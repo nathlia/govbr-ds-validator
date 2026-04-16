@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "source": "e-MAG v3.1 — Modelo de Acessibilidade em Governo Eletrônico",
+    "authority": "Ministério do Planejamento, Desenvolvimento e Gestão — Brasil",
+    "url": "https://emag.governoeletronico.gov.br/",
+    "note": "Mandatory for all Brazilian federal government websites. Based on WCAG 2.0 with government-specific additions. All gov.br portals must comply."
+  },
+  "sections": {
+    "1": {
+      "title": "Marcação",
+      "rules": [
+        { "id": "1.1", "title": "Respeitar os padrões web", "description": "Follow W3C standards for HTML, XML, XHTML, and CSS. Code must be semantically correct and valid.", "wcag": null },
+        { "id": "1.2", "title": "Organizar o código HTML de forma lógica e semântica", "description": "Structure HTML logically using semantic elements (headings, lists, emphasis). Reading order must match visual order.", "wcag": null },
+        { "id": "1.3", "title": "Utilizar corretamente os níveis de cabeçalho", "description": "Heading hierarchy (H1–H6) must be logical. H1 for primary content, subsequent levels for subordinate sections. Do not skip levels.", "wcag": "1.3.1" },
+        { "id": "1.4", "title": "Ordenar de forma lógica e intuitiva a leitura e tabulação", "description": "HTML code reading order must be logical. Main content should appear before navigation in source order.", "wcag": "1.3.2, 2.4.3" },
+        { "id": "1.5", "title": "Fornecer âncoras para ir direto a um bloco de conteúdo", "description": "Provide skip links in the accessibility bar. First link must jump to main content.", "wcag": "2.4.1" },
+        { "id": "1.6", "title": "Não utilizar tabelas para diagramação", "description": "Tables for tabular data only. Use CSS for layout.", "wcag": "1.3.1" },
+        { "id": "1.7", "title": "Separar links adjacentes", "description": "Consecutive links must be separated by lists or delimiters to prevent confusion for screen reader users.", "wcag": null },
+        { "id": "1.8", "title": "Dividir as áreas de informação", "description": "Pages must have distinct, consistent sections (header, navigation, content, footer) with landmark roles.", "wcag": "1.3.1, 2.4.6" },
+        { "id": "1.9", "title": "Não abrir novas instâncias sem a solicitação do usuário", "description": "Do not use pop-ups, new windows, or target='_blank' unless explicitly requested by the user.", "wcag": "3.2.1, 3.2.2" }
+      ]
+    },
+    "2": {
+      "title": "Comportamento",
+      "rules": [
+        { "id": "2.1", "title": "Disponibilizar todas as funções da página via teclado", "description": "All interactive elements and JavaScript functions must be keyboard-operable. No keyboard traps. Focus must be managed correctly.", "wcag": "2.1.1, 2.1.2" },
+        { "id": "2.2", "title": "Garantir que os objetos programáveis sejam acessíveis", "description": "Scripts and dynamic content must remain accessible. Provide alternatives when direct access is not possible.", "wcag": "4.1.2" },
+        { "id": "2.3", "title": "Não criar páginas com atualização automática periódica", "description": "Do not use meta refresh tags. Provide user-controlled update mechanisms instead.", "wcag": "2.2.1" },
+        { "id": "2.4", "title": "Não utilizar redirecionamento automático de páginas", "description": "Use server-side redirects, not client-side meta redirects.", "wcag": "3.2.5" },
+        { "id": "2.5", "title": "Fornecer alternativa para modificar limite de tempo", "description": "When time limits exist, allow users to disable, adjust, or extend them with clear notifications.", "wcag": "2.2.1" },
+        { "id": "2.6", "title": "Não incluir situações com intermitência de tela", "description": "Eliminate flashing, blinking, or flickering effects that could trigger seizures (no more than 3 flashes per second).", "wcag": "2.3.1" },
+        { "id": "2.7", "title": "Assegurar o controle do usuário sobre as alterações temporais do conteúdo", "description": "Users must be able to pause, restart, and control speed of slideshows, animations, and moving content.", "wcag": "2.2.2" }
+      ]
+    },
+    "3": {
+      "title": "Conteúdo/Informação",
+      "rules": [
+        { "id": "3.1", "title": "Identificar o idioma principal da página", "description": "Declare the primary language using the lang attribute on the <html> element. Gov.br pages: lang='pt-BR'.", "wcag": "3.1.1" },
+        { "id": "3.2", "title": "Informar mudança de idioma no conteúdo", "description": "Mark content in non-primary languages using the lang attribute on affected elements.", "wcag": "3.1.2" },
+        { "id": "3.3", "title": "Oferecer um título descritivo e informativo à página", "description": "Page titles must follow the pattern: [page topic] – [site name]. Must represent primary content.", "wcag": "2.4.2" },
+        { "id": "3.4", "title": "Informar o usuário sobre sua localização na página", "description": "Implement breadcrumb navigation showing the user's current path within the site hierarchy.", "wcag": "2.4.8" },
+        { "id": "3.5", "title": "Descrever links clara e sucintamente", "description": "Link/button text must describe the action or destination independently. Do not use 'clique aqui', 'saiba mais', 'aqui'.", "wcag": "2.4.4, 2.4.6" },
+        { "id": "3.6", "title": "Fornecer alternativa em texto para as imagens do sítio", "description": "All images must have alt text. Decorative images: alt=''. Meaningful images: alt describes the content. Complex images: use figure/figcaption.", "wcag": "1.1.1" },
+        { "id": "3.7", "title": "Utilizar mapas de imagem de forma acessível", "description": "Use client-side image maps with alt attributes for each area. Provide redundant text links for server-side maps.", "wcag": "1.1.1" },
+        { "id": "3.8", "title": "Disponibilizar documentos em formatos acessíveis", "description": "Offer documents primarily in HTML. Provide ODF alternatives when PDFs are used.", "wcag": null },
+        { "id": "3.9", "title": "Em tabelas, utilizar títulos e resumos de forma apropriada", "description": "Use <caption> and summary on tables. Headers via <th> with scope attribute.", "wcag": "1.3.1" },
+        { "id": "3.10", "title": "Associar células de dados às células de cabeçalho", "description": "Use TH for headers and TD for data. Use id/headers or scope attributes for complex tables.", "wcag": "1.3.1" },
+        { "id": "3.11", "title": "Garantir a leitura e compreensão das informações", "description": "Write clearly at elementary education level. Use short sentences, common vocabulary, and simple structure.", "wcag": "3.1.5" },
+        { "id": "3.12", "title": "Disponibilizar uma explicação para siglas, abreviaturas e palavras incomuns", "description": "Explain acronyms and specialized terms at first occurrence through text, glossaries, or the <abbr> element.", "wcag": "3.1.4" }
+      ]
+    },
+    "4": {
+      "title": "Apresentação/Design",
+      "rules": [
+        { "id": "4.1", "title": "Oferecer contraste mínimo entre plano de fundo e primeiro plano", "description": "Text contrast ratio must be at least 4.5:1 (WCAG AA) for normal text and 3:1 for large text (18pt+ or 14pt bold). Gov.br recommends 7:1 for body text. Error states and icons used alone must also meet contrast requirements.", "wcag": "1.4.3, 1.4.6" },
+        { "id": "4.2", "title": "Não utilizar apenas cor para transmitir informação", "description": "Color alone must not be the only means of conveying information, indicating actions, or distinguishing visual elements. Error states must use icons, text, or patterns in addition to color.", "wcag": "1.4.1" },
+        { "id": "4.3", "title": "Permitir redimensionamento sem perda de funcionalidade", "description": "Content must remain functional and readable when text is resized up to 200% without assistive technology. No horizontal scroll at 320px width.", "wcag": "1.4.4, 1.4.10" },
+        { "id": "4.4", "title": "Possibilitar que o elemento com foco seja visualmente evidente", "description": "Focus indicator must be clearly visible on all interactive elements. Gov.br DS uses a dashed gold outline (#c2850c, 4px offset). Do not use outline: none or outline: 0 without a custom visible replacement.", "wcag": "2.4.7, 2.4.11" }
+      ]
+    },
+    "5": {
+      "title": "Multimídia",
+      "rules": [
+        { "id": "5.1", "title": "Fornecer alternativa para vídeo", "description": "All video content must have captions (for the deaf) and audio description (for the blind). Pre-recorded video must have both.", "wcag": "1.2.1, 1.2.2, 1.2.3" },
+        { "id": "5.2", "title": "Fornecer alternativa para áudio", "description": "Audio-only content must have a text transcript.", "wcag": "1.2.1" },
+        { "id": "5.3", "title": "Não reproduzir áudio automaticamente", "description": "Do not auto-play audio that lasts more than 3 seconds without providing a mechanism to stop it.", "wcag": "1.4.2" },
+        { "id": "5.4", "title": "Fornecer controles de áudio para som em segundo plano", "description": "If audio plays automatically for more than 3 seconds, provide volume controls or a mute mechanism.", "wcag": "1.4.2" }
+      ]
+    },
+    "6": {
+      "title": "Formulário",
+      "note": "Most critical section for interface validation. All gov.br service forms must comply fully.",
+      "rules": [
+        { "id": "6.1", "title": "Fornecer alternativa em texto para todos os botões de imagem", "description": "Image-based submit buttons must have a descriptive alt attribute.", "wcag": "1.1.1" },
+        { "id": "6.2", "title": "Associar etiquetas aos seus campos", "description": "Every form input must have a programmatically associated label via: (a) <label> element with for attribute matching the input's id, (b) aria-label attribute, or (c) aria-labelledby pointing to a visible label element. Placeholder text is NOT a substitute for a label — it disappears on input and is not consistently announced by all screen readers.", "wcag": "1.3.1, 3.3.2, 4.1.2" },
+        { "id": "6.3", "title": "Indicar claramente que campos são obrigatórios", "description": "Required fields must be indicated both visually (asterisk * with legend, or 'obrigatório' text) AND programmatically via aria-required='true' or the required HTML attribute. The visual indicator alone is insufficient.", "wcag": "3.3.2" },
+        { "id": "6.4", "title": "Não provocar automaticamente alteração no contexto", "description": "Do not auto-submit forms or navigate away when a field value changes (e.g., on select change). Actions must be explicitly initiated by the user via a button.", "wcag": "3.2.2" },
+        { "id": "6.5", "title": "Fornecer instruções para entrada de dados", "description": "Complex inputs (CPF, CNPJ, date, phone, CEP) must have format instructions visible BEFORE the field — not only as placeholder text. Use <small> or a hint element linked via aria-describedby.", "wcag": "3.3.2" },
+        { "id": "6.6", "title": "Identificar e descrever os erros", "description": "Error messages must: (a) exist in the DOM as text (not only color or icon), (b) be linked to the offending input via aria-describedby, (c) use aria-invalid='true' on the input, (d) describe the error and how to fix it. Error summary at the top of the page is recommended for multi-field forms.", "wcag": "3.3.1, 3.3.3, 4.1.3" }
+      ]
+    }
+  }
+}

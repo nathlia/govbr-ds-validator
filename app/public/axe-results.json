@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-04-16T07:52:32.667Z",
+  "tool": "axe-core via @axe-core/playwright",
+  "appUrl": "http://localhost:3000",
+  "results": {
+    "buttons": {
+      "passes": 24,
+      "violationCount": 1,
+      "byCaseId": {
+        "TC-B-02": [
+          {
+            "rule": "button-name",
+            "impact": "critical",
+            "description": "Ensure buttons have discernible text",
+            "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/button-name?application=playwright"
+          }
+        ]
+      },
+      "raw": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "description": "Ensure buttons have discernible text",
+          "nodes": [
+            {
+              "target": [
+                "#TC-B-02 > .circle.br-button[type=\"button\"]"
+              ],
+              "testCaseId": "TC-B-02"
+            }
+          ]
+        }
+      ]
+    },
+    "forms": {
+      "passes": 28,
+      "violationCount": 1,
+      "byCaseId": {
+        "TC-F-02": [
+          {
+            "rule": "label",
+            "impact": "critical",
+            "description": "Ensure every form element has a label",
+            "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/label?application=playwright"
+          }
+        ]
+      },
+      "raw": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "description": "Ensure every form element has a label",
+          "nodes": [
+            {
+              "target": [
+                "#username"
+              ],
+              "testCaseId": "TC-F-02"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

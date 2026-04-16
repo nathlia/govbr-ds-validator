@@ -1,0 +1,33 @@
+/*
+ * Violation classes for PoC test cases.
+ * Class names are intentionally generic — they do not reveal what's wrong.
+ */
+
+/* TC-B-04: #1352b4 — off by one digit from the correct token #1351b4 */
+/* Visually indistinguishable. No linter knows the exact token value.  */
+.v-token-a {
+  background-color: #1352b4 !important;
+  border-color: #1352b4 !important;
+}
+
+/* TC-B-05: Arial instead of Rawline/Raleway */
+.v-font-a {
+  font-family: Arial, sans-serif !important;
+}
+
+/* TC-B-08: 6px radius — not a DS token (valid tokens: 0/4/8/16/500px/50%) */
+.v-radius-a {
+  border-radius: 6px !important;
+}
+
+/* TC-B-10: focus outline suppressed — DS requires visible focus indicator */
+.v-focus-a:focus,
+.v-focus-a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* TC-F-13: wrong border-color on br-input — #ff6600 is not a DS token */
+.v-border-a {
+  border-color: #ff6600 !important;
+}

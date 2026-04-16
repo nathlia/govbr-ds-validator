@@ -1,0 +1,92 @@
+{
+  "timestamp": "2026-04-16T07:49:00.000Z",
+  "model": "claude-sonnet-4-6",
+  "appUrl": "http://localhost:3000",
+  "verdicts": {
+    "TC-B-01": {
+      "detected": false,
+      "violations_found": [],
+      "notes": "Reference case. Proper <button class='br-button primary'> element. bg-color rgb(19,81,180)=#1351b4 matches --color-primary-default. font-family Rawline present. border-radius 1680px (pill, valid). Accessible name 'Entrar' from visible text. No aria-label mismatch."
+    },
+    "TC-B-02": {
+      "detected": true,
+      "violations_found": ["Icon-only circle button has no accessible name: no aria-label, no visible text, icon has aria-hidden='true'"],
+      "notes": "Button is <button class='br-button circle'> with <i class='fas fa-search' aria-hidden='true'> but no aria-label. Snapshot shows button [ref=e15] with no accessible name. DS canonical example requires aria-label on all circle buttons. e-MAG 2.1, WCAG 4.1.2."
+    },
+    "TC-B-03": {
+      "detected": true,
+      "violations_found": ["Non-semantic element <div> used instead of <button>"],
+      "notes": "Snapshot shows generic [ref=e19] (div/span) with cursor:pointer and text 'Confirmar'. Element is absent from inspect_computed_styles results (which query 'button, a, input, select, textarea, [role=button]') confirming no semantic button role. e-MAG 1.1, 2.1."
+    },
+    "TC-B-04": {
+      "detected": true,
+      "violations_found": ["background-color rgb(19,82,180) = #1352b4 is not in DS hexLookup (expected #1351b4 = --color-primary-default)"],
+      "notes": "Computed bg-color is rgb(19,82,180): R=0x13, G=0x52, B=0xB4 -> #1352b4. DS token --color-primary-default is #1351b4 (G=0x51). Off by 1 in green channel — not a recognized DS token value."
+    },
+    "TC-B-05": {
+      "detected": true,
+      "violations_found": ["font-family is 'Arial, sans-serif' — Rawline is completely absent from the computed font stack"],
+      "notes": "Computed fontFamily = 'Arial, sans-serif'. DS token --font-family-base requires 'Rawline, Raleway, sans-serif'. Rawline is fully absent from the stack on a br-button element."
+    },
+    "TC-B-06": {
+      "detected": false,
+      "violations_found": [],
+      "notes": "Reference case (danger variant). bg-color rgb(229,34,7)=#e52207 maps to --red-vivid-50 / --danger. font-family Rawline present. border-radius 1680px (pill, valid). Accessible name 'Excluir conta' from visible text."
+    },
+    "TC-B-07": {
+      "detected": true,
+      "violations_found": ["aria-label 'Cancelar' does not match visible text 'Confirmar' (normalized: 'cancelar' != 'confirmar')"],
+      "notes": "Button has aria-label='Cancelar' but textContent='Confirmar'. After normalize (trim+lowercase): 'cancelar' != 'confirmar'. Screen readers announce 'Cancelar' while sighted users see 'Confirmar'. WCAG 2.5.3 accessible name mismatch."
+    },
+    "TC-B-08": {
+      "detected": true,
+      "violations_found": ["border-radius 6px is not in the DS token set (valid: 0px, 4px, 8px, 16px, 500px+, 50%)"],
+      "notes": "Computed borderRadius = 6px. DS surface rounder tokens are 4px (--surface-rounder-sm), 8px (--surface-rounder-md), 16px (--surface-rounder-lg), plus 0px, pill (>500px), circle (50%). 6px matches none of these."
+    },
+    "TC-B-09": {
+      "detected": false,
+      "violations_found": [],
+      "notes": "Reference case (circle button with proper accessible name). aria-label='Pesquisar' present. Icon has aria-hidden='true'. font-family Rawline present. border-radius 50% (valid)."
+    },
+    "TC-F-01": {
+      "detected": false,
+      "violations_found": [],
+      "notes": "Reference case. Nome completo and CPF inputs have visible label text with associated accessible names. CPF has format hint 'Formato: 000.000.000-00' before the field (e-MAG 6.5 satisfied). Button order: 'Cancelar' (secondary) before 'Confirmar cadastro' (primary) — correct DS pattern."
+    },
+    "TC-F-02": {
+      "detected": true,
+      "violations_found": ["Textbox has no accessible name — label 'Nome de usuario' is not programmatically associated with the input"],
+      "notes": "Snapshot shows text 'Nome de usuario' as a sibling text node but the textbox (ref=e56) has no quoted accessible name (appears as bare 'textbox [ref=e56]'). Label exists visually but is not associated via label[for], aria-label, or aria-labelledby. e-MAG 6.2."
+    },
+    "TC-F-03": {
+      "detected": true,
+      "violations_found": ["Textbox accessible name 'E-mail' has no visible <label> element in the accessibility tree — accessible name likely comes from placeholder only"],
+      "notes": "Snapshot shows generic [ref=e60] containing only 'textbox \"E-mail\" [ref=e62]' with no sibling text node. All properly labeled inputs in this suite show an explicit text node. Placeholder is not a valid substitute for a label per e-MAG 6.2."
+    },
+    "TC-F-04": {
+      "detected": true,
+      "violations_found": ["Label text contains '*' indicating required field but input has no aria-required='true' or required attribute"],
+      "notes": "Snapshot shows label 'Nome *' and textbox 'Nome *' [ref=e68] with no required or aria-required indicated in the accessibility tree. e-MAG 6.3 requires both visual AND programmatic indication. Visual asterisk alone is insufficient."
+    },
+    "TC-F-05": {
+      "detected": true,
+      "violations_found": ["CPF input has no format hint before the field"],
+      "notes": "Snapshot shows 'text: CPF' + 'textbox \"CPF\"' with no preceding format hint element. Compare TC-F-01 CPF which has a 'Formato: 000.000.000-00' hint node. CPF is a complex-format field requiring visible instructions before the input per e-MAG 6.5."
+    },
+    "TC-F-06": {
+      "detected": true,
+      "violations_found": ["Error message present in DOM but input lacks aria-invalid='true' and aria-describedby linking the error to the input"],
+      "notes": "Snapshot shows textbox 'CPF' with value '123' and paragraph 'CPF invalido. Verifique o numero digitado.' in DOM, but no aria-invalid or aria-describedby on the textbox. Error message is not programmatically linked to the offending field. e-MAG 6.6, WCAG 3.3.1."
+    },
+    "TC-F-07": {
+      "detected": true,
+      "violations_found": ["Button order: primary 'Confirmar' appears before secondary 'Cancelar' in DOM order"],
+      "notes": "Snapshot shows buttons: 'Confirmar' [ref=e89] then 'Cancelar' [ref=e90]. DS pattern requires secondary action before primary (confirm/primary should be last/rightmost). This reversal can lead users to accidentally trigger confirmatory actions."
+    },
+    "TC-F-08": {
+      "detected": true,
+      "violations_found": ["Select/combobox 'Estado' has no visible <label> element in the accessibility tree — accessible name likely from aria-label only"],
+      "notes": "Snapshot shows generic [ref=e93] containing combobox 'Estado' [ref=e95] with no preceding text node for a label. All compliant labeled inputs show an explicit text node. Combobox has accessible name 'Estado' but no visible <label> element. e-MAG 6.2."
+    }
+  }
+}

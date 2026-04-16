@@ -1,0 +1,7 @@
+/.claude/
+/.idea/
+/.playwright-mcp/
+/app/dist/
+/app/node_modules/
+/scripts/node_modules/
+/mcp-server/node_modules/

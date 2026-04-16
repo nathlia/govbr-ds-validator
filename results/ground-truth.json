@@ -1,0 +1,270 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "ds": "gov.br Design System (Padrão Digital de Governo)",
+    "tools_baseline": ["axe-core 4.x", "eslint-plugin-jsx-a11y 6.x"],
+    "detection_values": {
+      "true": "tool detects this violation",
+      "false": "tool misses this violation",
+      "null": "reference case — no violation expected"
+    },
+    "categories": {
+      "structural": "Wrong HTML element or missing required attribute — detectable by static analysis",
+      "token": "Computed CSS value does not match a valid DS token — requires token knowledge + computed style",
+      "ds-pattern": "Violates a DS UX pattern not expressible as a single-element rule — requires DS expertise",
+      "emag-specific": "Brazilian e-MAG rule not covered by generic a11y tools like axe-core",
+      "compositional": "Violation only visible when multiple elements are evaluated in relation to each other"
+    }
+  },
+  "cases": {
+    "TC-B-01": {
+      "page": "buttons",
+      "description": "Referência correta — primary button com texto visível",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "Reference case. All tools should pass."
+    },
+    "TC-B-02": {
+      "page": "buttons",
+      "description": "Botão ícone sem aria-label (nome acessível ausente)",
+      "violations": [
+        "Botão sem nome acessível: contém apenas ícone com aria-hidden='true', sem aria-label ou texto visível — WCAG 4.1.2, e-MAG 1.1"
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": true, "eslint_a11y": true, "agent": true },
+      "notes": "Axe catches via 'button-name' rule. eslint-a11y catches statically. Baseline case."
+    },
+    "TC-B-03": {
+      "page": "buttons",
+      "description": "Elemento semântico errado: <div> estilizado como botão",
+      "violations": [
+        "<div> sem role='button', tabindex, ou listeners de teclado — não é focável nem acionável por teclado (WCAG 2.1.1, 4.1.2)"
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Axe ignores the div — no interactive role, not in the a11y tree as interactive. eslint-a11y won't flag a div with no event handler in JSX. Agent detects by cross-referencing br-button class with the non-semantic element type."
+    },
+    "TC-B-04": {
+      "page": "buttons",
+      "description": "Cor de fundo fora do token: #1352b4 (correto: #1351b4)",
+      "violations": [
+        "background-color computado é #1352b4 — não é um token válido do DS gov.br. Token correto para primary: #1351b4 (--color-primary-default). Diferença de 1 dígito, visualmente imperceptível."
+      ],
+      "categories": ["token"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "No linter knows the DS token values. Only a tool with access to the token registry + computed CSS can detect this. Strongest 'agent-only' case."
+    },
+    "TC-B-05": {
+      "page": "buttons",
+      "description": "Fonte incorreta: Arial no lugar de Rawline/Raleway",
+      "violations": [
+        "fontFamily computado contém 'Arial' — DS gov.br exige Rawline (principal) com fallback Raleway. Arial é uma fonte do sistema não pertencente ao DS."
+      ],
+      "categories": ["token"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Font family is a DS token rule. No a11y tool validates typography tokens."
+    },
+    "TC-B-06": {
+      "page": "buttons",
+      "description": "Referência correta — danger button com texto visível",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "Reference case. Correct danger button with visible text. Agent should not flag this."
+    },
+    "TC-B-07": {
+      "page": "buttons",
+      "description": "aria-label contradiz o texto visível do botão",
+      "violations": [
+        "aria-label='Cancelar' mas texto visível é 'Confirmar' — viola WCAG 2.5.3 (Label in Name). Usuários de reconhecimento de voz que dizem 'Cancelar' acionam o botão, mas usuários visuais leem 'Confirmar'."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Axe has 'label-content-name-mismatch' (WCAG 2.5.3) but it is tagged experimental — excluded from standard runs. The agent catches it by comparing aria-label against visible text content directly."
+    },
+    "TC-B-08": {
+      "page": "buttons",
+      "description": "Border-radius fora dos tokens: 6px (tokens válidos: 0/4/8/16/500px/50%)",
+      "violations": [
+        "borderRadius computado é 6px — não é um valor de token do DS gov.br. Valores válidos: 0px, 4px (--surface-rounder-sm), 8px (--surface-rounder-md), 16px (--surface-rounder-lg), 500px+ (pill), 50% (circle)."
+      ],
+      "categories": ["token"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Token range knowledge + computed style comparison. No generic tool covers DS-specific spacing/radius tokens."
+    },
+    "TC-B-09": {
+      "page": "buttons",
+      "description": "Referência correta — botão ícone com aria-label",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "Reference case. Correct icon button with aria-label."
+    },
+    "TC-B-10": {
+      "page": "buttons",
+      "description": "Indicador de foco suprimido: outline e box-shadow removidos via CSS",
+      "violations": [
+        "Botão não tem indicador visual de foco: outline: none e box-shadow: none aplicados via .v-focus-a:focus — usuários de teclado não conseguem identificar o elemento focado. DS gov.br e WCAG 2.4.7 (Focus Visible) exigem indicador de foco perceptível."
+      ],
+      "categories": ["token"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "axe-core does not reliably detect programmatically suppressed focus outlines via CSS override — it checks the accessibility tree, not focus-state computed styles. Only inspect_computed_styles with focus-state capture (el.focus() + getComputedStyle) can observe this. Agent-only via focusedComputed.outline + focusedComputed.boxShadow."
+    },
+    "TC-B-11": {
+      "page": "buttons",
+      "description": "role='button' em <span> sem tabindex: não focável por teclado",
+      "violations": [
+        "<span role='button'> sem tabindex='0' — elemento tem papel interativo mas não entra no tab order. Usuários de teclado não conseguem acessá-lo. WCAG 2.1.1, e-MAG 2.1."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": true, "eslint_a11y": true, "agent": true },
+      "notes": "Baseline case. axe catches via 'interactive-supports-focus' rule. eslint-plugin-jsx-a11y catches via the same rule statically. All tools should detect this."
+    },
+    "TC-B-12": {
+      "page": "buttons",
+      "description": "<a href='#'> usado como botão de ação (não-navegação)",
+      "violations": [
+        "Elemento <a href='#'> com class='br-button primary' e texto 'Excluir arquivo' — ancora usada para ação destrutiva, não para navegação. DS gov.br e WCAG exigem <button> para ações; <a> é para navegação. Semântica errada afeta tecnologias assistivas e contexto de teclado."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "axe does not flag anchors with accessible names and href — it considers them valid links. eslint-a11y similarly has no rule against anchor-as-action-button when href is present. Agent detects by reasoning: the text 'Excluir arquivo' is a destructive action, not navigation — <a> is semantically wrong regardless of styling."
+    },
+    "TC-B-13": {
+      "page": "buttons",
+      "description": "Referência correta — navegação paginada: secondary antes de primary",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "False-positive trap. Secondary ('Voltar') before primary ('Próxima etapa') is CORRECT DS order. Agent must not flag this — it is the expected pattern, not a violation."
+    },
+
+    "TC-F-01": {
+      "page": "forms",
+      "description": "Referência correta — formulário completo e conforme",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "Reference case. All rules satisfied: labels, hints, aria-required, correct button order."
+    },
+    "TC-F-02": {
+      "page": "forms",
+      "description": "Label com for/id incorretos: for='usuario', id='username'",
+      "violations": [
+        "label[for='usuario'] não encontra input[id='username'] — associação programática quebrada. Leitor de tela não anunciará o label ao focar o campo (e-MAG 6.2, WCAG 1.3.1)."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": true, "eslint_a11y": true, "agent": true },
+      "notes": "Baseline case. Caught by both tools."
+    },
+    "TC-F-03": {
+      "page": "forms",
+      "description": "Input sem label: apenas placeholder como rótulo",
+      "violations": [
+        "Input sem <label> associado — placeholder não é substituto de label. Desaparece ao digitar, não é lido como label por todos os leitores de tela (e-MAG 6.2, WCAG 1.3.1)."
+      ],
+      "categories": ["structural", "emag-specific"],
+      "detection": { "axe": false, "eslint_a11y": true, "agent": true },
+      "notes": "Axe accepts placeholder as accessible name (ARIA accessible name computation algorithm). eslint-plugin-jsx-a11y's label-has-associated-control does NOT accept placeholder. e-MAG 6.2 explicitly prohibits placeholder-only labels."
+    },
+    "TC-F-04": {
+      "page": "forms",
+      "description": "Campo obrigatório com indicador visual (*) mas sem aria-required",
+      "violations": [
+        "Label contém asterisco visual ('Nome *') mas input não tem aria-required='true' nem atributo required — leitor de tela não anuncia obrigatoriedade (e-MAG 6.3, WCAG 3.3.2)."
+      ],
+      "categories": ["emag-specific"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Axe only checks required/aria-required, not the semantics of '*' in label text. Agent reads the label content AND the missing attribute together."
+    },
+    "TC-F-05": {
+      "page": "forms",
+      "description": "Campo CPF sem instrução de formato antes do campo",
+      "violations": [
+        "Campo CPF sem hint de formato (ex: 'Formato: 000.000.000-00') exibido ANTES do input. e-MAG 6.5 exige instruções de formato para campos complexos antes do campo, não como placeholder."
+      ],
+      "categories": ["emag-specific"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "e-MAG 6.5 is not in WCAG 2.x or in axe-core's ruleset. Requires knowledge of the Brazilian government a11y standard."
+    },
+    "TC-F-06": {
+      "page": "forms",
+      "description": "Mensagem de erro não vinculada ao campo via aria-describedby",
+      "violations": [
+        "Input tem aria-invalid='true' mas não tem aria-describedby apontando para #f06-error. A mensagem de erro existe no DOM mas leitor de tela não a lê ao focar o campo (e-MAG 6.6, WCAG 3.3.1)."
+      ],
+      "categories": ["emag-specific", "compositional"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "ARIA spec does not require aria-describedby on aria-invalid fields. Static analysis cannot see the pairing between input and error message node. Agent reasons: aria-invalid=true with visible error message in DOM but no aria-describedby = broken error announcement."
+    },
+    "TC-F-07": {
+      "page": "forms",
+      "description": "Ordem de botões invertida: primary antes de secondary",
+      "violations": [
+        "Botões na ordem [primary, secondary] = [Confirmar, Cancelar]. Padrão DS gov.br: ação secundária (cancelar) sempre precede a ação primária (confirmar) — ordem correta: [secondary] [primary]."
+      ],
+      "categories": ["ds-pattern", "compositional"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Requires evaluating both buttons in relation to each other AND knowing the DS button-order convention. Single-element analysis cannot detect this."
+    },
+    "TC-F-08": {
+      "page": "forms",
+      "description": "Select com aria-label apenas, sem <label> visível",
+      "violations": [
+        "Campo select tem aria-label='Estado' mas nenhum elemento <label> visível associado. e-MAG: campos de formulário devem ter rótulos visíveis — aria-label satisfaz WCAG mas não e-MAG, que exige visibilidade do rótulo para todos os usuários."
+      ],
+      "categories": ["emag-specific"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Axe considers aria-label sufficient for accessible name (WCAG 1.3.1 passes). e-MAG additionally requires the label to be VISIBLE. Only agent with e-MAG knowledge catches this."
+    },
+    "TC-F-09": {
+      "page": "forms",
+      "description": "Grupo de checkboxes sem <fieldset><legend>",
+      "violations": [
+        "Três checkboxes relacionados (mesmo atributo name='notif') sem <fieldset> e <legend> — o grupo não tem nome acessível. Leitores de tela não comunicam o contexto do grupo ao navegar entre os itens. e-MAG 6.2, WCAG 1.3.1."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": true, "eslint_a11y": false, "agent": true },
+      "notes": "axe catches via 'checkboxgroup' rule — checkboxes sharing the same name must be in a group with an accessible name. eslint-a11y has no static rule for missing fieldset/legend at the group level. Adds a third axe-baseline case."
+    },
+    "TC-F-10": {
+      "page": "forms",
+      "description": "Dois botões 'Salvar' com nome acessível idêntico em contextos diferentes",
+      "violations": [
+        "Dois botões com accessible name 'Salvar' na mesma página, com funções distintas (perfil público vs. configurações) — usuários de tecnologia assistiva não conseguem diferenciá-los. WCAG 2.4.6 requer que controles com funções diferentes tenham nomes distinguíveis."
+      ],
+      "categories": ["compositional"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Single-element analysis is inherently blind to this — each button individually has a valid accessible name. Only cross-element reasoning detects the collision. Strongest purely-compositional case in the suite."
+    },
+    "TC-F-11": {
+      "page": "forms",
+      "description": "aria-labelledby apontando para ID inexistente no DOM",
+      "violations": [
+        "Input tem aria-labelledby='ghost-label-id' mas nenhum elemento com id='ghost-label-id' existe no DOM — referência ARIA quebrada. O input não tem nome acessível. e-MAG 6.2, WCAG 1.3.1."
+      ],
+      "categories": ["structural"],
+      "detection": { "axe": true, "eslint_a11y": false, "agent": true },
+      "notes": "axe catches via 'aria-valid-attr-value' — validates that IDs referenced in aria-* attributes exist in the DOM. eslint-a11y cannot verify cross-component ID resolution at static analysis time. Adds a fourth axe-baseline case."
+    },
+    "TC-F-12": {
+      "page": "forms",
+      "description": "Referência correta — aria-labelledby válido apontando para heading existente",
+      "violations": [],
+      "categories": [],
+      "detection": { "axe": null, "eslint_a11y": null, "agent": null },
+      "notes": "False-positive trap. Input has no visible <label> but aria-labelledby points to an existing <h3 id='f12-section-label'>. This is valid per WCAG and e-MAG — the heading serves as the label. Agent must recognize the association is intact and not flag it."
+    },
+    "TC-F-13": {
+      "page": "forms",
+      "description": "Cor de borda do br-input fora do token DS: #ff6600",
+      "violations": [
+        "border-color computado é #ff6600 (laranja) — não é um token válido do DS gov.br. A borda padrão de br-input deve usar --color-secondary-04 (#1351b4) ou tokens de estado definidos no DS."
+      ],
+      "categories": ["token"],
+      "detection": { "axe": false, "eslint_a11y": false, "agent": true },
+      "notes": "Extends token violation coverage to form input components. #ff6600 is not in the DS hexLookup. Agent-only — no linter knows DS token values for input border colors."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "govbr-ds-validator-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "scrape-rules": "node scripts/scrape-ds-rules.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "playwright": "1.59.1"
+  }
+}
