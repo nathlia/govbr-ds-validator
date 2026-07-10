@@ -179,8 +179,9 @@ Isso é fundamentalmente diferente de um linter, que aplica regras pré-programa
 │  Tools:              │  │  Tools:                      │
 │  - browser_navigate  │  │  - get_design_tokens         │
 │  - browser_snapshot  │  │  - get_emag_rules            │
-│  - browser_click     │  │  - inspect_computed_styles   │
-│  - ...               │  │                              │
+│  - browser_click     │  │  - get_page_rules            │
+│  - ...               │  │  - get_component_examples    │
+│                      │  │  - inspect_computed_styles   │
 └──────────┬───────────┘  └──────────────────────────────┘
            │ controla
            ▼
@@ -189,9 +190,9 @@ Isso é fundamentalmente diferente de um linter, que aplica regras pré-programa
 │  localhost:3000      │
 │  (app/)              │
 │                      │
-│  20 casos de teste   │
-│  com violações       │
-│  intencionais        │
+│  26 casos de teste   │
+│  (20 violações +     │
+│  6 referências)      │
 └──────────────────────┘
 ```
 
@@ -200,7 +201,7 @@ Isso é fundamentalmente diferente de um linter, que aplica regras pré-programa
 | Componente | Responsabilidade |
 |---|---|
 | `@playwright/mcp` | Tudo relacionado ao browser: navegar, tirar snapshot da árvore de acessibilidade, clicar, etc. |
-| `govbr-ds` MCP server | Conhecimento específico do DS: tokens, e-MAG, e estilos computados (que o Playwright não expõe) |
+| `govbr-ds` MCP server | Conhecimento específico do DS: tokens, e-MAG, regras de página, exemplos de componentes, e estilos computados (que o Playwright não expõe) |
 | Agente (Claude) | Raciocínio: cruzar as informações, identificar violações, gerar o relatório |
 | Skills | Protocolo de execução: definem a sequência de ações que o agente deve seguir |
 | App de testes | Corpus de avaliação: páginas com violações intencionais para medir a detecção |
@@ -211,7 +212,7 @@ Isso é fundamentalmente diferente de um linter, que aplica regras pré-programa
 
 **Localização:** `mcp-server/index.js`
 
-Este é o servidor MCP customizado para este projeto. Ele expõe três ferramentas ao agente, todas relacionadas ao conhecimento específico do gov.br DS e do e-MAG.
+Este é o servidor MCP customizado para este projeto. Ele expõe cinco ferramentas ao agente, todas relacionadas ao conhecimento específico do gov.br DS e do e-MAG.
 
 ### Por que um servidor MCP separado?
 
@@ -269,7 +270,7 @@ server.tool(
 );
 ```
 
-**Por que o `hexLookup`?** É a chave do argumento para o caso TC-B-05. O agente recebe o estilo computado `background-color: rgb(19, 82, 180)` (que é `#1352b4`), converte para hex, e faz a busca reversa no `hexLookup`. Se não encontrar, sabe que não é um token válido. Com `#1351b4` (o correto), encontraria `color-primary-default`.
+**Por que o `hexLookup`?** É a chave do argumento para o caso TC-B-04. O agente recebe o estilo computado `background-color: rgb(19, 82, 180)` (que é `#1352b4`), converte para hex, e faz a busca reversa no `hexLookup`. Se não encontrar, sabe que não é um token válido. Com `#1351b4` (o correto), encontraria `color-primary-default`.
 
 ### Tool 2: `get_emag_rules`
 
@@ -315,6 +316,19 @@ server.tool(
     const elements = await page.evaluate((sel) => {
       return Array.from(document.querySelectorAll(sel)).map((el) => {
         const computed = window.getComputedStyle(el);
+
+        // Captura estilos de foco: precisa focar o elemento para ler :focus
+        el.focus({ preventScroll: true });
+        const focusedComputed = window.getComputedStyle(el);
+        const focusStyles = {
+          outline:      focusedComputed.outline,
+          outlineColor: focusedComputed.outlineColor,
+          outlineWidth: focusedComputed.outlineWidth,
+          outlineStyle: focusedComputed.outlineStyle,
+          boxShadow:    focusedComputed.boxShadow,
+        };
+        el.blur();
+
         return {
           tagName: el.tagName,
           classes: Array.from(el.classList),
@@ -339,6 +353,8 @@ server.tool(
             borderRadius: computed.borderRadius,         // "4px"
             // ...
           },
+          // Estilos enquanto o elemento está focado (detecta outline: none)
+          focusedComputed: focusStyles,
           inlineStyle: el.getAttribute("style"),  // captura overrides inline
         };
       });
@@ -353,6 +369,42 @@ server.tool(
 **Por que essa ferramenta é necessária?** O `@playwright/mcp` expõe a **árvore de acessibilidade** — que diz se um botão tem nome acessível, se um input tem label, etc. Mas não expõe `backgroundColor`, `fontFamily`, `borderRadius`. Para validar tokens visuais, você precisa de `getComputedStyle`. Este servidor preenche esse gap.
 
 **Por que `getComputedStyle` e não apenas ler o CSS?** Porque o valor final pode ser diferente do declarado. Um botão pode ter `class="br-button primary"` (que define `background: #1351b4`) mas também ter uma classe override ou estilo inline que sobrescreve. `getComputedStyle` retorna o valor que o browser realmente usa.
+
+**Por que capturar o estado de foco?** A pseudo-classe `:focus` só é ativa enquanto o elemento está focado — `getComputedStyle` sem foco não a captura. Ao chamar `el.focus()` antes de ler os estilos e `el.blur()` depois, temos o valor real de `outline` e `box-shadow` durante o foco. Isso é essencial para detectar TC-B-10, onde `outline: none !important` suprime o indicador de foco exigido pelo DS.
+
+### Tool 4: `get_page_rules`
+
+```js
+server.tool(
+  "get_page_rules",
+  "Retorna diretrizes estruturais e de UX do gov.br DS...",
+  {},
+  async () => {
+    return { content: [{ type: "text", text: JSON.stringify(PAGE_RULES) }] };
+  }
+);
+```
+
+O arquivo `mcp-server/data/ds-page-rules.json` contém regras extraídas da documentação do DS: anatomia de página, padrões de formulário, convenções de grid, e guias WAI-ARIA. Inclui, por exemplo, a regra de que botões secundários devem vir antes de primários, e que botões destrutivos devem usar a variante `danger`.
+
+### Tool 5: `get_component_examples`
+
+```js
+server.tool(
+  "get_component_examples",
+  "Retorna exemplos canônicos de HTML de componentes do @govbr-ds/core...",
+  {
+    component: z.string().optional(),  // ex: "br-button", "br-input"
+  },
+  async ({ component }) => {
+    // Extrai exemplos reais do pacote @govbr-ds/core instalado
+    // → HTML canônico de cada componente para comparação
+    return { content: [{ type: "text", text: JSON.stringify(examples) }] };
+  }
+);
+```
+
+Esta ferramenta extrai exemplos de HTML diretamente do pacote `@govbr-ds/core` instalado, fornecendo ao agente o markup canônico de referência. Útil para comparar se um componente usa as variantes corretas e atributos esperados pelo DS.
 
 ### Inicialização do servidor
 
@@ -395,8 +447,8 @@ Cada caso de teste é uma `<section>` com:
 ```jsx
 // app/src/pages/ButtonPage.jsx
 
-<section id="TC-B-05" data-testid="TC-B-05" style={CASE_STYLE}>
-  <span aria-hidden="true" style={ID_STYLE}>TC-B-05</span>
+<section id="TC-B-04" data-testid="TC-B-04" style={CASE_STYLE}>
+  <span aria-hidden="true" style={ID_STYLE}>TC-B-04</span>
   {/* Apenas o elemento, sem nenhuma dica do que está errado */}
   <button className="br-button primary v-token-a" type="button">Confirmar</button>
 </section>
@@ -404,7 +456,7 @@ Cada caso de teste é uma `<section>` com:
 
 ### Por que `aria-hidden` no label?
 
-Para não dar dicas ao agente. O agente usa `browser_snapshot` do Playwright, que retorna a **árvore de acessibilidade**. Com `aria-hidden="true"`, o span "TC-B-05" não aparece nessa árvore — o agente vê apenas o botão, sem saber que é o caso 5 ou que estamos testando tokens.
+Para não dar dicas ao agente. O agente usa `browser_snapshot` do Playwright, que retorna a **árvore de acessibilidade**. Com `aria-hidden="true"`, o span "TC-B-04" não aparece nessa árvore — o agente vê apenas o botão, sem saber que é o caso 4 ou que estamos testando tokens.
 
 Se deixássemos o texto visível na árvore de acessibilidade, o agente poderia "trapacear" usando o número do caso para inferir o que validar.
 
@@ -417,20 +469,32 @@ Para violações visuais (tokens), as classes de override estão em `app/src/pag
 ```css
 /* overrides.css */
 
-/* TC-B-05: off by 1 do token correto #1351b4 */
+/* TC-B-04: off by 1 do token correto #1351b4 */
 .v-token-a {
   background-color: #1352b4 !important;
   border-color: #1352b4 !important;
 }
 
-/* TC-B-06: fonte errada */
+/* TC-B-05: fonte errada */
 .v-font-a {
   font-family: Arial, sans-serif !important;
 }
 
-/* TC-B-10: radius fora dos tokens permitidos */
+/* TC-B-08: radius fora dos tokens permitidos (válidos: 0/4/8/16/500px/50%) */
 .v-radius-a {
   border-radius: 6px !important;
+}
+
+/* TC-B-10: indicador de foco suprimido — DS exige foco visível */
+.v-focus-a:focus,
+.v-focus-a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* TC-F-13: cor de borda fora dos tokens — #ff6600 não existe no DS */
+.v-border-a {
+  border-color: #ff6600 !important;
 }
 ```
 
@@ -442,7 +506,8 @@ O terceiro tab da app é a matriz de detecção — uma tabela que compara o que
 
 1. Importa `ground-truth.json` (o gabarito com detecções esperadas) — estático, compilado no bundle
 2. Busca `axe-results.json` via `fetch("/axe-results.json")` — dinâmico, do `public/`
-3. Renderiza a tabela com células coloridas
+3. Busca `agent-results.json` via `fetch("/agent-results.json")` — gerado pelo skill `evaluate-all`
+4. Renderiza a tabela com células coloridas e uma seção de métricas (TP/FP/FN/Precision/Recall/F1)
 
 ```jsx
 // app/src/pages/ResultsPage.jsx (simplificado)
@@ -452,6 +517,11 @@ useEffect(() => {
   fetch("/axe-results.json?t=" + Date.now())
     .then(r => r.json())
     .then(data => { if (data.results) setAxeRaw(data); });
+
+  // Busca resultado do agente (gerado pelo skill evaluate-all)
+  fetch("/agent-results.json?t=" + Date.now())
+    .then(r => r.json())
+    .then(data => { if (data.verdicts) setAgentRaw(data); });
 }, []);
 
 const runAxe = async () => {
@@ -461,6 +531,11 @@ const runAxe = async () => {
   fetchAxeResults();  // atualiza a tabela
 };
 ```
+
+A seção **MetricsSection** calcula e exibe para cada ferramenta:
+- TP (true positives), FP (false positives), FN (false negatives), TN (true negatives)
+- Precision, Recall, F1-score
+- Tabela por caso com a classificação de cada resultado
 
 O botão **▶ Executar axe-core** faz um `POST /api/run-axe`, que é tratado por um middleware Vite customizado em `vite.config.js`:
 
@@ -532,6 +607,40 @@ Uma skill é basicamente um sistema de prompts estruturado. Não é código exec
 
 **O campo "Detectable by linter"** é crucial para a tese — força o agente a classificar cada violação quanto à detectabilidade por ferramentas tradicionais. Isso gera os dados para a matriz de detecção.
 
+### Skill: `evaluate-all`
+
+Esta é a skill de avaliação formal — usada para gerar os dados da tese. Diferente de `validate-page` (que produz um relatório legível), `evaluate-all` percorre todos os 26 casos de teste de forma sistemática e grava o resultado num arquivo JSON estruturado.
+
+```markdown
+# Skill: evaluate-all
+
+## Steps
+
+1. **Carregar referências em paralelo**:
+   - get_design_tokens, get_emag_rules, get_page_rules, get_component_examples
+
+2. **Inspecionar a página de Botões**:
+   - browser_navigate + browser_snapshot
+   - inspect_computed_styles(url, seletor de botões)
+
+3. **Para cada TC-B-***, avaliar e decidir: detected true/false
+
+4. **Inspecionar a página de Formulários** e repetir para TC-F-*
+
+5. **Gravar saída** em results/agent-results.json:
+   {
+     "timestamp": "...",
+     "model": "claude-sonnet-4-6",
+     "verdicts": {
+       "TC-B-01": { "detected": false, "violations_found": [], "notes": "..." },
+       "TC-B-02": { "detected": true, "violations_found": ["..."], "notes": "..." },
+       ...
+     }
+   }
+```
+
+**Importante:** a skill instrui o agente a **não ler `ground-truth.json` antes de avaliar**. Isso é essencial para a validade da tese — o agente deve raciocinar a partir das evidências (DOM, estilos, tokens, e-MAG), não do gabarito.
+
 ### Por que steps paralelos?
 
 ```
@@ -546,9 +655,11 @@ Chamar em paralelo reduz o tempo total. O agente (Claude) pode fazer múltiplas 
 
 ---
 
-## 8. Componente 4 — Baseline axe-core
+## 8. Componente 4 — Scripts de Baseline e Pontuação
 
-**Localização:** `scripts/run-axe.js`
+**Localização:** `scripts/`
+
+### `run-axe.js` — Baseline axe-core
 
 Este script é o "advogado do diabo" — executa o melhor concorrente (axe-core) contra os mesmos casos de teste para medir onde o agente supera.
 
@@ -617,7 +728,50 @@ async function findTestCaseId(page, target) {
 }
 ```
 
-Apenas 2 de 18 casos com violações foram detectados pelo axe em execução padrão.
+Apenas 5 de 20 casos com violações são detectados pelo axe em execução padrão (TC-B-02, TC-B-11, TC-F-02, TC-F-09, TC-F-11).
+
+### `score-results.js` — Pontuação formal
+
+Este script calcula as métricas formais de avaliação comparando os resultados de cada ferramenta com o gabarito.
+
+```js
+// scripts/score-results.js (simplificado)
+
+function computeMetrics(cases, toolKey, actualMap) {
+  let TP = 0, FP = 0, FN = 0, TN = 0;
+
+  for (const [id, tc] of Object.entries(cases)) {
+    const expected = tc.detection[toolKey];   // gabarito: deveria detectar?
+    const actual   = actualMap[id] ?? false;  // detectou de fato?
+
+    if (expected && actual)  TP++;
+    if (!expected && actual) FP++;
+    if (expected && !actual) FN++;
+    if (!expected && !actual) TN++;
+  }
+
+  const precision = TP / (TP + FP) || 0;
+  const recall    = TP / (TP + FN) || 0;
+  const f1        = 2 * precision * recall / (precision + recall) || 0;
+  return { TP, FP, FN, TN, precision, recall, f1 };
+}
+```
+
+O script carrega `results/ground-truth.json`, `results/axe-results.json` e `results/agent-results.json`, e computa as métricas para cada ferramenta. Flags disponíveis:
+
+```bash
+cd scripts && npm run score           # sumário por ferramenta
+cd scripts && npm run score:verbose   # breakdown por caso
+cd scripts && node score-results.js --json  # saída JSON bruta
+```
+
+Saída típica:
+```
+Tool        TP  FP  FN  TN  Precision  Recall  F1
+axe          5   0  15   6    100.0%   25.0%  40.0%
+eslint        4   0  16   6    100.0%   20.0%  33.3%
+agent        20   0   0   6    100.0%  100.0% 100.0%
+```
 
 ---
 
@@ -634,9 +788,9 @@ Este arquivo define o "gabarito" — para cada caso de teste, documenta:
 - Notas explicando o raciocínio
 
 ```json
-// results/ground-truth.json (exemplo — TC-B-05)
+// results/ground-truth.json (exemplo — TC-B-04)
 {
-  "TC-B-05": {
+  "TC-B-04": {
     "description": "Cor de fundo fora do token: #1352b4 (correto: #1351b4)",
     "violations": [
       "background-color computado é #1352b4 — não é um token válido..."
@@ -669,8 +823,11 @@ Cada linha é um caso de teste. As colunas:
 - **eslint-a11y** (verde/vermelho): idem para eslint
 - **Agente** (verde): o agente deveria detectar (sempre verde para violação, por construção — é o que testamos)
 - **axe real** (verde/vermelho): o que o axe **realmente encontrou** na última execução do script
+- **Agente real** (verde/vermelho): o que o agente **realmente encontrou** na última execução de `evaluate-all`
 
 Casos em **amarelo** com badge "agente" = só o agente detecta. São o argumento central da tese.
+
+Abaixo da tabela, a **MetricsSection** exibe TP/FP/FN/TN/Precision/Recall/F1 calculados em tempo real para as três ferramentas, com breakdown por caso.
 
 ---
 
@@ -695,7 +852,8 @@ Quando você digita "validate http://localhost:3000" no Claude Code, isso aconte
    └── Chama inspect_computed_styles("http://localhost:3000") via govbr-ds MCP
        → Retorna: [
            { tagName: "BUTTON", classes: ["br-button","primary","v-token-a"],
-             computed: { backgroundColor: "rgb(19, 82, 180)", ... } },
+             computed: { backgroundColor: "rgb(19, 82, 180)", ... },
+             focusedComputed: { outline: "none", boxShadow: "none", ... } },
            ...
          ]
 
@@ -704,12 +862,16 @@ Quando você digita "validate http://localhost:3000" no Claude Code, isso aconte
    - "rgb(19, 82, 180)" → converte para hex → "#1352b4"
    - Busca "#1352b4" no hexLookup dos tokens → não encontrado
    - Busca "#1351b4" → encontrado como "color-primary-default"
-   - Conclusão: violação de token, TC-B-05
+   - Conclusão: violação de token, TC-B-04
+
+   Para o botão com classe v-focus-a:
+   - focusedComputed.outline === "none" → indica foco suprimido
+   - DS exige indicador de foco visível → violação, TC-B-10
    
    Para o formulário com botões:
    - Snapshot: [button "Confirmar" (primary)][button "Cancelar" (secondary)]
    - Regra DS: secundário vem antes do primário
-   - A ordem está invertida → violação, TC-F-08
+   - A ordem está invertida → violação, TC-F-07
 
 5. Gera relatório:
    ❌ Ordem de botões invertida
@@ -729,11 +891,11 @@ O processo todo leva tipicamente 15-30 segundos, dependendo do número de elemen
 
 ### Números
 
-| Ferramenta | Casos detectados (de 18 com violação) | Taxa de detecção |
+| Ferramenta | Casos detectados (de 20 com violação) | Taxa de detecção |
 |---|---|---|
-| axe-core (padrão) | 2 | 11% |
-| eslint-plugin-jsx-a11y | ~2-3 (estimado) | ~15% |
-| **Agente** | **18** | **100%** |
+| axe-core (padrão) | 5 | 25% |
+| eslint-plugin-jsx-a11y | 4 | 20% |
+| **Agente** | **20** | **100%** |
 
 ### Por que "100%" não é exagero
 
@@ -745,13 +907,13 @@ O argumento honesto da tese não é "o agente é perfeito" — é:
 
 ### Os casos mais importantes para a tese
 
-**TC-B-05** (token off by 1): O caso mais forte. A diferença entre `#1352b4` e `#1351b4` é invisível ao olho humano e passa em todos os linters. Só é detectável com o registro exato de tokens + `getComputedStyle`. Demonstra a necessidade do MCP server especializado.
+**TC-B-04** (token off by 1): O caso mais forte. A diferença entre `#1352b4` e `#1351b4` é invisível ao olho humano e passa em todos os linters. Só é detectável com o registro exato de tokens + `getComputedStyle`. Demonstra a necessidade do MCP server especializado.
 
 **TC-F-05** (CPF sem formato hint — e-MAG 6.5): Demonstra a necessidade do e-MAG. Axe não tem essa regra. O agente só detecta porque o `get_emag_rules` foi chamado e o agente cruzou a regra 6.5 com a ausência do `<small>` de instrução.
 
-**TC-F-08** (ordem de botões): Demonstra raciocínio composicional. Um linter avalia cada botão isoladamente e nada está errado com cada um individualmente. Só avaliando a sequência deles em conjunto se detecta a violação.
+**TC-F-07** (ordem de botões): Demonstra raciocínio composicional. Um linter avalia cada botão isoladamente e nada está errado com cada um individualmente. Só avaliando a sequência deles em conjunto se detecta a violação.
 
-**TC-B-09** (aria-label contradiz texto visível): Demonstra a profundidade das regras do axe. O axe TEM a regra (`label-content-name-mismatch`, WCAG 2.5.3) mas ela é marcada como `experimental` e excluída de execuções padrão. O agente detecta sem precisar de configuração especial.
+**TC-B-07** (aria-label contradiz texto visível): Demonstra a profundidade das regras do axe. O axe TEM a regra (`label-content-name-mismatch`, WCAG 2.5.3) mas ela é marcada como `experimental` e excluída de execuções padrão. O agente detecta sem precisar de configuração especial.
 
 ---
 
@@ -769,7 +931,7 @@ Cada validação consome tokens do modelo. Para um portal grande (centenas de co
 Os resultados dependem do modelo específico (Claude Sonnet). Um modelo diferente pode ter performance diferente.
 
 **4. Corpus pequeno**
-O corpus de teste tem 18 casos. Para avaliar com rigor estatístico, precisaria de centenas de casos, incluindo casos em "estado conforme" (sem violação) para medir falsos positivos.
+O corpus de teste tem 26 casos (20 com violação, 6 de referência conformes). Para avaliar com rigor estatístico, precisaria de centenas de casos, incluindo mais casos em "estado conforme" (sem violação) para medir falsos positivos com maior confiança estatística.
 
 **5. Design system específico**
 O servidor MCP atual conhece apenas o gov.br DS. Para outro DS, seria necessário um servidor novo ou uma forma de carregar o conhecimento do DS dinamicamente.
@@ -791,7 +953,7 @@ R: Três diferenças estruturais. Primeiro, axe-core (mesmo com todas as regras 
 
 **P: Como você garante que os resultados do agente são corretos? E os falsos positivos?**
 
-R: No corpus atual, os casos foram criados com violações conhecidas, então falsos negativos são medíveis. Para falsos positivos, seria necessário um corpus de casos conformes — isso é uma limitação atual e trabalho futuro. No experimento atual, o agente não gerou falsos positivos nos casos de referência (TC-B-01, TC-B-11, TC-F-01), mas uma avaliação rigorosa precisaria de mais casos conformes.
+R: No corpus atual, os casos foram criados com violações conhecidas, então falsos negativos são medíveis. Para falsos positivos, o corpus inclui 6 casos de referência conformes (TC-B-01, TC-B-06, TC-B-09, TC-B-13, TC-F-01, TC-F-12) — o agente não gerou falsos positivos nesses casos. Uma avaliação rigorosa precisaria de ainda mais casos conformes para confiança estatística maior.
 
 **P: O agente não poderia simplesmente inventar violações que não existem?**
 

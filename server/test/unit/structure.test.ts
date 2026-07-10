@@ -45,6 +45,21 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-2.2")).toEqual([]);
   });
 
+  // Regression: status/emphasis variants (danger, success, info, warning)
+  // exist only in button.css selectors, never in the official example HTML —
+  // the spec extraction used to miss them and flag conformant buttons.
+  it("accepts CSS-defined status variants absent from the example HTML", () => {
+    for (const variant of ["danger", "success", "info", "warning"]) {
+      const el = makeElement({
+        classes: ["br-button", variant],
+        outerHTML: `<button class="br-button ${variant}" type="button">Enviar</button>`,
+      });
+      expect(
+        checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-variant")
+      ).toEqual([]);
+    }
+  });
+
   it("flags unknown variant classes as minor review signals", () => {
     const el = makeElement({ classes: ["br-button", "primary", "botao-customizado"] });
     const findings = checkComponentStructure(page, [el], buttonSpec);

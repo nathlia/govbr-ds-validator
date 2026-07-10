@@ -94,7 +94,7 @@ export function checkComponentStructure(
         rule: {
           id: `ds-structure-${spec.name}-variant`,
           source: "govbr-ds-structure",
-          description: `Classes de variação de ${spec.rootClass} devem ser as documentadas nos exemplos oficiais (${spec.variantClasses.join(", ")}).`,
+          description: `Classes de variação de ${spec.rootClass} devem ser as documentadas nos exemplos e na folha de estilo oficiais (${spec.variantClasses.join(", ")}).`,
         },
         ...base,
         evidence: {

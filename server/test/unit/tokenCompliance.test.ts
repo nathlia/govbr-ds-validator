@@ -54,6 +54,39 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     expect(checkTokenCompliance(page, [good], registry, ["radius"])).toEqual([]);
   });
 
+  // Regression: the pill tokens are em-based (--button-radius: 100em,
+  // --surface-rounder-pill: 999em) and reach the computed style as px scaled
+  // by the element's font-size. The checker used to flag every conformant
+  // pill button (e.g. 1680px) as off-scale.
+  describe("pill radius (em tokens computed as px)", () => {
+    it("accepts the default pill baseline (1680px = 100em × 16.8px)", () => {
+      expect(checkTokenCompliance(page, [makeElement()], registry, ["radius"])).toEqual([]);
+    });
+
+    it("accepts the pill at other font sizes (1400px = 100em × 14px)", () => {
+      const el = makeElement({ computed: { borderRadius: "1400px", fontSize: "14px" } as never });
+      expect(checkTokenCompliance(page, [el], registry, ["radius"])).toEqual([]);
+    });
+
+    it("accepts the surface pill token (16783.2px = 999em × 16.8px)", () => {
+      const el = makeElement({ computed: { borderRadius: "16783.2px" } as never });
+      expect(checkTokenCompliance(page, [el], registry, ["radius"])).toEqual([]);
+    });
+
+    it("accepts the circle variant (50%)", () => {
+      const el = makeElement({ computed: { borderRadius: "50%" } as never });
+      expect(checkTokenCompliance(page, [el], registry, ["radius"])).toEqual([]);
+    });
+
+    it("still flags a large radius that matches no px token nor a pill", () => {
+      const el = makeElement({ computed: { borderRadius: "30px" } as never });
+      const findings = checkTokenCompliance(page, [el], registry, ["radius"]);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].rule.id).toBe("ds-token-radius");
+      expect(findings[0].evidence.data?.pillEmFactors).toContain(100);
+    });
+  });
+
   it("skips transparent colors entirely", () => {
     const el = makeElement({ computed: { backgroundColor: "rgba(0, 0, 0, 0)" } as never });
     expect(checkTokenCompliance(page, [el], registry, ["color"])).toEqual([]);

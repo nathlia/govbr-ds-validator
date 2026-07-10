@@ -37,7 +37,20 @@ Every case gets a verdict object:
 ### 3. Inspect forms page
 - `browser_click` on the "Formulário" tab in the nav
 - `browser_snapshot` — accessibility tree for forms
-- `inspect_computed_styles` with `selector: "input, select, textarea, button, label"` — form element styles
+- `inspect_computed_styles` with `selector: "input, select, textarea, button, label"` — form element styles (note: this tool loads the page fresh and sees the buttons tab; use it for button token checks only)
+- `browser_evaluate` to extract computed styles for form inputs directly from the live tab state:
+
+```js
+Array.from(document.querySelectorAll('input, select, textarea')).map(el => ({
+  testId: el.closest('[data-testid]')?.dataset.testid,
+  tagName: el.tagName,
+  borderColor: getComputedStyle(el).borderColor,
+  backgroundColor: getComputedStyle(el).backgroundColor,
+  outline: getComputedStyle(el).outline
+}))
+```
+
+Convert each `rgb(r,g,b)` border-color and background-color to hex and check against `hexLookup`. A value not in `hexLookup` on a DS-styled form element (`br-input`, `br-select`, etc.) is a token violation.
 
 ### 4. Evaluate each case
 
@@ -51,6 +64,7 @@ Work through each `data-testid` section. For each case apply the relevant checks
 | aria-label vs visible text | `aria-label` ≠ `textContent` on the same button |
 | label[for] ↔ input[id] | `for` attribute value not found as any input's `id` |
 | Input accessible name | `textbox` with no name in snapshot = broken label |
+| Checkbox/radio group without fieldset+legend | Multiple checkboxes or radios under the same section with no `group` role ancestor and no `<fieldset>`/`<legend>` — the group has no accessible name (e-MAG 6.2, WCAG 1.3.1) |
 
 #### Token checks (from computed styles + token reference)
 | What to check | Data source | Violation signal |
@@ -59,11 +73,13 @@ Work through each `data-testid` section. For each case apply the relevant checks
 | font-family | `computed.fontFamily` | Does not start with "Rawline" or include "Raleway" as first real font |
 | border-radius | `computed.borderRadius` | Value not in {0px, 4px, 8px, 16px, 500px+, 50%} |
 | focus outline | `focusedComputed.outline` + `focusedComputed.boxShadow` | Both are "none" or "0px" while the element has `br-button` class — focus indicator suppressed |
+| form input border-color | `browser_evaluate` computed borderColor | Value not in `hexLookup` on a DS-styled form element |
 
 #### e-MAG checks (from snapshot + e-MAG rules)
 | What to check | Violation signal |
 |---------------|-----------------|
 | Placeholder-only label | Input accessible name comes from placeholder, not a `<label>` |
+| Broken aria-labelledby | Input has `aria-labelledby` attribute but the referenced ID does not exist in the DOM — accessible name silently absent |
 | Required field programmatic | Label text has `*` but input has no `aria-required` and no `required` |
 | Format hint for complex fields | CPF/date/phone input with no hint element before it in DOM |
 | Error message linkage | `aria-invalid=true` + visible error `<p>` in DOM but no `aria-describedby` |
@@ -73,6 +89,21 @@ Work through each `data-testid` section. For each case apply the relevant checks
 | What to check | Violation signal |
 |---------------|-----------------|
 | Button order | In any form/section, primary button appears BEFORE secondary button |
+| Duplicate accessible names | Two or more buttons on the page share the same accessible name but appear in different sections/contexts — users of AT cannot distinguish them (WCAG 2.4.6) |
+
+### 4.5. Cross-element scan (run after all per-case checks)
+
+These checks require looking across multiple cases simultaneously:
+
+1. **Duplicate button names:** Collect every button accessible name visible in the snapshot. If the same name appears more than once in different `data-testid` sections, check whether the buttons serve different functions. If so, flag every affected case.
+
+2. **Broken aria-labelledby:** For any `textbox` that has an accessible name but no visible `text:` sibling in the snapshot, use `browser_evaluate` to confirm whether the name source is a broken reference:
+```js
+const el = document.querySelector('[data-testid="TC-F-XX"] input');
+const id = el.getAttribute('aria-labelledby');
+return { id, targetExists: id ? !!document.getElementById(id) : null };
+```
+If `targetExists` is `false`, the violation is a broken `aria-labelledby`, not a placeholder-only label — update the violation description accordingly.
 
 ### 5. Build and save the verdict
 
@@ -107,6 +138,8 @@ TC-B-03  ✗ detected  <div> used instead of <button>
 ## Notes for thesis validity
 
 - **Do not read `ground-truth.json` before evaluating** — verdicts must come from what you actually observe in the app, not from prior knowledge of expected results.
-- The token check for background-color: convert the computed `rgb(r, g, b)` to hex and look it up in the token reference's `hexLookup`. A value not in `hexLookup` is a violation only if it is applied to an element that is supposed to follow DS tokens (i.e., has a `br-button` class).
+- The token check for background-color: convert the computed `rgb(r, g, b)` to hex and look it up in the token reference's `hexLookup`. A value not in `hexLookup` is a violation only if it is applied to an element that is supposed to follow DS tokens (i.e., has a `br-button` class or a DS form component class).
 - For font-family: DS requires `Rawline` as the primary font. The computed value will include fallbacks — flag only if `Rawline` is completely absent from the computed font stack AND the element uses `br-button` classes.
 - For the aria-label vs visible text check: normalize both strings (trim, lowercase) before comparing.
+- For inputs with an accessible name but no visible `text:` sibling in the snapshot: always disambiguate between (a) broken `aria-labelledby` pointing to a missing ID and (b) placeholder-only label. Use `browser_evaluate` to inspect the attribute directly — the violation description must be accurate.
+- `inspect_computed_styles` always loads the page fresh at the given URL and sees the default tab (Buttons). Use `browser_evaluate` on the live page after clicking the Formulário tab to get computed styles for form inputs.

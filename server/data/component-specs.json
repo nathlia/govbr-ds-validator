@@ -2,7 +2,7 @@
   "meta": {
     "source": "@govbr-ds/core",
     "version": "3.7.0",
-    "generatedAt": "2026-07-10T19:34:20.753Z",
+    "generatedAt": "2026-07-10T20:50:14.384Z",
     "totalComponents": 36
   },
   "components": {
@@ -71,8 +71,12 @@
         "span"
       ],
       "variantClasses": [
+        "is-large",
+        "is-medium",
+        "is-small",
         "large",
-        "medium"
+        "medium",
+        "small"
       ],
       "ariaAttributes": [
         "aria-hidden",
@@ -176,14 +180,42 @@
       ],
       "variantClasses": [
         "active",
+        "auto-lg",
+        "auto-md",
+        "auto-sm",
+        "auto-xl",
         "block",
+        "block-lg",
+        "block-md",
+        "block-sm",
+        "block-xl",
         "circle",
+        "danger",
         "dark-mode",
+        "info",
+        "inverted",
+        "is-active",
+        "is-circle",
+        "is-danger",
+        "is-info",
+        "is-inverted",
+        "is-large",
+        "is-medium",
+        "is-primary",
+        "is-secondary",
+        "is-small",
+        "is-success",
+        "is-warning",
+        "is-xsmall",
         "large",
         "loading",
+        "medium",
         "primary",
         "secondary",
-        "small"
+        "small",
+        "success",
+        "warning",
+        "xsmall"
       ],
       "ariaAttributes": [
         "aria-hidden",
@@ -273,9 +305,11 @@
         "div"
       ],
       "variantClasses": [
+        "dark-mode",
         "disabled",
         "h-fixed",
-        "hover"
+        "hover",
+        "inverted"
       ],
       "ariaAttributes": [
         "aria-controls",
@@ -334,7 +368,10 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "dark-mode",
+        "inverted"
+      ],
       "ariaAttributes": [
         "aria-hidden",
         "aria-label",
@@ -414,9 +451,15 @@
         "div"
       ],
       "variantClasses": [
+        "dark-mode",
         "disabled",
         "hidden-label",
         "invalid",
+        "inverted",
+        "is-invalid",
+        "is-small",
+        "is-valid",
+        "small",
         "valid"
       ],
       "ariaAttributes": [
@@ -527,7 +570,10 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "dark-mode",
+        "inverted"
+      ],
       "ariaAttributes": [
         "aria-describedby",
         "aria-hidden",
@@ -608,6 +654,7 @@
         "span"
       ],
       "variantClasses": [
+        "content",
         "dark-mode",
         "dashed",
         "inverted",
@@ -674,7 +721,8 @@
         "footer"
       ],
       "variantClasses": [
-        "inverted"
+        "inverted",
+        "no-divider"
       ],
       "ariaAttributes": [
         "aria-hidden",
@@ -736,6 +784,7 @@
       "variantClasses": [
         "compact",
         "large",
+        "medium",
         "small"
       ],
       "ariaAttributes": [
@@ -800,11 +849,14 @@
       "variantClasses": [
         "danger",
         "dark-mode",
+        "has-icon",
         "info",
         "input-button",
         "input-highlight",
         "input-inline",
+        "inverted",
         "large",
+        "medium",
         "small",
         "success",
         "warning"
@@ -907,7 +959,28 @@
         "button",
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "active",
+        "dark-mode",
+        "focus-visible",
+        "highlight",
+        "inverted",
+        "primary-darken-01",
+        "primary-darken-02",
+        "primary-default",
+        "primary-lighten-01",
+        "primary-lighten-02",
+        "secondary-06",
+        "secondary-07",
+        "secondary-08",
+        "secondary-09",
+        "selected",
+        "support-01",
+        "support-03",
+        "support-04",
+        "support-07",
+        "support-08"
+      ],
       "ariaAttributes": [
         "aria-hidden",
         "aria-label"
@@ -980,7 +1053,8 @@
         "div"
       ],
       "variantClasses": [
-        "horizontal"
+        "horizontal",
+        "toggle"
       ],
       "ariaAttributes": [
         "aria-hidden",
@@ -1156,6 +1230,7 @@
         "active",
         "contextual",
         "large",
+        "medium",
         "push",
         "small"
       ],
@@ -1227,6 +1302,10 @@
         "danger",
         "info",
         "inverted",
+        "is-danger",
+        "is-info",
+        "is-success",
+        "is-warning",
         "success",
         "warning"
       ],
@@ -1295,7 +1374,13 @@
         "div"
       ],
       "variantClasses": [
+        "auto",
         "div",
+        "is-auto",
+        "is-large",
+        "is-medium",
+        "is-small",
+        "is-xsmall",
         "large",
         "medium",
         "small",
@@ -1358,7 +1443,9 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "close"
+      ],
       "ariaAttributes": [
         "aria-hidden",
         "aria-label"
@@ -1397,7 +1484,9 @@
       ],
       "variantClasses": [
         "dark-mode",
+        "inverted",
         "large",
+        "medium",
         "small"
       ],
       "ariaAttributes": [
@@ -1468,8 +1557,14 @@
         "div"
       ],
       "variantClasses": [
+        "dark-mode",
         "disabled",
         "invalid",
+        "inverted",
+        "is-invalid",
+        "is-small",
+        "is-valid",
+        "small",
         "valid"
       ],
       "ariaAttributes": [
@@ -1515,7 +1610,10 @@
         "div"
       ],
       "variantClasses": [
-        "foco"
+        "active",
+        "foco",
+        "inibicao",
+        "legibilidade"
       ],
       "ariaAttributes": [],
       "tokensUsed": [
@@ -1541,7 +1639,10 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "dark-mode",
+        "inverted"
+      ],
       "ariaAttributes": [
         "aria-hidden",
         "aria-label"
@@ -1757,6 +1858,7 @@
       ],
       "variantClasses": [
         "dark-mode",
+        "inverted",
         "vertical"
       ],
       "ariaAttributes": [
@@ -1857,8 +1959,10 @@
         "div"
       ],
       "variantClasses": [
+        "dark-mode",
         "disabled",
         "icon",
+        "inverted",
         "large",
         "medium",
         "right",
@@ -1938,7 +2042,12 @@
       ],
       "variantClasses": [
         "dark-mode",
+        "inverted",
+        "is-large",
+        "is-medium",
+        "is-small",
         "large",
+        "medium",
         "small"
       ],
       "ariaAttributes": [
@@ -2012,8 +2121,12 @@
         "div"
       ],
       "variantClasses": [
+        "dark-mode",
         "inverted",
-        "no-hover"
+        "large",
+        "medium",
+        "no-hover",
+        "small"
       ],
       "ariaAttributes": [
         "aria-controls",
@@ -2078,15 +2191,79 @@
       ],
       "variantClasses": [
         "count",
+        "danger",
         "disabled",
+        "highlight",
         "icon",
+        "info",
         "interaction",
         "interaction-select",
+        "is-danger",
+        "is-highlight",
+        "is-info",
+        "is-primary-darken-01",
+        "is-primary-darken-02",
+        "is-primary-default",
+        "is-primary-lighten-01",
+        "is-primary-lighten-02",
+        "is-primary-pastel-01",
+        "is-primary-pastel-02",
+        "is-secondary-01",
+        "is-secondary-02",
+        "is-secondary-03",
+        "is-secondary-04",
+        "is-secondary-05",
+        "is-secondary-06",
+        "is-secondary-07",
+        "is-secondary-08",
+        "is-secondary-09",
+        "is-success",
+        "is-support-01",
+        "is-support-02",
+        "is-support-03",
+        "is-support-04",
+        "is-support-05",
+        "is-support-06",
+        "is-support-07",
+        "is-support-08",
+        "is-support-09",
+        "is-support-10",
+        "is-support-11",
+        "is-warning",
         "large",
         "medium",
+        "primary-darken-01",
+        "primary-darken-02",
+        "primary-default",
+        "primary-lighten-01",
+        "primary-lighten-02",
+        "primary-pastel-01",
+        "primary-pastel-02",
+        "secondary-01",
+        "secondary-02",
+        "secondary-03",
+        "secondary-04",
+        "secondary-05",
+        "secondary-06",
+        "secondary-07",
+        "secondary-08",
+        "secondary-09",
         "selected",
         "small",
-        "status"
+        "status",
+        "success",
+        "support-01",
+        "support-02",
+        "support-03",
+        "support-04",
+        "support-05",
+        "support-06",
+        "support-07",
+        "support-08",
+        "support-09",
+        "support-10",
+        "support-11",
+        "warning"
       ],
       "ariaAttributes": [
         "aria-describedby",
@@ -2202,6 +2379,7 @@
         "danger",
         "dark-mode",
         "info",
+        "inverted",
         "large",
         "medium",
         "small",
@@ -2342,7 +2520,13 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "danger",
+        "dragging",
+        "info",
+        "success",
+        "warning"
+      ],
       "ariaAttributes": [
         "aria-hidden",
         "aria-label"
@@ -2403,7 +2587,10 @@
       "tags": [
         "div"
       ],
-      "variantClasses": [],
+      "variantClasses": [
+        "dark-mode",
+        "inverted"
+      ],
       "ariaAttributes": [
         "aria-controls",
         "aria-description",

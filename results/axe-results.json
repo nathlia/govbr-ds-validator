@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-04-16T07:52:32.667Z",
+  "timestamp": "2026-06-01T14:17:55.807Z",
   "tool": "axe-core via @axe-core/playwright",
   "appUrl": "http://localhost:3000",
   "results": {
     "buttons": {
-      "passes": 24,
+      "passes": 31,
       "violationCount": 1,
       "byCaseId": {
         "TC-B-02": [
@@ -24,7 +24,7 @@
           "nodes": [
             {
               "target": [
-                "#TC-B-02 > .circle.br-button[type=\"button\"]"
+                "#TC-B-02 > .circle[type=\"button\"]"
               ],
               "testCaseId": "TC-B-02"
             }
@@ -34,8 +34,16 @@
     },
     "forms": {
       "passes": 28,
-      "violationCount": 1,
+      "violationCount": 2,
       "byCaseId": {
+        "TC-F-12": [
+          {
+            "rule": "heading-order",
+            "impact": "moderate",
+            "description": "Ensure the order of headings is semantically correct",
+            "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/heading-order?application=playwright"
+          }
+        ],
         "TC-F-02": [
           {
             "rule": "label",
@@ -46,6 +54,19 @@
         ]
       },
       "raw": [
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "description": "Ensure the order of headings is semantically correct",
+          "nodes": [
+            {
+              "target": [
+                "#f12-section-label"
+              ],
+              "testCaseId": "TC-F-12"
+            }
+          ]
+        },
         {
           "id": "label",
           "impact": "critical",

@@ -30,6 +30,15 @@ function tokenListLabel(tokens: string[]): string {
   return tokens.slice(0, 3).join(", ") + (tokens.length > 3 ? ", …" : "");
 }
 
+/** Follow var(--x) chains in the raw token map (e.g. --radius: var(--surface-rounder-pill)). */
+function resolveVar(value: string, all: Record<string, string>, depth = 0): string {
+  if (depth > 5) return value;
+  const m = value.trim().match(/^var\((--[\w-]+)\)$/);
+  if (!m) return value;
+  const next = all[m[1]];
+  return next ? resolveVar(next, all, depth + 1) : value;
+}
+
 export function checkTokenCompliance(
   page: { url: string },
   elements: ElementEvidence[],
@@ -50,13 +59,27 @@ export function checkTokenCompliance(
     if (px === null) return true; // non-px (%, em) — not comparable here
     return fontSizePxScale.some((s) => Math.abs(s - px) < 0.5);
   };
-  const radii = new Set(
-    Object.entries(all)
-      .filter(([name]) => name.includes("rounder"))
-      .map(([, v]) => v)
-  );
-  radii.add("0px");
-  radii.add("50%"); // circle variant
+  // Radius tokens: px values compare directly; em values (pill: --button-radius
+  // 100em, --surface-rounder-pill 999em) reach the computed style multiplied by
+  // the element's font-size, so they must be converted per element.
+  const radiusPxScale = new Set<number>([0]);
+  const radiusEmFactors = new Set<number>();
+  for (const [name, raw] of Object.entries(all)) {
+    if (!/rounder|radius/.test(name)) continue;
+    const v = resolveVar(raw, all).trim();
+    if (v === "0") {
+      radiusPxScale.add(0);
+      continue;
+    }
+    const px = parsePx(v);
+    if (px !== null) {
+      radiusPxScale.add(px);
+      continue;
+    }
+    const em = v.match(/^([\d.]+)em$/);
+    if (em) radiusEmFactors.add(parseFloat(em[1]));
+  }
+  const radiusScaleLabel = `${[...radiusPxScale].sort((a, b) => a - b).map((v) => `${v}px`).join(", ")}, 50% (circle) ou pill (${[...radiusEmFactors].sort((a, b) => a - b).map((f) => `${f}em`).join("/")} × font-size)`;
   const spacingBase = parsePx(registry.semantic["spacing-base"]?.value ?? "8px") ?? 8;
 
   for (const el of elements) {
@@ -154,28 +177,40 @@ export function checkTokenCompliance(
 
     if (checks.includes("radius")) {
       const radius = el.computed.borderRadius;
-      // Only single-value radii are comparable against the discrete scale
-      if (radius && !radius.includes(" ") && !radii.has(radius)) {
+      // Only single-value radii are comparable against the discrete scale;
+      // 50% is the circle variant.
+      if (radius && !radius.includes(" ") && radius !== "50%") {
         const px = parsePx(radius);
         if (px !== null && px > 0) {
-          findings.push({
-            id: nextFindingId(),
-            rule: {
-              id: "ds-token-radius",
-              source: "govbr-ds-token",
-              description: "Cantos arredondados devem usar os tokens de superfície (--surface-rounder-sm/md/lg).",
-            },
-            ...base,
-            evidence: {
-              observed: `border-radius: ${radius} fora da escala do DS`,
-              expected: `Um de: ${[...radii].join(", ")}`,
-              data: { property: "border-radius", observed: radius, allowedScale: [...radii] },
-            },
-            severity: "minor",
-            nature: "syntactic",
-            mode: "display",
-            pathway: "deterministic",
-          });
+          const fontPx = parsePx(el.computed.fontSize);
+          const onPxScale = [...radiusPxScale].some((r) => Math.abs(r - px) < 0.5);
+          const isPill =
+            fontPx !== null && [...radiusEmFactors].some((f) => Math.abs(f * fontPx - px) < 1);
+          if (!onPxScale && !isPill) {
+            findings.push({
+              id: nextFindingId(),
+              rule: {
+                id: "ds-token-radius",
+                source: "govbr-ds-token",
+                description: "Cantos arredondados devem usar os tokens de superfície (--surface-rounder-sm/md/lg) ou o pill (--button-radius/--surface-rounder-pill).",
+              },
+              ...base,
+              evidence: {
+                observed: `border-radius: ${radius} fora da escala do DS`,
+                expected: `Um de: ${radiusScaleLabel}`,
+                data: {
+                  property: "border-radius",
+                  observed: radius,
+                  allowedPxScale: [...radiusPxScale].sort((a, b) => a - b),
+                  pillEmFactors: [...radiusEmFactors].sort((a, b) => a - b),
+                },
+              },
+              severity: "minor",
+              nature: "syntactic",
+              mode: "display",
+              pathway: "deterministic",
+            });
+          }
         }
       }
     }

@@ -31,7 +31,9 @@ export function makeElement(overrides: Partial<ElementEvidence> = {}): ElementEv
       fontSize: "16.8px",
       fontWeight: "600",
       lineHeight: "normal",
-      borderRadius: "100em",
+      // Browsers report the pill radius (--button-radius: 100em) as computed
+      // px relative to font-size — never as "100em". 100em × 16.8px = 1680px.
+      borderRadius: "1680px",
       borderColor: "rgba(0, 0, 0, 0)",
       border: "0px none",
       padding: "0px 24px",

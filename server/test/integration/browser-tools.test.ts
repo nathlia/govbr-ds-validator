@@ -20,7 +20,14 @@ import { closeBrowser } from "../../src/evidence/browser.js";
  *   V3  .br-button as <a>     (#link-as-button)                       → check_component_structure
  *   V4  icon-only button without aria-label (#btn-icon-only)          → check_component_structure + axe (button-name)
  *   V5  <html> without lang                                           → run_axe_scan (html-has-lang → e-MAG 3.1)
- * Compliant twin: #btn-compliant uses the real DS primary + Rawline.
+ *   V6  #btn-bad-radius       border-radius 6px (off the DS scale)    → check_token_compliance
+ * Compliant twins (must produce ZERO findings across ALL checks):
+ *   #btn-compliant  real DS primary + Rawline + the pill radius (100em,
+ *                   computed by the browser as px × font-size — regression
+ *                   guard for the em→px pill false positive)
+ *   #btn-danger     status variant defined only in button.css, not in the
+ *                   official example HTML — regression guard for the variant
+ *                   extraction gap
  */
 const FIXTURE_HTML = `<!DOCTYPE html>
 <html>
@@ -28,8 +35,10 @@ const FIXTURE_HTML = `<!DOCTYPE html>
 <style>
   .br-button { border: 0; border-radius: 100em; padding: 0 24px; height: 40px; cursor: pointer; }
   #btn-compliant { background-color: #1351b4; color: #ffffff; font-family: Rawline, sans-serif; font-size: 16.8px; }
+  #btn-danger { background-color: #e52207; color: #ffffff; font-family: Rawline, sans-serif; font-size: 16.8px; }
   #btn-arbitrary-color { background-color: #ff5733; color: #ffffff; font-family: Rawline, sans-serif; font-size: 16.8px; }
   #btn-wrong-font { background-color: #1351b4; color: #ffffff; font-family: "Comic Sans MS", cursive; font-size: 16.8px; }
+  #btn-bad-radius { background-color: #ffffff; color: #1351b4; border: 1px solid #1351b4; border-radius: 6px; font-family: Rawline, sans-serif; font-size: 16.8px; }
   #link-as-button { background-color: #1351b4; color: #ffffff; font-family: Rawline, sans-serif; font-size: 16.8px; text-decoration: none; display: inline-block; line-height: 40px; }
   #btn-icon-only { background-color: #1351b4; color: #ffffff; font-family: Rawline, sans-serif; font-size: 16.8px; width: 40px; padding: 0; }
 </style>
@@ -38,8 +47,10 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   <main>
     <h1 style="font-family: Rawline, sans-serif;">Página de teste</h1>
     <button id="btn-compliant" class="br-button primary" type="button">Conforme</button>
+    <button id="btn-danger" class="br-button danger" type="button">Excluir conta</button>
     <button id="btn-arbitrary-color" class="br-button primary" type="button">Cor arbitrária</button>
     <button id="btn-wrong-font" class="br-button primary" type="button">Fonte errada</button>
+    <button id="btn-bad-radius" class="br-button secondary" type="button">Raio errado</button>
     <a id="link-as-button" class="br-button primary" href="#">Sou um link</a>
     <button id="btn-icon-only" class="br-button circle primary" type="button"><svg width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg></button>
   </main>
@@ -90,16 +101,20 @@ describe("inspect_computed_styles", () => {
   });
 });
 
-describe("check_token_compliance (V1, V2)", () => {
-  it("flags exactly the injected token violations, not the compliant twin", async () => {
+describe("check_token_compliance (V1, V2, V6)", () => {
+  it("flags exactly the injected token violations, nothing on the compliant twins (ALL checks)", async () => {
+    // Deliberately no `checks` filter: the compliant twins must survive every
+    // check, including radius — the em-based pill (100em → computed px) used
+    // to be a systematic false positive here.
     const res = await client.callTool({
       name: "check_token_compliance",
-      arguments: { url: baseUrl, selector: ".br-button", checks: ["color", "font"] },
+      arguments: { url: baseUrl, selector: ".br-button" },
     });
     const data = JSON.parse(textOf(res));
 
     const byLocator = (loc: string) => data.findings.filter((f: { element: { locator: string } }) => f.element.locator === loc);
     expect(byLocator("#btn-compliant")).toEqual([]);
+    expect(byLocator("#btn-danger")).toEqual([]);
 
     const colorFindings = byLocator("#btn-arbitrary-color");
     expect(colorFindings.some((f: { rule: { id: string } }) => f.rule.id === "ds-token-color")).toBe(true);
@@ -110,6 +125,16 @@ describe("check_token_compliance (V1, V2)", () => {
     expect(
       byLocator("#btn-wrong-font").some((f: { rule: { id: string } }) => f.rule.id === "ds-token-font-family")
     ).toBe(true);
+
+    // V6: the off-scale radius is flagged — and it is the ONLY finding there
+    const radiusFindings = byLocator("#btn-bad-radius");
+    expect(radiusFindings.map((f: { rule: { id: string } }) => f.rule.id)).toEqual(["ds-token-radius"]);
+    expect(radiusFindings[0].evidence.data.observed).toBe("6px");
+
+    // No pill false positives anywhere: every ds-token-radius finding on this
+    // page must be the injected 6px one
+    const allRadius = data.findings.filter((f: { rule: { id: string } }) => f.rule.id === "ds-token-radius");
+    expect(allRadius.map((f: { element: { locator: string } }) => f.element.locator)).toEqual(["#btn-bad-radius"]);
   });
 });
 
@@ -125,8 +150,10 @@ describe("check_component_structure (V3, V4)", () => {
     const ruleIds = data.findings.map((f: { rule: { id: string }; element: { locator: string } }) => `${f.rule.id}@${f.element.locator}`);
     expect(ruleIds).toContain("ds-structure-button-tag@#link-as-button");
     expect(ruleIds).toContain("emag-2.2@#btn-icon-only");
-    // The compliant twin produces nothing
+    // The compliant twins produce nothing — including the danger status
+    // variant, which only exists in button.css (not in the example HTML)
     expect(data.findings.filter((f: { element: { locator: string } }) => f.element.locator === "#btn-compliant")).toEqual([]);
+    expect(data.findings.filter((f: { element: { locator: string } }) => f.element.locator === "#btn-danger")).toEqual([]);
   });
 });
 

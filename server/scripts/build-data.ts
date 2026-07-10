@@ -213,20 +213,25 @@ function buildComponentSpecs(): void {
     const corpus = examplesHtml + "\n" + examples.map((e) => e.html).join("\n");
     const roots = extractRootElements(corpus, rootClass);
 
+    const cssPath = join(dir, `${name}.css`);
+    const css = existsSync(cssPath) ? readFileSync(cssPath, "utf8") : "";
+
     const tags = [...new Set(roots.map((r) => r.tag))].sort();
     // Drop spacing/background utility classes — they are demo scaffolding, not component variants
     const utilityClass = /^(?:[mp][trblxy]?-(?:n?\d+|auto)|bg-[\w-]+|text-[\w-]+|d-[\w-]+|col(?:-[\w-]+)?|row|h\d)$/;
+    // Variants also live in the component's own stylesheet: status/emphasis
+    // classes like .br-button.danger never appear in the example HTML.
+    const cssVariantSelector = new RegExp(`\\.${rootClass}((?:\\.[a-zA-Z][\\w-]*)+)`, "g");
+    const cssVariants = [...css.matchAll(cssVariantSelector)].flatMap((m) => m[1].split(".").filter(Boolean));
     const variantClasses = [
-      ...new Set(roots.flatMap((r) => r.classes).filter((c) => c !== rootClass && !utilityClass.test(c))),
+      ...new Set([
+        ...roots.flatMap((r) => r.classes).filter((c) => c !== rootClass && !utilityClass.test(c)),
+        ...cssVariants,
+      ]),
     ].sort();
     const ariaAttributes = [...new Set([...corpus.matchAll(/\b(aria-[\w-]+)=/g)].map((m) => m[1]))].sort();
 
-    let tokensUsed: string[] = [];
-    const cssPath = join(dir, `${name}.css`);
-    if (existsSync(cssPath)) {
-      const css = readFileSync(cssPath, "utf8");
-      tokensUsed = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]))].sort();
-    }
+    const tokensUsed = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]))].sort();
 
     specs[name] = { name, rootClass, tags, variantClasses, ariaAttributes, tokensUsed, examples };
   }
