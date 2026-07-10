@@ -1,0 +1,128 @@
+/**
+ * D2 — Finding schema.
+ *
+ * Every validation result in the framework — deterministic checker output,
+ * axe-core findings, agent judgments, verified heuristic findings — is
+ * expressed as a Finding. The schema carries the triple proven sufficient to
+ * ground remediation guidance (huang2024access, li2025portal):
+ *
+ *   observed evidence + violated rule (id/source) + expected behavior
+ *
+ * plus severity, element locator, the two classification axes used for
+ * result slicing in the evaluation (oyelayo2026: semantic × syntactic ×
+ * layout; zhao2024gtarena: display × interaction), the detection pathway
+ * (wang2025sgcr dual-pathway), and an optional reasoning trace (fan2023 —
+ * auditability as Oracle Problem mitigation).
+ */
+import { z } from "zod";
+
+/** Where the violated rule comes from. */
+export const RuleSourceSchema = z.enum([
+  "govbr-ds-token", // design token registry parsed from @govbr-ds/core
+  "govbr-ds-structure", // canonical component structure from @govbr-ds/core examples
+  "govbr-ds-page", // page-level structural guidelines from the official docs
+  "emag", // e-MAG 3.1 — Brazilian government accessibility model
+  "wcag", // WCAG 2.2 success criteria
+  "axe-core", // axe-core rule (deterministic accessibility pass)
+]);
+export type RuleSource = z.infer<typeof RuleSourceSchema>;
+
+export const SeveritySchema = z.enum(["critical", "serious", "moderate", "minor"]);
+export type Severity = z.infer<typeof SeveritySchema>;
+
+/**
+ * Violation nature (oyelayo2026). Determines which half of the hybrid
+ * architecture is expected to detect it:
+ *   syntactic — exact-value mismatch (token values, required classes/attrs);
+ *               deterministic code territory (LLM F1 0.48 on layout).
+ *   semantic  — contextual correctness (right token for the context, ARIA
+ *               correct for the role); LLM territory (F1 0.83).
+ *   layout    — spatial/visual arrangement.
+ */
+export const NatureSchema = z.enum(["syntactic", "semantic", "layout"]);
+export type Nature = z.infer<typeof NatureSchema>;
+
+/** Interaction mode (zhao2024gtarena): visible at rest vs. only under interaction. */
+export const ModeSchema = z.enum(["display", "interaction"]);
+export type Mode = z.infer<typeof ModeSchema>;
+
+/**
+ * Detection pathway (wang2025sgcr dual-pathway):
+ *   deterministic — produced by the syntactic checker layer (B1/B2), no LLM.
+ *   explicit      — agent judgment against a predefined rule fed to it.
+ *   heuristic     — agent-initiated finding; MUST pass the verification gate
+ *                   (verify_finding) before entering a report.
+ */
+export const PathwaySchema = z.enum(["deterministic", "explicit", "heuristic"]);
+export type Pathway = z.infer<typeof PathwaySchema>;
+
+/** C3 verification gate verdicts. */
+export const VerdictSchema = z.enum(["confirmed", "rejected", "unverifiable"]);
+export type Verdict = z.infer<typeof VerdictSchema>;
+
+export const RuleRefSchema = z.object({
+  id: z
+    .string()
+    .describe("Rule identifier, e.g. 'emag-3.5', 'token-color', 'br-button-structure', 'color-contrast' (axe)"),
+  source: RuleSourceSchema,
+  description: z.string().describe("What the rule requires, quoted or paraphrased from the source"),
+  wcag: z.string().optional().describe("Related WCAG success criterion, e.g. '1.4.3'"),
+});
+export type RuleRef = z.infer<typeof RuleRefSchema>;
+
+export const ElementRefSchema = z.object({
+  locator: z.string().describe("CSS selector or Playwright locator uniquely identifying the element"),
+  snippet: z.string().optional().describe("outerHTML excerpt (truncated) of the offending element"),
+  page: z.string().describe("URL of the page the element was found on"),
+});
+export type ElementRef = z.infer<typeof ElementRefSchema>;
+
+export const EvidenceSchema = z.object({
+  observed: z.string().describe("What was actually found (computed value, attribute, structure)"),
+  expected: z.string().describe("What the rule requires instead"),
+  data: z
+    .record(z.unknown())
+    .optional()
+    .describe("Machine-readable supporting values, e.g. { observedHex, expectedToken }"),
+});
+export type Evidence = z.infer<typeof EvidenceSchema>;
+
+export const VerificationSchema = z.object({
+  verdict: VerdictSchema,
+  verifiedBy: z.string().describe("Which oracle check produced the verdict, e.g. 'token-registry', 'emag-rule-index'"),
+  detail: z.string().optional(),
+});
+export type Verification = z.infer<typeof VerificationSchema>;
+
+export const FindingSchema = z.object({
+  id: z.string().describe("Stable finding id, e.g. 'F-001'"),
+  rule: RuleRefSchema,
+  element: ElementRefSchema,
+  evidence: EvidenceSchema,
+  severity: SeveritySchema,
+  nature: NatureSchema,
+  mode: ModeSchema,
+  pathway: PathwaySchema,
+  verification: VerificationSchema.optional().describe("Present for heuristic findings that passed the gate"),
+  trace: z
+    .string()
+    .optional()
+    .describe("Reasoning trace: why this was judged a violation (auditable, persisted per finding)"),
+});
+export type Finding = z.infer<typeof FindingSchema>;
+
+/** Raw ZodRawShape variants for MCP registerTool input/output schemas. */
+export const FindingShape = FindingSchema.shape;
+
+let counter = 0;
+
+/** Sequential finding ids within a server process. */
+export function nextFindingId(): string {
+  counter += 1;
+  return `F-${String(counter).padStart(3, "0")}`;
+}
+
+/** Reset the counter (tests only). */
+export function resetFindingIds(): void {
+  counter = 0;
+}
