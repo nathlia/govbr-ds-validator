@@ -56,7 +56,7 @@ Supersedes the TCC 1 proof of concept in `../mcp-server` (kept for reference).
 npm install
 npx playwright install chromium   # once
 npm run build:data                # regenerate data/ after upgrading @govbr-ds/core
-npm test                          # 52 tests: unit + in-memory MCP integration + live browser e2e
+npm test                          # 58 tests: unit + in-memory MCP integration + live browser e2e
 npm run build                     # tsc → dist/
 ```
 
