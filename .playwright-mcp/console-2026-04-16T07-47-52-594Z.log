@@ -1,0 +1,6 @@
+[     187ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=6a8e0f89:20100
+[     248ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[  890391ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/pages/ResultsPage.jsx?t=1776326562921:0
+[  890393ms] [ERROR] [hmr] Failed to reload /src/pages/ResultsPage.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:175
+[  903196ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/pages/ResultsPage.jsx?t=1776326575761:0
+[  903196ms] [ERROR] [hmr] Failed to reload /src/pages/ResultsPage.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:175

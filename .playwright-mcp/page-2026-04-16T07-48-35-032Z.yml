@@ -1,0 +1,74 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]: gov.br DS Validator PoC
+    - button "Botões" [ref=e5] [cursor=pointer]
+    - button "Formulário" [active] [ref=e6] [cursor=pointer]
+    - button "Matriz de Detecção" [ref=e7] [cursor=pointer]
+  - main [ref=e39]:
+    - heading "Formulários — Casos de Teste" [level=1] [ref=e40]
+    - generic [ref=e41]:
+      - generic [ref=e42]: TC-F-01
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - text: Nome completo
+          - textbox "Nome completo" [ref=e45]:
+            - /placeholder: Digite seu nome
+        - generic [ref=e46]:
+          - text: CPF
+          - generic [ref=e47]: "Formato: 000.000.000-00"
+          - textbox "CPF" [ref=e48]:
+            - /placeholder: 000.000.000-00
+        - generic [ref=e49]:
+          - button "Cancelar" [ref=e50] [cursor=pointer]
+          - button "Confirmar cadastro" [ref=e51] [cursor=pointer]
+    - generic [ref=e52]:
+      - generic [ref=e53]: TC-F-02
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - text: Nome de usuário
+          - textbox [ref=e56]
+        - button "Entrar" [ref=e57] [cursor=pointer]
+    - generic [ref=e58]:
+      - generic [ref=e59]: TC-F-03
+      - generic [ref=e60]:
+        - textbox "E-mail" [ref=e62]
+        - button "Enviar" [ref=e63] [cursor=pointer]
+    - generic [ref=e64]:
+      - generic [ref=e65]: TC-F-04
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - text: Nome *
+          - textbox "Nome *" [ref=e68]
+        - button "Continuar" [ref=e69] [cursor=pointer]
+    - generic [ref=e70]:
+      - generic [ref=e71]: TC-F-05
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - text: CPF
+          - textbox "CPF" [ref=e74]
+        - button "Salvar" [ref=e75] [cursor=pointer]
+    - generic [ref=e76]:
+      - generic [ref=e77]: TC-F-06
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - text: CPF
+          - textbox "CPF" [ref=e80]: "123"
+        - paragraph [ref=e81]: CPF inválido. Verifique o número digitado.
+        - button "Salvar" [ref=e82] [cursor=pointer]
+    - generic [ref=e83]:
+      - generic [ref=e84]: TC-F-07
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - text: Nome completo
+          - textbox "Nome completo" [ref=e87]
+        - generic [ref=e88]:
+          - button "Confirmar" [ref=e89] [cursor=pointer]
+          - button "Cancelar" [ref=e90] [cursor=pointer]
+    - generic [ref=e91]:
+      - generic [ref=e92]: TC-F-08
+      - generic [ref=e93]:
+        - combobox "Estado" [ref=e95]:
+          - option "Selecione um estado" [selected]
+          - option "São Paulo"
+          - option "Rio de Janeiro"
+        - button "Confirmar" [ref=e96] [cursor=pointer]
