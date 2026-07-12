@@ -1,0 +1,190 @@
+{
+  "name": "message",
+  "canonicalUrl": "https://www.gov.br/ds/components/message",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 3
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-message-088613b94e1c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "message",
+      "title": "Evitar mensagens longas",
+      "originalText": "É importante evitar textos de mensagens muito longos, que proporcionem muitas quebras de linha.",
+      "normalizedRule": "Evite textos excessivamente longos e com muitas quebras de linha em Message.",
+      "force": "discouraged",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Texto conciso.",
+        "Quantidade limitada de quebras de linha."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/message?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Message",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "993fe75fcade8926eaf7bef613c2c81e2f29c2a62cf1b80d3182a504132a93c9",
+        "retrievalEvidence": "turn554226search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-message-188aad85588b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "usage",
+      "component": "message",
+      "title": "Evitar múltiplas Messages padrão",
+      "originalText": "Deve-se evitar o uso de múltiplas Mensagens do Tipo Padrão.",
+      "normalizedRule": "Evite exibir múltiplas Messages do tipo Padrão simultaneamente.",
+      "force": "discouraged",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Número reduzido de Messages padrão simultâneas."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/message?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Message",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "506f32bcf847870b35407aa9c9c92a7436f5247bf986e1b2e235dcb6e966520f",
+        "retrievalEvidence": "turn554226search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-message-66b01a712e67",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "anatomy",
+      "component": "message",
+      "title": "Posicionamento dos ícones da Message",
+      "originalText": "Os ícones de função semântica devem ser posicionados à esquerda na Superfície do Message, enquanto o Botão Fechar, deve ser posicionado no topo e à direita.",
+      "normalizedRule": "Posicione o ícone semântico à esquerda e o botão Fechar no topo à direita da Message.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Ícone semântico no lado esquerdo.",
+        "Botão Fechar no topo direito."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/message?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Message",
+        "tab": "designer",
+        "section": "Anatomia",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "9941371aac03f57fc52f81eadf6506058ae3c79a09766e86a8de17ceb13da998",
+        "retrievalEvidence": "turn624744search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-message-770d2a04a8b1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "message",
+      "title": "Estrutura exemplificada com .br-message",
+      "originalText": "Os exemplos oficiais de message no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-message.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-message como referência estrutural ao comparar a implementação com os exemplos oficiais de message.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-message."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/message/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "13c859f4f8a81750073b0becc6ca4d2dd920a54150df352a0d457439fb07fb69"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 3,
+    "canonicalClassCandidate": "br-message",
+    "structureFile": "normalized/examples/html/message.json"
+  }
+}

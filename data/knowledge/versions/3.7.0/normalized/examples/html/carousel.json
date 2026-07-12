@@ -1,0 +1,499 @@
+{
+  "component": "carousel",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 6,
+  "canonicalClassCandidate": "br-carousel",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 12
+    },
+    {
+      "class": "br-carousel",
+      "occurrences": 6
+    },
+    {
+      "class": "br-step",
+      "occurrences": 6
+    }
+  ],
+  "tags": {
+    "div": 138,
+    "button": 42,
+    "i": 12,
+    "nav": 6,
+    "span": 30
+  },
+  "classes": {
+    "row": 6,
+    "col-sm-12": 6,
+    "col-md-8": 6,
+    "br-carousel": 6,
+    "carousel-button": 12,
+    "br-button": 12,
+    "carousel-btn-prev": 6,
+    "terciary": 12,
+    "circle": 12,
+    "fas": 12,
+    "fa-chevron-left": 6,
+    "carousel-stage": 6,
+    "carousel-page": 30,
+    "carousel-content": 30,
+    "bg-blue-10": 6,
+    "h3": 30,
+    "carousel-title": 30,
+    "bg-violet-warm-10": 6,
+    "bg-yellow-5": 6,
+    "bg-green-cool-10": 6,
+    "bg-orange-vivid-10": 6,
+    "carousel-btn-next": 6,
+    "fa-chevron-right": 6,
+    "carousel-step": 6,
+    "br-step": 6,
+    "step-progress": 6,
+    "step-progress-btn": 30,
+    "step-info": 30
+  },
+  "ariaAttributes": {
+    "aria-label": 24,
+    "aria-roledescription": 36,
+    "aria-hidden": 12,
+    "aria-live": 30,
+    "aria-orientation": 6,
+    "aria-posinset": 30,
+    "aria-setsize": 30
+  },
+  "roles": {
+    "group": 30,
+    "none": 6,
+    "listbox": 6,
+    "option": 30
+  },
+  "dataAttributes": {
+    "data-circular": 1,
+    "data-initial": 6,
+    "data-type": 6,
+    "data-stage": 3,
+    "data-mobile-nav": 3
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 42
+  },
+  "examples": [
+    {
+      "file": "carousel-circular.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-circular.html",
+      "sha256": "0c6c296697a230efae2c74ce9c1e023aad545be300abd695c7237e930d776df3",
+      "byteSize": 3057,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-circular": 1,
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "carousel-hibh.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-hibh.html",
+      "sha256": "546c5500c9695d0bc1c4817779faf409dc0b229d92c7782edbcd14c67c43a677",
+      "byteSize": 3073,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-stage": 1,
+        "data-mobile-nav": 1,
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "carousel-hibw.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-hibw.html",
+      "sha256": "4b3e3f7caafbb3b10c302ee1934046e45ddb4713051ccb058fdb4d70942a2ded",
+      "byteSize": 3073,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-stage": 1,
+        "data-mobile-nav": 1,
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "carousel-in.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-in.html",
+      "sha256": "f83627ecf1a28eb0af76e5bdaf23c80b5e5da1068fb4c5887b363675f1b28c7a",
+      "byteSize": 3071,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-stage": 1,
+        "data-mobile-nav": 1,
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "carousel-padrao.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-padrao.html",
+      "sha256": "019c0d73f439f2bb34cb8d14273422e41e2f5ecc31fad2374711a7af98f834bf",
+      "byteSize": 3036,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "carousel-text.html",
+      "relativePackagePath": "dist/components/carousel/examples/carousel-text.html",
+      "sha256": "5e29f4053a63aed5f8f309bd53d84e47dad17373ad6e40d4f728bcbc4f876176",
+      "byteSize": 3034,
+      "tags": {
+        "div": 23,
+        "button": 7,
+        "i": 2,
+        "nav": 1,
+        "span": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-12": 1,
+        "col-md-8": 1,
+        "br-carousel": 1,
+        "carousel-button": 2,
+        "br-button": 2,
+        "carousel-btn-prev": 1,
+        "terciary": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-chevron-left": 1,
+        "carousel-stage": 1,
+        "carousel-page": 5,
+        "carousel-content": 5,
+        "bg-blue-10": 1,
+        "h3": 5,
+        "carousel-title": 5,
+        "bg-violet-warm-10": 1,
+        "bg-yellow-5": 1,
+        "bg-green-cool-10": 1,
+        "bg-orange-vivid-10": 1,
+        "carousel-btn-next": 1,
+        "fa-chevron-right": 1,
+        "carousel-step": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-label": 4,
+        "aria-roledescription": 6,
+        "aria-hidden": 2,
+        "aria-live": 5,
+        "aria-orientation": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "group": 5,
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-initial": 1,
+        "data-type": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

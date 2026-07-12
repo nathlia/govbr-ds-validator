@@ -1,0 +1,335 @@
+{
+  "component": "card",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 5,
+  "canonicalClassCandidate": "br-card",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 14
+    },
+    {
+      "class": "br-card",
+      "occurrences": 8
+    },
+    {
+      "class": "br-avatar",
+      "occurrences": 4
+    },
+    {
+      "class": "br-item",
+      "occurrences": 3
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 2
+    },
+    {
+      "class": "br-list",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 78,
+    "span": 10,
+    "img": 5,
+    "button": 14,
+    "i": 14,
+    "p": 11
+  },
+  "classes": {
+    "col-sm-6": 5,
+    "col-md-4": 5,
+    "col-lg-3": 5,
+    "br-card": 8,
+    "card-header": 4,
+    "d-flex": 7,
+    "br-avatar": 4,
+    "mt-1": 4,
+    "content": 4,
+    "ml-3": 4,
+    "text-weight-semi-bold": 4,
+    "text-up-02": 4,
+    "ml-auto": 7,
+    "br-button": 14,
+    "circle": 11,
+    "fas": 14,
+    "fa-ellipsis-v": 4,
+    "card-content": 8,
+    "card-footer": 4,
+    "text-right": 1,
+    "fa-chevron-down": 1,
+    "br-list": 1,
+    "mt-3": 1,
+    "br-item": 3,
+    "row": 5,
+    "col-auto": 3,
+    "fa-heartbeat": 3,
+    "col": 3,
+    "m-0": 3,
+    "br-divider": 2,
+    "disabled": 1,
+    "fa-heart": 3,
+    "fa-share-alt": 3,
+    "col-md": 3,
+    "hover": 3,
+    "h-fixed": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 11,
+    "aria-hidden": 14,
+    "aria-controls": 1,
+    "aria-expanded": 1
+  },
+  "roles": {},
+  "dataAttributes": {
+    "data-toggle": 1,
+    "data-target": 1,
+    "data-visible": 1
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 14
+  },
+  "examples": [
+    {
+      "file": "card-collapse.html",
+      "relativePackagePath": "dist/components/card/examples/card-collapse.html",
+      "sha256": "f5b4f43583cb5b72a0a6a37d72d0fbb13cc1771890c9674edcd901d59e3bbdf2",
+      "byteSize": 2619,
+      "tags": {
+        "div": 25,
+        "span": 4,
+        "img": 1,
+        "button": 2,
+        "i": 5,
+        "p": 4
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-card": 1,
+        "card-header": 1,
+        "d-flex": 1,
+        "br-avatar": 1,
+        "mt-1": 1,
+        "content": 1,
+        "ml-3": 1,
+        "text-weight-semi-bold": 1,
+        "text-up-02": 1,
+        "ml-auto": 1,
+        "br-button": 2,
+        "circle": 2,
+        "fas": 5,
+        "fa-ellipsis-v": 1,
+        "card-content": 1,
+        "card-footer": 1,
+        "text-right": 1,
+        "fa-chevron-down": 1,
+        "br-list": 1,
+        "mt-3": 1,
+        "br-item": 3,
+        "row": 3,
+        "col-auto": 3,
+        "fa-heartbeat": 3,
+        "col": 3,
+        "m-0": 3,
+        "br-divider": 2
+      },
+      "ariaAttributes": {
+        "aria-label": 2,
+        "aria-hidden": 5,
+        "aria-controls": 1,
+        "aria-expanded": 1
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-target": 1,
+        "data-visible": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 2
+      }
+    },
+    {
+      "file": "card-disabled.html",
+      "relativePackagePath": "dist/components/card/examples/card-disabled.html",
+      "sha256": "97a74c1fcb4a534e47c8d9cc8ae83825bc1926c8d54ad1d6738c844d14f55d29",
+      "byteSize": 1475,
+      "tags": {
+        "div": 13,
+        "span": 2,
+        "img": 1,
+        "button": 4,
+        "i": 3,
+        "p": 1
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-card": 1,
+        "disabled": 1,
+        "card-header": 1,
+        "d-flex": 2,
+        "br-avatar": 1,
+        "mt-1": 1,
+        "content": 1,
+        "ml-3": 1,
+        "text-weight-semi-bold": 1,
+        "text-up-02": 1,
+        "ml-auto": 2,
+        "br-button": 4,
+        "circle": 3,
+        "fas": 3,
+        "fa-ellipsis-v": 1,
+        "card-content": 1,
+        "card-footer": 1,
+        "fa-heart": 1,
+        "fa-share-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "card-examples.html",
+      "relativePackagePath": "dist/components/card/examples/card-examples.html",
+      "sha256": "eddc7d3e0c633421e099923c08042c1ba47105a841ac423e832a910d50dea9f2",
+      "byteSize": 1750,
+      "tags": {
+        "div": 17,
+        "img": 2,
+        "span": 2,
+        "button": 4,
+        "i": 3,
+        "p": 1
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-6": 2,
+        "col-md-4": 2,
+        "col-lg-3": 2,
+        "br-card": 2,
+        "card-content": 2,
+        "card-header": 1,
+        "d-flex": 2,
+        "br-avatar": 1,
+        "mt-1": 1,
+        "content": 1,
+        "ml-3": 1,
+        "text-weight-semi-bold": 1,
+        "text-up-02": 1,
+        "ml-auto": 2,
+        "br-button": 4,
+        "circle": 3,
+        "fas": 3,
+        "fa-ellipsis-v": 1,
+        "card-footer": 1,
+        "fa-heart": 1,
+        "fa-share-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "card-hover.html",
+      "relativePackagePath": "dist/components/card/examples/card-hover.html",
+      "sha256": "68e01c48582556c55f062339b8368d0d809cd162afb0fce4e603f1302ebcf492",
+      "byteSize": 1045,
+      "tags": {
+        "div": 10,
+        "p": 3
+      },
+      "classes": {
+        "row": 1,
+        "col-md": 3,
+        "br-card": 3,
+        "hover": 3,
+        "card-content": 3
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "card-scroll.html",
+      "relativePackagePath": "dist/components/card/examples/card-scroll.html",
+      "sha256": "b6a1aa6d96c2439a53ce370054e8ccecd231303301f224bc2c75c2d9a1be92e0",
+      "byteSize": 2110,
+      "tags": {
+        "div": 13,
+        "span": 2,
+        "img": 1,
+        "button": 4,
+        "i": 3,
+        "p": 2
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-card": 1,
+        "h-fixed": 1,
+        "card-header": 1,
+        "d-flex": 2,
+        "br-avatar": 1,
+        "mt-1": 1,
+        "content": 1,
+        "ml-3": 1,
+        "text-weight-semi-bold": 1,
+        "text-up-02": 1,
+        "ml-auto": 2,
+        "br-button": 4,
+        "circle": 3,
+        "fas": 3,
+        "fa-ellipsis-v": 1,
+        "card-content": 1,
+        "card-footer": 1,
+        "fa-heart": 1,
+        "fa-share-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

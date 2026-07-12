@@ -1,0 +1,204 @@
+{
+  "component": "message",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 3,
+  "canonicalClassCandidate": "br-message",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 8
+    },
+    {
+      "class": "br-message",
+      "occurrences": 8
+    }
+  ],
+  "tags": {
+    "div": 37,
+    "span": 20,
+    "i": 20,
+    "button": 8
+  },
+  "classes": {
+    "mb-3": 4,
+    "feedback": 4,
+    "danger": 3,
+    "fas": 20,
+    "fa-times-circle": 3,
+    "success": 3,
+    "fa-check-circle": 3,
+    "warning": 3,
+    "fa-exclamation-triangle": 3,
+    "info": 3,
+    "fa-info-circle": 3,
+    "col-sm": 1,
+    "p-3": 1,
+    "bg-primary-darken-02": 1,
+    "br-message": 8,
+    "inverted": 4,
+    "icon": 8,
+    "fa-lg": 8,
+    "content": 8,
+    "message-title": 8,
+    "message-body": 8,
+    "close": 8,
+    "br-button": 8,
+    "circle": 8,
+    "small": 8,
+    "fa-times": 8
+  },
+  "ariaAttributes": {
+    "aria-hidden": 20,
+    "aria-label": 16
+  },
+  "roles": {
+    "alert": 12
+  },
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 8
+  },
+  "examples": [
+    {
+      "file": "feedback.html",
+      "relativePackagePath": "dist/components/message/examples/feedback.html",
+      "sha256": "b5bf335fa7fd6cfe9bc30e89be315b4a53b4760ebc092a449ade2ec1c0f1c61e",
+      "byteSize": 675,
+      "tags": {
+        "div": 4,
+        "span": 4,
+        "i": 4
+      },
+      "classes": {
+        "mb-3": 4,
+        "feedback": 4,
+        "danger": 1,
+        "fas": 4,
+        "fa-times-circle": 1,
+        "success": 1,
+        "fa-check-circle": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1,
+        "info": 1,
+        "fa-info-circle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 4
+      },
+      "roles": {
+        "alert": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "message-inverted.html",
+      "relativePackagePath": "dist/components/message/examples/message-inverted.html",
+      "sha256": "040a7c85fe8e94a484ecca3bfb229c11470089f9578a805d8d4f83fc0fb328d0",
+      "byteSize": 2667,
+      "tags": {
+        "div": 17,
+        "i": 8,
+        "span": 8,
+        "button": 4
+      },
+      "classes": {
+        "col-sm": 1,
+        "p-3": 1,
+        "bg-primary-darken-02": 1,
+        "br-message": 4,
+        "danger": 1,
+        "inverted": 4,
+        "icon": 4,
+        "fas": 8,
+        "fa-times-circle": 1,
+        "fa-lg": 4,
+        "content": 4,
+        "message-title": 4,
+        "message-body": 4,
+        "close": 4,
+        "br-button": 4,
+        "circle": 4,
+        "small": 4,
+        "fa-times": 4,
+        "success": 1,
+        "fa-check-circle": 1,
+        "info": 1,
+        "fa-info-circle": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 8,
+        "aria-label": 8
+      },
+      "roles": {
+        "alert": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "message-padrao.html",
+      "relativePackagePath": "dist/components/message/examples/message-padrao.html",
+      "sha256": "e972aedab31fe1db4ac6856dbe55b7d60e4b4d02f17d4eb5c6819bd4628e9c95",
+      "byteSize": 2506,
+      "tags": {
+        "div": 16,
+        "i": 8,
+        "span": 8,
+        "button": 4
+      },
+      "classes": {
+        "br-message": 4,
+        "danger": 1,
+        "icon": 4,
+        "fas": 8,
+        "fa-times-circle": 1,
+        "fa-lg": 4,
+        "content": 4,
+        "message-title": 4,
+        "message-body": 4,
+        "close": 4,
+        "br-button": 4,
+        "circle": 4,
+        "small": 4,
+        "fa-times": 4,
+        "success": 1,
+        "fa-check-circle": 1,
+        "info": 1,
+        "fa-info-circle": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 8,
+        "aria-label": 8
+      },
+      "roles": {
+        "alert": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

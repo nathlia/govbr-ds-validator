@@ -1,0 +1,242 @@
+{
+  "batch": 5,
+  "retrievedAt": "2026-07-11T06:59:57+00:00",
+  "rulesAdded": [
+    {
+      "ruleId": "govbr-3.7.0-development-global-b491c2e2c1a0",
+      "url": "https://www.gov.br/ds/guias/boas-praticas-de-html",
+      "section": "Atributos",
+      "excerpt": "Escrever os valores dos atributos entre aspas duplas.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn354649search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-9826b6862644",
+      "url": "https://www.gov.br/ds/guias/boas-praticas-de-html",
+      "section": "Elementos script",
+      "excerpt": "Omitir atributos de tipo e linguagem nas tags script.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn354649search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-067a1786b481",
+      "url": "https://www.gov.br/ds/guias/boas-praticas-de-css",
+      "section": "Formatação",
+      "excerpt": "A primeira usa indentação para separar blocos de códigos e cada regra deve ser escrita numa linha única.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn827526search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-1b31bf3ccece",
+      "url": "https://www.gov.br/ds/guias/navegadores-suportados",
+      "section": "Navegadores suportados",
+      "excerpt": "Chrome, 49 ou mais recente.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn796701search1"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-f3c19eb70e19",
+      "url": "https://www.gov.br/ds/guias/navegadores-suportados",
+      "section": "Navegadores suportados",
+      "excerpt": "Edge, 14 ou mais recente.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn705861search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-58a3f67d8445",
+      "url": "https://www.gov.br/ds/guias/navegadores-suportados",
+      "section": "Navegadores suportados",
+      "excerpt": "Firefox, 67 ou mais recente.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn705861search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-ea51f70c65fe",
+      "url": "https://www.gov.br/ds/guias/navegadores-suportados",
+      "section": "Navegadores suportados",
+      "excerpt": "Safari, 11 ou mais recente.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn705861search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-d0e2bd4850ee",
+      "url": "https://www.gov.br/ds/guias/navegadores-suportados",
+      "section": "Navegadores não recomendados",
+      "excerpt": "Não recomendamos o uso do Internet Explorer (qualquer versão) e Edge Legacy.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn705861search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-template-global-19f93475dc5e",
+      "url": "https://www.gov.br/ds/templates/base",
+      "section": "Uso",
+      "excerpt": "O template base deve ser utilizado como ponto de partida para construção de uma página em projetos de layout ou como referência visual na fase de ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn462956search14"
+    },
+    {
+      "ruleId": "govbr-3.7.0-template-global-8e553b2c8bc7",
+      "url": "https://www.gov.br/ds/templates/base",
+      "section": "Grid",
+      "excerpt": "O uso é recomendado para Grid de 12 colunas ou para grid de 8 colunas com breakpoint Tablet Landscape.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn796701search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-template-global-2387114907b1",
+      "url": "https://www.gov.br/ds/templates/base?tab=codigos",
+      "section": "Skip Link",
+      "excerpt": "Oferecer um menu oculto (skip link) com âncoras para as principais áreas da página fornece benefícios para usuários que usam apenas teclado sem prejudicar aqueles que usam o mouse para navegar.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn462956search11"
+    },
+    {
+      "ruleId": "govbr-3.7.0-template-global-9cbfa5906031",
+      "url": "https://www.gov.br/ds/templates/erro",
+      "section": "Responsividade",
+      "excerpt": "O conteúdo da tela de erro deve se ajustar na grid da resolução correspondente.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn705861search1"
+    },
+    {
+      "ruleId": "govbr-3.7.0-template-global-3d795df32a0e",
+      "url": "https://www.gov.br/ds/templates/erro",
+      "section": "Imagem",
+      "excerpt": "Tanto ilustrações como fotos podem ser utilizadas como imagem a fim de apoiarem visualmente a mensagem de erro.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn796701search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-eb8c1606a52e",
+      "url": "https://www.gov.br/ds/padroes/design/emptystates",
+      "section": "Ausência de Dados",
+      "excerpt": "Deve informa ao usuário que tipo de dado estará disponível na tela ou elemento quando os dados ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn161260search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-03695a4aede0",
+      "url": "https://www.gov.br/ds/padroes/design/emptystates",
+      "section": "Onde usar",
+      "excerpt": "Use Empty States substituindo os elementos que deveriam aparecer.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn270293search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-9d9f1c9bf1ed",
+      "url": "https://www.gov.br/ds/padroes/design/contentoverflow",
+      "section": "Truncamento",
+      "excerpt": "O truncamento não deve ser utilizado em cabeçalhos de página, títulos, menus, rótulos de botões, mensagens de erro, mensagens de validação ou ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn178530search1"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-5717506ac2e6",
+      "url": "https://www.gov.br/ds/padroes/design/ajuda-comunicacao",
+      "section": "Seção de ajuda",
+      "excerpt": "Disponibilize uma seção de ajuda: O conteúdo deve ser estruturado em uma tela ou seção do sistema. Deve ficar claro para o usuário onde encontrar o conteúdo de ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn361164search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-abaec84ff915",
+      "url": "https://www.gov.br/ds/padroes/design/onboarding",
+      "section": "Incentive o Usuário",
+      "excerpt": "Incentive o Usuário: Sua interface deve incentivar a interação do usuário. Quando apresentar um tour através de Onboarding, sempre que possível, ofereça opções ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn361164search2"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-46a1ae2f366b",
+      "url": "https://www.gov.br/ds/padroes/design/grafico",
+      "section": "Categorias",
+      "excerpt": "Use sete ou menos categorias, pois fica cada vez mais fácil perceber o tamanho relativo de cada segmento, ao trabalhar com mais de sete categorias fica mais ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn178530search3"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-a633e540aa5c",
+      "url": "https://www.gov.br/ds/padroes/design/navegacao",
+      "section": "Página inicial",
+      "excerpt": "É a entrada principal de seu site, sistema ou aplicativo e deve exibir o conteúdo de apresentação deste, assim como um componente principal de navegação que ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn161260search1"
+    },
+    {
+      "ruleId": "govbr-3.7.0-pattern-global-eebb093156e7",
+      "url": "https://www.gov.br/ds/padroes/design/collapse",
+      "section": "Acionador",
+      "excerpt": "Por padrão, o Acionador deve ser toda área de conteúdo de destaque, como demonstrado na figura, e esta deve conter o ícone identificador de expansão/retração (1) ...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn270293search1"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-63b44801da86",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Arquitetura",
+      "excerpt": "O componente foi construído de forma otimizada, separação de responsabilidades?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-137c50bea6ca",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Arquitetura",
+      "excerpt": "Os tokens forma consumidos de forma correta e otimizada?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-41850b4791b8",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Acessibilidade",
+      "excerpt": "Foi possível utilizar o componente apenas com o teclado?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-1c3bd2a1c1a7",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Acessibilidade",
+      "excerpt": "É possível utilizar o componente em dispositivos móveis?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-component-global-e30aab6e9a68",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Layout",
+      "excerpt": "A anatomia do componente segue exatamente o que está previsto na diretriz de Design?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-8c92e4e83038",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Documentação",
+      "excerpt": "A documentação dev está atualizada e de acordo com o exemplo implementado?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    },
+    {
+      "ruleId": "govbr-3.7.0-development-global-dfebe85e65d8",
+      "url": "https://govbr-ds.gitlab.io/tools/govbr-ds-wiki/gestao/guias/criterios-analise-classificacao/criterios/criterios-analise-qualitativa/",
+      "section": "Qualidade",
+      "excerpt": "O componente Possui teste funcional? O componente possui testes de regressão visual?",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn438041search0"
+    }
+  ],
+  "packageAuditSummary": {
+    "accessibilityFindingCounts": {
+      "image-missing-alt": 4,
+      "broken-aria-labelledby": 2
+    },
+    "legacyCdnFiles": 63
+  },
+  "limitations": [
+    "Most site evidence remains search-index excerpts rather than full rendered DOM capture.",
+    "Truncated excerpts are explicitly labeled.",
+    "The package audit is static and does not execute component JavaScript."
+  ]
+}

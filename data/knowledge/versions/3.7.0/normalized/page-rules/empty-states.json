@@ -1,0 +1,89 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "empty-states",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-eb8c1606a52e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "empty-states",
+      "component": null,
+      "title": "Empty State informa os dados esperados",
+      "originalText": "Deve informa ao usuário que tipo de dado estará disponível na tela ou elemento quando os dados ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Quando não houver dados, informe ao usuário qual conteúdo aparecerá naquele local quando estiver disponível.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho indexado é truncado."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/emptystates",
+        "pageTitle": "Empty State informa os dados esperados",
+        "tab": null,
+        "section": "Ausência de Dados",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "c29df065ac743a4272162539b1ca3639e59bee765d77257debf022da35e77ffe",
+        "retrievalEvidence": "turn161260search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-03695a4aede0",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "empty-states",
+      "component": null,
+      "title": "Empty State substitui conteúdo ausente",
+      "originalText": "Use Empty States substituindo os elementos que deveriam aparecer.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Apresente o Empty State no lugar dos elementos ou dados que estão ausentes.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A ausência não deixa uma região vazia sem explicação."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/emptystates",
+        "pageTitle": "Empty State substitui conteúdo ausente",
+        "tab": null,
+        "section": "Onde usar",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "db1327874b51ff6a7c06725f8dd218fd8abdc7afd686a1b0c97b016dffef660c",
+        "retrievalEvidence": "turn270293search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

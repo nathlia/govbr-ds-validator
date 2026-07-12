@@ -1,0 +1,157 @@
+{
+  "name": "input",
+  "canonicalUrl": "https://www.gov.br/ds/components/input",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-input-6fe41e804955",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "input",
+      "title": "Input acessível por Tab",
+      "originalText": "Os inputs ou input Text devem ser acessíveis por meio de navegação via teclado, por meio da tecla Tab, onde cada input deve ser um ponto de foco na ordem da navegação.",
+      "normalizedRule": "Cada Input deve ser alcançável pela tecla Tab e ocupar um ponto coerente na ordem de foco.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Cada input recebe foco por Tab.",
+        "A ordem de foco acompanha a ordem lógica da interface."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/input",
+        "pageTitle": "Padrão Digital de Governo - Input",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "73b6503525e587030a433a1b56cbc03f5ac4e2b111b7036ee13258bad9170a25",
+        "retrievalEvidence": "turn548585search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-input-3788829b08fe",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "action",
+      "component": "input",
+      "title": "Botão de ação interno",
+      "originalText": "Por padrão é utilizado um Button de enfase terciária do tipo circular sempre com densidade alta, e o ícone deve representar a ação a ser realizada na interação.",
+      "normalizedRule": "A ação interna padrão do Input deve usar Button terciário circular de alta densidade, com ícone representando a ação.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Botão circular.",
+        "Ênfase terciária.",
+        "Densidade alta.",
+        "Ícone semanticamente alinhado à ação."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/input",
+        "pageTitle": "Padrão Digital de Governo - Input",
+        "tab": "designer",
+        "section": "Botão de ação",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "ad684b60e545663cc72b27f2b2f974a9818046b2f7a2dc114813705965c961b9",
+        "retrievalEvidence": "turn984279search21",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-input-4c07cef5a791",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "input",
+      "title": "Estrutura exemplificada com .br-input",
+      "originalText": "Os exemplos oficiais de input no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-input.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-input como referência estrutural ao comparar a implementação com os exemplos oficiais de input.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-input."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/input/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "19e14a9bc254886a4fdae1f6f17756512c727a8391dc92fce66ea6b42cbabc00"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 7,
+    "canonicalClassCandidate": "br-input",
+    "structureFile": "normalized/examples/html/input.json"
+  }
+}

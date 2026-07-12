@@ -1,0 +1,415 @@
+{
+  "component": "signin",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 13,
+  "canonicalClassCandidate": null,
+  "canonicalClassObserved": false,
+  "rootClassCandidates": [
+    {
+      "class": "br-sign-in",
+      "occurrences": 13
+    }
+  ],
+  "tags": {
+    "button": 13,
+    "span": 4,
+    "i": 8,
+    "div": 3,
+    "img": 1
+  },
+  "classes": {
+    "br-sign-in": 13,
+    "large": 1,
+    "primary": 8,
+    "mt-3": 9,
+    "mt-sm-0": 9,
+    "ml-sm-3": 9,
+    "text-black": 4,
+    "medium": 1,
+    "circle": 2,
+    "fas": 8,
+    "fa-user": 8,
+    "p-3": 3,
+    "mb-3": 3,
+    "bg-primary-darken-02": 3,
+    "inverted": 3,
+    "block": 1,
+    "small": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 2,
+    "aria-hidden": 8
+  },
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 13
+  },
+  "examples": [
+    {
+      "file": "signin-large.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-large.html",
+      "sha256": "da3066908e94745562900b587013c170c77712e975565a589c845fcbed13ff65",
+      "byteSize": 141,
+      "tags": {
+        "button": 1,
+        "span": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "large": 1,
+        "primary": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "text-black": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-medium.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-medium.html",
+      "sha256": "ad165403ebe0d69dec4c394f221978ac88138c62f6ad7c24b3b069b98d0efb30",
+      "byteSize": 142,
+      "tags": {
+        "button": 1,
+        "span": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "medium": 1,
+        "primary": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "text-black": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-primary-circle.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-primary-circle.html",
+      "sha256": "ff65c18d0e1b5d85d65620fe14efb3ff532ca33a1ec4cdff12587ada391b6847",
+      "byteSize": 166,
+      "tags": {
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "primary": 1,
+        "circle": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-primary-inverted.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-primary-inverted.html",
+      "sha256": "e01693ddf955ddc49fa768fe901282cd443abd7e7517b4ea2e87e59c2190a895",
+      "byteSize": 197,
+      "tags": {
+        "div": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "p-3": 1,
+        "mb-3": 1,
+        "bg-primary-darken-02": 1,
+        "br-sign-in": 1,
+        "primary": 1,
+        "inverted": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-primary.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-primary.html",
+      "sha256": "ebf596f5930a1add415d7379f1f967f34b860c8023e19b608a09ba40830b6593",
+      "byteSize": 133,
+      "tags": {
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "primary": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-secondary-block.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-secondary-block.html",
+      "sha256": "81bc1131b94c97b7fc4d245904473842a6edf69bba84ba07e622b2e64ddeef38",
+      "byteSize": 110,
+      "tags": {
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "block": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-secondary-circle-inverted.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-secondary-circle-inverted.html",
+      "sha256": "31aaced4131fff5ef52eaf0cef696a76daca873884c920727a580597fc2e338a",
+      "byteSize": 222,
+      "tags": {
+        "div": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "p-3": 1,
+        "mb-3": 1,
+        "bg-primary-darken-02": 1,
+        "br-sign-in": 1,
+        "circle": 1,
+        "inverted": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-secondary-inverted.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-secondary-inverted.html",
+      "sha256": "32d0e86c86f3bef7f09a5ea0f865f4132559cbfd98e32ae3b21ecbe1a1f3eea7",
+      "byteSize": 189,
+      "tags": {
+        "div": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "p-3": 1,
+        "mb-3": 1,
+        "bg-primary-darken-02": 1,
+        "br-sign-in": 1,
+        "inverted": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-secondary.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-secondary.html",
+      "sha256": "594ee4c5d19a476b10c2ef9a47a85e37920005e1281dcd074ee225ecd6c35988",
+      "byteSize": 125,
+      "tags": {
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-small.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-small.html",
+      "sha256": "0715aecf2d76a1825fc2aaa2e4149f4a7a49f11c0754dec8af07d8bc2163bbb3",
+      "byteSize": 141,
+      "tags": {
+        "button": 1,
+        "span": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "small": 1,
+        "primary": 1,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "text-black": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-tipo1.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-tipo1.html",
+      "sha256": "10bdee6cc31fa2ec1c07b2fedeadb21d84f5ac259af8e2e876cfc9b1133b96ce",
+      "byteSize": 112,
+      "tags": {
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "primary": 1,
+        "fas": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-tipo2-image.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-tipo2-image.html",
+      "sha256": "e1d7c21309f98db4b1a7f3a6a375b73a01444b68130e2e672d76c775cb5704e6",
+      "byteSize": 159,
+      "tags": {
+        "button": 1,
+        "img": 1
+      },
+      "classes": {
+        "br-sign-in": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "signin-tipo2.html",
+      "relativePackagePath": "dist/components/signin/examples/signin-tipo2.html",
+      "sha256": "4ba5b1b5472e48e2aeb95125e49d39c1587f78bf539ecb5b69a5ccd773362f91",
+      "byteSize": 114,
+      "tags": {
+        "button": 1,
+        "span": 1
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "primary": 1,
+        "text-black": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

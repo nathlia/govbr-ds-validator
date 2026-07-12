@@ -1,0 +1,121 @@
+{
+  "name": "cookiebar",
+  "canonicalUrl": "https://www.gov.br/ds/components/cookiebar",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-cookiebar-7f95941b1616",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "cookiebar",
+      "title": "Estrutura exemplificada com .br-cookiebar",
+      "originalText": "Os exemplos oficiais de cookiebar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-cookiebar.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-cookiebar como referência estrutural ao comparar a implementação com os exemplos oficiais de cookiebar.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-cookiebar."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/cookiebar/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "2fd0e802995f034ff9c58c2da97c96cbdd4ba78e15366059c550c2b8de41f09f"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-e564d18c805e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "usage",
+      "component": "cookiebar",
+      "title": "Uso condicionado à gestão de cookies",
+      "originalText": "O cookieBar é o componente responsável por fazer a gestão de cookies de um determinado produto, ele deve ser utilizado quando houver a necessidade de fazer...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Use CookieBar quando o produto precisar informar, configurar ou gerenciar cookies.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [
+        "O produto utiliza cookies sujeitos a informação ou gestão pelo usuário."
+      ],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Existe mecanismo de gestão de cookies adequado ao produto."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho indexado é truncado; a regra foi normalizada de forma conservadora."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/components/cookiebar",
+        "pageTitle": "Padrão Digital de Governo - Componentes - CookieBar",
+        "tab": "visao-geral",
+        "section": "Uso",
+        "retrievalEvidence": "turn455640search0",
+        "captureType": "official-web-search-index-excerpt",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "6aa2d6be8deb344415d9f5d9f9d840bfd5879d75abac00a984844850f0f1d4bd"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 1,
+    "canonicalClassCandidate": "br-cookiebar",
+    "structureFile": "normalized/examples/html/cookiebar.json"
+  },
+  "lastUpdatedBatch": 4
+}

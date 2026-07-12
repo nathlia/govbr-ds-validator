@@ -1,0 +1,177 @@
+{
+  "component": "scrim",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-scrim",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 3
+    },
+    {
+      "class": "br-card",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-body",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-content",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-dialog",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-footer",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-header",
+      "occurrences": 1
+    },
+    {
+      "class": "br-modal-title",
+      "occurrences": 1
+    },
+    {
+      "class": "br-scrim",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 15,
+    "h1": 1,
+    "p": 1,
+    "button": 3,
+    "style": 1,
+    "img": 1
+  },
+  "classes": {
+    "br-scrim": 1,
+    "foco": 1,
+    "br-modal": 1,
+    "medium": 1,
+    "br-modal-dialog": 1,
+    "br-modal-content": 1,
+    "br-modal-header": 1,
+    "br-modal-title": 1,
+    "br-modal-body": 1,
+    "br-modal-footer": 1,
+    "justify-content-center": 1,
+    "br-button": 3,
+    "secondary": 1,
+    "primary": 2,
+    "mt-3": 1,
+    "mt-sm-0": 1,
+    "ml-sm-3": 1,
+    "scrimexemplo": 1,
+    "row": 1,
+    "col-auto": 1,
+    "br-card": 1,
+    "legibilidade": 1,
+    "front": 1,
+    "content": 1,
+    "p-0": 1,
+    "effect": 1,
+    "p-3": 1
+  },
+  "ariaAttributes": {},
+  "roles": {},
+  "dataAttributes": {
+    "data-trigger": 1,
+    "data-dismiss": 1
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 3
+  },
+  "examples": [
+    {
+      "file": "scrim-default.html",
+      "relativePackagePath": "dist/components/scrim/examples/scrim-default.html",
+      "sha256": "1533f9c616c03c43fd0f00ee96f9cac958f8e5419bc79b1f24230310aae6039c",
+      "byteSize": 845,
+      "tags": {
+        "div": 8,
+        "h1": 1,
+        "p": 1,
+        "button": 3
+      },
+      "classes": {
+        "br-scrim": 1,
+        "foco": 1,
+        "br-modal": 1,
+        "medium": 1,
+        "br-modal-dialog": 1,
+        "br-modal-content": 1,
+        "br-modal-header": 1,
+        "br-modal-title": 1,
+        "br-modal-body": 1,
+        "br-modal-footer": 1,
+        "justify-content-center": 1,
+        "br-button": 3,
+        "secondary": 1,
+        "primary": 2,
+        "mt-3": 1,
+        "mt-sm-0": 1,
+        "ml-sm-3": 1,
+        "scrimexemplo": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-trigger": 1,
+        "data-dismiss": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "scrim-legibilidade.html",
+      "relativePackagePath": "dist/components/scrim/examples/scrim-legibilidade.html",
+      "sha256": "b99865134083b5fa4a492eca995669f8735f356096e18a9727791644c0976e4d",
+      "byteSize": 638,
+      "tags": {
+        "style": 1,
+        "div": 7,
+        "img": 1
+      },
+      "classes": {
+        "row": 1,
+        "col-auto": 1,
+        "br-card": 1,
+        "legibilidade": 1,
+        "front": 1,
+        "content": 1,
+        "p-0": 1,
+        "effect": 1,
+        "p-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

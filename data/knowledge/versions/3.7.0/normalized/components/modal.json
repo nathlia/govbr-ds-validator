@@ -1,0 +1,229 @@
+{
+  "name": "modal",
+  "canonicalUrl": "https://www.gov.br/ds/components/modal",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 3
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-modal-64b84991229c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "modal",
+      "title": "Navegação interna da Modal",
+      "originalText": "Os usuários devem ser capazes de navegar facilmente pela janela modal, por meio da tecla Tab ou Shift + Tab para retroceder na navegação.",
+      "normalizedRule": "A Modal deve permitir navegação interna com Tab e Shift+Tab.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Tab avança entre controles.",
+        "Shift+Tab retrocede.",
+        "Foco permanece coerente com a Modal aberta."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/modal?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Modal",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "23568369859cae52fac4f4274b9c8769110285e8da3a1b0a54770da01813e41e",
+        "retrievalEvidence": "turn984279search4",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "accessible-name",
+      "component": "modal",
+      "title": "Rotulagem da Modal",
+      "originalText": "A janela modal pode ser rotulada pelo atributo aria-label, usando a mesma string do título.",
+      "normalizedRule": "Quando aria-label for usado na Modal, seu valor deve corresponder ao título apresentado.",
+      "force": "permitted",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O valor de aria-label corresponde ao título visível da Modal."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "Accessible Name"
+      ],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/modal",
+        "pageTitle": "Padrão Digital de Governo - Modal",
+        "tab": "acessibilidade",
+        "section": "Recomendações para Código",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "2a31cb80b96be1b7b411f6b8749ffd81c30e38bb6718f8230fca865202b8d00d",
+        "retrievalEvidence": "turn237587search22"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-modal-65446caf1efc",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "aria",
+      "component": "modal",
+      "title": "Uso condicionado de aria-modal",
+      "originalText": "Ao utilizar o recurso de arial-modal como true, pode impedir que os usuários de tecnologias assistivas sejam impedidos de acessar o conteúdo de fora da modal, quando esta estiver aberta. Portanto, faça isso apenas quando o objetivo for realmente este e a experiência seja a mesma para todos os tipos de usuários.",
+      "normalizedRule": "Defina aria-modal=\"true\" somente quando o conteúdo externo realmente deva ficar indisponível enquanto a Modal estiver aberta.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [
+        "A Modal bloqueia intencionalmente a interação com o conteúdo externo."
+      ],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O comportamento do foco e da árvore de acessibilidade corresponde à modalidade declarada."
+      ],
+      "validationStrategy": "accessibility-tree",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/modal",
+        "pageTitle": "Padrão Digital de Governo - Modal",
+        "tab": "acessibilidade",
+        "section": "Recomendações para Código",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "b1d410e64539e5e1376c751699b638534dd473c4b14d4e4b20d62a202fdd8432",
+        "retrievalEvidence": "turn237587search22"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-091e0e012f86",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "actions",
+      "component": "modal",
+      "title": "Máximo recomendado de dois botões",
+      "originalText": "É recomendado que em uma modal contenha no máximo dois botões.",
+      "normalizedRule": "Uma Modal deve conter, preferencialmente, no máximo dois botões de ação.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "No máximo dois botões de ação na Modal."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/modal?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Modal",
+        "tab": "designer",
+        "section": "Botões",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "6c5ef2d4333f07ca616c6da864f6072b6905328bf944a0651fb4d888ac8d2955",
+        "retrievalEvidence": "turn554226search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-c9493346e1ad",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "modal",
+      "title": "Estrutura exemplificada com .br-modal",
+      "originalText": "Os exemplos oficiais de modal no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-modal.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-modal como referência estrutural ao comparar a implementação com os exemplos oficiais de modal.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-modal."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/modal/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "9acf5699c2db19f1bed916c93ea691a9cc25fe6eba6aacab9a4b8e5008452adf"
+      }
+    }
+  ],
+  "limitations": [
+    "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 4,
+    "canonicalClassCandidate": "br-modal",
+    "structureFile": "normalized/examples/html/modal.json"
+  }
+}

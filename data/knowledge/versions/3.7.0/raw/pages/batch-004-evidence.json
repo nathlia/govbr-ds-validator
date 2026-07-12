@@ -1,0 +1,118 @@
+{
+  "batch": 4,
+  "retrievedAt": "2026-07-11T06:52:44+00:00",
+  "emagCompletedRecommendationIds": [
+    "1.8",
+    "1.9",
+    "2.1",
+    "2.2",
+    "2.3",
+    "3.3",
+    "3.4",
+    "3.5",
+    "3.7",
+    "3.8",
+    "5.1",
+    "5.2",
+    "5.3",
+    "6.6",
+    "6.8"
+  ],
+  "govbrSiteExcerpts": [
+    {
+      "component": "divider",
+      "url": "https://www.gov.br/ds/components/divider?tab=designer",
+      "excerpt": "Por se tratar de um elemento decorativo, o divider deve ser ignorado pelos leitores de tela e o foco não deve passar por ele.",
+      "excerptMode": "verbatim-excerpt",
+      "evidenceRef": "turn199316search0"
+    },
+    {
+      "component": "cookiebar",
+      "url": "https://www.gov.br/ds/components/cookiebar",
+      "excerpt": "O cookieBar é o componente responsável por fazer a gestão de cookies de um determinado produto, ele deve ser utilizado quando houver a necessidade de fazer...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn455640search0"
+    },
+    {
+      "component": "loading",
+      "url": "https://www.gov.br/ds/components/loading",
+      "excerpt": "Exemplo de loading no corpo da página. Bloqueando a tela ou parte dela. Aqui, também, deve-se utilizar o Loading Indeterminado ou Determinado em seus formatos...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn795358search2"
+    },
+    {
+      "component": "switch",
+      "url": "https://www.gov.br/ds/components/switch",
+      "excerpt": "O Switch deve ser posicionado na interface de forma firme e consistente durante o movimento da chave de alternância ou alternância de labels e surgimento de...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn795358search1"
+    },
+    {
+      "component": "menu",
+      "url": "https://www.gov.br/ds/components/menu",
+      "excerpt": "Superfície scrim (Condicional). Este elemento serve para adicionar contraste entre o componente menu e o conteúdo da tela ao fundo, direcionando a atenção do...",
+      "excerptMode": "verbatim-truncated-excerpt",
+      "evidenceRef": "turn795358search3"
+    }
+  ],
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "description": "Padrão Digital de Governo",
+    "homepage": "https://www.gov.br/ds/",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "license": "MIT",
+    "author": "SERPRO (http://serpro.gov.br/)",
+    "tarballSha256": "2b8f13b0a1427f101f9f7aa81751b1bafe829e17305b1727fc2a0e3326781247",
+    "packageJsonSha256": "895887aea36933617c5365f572ce5bb21d3a2a8aa5489e9dc05fe64073c5dfa1",
+    "coreTokensSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6",
+    "componentCount": 36,
+    "components": [
+      "accordion",
+      "avatar",
+      "breadcrumb",
+      "button",
+      "card",
+      "carousel",
+      "checkbox",
+      "cookiebar",
+      "datetimepicker",
+      "divider",
+      "footer",
+      "header",
+      "input",
+      "item",
+      "list",
+      "loading",
+      "magicbutton",
+      "menu",
+      "message",
+      "modal",
+      "notification",
+      "pagination",
+      "radio",
+      "scrim",
+      "select",
+      "signin",
+      "skiplink",
+      "step",
+      "switch",
+      "tab",
+      "table",
+      "tag",
+      "textarea",
+      "tooltip",
+      "upload",
+      "wizard"
+    ],
+    "exampleFileCount": 172,
+    "designTokenCount": 1253,
+    "retrievedAt": "2026-07-11T06:52:44+00:00",
+    "preservationPolicy": "O arquivo do pacote não é redistribuído no corpus. São armazenados hashes, metadados, tokens e assinaturas estruturais dos exemplos."
+  },
+  "limitations": [
+    "As páginas dinâmicas completas do site ainda não foram capturadas.",
+    "Assinaturas de exemplos não substituem regras textuais.",
+    "Trechos de busca truncados estão explicitamente marcados."
+  ]
+}

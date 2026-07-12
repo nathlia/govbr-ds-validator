@@ -1,0 +1,118 @@
+{
+  "name": "divider",
+  "canonicalUrl": "https://www.gov.br/ds/components/divider",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-divider-30bbcbf3a17c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "accessibility",
+      "subcategory": "decorative",
+      "component": "divider",
+      "title": "Divider ignorado por leitores de tela",
+      "originalText": "Por se tratar de um elemento decorativo, o divider deve ser ignorado pelos leitores de tela e o foco não deve passar por ele.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Divider deve ser ignorado por tecnologias assistivas e não pode entrar na ordem de foco.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Divider não possui tabindex focável.",
+        "Elemento decorativo não é anunciado como conteúdo significativo."
+      ],
+      "validationStrategy": "accessibility-tree",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/divider?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Componentes - Divider",
+        "tab": "acessibilidade",
+        "section": "Acessibilidade",
+        "retrievalEvidence": "turn199316search0",
+        "captureType": "official-web-search-index-excerpt",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "b46fee6d647c48876d16f875cf2c1f12e272705c92d60857509877911051e2cc"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-divider-abb2a883ef61",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "divider",
+      "title": "Estrutura exemplificada com .br-divider",
+      "originalText": "Os exemplos oficiais de divider no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-divider.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-divider como referência estrutural ao comparar a implementação com os exemplos oficiais de divider.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-divider."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/divider/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "1bc134fd7a5cdc8734923ee5c7546203cfff7436823c768bb388ca1cdbb9a722"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 9,
+    "canonicalClassCandidate": "br-divider",
+    "structureFile": "normalized/examples/html/divider.json"
+  },
+  "lastUpdatedBatch": 4
+}

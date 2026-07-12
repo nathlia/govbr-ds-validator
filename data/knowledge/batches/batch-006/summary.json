@@ -1,0 +1,11 @@
+{
+  "batch": 6,
+  "generatedAt": "2026-07-11T07:06:33+00:00",
+  "newRules": 18,
+  "duplicatesSkipped": 0,
+  "cumulativeRules": 186,
+  "status": "complete",
+  "completionProfile": "tcc-validator-core",
+  "fullSiteMirror": false,
+  "integrityStatus": "passed"
+}

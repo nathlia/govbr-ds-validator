@@ -1,0 +1,184 @@
+{
+  "component": "select",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-select",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 54
+    },
+    {
+      "class": "br-checkbox",
+      "occurrences": 27
+    },
+    {
+      "class": "br-radio",
+      "occurrences": 27
+    },
+    {
+      "class": "br-button",
+      "occurrences": 2
+    },
+    {
+      "class": "br-input",
+      "occurrences": 2
+    },
+    {
+      "class": "br-list",
+      "occurrences": 2
+    },
+    {
+      "class": "br-select",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "div": 114,
+    "label": 56,
+    "input": 56,
+    "button": 2,
+    "i": 4,
+    "span": 2
+  },
+  "classes": {
+    "br-select": 2,
+    "br-input": 2,
+    "br-button": 2,
+    "fas": 4,
+    "fa-angle-down": 2,
+    "br-list": 2,
+    "br-item": 54,
+    "highlighted": 1,
+    "br-checkbox": 27,
+    "feedback": 2,
+    "warning": 2,
+    "fa-exclamation-triangle": 2,
+    "br-radio": 27
+  },
+  "ariaAttributes": {
+    "aria-label": 2,
+    "aria-hidden": 4
+  },
+  "roles": {
+    "alert": 2
+  },
+  "dataAttributes": {
+    "data-trigger": 2,
+    "data-all": 1
+  },
+  "inputTypes": {
+    "text": 2,
+    "checkbox": 27,
+    "radio": 27
+  },
+  "interactiveTags": {
+    "input": 56,
+    "button": 2
+  },
+  "examples": [
+    {
+      "file": "select-multiplo.html",
+      "relativePackagePath": "dist/components/select/examples/select-multiplo.html",
+      "sha256": "cc2c32b59d4bbb434905a10c1dd2b5d672d2ed18b15856afc96b63ddd69157d5",
+      "byteSize": 5963,
+      "tags": {
+        "div": 57,
+        "label": 28,
+        "input": 28,
+        "button": 1,
+        "i": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-select": 1,
+        "br-input": 1,
+        "br-button": 1,
+        "fas": 2,
+        "fa-angle-down": 1,
+        "br-list": 1,
+        "br-item": 27,
+        "highlighted": 1,
+        "br-checkbox": 27,
+        "feedback": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {
+        "alert": 1
+      },
+      "dataAttributes": {
+        "data-trigger": 1,
+        "data-all": 1
+      },
+      "inputTypes": {
+        "text": 1,
+        "checkbox": 27
+      },
+      "interactiveTags": {
+        "input": 28,
+        "button": 1
+      }
+    },
+    {
+      "file": "select-simples.html",
+      "relativePackagePath": "dist/components/select/examples/select-simples.html",
+      "sha256": "bd2749730a4d08390e4c9c664d4649f857941494ee11d1d307521ec4c2509c9b",
+      "byteSize": 6309,
+      "tags": {
+        "div": 57,
+        "label": 28,
+        "input": 28,
+        "button": 1,
+        "i": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-select": 1,
+        "br-input": 1,
+        "br-button": 1,
+        "fas": 2,
+        "fa-angle-down": 1,
+        "br-list": 1,
+        "br-item": 27,
+        "br-radio": 27,
+        "feedback": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {
+        "alert": 1
+      },
+      "dataAttributes": {
+        "data-trigger": 1
+      },
+      "inputTypes": {
+        "text": 1,
+        "radio": 27
+      },
+      "interactiveTags": {
+        "input": 28,
+        "button": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

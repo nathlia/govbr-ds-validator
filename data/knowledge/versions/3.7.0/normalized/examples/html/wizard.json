@@ -1,0 +1,171 @@
+{
+  "component": "wizard",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-wizard",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 28
+    },
+    {
+      "class": "br-wizard",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "style": 2,
+    "div": 58,
+    "button": 38,
+    "span": 10,
+    "a": 2
+  },
+  "classes": {
+    "wizard-sample-1": 1,
+    "br-wizard": 2,
+    "wizard-progress": 2,
+    "wizard-progress-btn": 10,
+    "info": 10,
+    "wizard-form": 2,
+    "wizard-panel": 10,
+    "wizard-panel-content": 10,
+    "h3": 10,
+    "text": 10,
+    "wizard-panel-btn": 10,
+    "br-button": 28,
+    "wizard-btn-canc": 10,
+    "primary": 10,
+    "wizard-btn-next": 8,
+    "secondary": 8,
+    "wizard-btn-prev": 8,
+    "wizard-btn": 2,
+    "wizard-sample-2": 1
+  },
+  "ariaAttributes": {
+    "aria-labelledby": 10,
+    "aria-controls": 10,
+    "aria-description": 14
+  },
+  "roles": {
+    "tablist": 2,
+    "tab": 10,
+    "tabpanel": 10
+  },
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 38,
+    "a": 2
+  },
+  "examples": [
+    {
+      "file": "wizard-horizontal.html",
+      "relativePackagePath": "dist/components/wizard/examples/wizard-horizontal.html",
+      "sha256": "33a732fa4225872a0d2c38d2530df0d2c93d4a35a321ca1d530f9ccbdcf18c8f",
+      "byteSize": 17387,
+      "tags": {
+        "style": 1,
+        "div": 29,
+        "button": 19,
+        "span": 5,
+        "a": 1
+      },
+      "classes": {
+        "wizard-sample-1": 1,
+        "br-wizard": 1,
+        "wizard-progress": 1,
+        "wizard-progress-btn": 5,
+        "info": 5,
+        "wizard-form": 1,
+        "wizard-panel": 5,
+        "wizard-panel-content": 5,
+        "h3": 5,
+        "text": 5,
+        "wizard-panel-btn": 5,
+        "br-button": 14,
+        "wizard-btn-canc": 5,
+        "primary": 5,
+        "wizard-btn-next": 4,
+        "secondary": 4,
+        "wizard-btn-prev": 4,
+        "wizard-btn": 1
+      },
+      "ariaAttributes": {
+        "aria-labelledby": 5,
+        "aria-controls": 5,
+        "aria-description": 7
+      },
+      "roles": {
+        "tablist": 1,
+        "tab": 5,
+        "tabpanel": 5
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 19,
+        "a": 1
+      }
+    },
+    {
+      "file": "wizard-vertical.html",
+      "relativePackagePath": "dist/components/wizard/examples/wizard-vertical.html",
+      "sha256": "27eebd51d32a4c33b709b1be5d9cdad2dd60e1e7163b745ada0465bfb6238981",
+      "byteSize": 17407,
+      "tags": {
+        "style": 1,
+        "div": 29,
+        "button": 19,
+        "span": 5,
+        "a": 1
+      },
+      "classes": {
+        "wizard-sample-2": 1,
+        "br-wizard": 1,
+        "wizard-progress": 1,
+        "wizard-progress-btn": 5,
+        "info": 5,
+        "wizard-form": 1,
+        "wizard-panel": 5,
+        "wizard-panel-content": 5,
+        "h3": 5,
+        "text": 5,
+        "wizard-panel-btn": 5,
+        "br-button": 14,
+        "wizard-btn-canc": 5,
+        "primary": 5,
+        "wizard-btn-next": 4,
+        "secondary": 4,
+        "wizard-btn-prev": 4,
+        "wizard-btn": 1
+      },
+      "ariaAttributes": {
+        "aria-labelledby": 5,
+        "aria-controls": 5,
+        "aria-description": 7
+      },
+      "roles": {
+        "tablist": 1,
+        "tab": 5,
+        "tabpanel": 5
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 19,
+        "a": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

@@ -1,0 +1,161 @@
+{
+  "name": "header",
+  "canonicalUrl": "https://www.gov.br/ds/components/header",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-header-b6a44cb3d346",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "surface",
+      "component": "header",
+      "title": "Camada e sombra padrão do Header",
+      "originalText": "Por padrão o header se encontra na camada 1 por ser um elemento com relevância e desta forma apresenta sombra suave.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "O Header padrão utiliza a camada 1 e apresenta sombra suave.",
+      "force": "informative",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Elevação compatível com camada 1.",
+        "Sombra suave conforme os tokens oficiais."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [
+        "surface-layer-1",
+        "shadow-layer-1"
+      ],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/header",
+        "pageTitle": "Padrão Digital de Governo - Header",
+        "tab": "designer",
+        "section": "Camadas",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "a93b35e743efef0e6f0bd53e0110655f3cc992d953c1a39aba270b4008bb5e35",
+        "retrievalEvidence": "turn788987search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-header-523d98904576",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "header",
+      "title": "Estrutura exemplificada com .br-header",
+      "originalText": "Os exemplos oficiais de header no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-header.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-header como referência estrutural ao comparar a implementação com os exemplos oficiais de header.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-header."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/header/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "afa73df70d75ad39dd13df142decfff169cc282b25887f3fd91ebbf5cc5bd039"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-header-12492dba566e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "purpose",
+      "component": "header",
+      "title": "Header como elemento principal da página",
+      "originalText": "O componente Header é o principal elemento de uma página, onde podem ser agrupados componentes predefinidos que tem como finalidade auxiliar o usuário no acesso.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Use Header como a região principal que agrupa os recursos de identificação e acesso da página.",
+      "force": "informative",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A página possui uma região de cabeçalho identificável.",
+        "Os recursos agrupados auxiliam identificação ou acesso."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/header",
+        "pageTitle": "Padrão Digital de Governo - Header",
+        "tab": "visao-geral",
+        "section": "Definição",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "222b66c826da393a2408081a20f2087588175e6b9e20f8697ff7e0709e086ade",
+        "retrievalEvidence": "turn524143search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 3,
+    "canonicalClassCandidate": "br-header",
+    "structureFile": "normalized/examples/html/header.json"
+  }
+}

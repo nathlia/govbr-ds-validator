@@ -1,0 +1,187 @@
+{
+  "name": "table",
+  "canonicalUrl": "https://www.gov.br/ds/components/table",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 3
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-table-7c605ca2f85e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "anatomy",
+      "component": "table",
+      "title": "Coluna obrigatória",
+      "originalText": "A coluna é um elemento obrigatório e essencial da tabela, pois para constituir uma tabela é necessário pelo menos uma coluna.",
+      "normalizedRule": "Toda Table deve possuir ao menos uma coluna.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A tabela possui pelo menos uma célula de cabeçalho/coluna."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/table",
+        "pageTitle": "Padrão Digital de Governo - Table",
+        "tab": "designer",
+        "section": "Colunas",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "d0db234b5a1dabbc0569b05c1438d9e7eb768b476cb85dbf611aa8e10c179591",
+        "retrievalEvidence": "turn237587search13"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-table-88941e76c77b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "best-practice",
+      "component": "table",
+      "title": "Evitar colunas vazias",
+      "originalText": "Evite o uso de colunas com células vazias.",
+      "normalizedRule": "Evite colunas compostas por células vazias.",
+      "force": "discouraged",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Colunas apresentam conteúdo significativo ou justificativa semântica."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/table",
+        "pageTitle": "Padrão Digital de Governo - Table",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "679ab64757d8beb5a54744f575a8ae09db36b8e16f963402da96e943a0d1cdfd",
+        "retrievalEvidence": "turn237587search13"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-table-8b8d4b403cb9",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "actions",
+      "component": "table",
+      "title": "Limite recomendado de ações visíveis",
+      "originalText": "Recomendamos a utilização de até 4 ícones dispostos lado a lado na barra de título. Caso seja necessário utilizar uma quantidade maior, deve-se optar pelo uso do menu flutuante, que será acessado pelo botão Ellipsis-v.",
+      "normalizedRule": "A barra de título da Table deve exibir no máximo quatro ícones de ação lado a lado; ações adicionais devem ser agrupadas em menu flutuante.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Até quatro ações diretas.",
+        "Com mais ações, existe botão Ellipsis-v e menu associado."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "menu",
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/table",
+        "pageTitle": "Padrão Digital de Governo - Table",
+        "tab": "designer",
+        "section": "Quantidade de ícones de ação",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "7aa0abcbfff4301c051de97917c2a095422f4ba7fad08114263a519adeb1646f",
+        "retrievalEvidence": "turn237587search13"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-table-41e9a89fb4e1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "table",
+      "title": "Estrutura exemplificada com .br-table",
+      "originalText": "Os exemplos oficiais de table no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-table.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-table como referência estrutural ao comparar a implementação com os exemplos oficiais de table.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-table."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/table/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "2d7c09582451ff686c57f20651d028892ddf854cd5ddfe8f5061152853f34519"
+      }
+    }
+  ],
+  "limitations": [
+    "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 3,
+    "canonicalClassCandidate": "br-table",
+    "structureFile": "normalized/examples/html/table.json"
+  }
+}

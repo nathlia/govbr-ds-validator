@@ -1,0 +1,498 @@
+{
+  "version": "3.1",
+  "generatedAt": "2026-07-11T06:52:44+00:00",
+  "templateCount": 45,
+  "templates": [
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-7e6420514860",
+      "recommendation": "1.1",
+      "strategy": "source-code",
+      "automatable": true,
+      "checks": [
+        "Código válido e interoperável.",
+        "Conteúdo, apresentação e comportamento permanecem separados."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-1cb2c878824b",
+      "recommendation": "1.2",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Elementos semânticos correspondem ao propósito do conteúdo.",
+        "A ordem do DOM é compreensível sem CSS."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-3ac0aaa53900",
+      "recommendation": "1.3",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Não há saltos ilógicos de hierarquia.",
+        "O H1 identifica o conteúdo principal."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-79db88c7f55d",
+      "recommendation": "1.4",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "A ordem de foco acompanha a leitura.",
+        "Tabindex positivo não cria sequência artificial."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-7d2b85f81c52",
+      "recommendation": "1.5",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "O primeiro link focável leva ao conteúdo principal.",
+        "Existem destinos válidos para conteúdo, menu e busca quando aplicáveis."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-206c9fa6ae11",
+      "recommendation": "1.6",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Elementos table representam dados, não layout."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cf61b3eb3c71",
+      "recommendation": "1.7",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Links adjacentes são distinguíveis por leitores de tela e visualmente."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-bfba9c1f5026",
+      "recommendation": "1.8",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Regiões como topo, menu, conteúdo e rodapé são identificáveis.",
+        "Páginas internas mantêm estrutura consistente."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-5be1f553cc03",
+      "recommendation": "1.9",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Links não forçam nova janela sem aviso.",
+        "Modais recebem foco e permitem retorno por teclado."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+      "recommendation": "2.1",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Todas as ações possuem equivalente de teclado.",
+        "O foco percorre todos os elementos e pode sair deles."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-f639993e9416",
+      "recommendation": "2.2",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Conteúdo dinâmico é operável por teclado.",
+        "Interações de arrastar possuem alternativa.",
+        "Scripts inacessíveis têm alternativa equivalente."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cd5de9a6f164",
+      "recommendation": "2.3",
+      "strategy": "source-code",
+      "automatable": true,
+      "checks": [
+        "Não existe meta refresh periódico.",
+        "Existe controle explícito para atualizar o conteúdo."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-d6e816588306",
+      "recommendation": "2.4",
+      "strategy": "source-code",
+      "automatable": true,
+      "checks": [
+        "Não existe meta http-equiv=refresh para redirecionamento."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-5d366ef29b04",
+      "recommendation": "2.5",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "O limite é comunicado.",
+        "Existe controle para ampliar, ajustar ou desativar o tempo."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-8faca42c2c9a",
+      "recommendation": "2.6",
+      "strategy": "visual",
+      "automatable": true,
+      "checks": [
+        "Não há intermitência capaz de provocar risco fotossensível."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-33b13d9fa271",
+      "recommendation": "2.7",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Controles de pausa e retomada são acessíveis.",
+        "Movimento automático pode ser interrompido."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-698e0a4783a9",
+      "recommendation": "3.1",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "O elemento html possui lang válido."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-1db13803cbf8",
+      "recommendation": "3.2",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Trechos em idioma diferente possuem lang adequado."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-5d5a5f21d94b",
+      "recommendation": "3.3",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "O elemento title existe.",
+        "O título descreve o assunto principal.",
+        "Páginas internas identificam também o sítio ou sistema."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-75c11ccac582",
+      "recommendation": "3.4",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Breadcrumb ou mecanismo equivalente existe.",
+        "A página atual não é apresentada como link.",
+        "Itens anteriores são navegáveis."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cdfbb56eebc5",
+      "recommendation": "3.5",
+      "strategy": "semantic",
+      "automatable": false,
+      "checks": [
+        "Texto do link descreve o destino.",
+        "Links externos são identificados quando necessário.",
+        "Evita-se texto genérico isolado."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-3a3e47354c53",
+      "recommendation": "3.6",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Imagens informativas possuem alt significativo.",
+        "Imagens decorativas são tratadas de forma apropriada."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-609e3494150c",
+      "recommendation": "3.7",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Cada area possui alt.",
+        "Mapa de imagem não substitui menu ou seleção regional."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-3a57435c3b32",
+      "recommendation": "3.8",
+      "strategy": "source-code",
+      "automatable": true,
+      "checks": [
+        "Documentos são oferecidos em HTML quando possível.",
+        "PDF possui alternativa acessível em HTML ou ODF."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cd705eb5da2a",
+      "recommendation": "3.9",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Caption identifica a tabela.",
+        "Tabelas extensas possuem descrição ou contexto equivalente."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-1ccbc61dddbc",
+      "recommendation": "3.10",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Cabeçalhos são identificáveis.",
+        "Associações permanecem corretas em tabelas complexas."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-fb83eab75d8d",
+      "recommendation": "3.11",
+      "strategy": "semantic",
+      "automatable": false,
+      "checks": [
+        "Parágrafos tratam um tópico.",
+        "Sentenças são diretas.",
+        "Jargões recebem explicação."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-20c08f26d8e8",
+      "recommendation": "3.12",
+      "strategy": "semantic",
+      "automatable": true,
+      "checks": [
+        "Primeira ocorrência contém forma completa ou explicação.",
+        "Glossário, quando usado, é acessível."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cb09bc0c77c0",
+      "recommendation": "4.1",
+      "strategy": "computed-style",
+      "automatable": true,
+      "checks": [
+        "Contraste calculado igual ou superior a 4,5:1.",
+        "Texto não depende de fundo visual que prejudique leitura."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-c2f94bdc17ce",
+      "recommendation": "4.2",
+      "strategy": "semantic",
+      "automatable": true,
+      "checks": [
+        "Informações sensoriais possuem alternativa textual ou estrutural."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-d9c42f188e2c",
+      "recommendation": "4.3",
+      "strategy": "visual",
+      "automatable": true,
+      "checks": [
+        "Zoom de 200% preserva conteúdo e controles.",
+        "Não há sobreposição ou corte funcional."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+      "recommendation": "4.4",
+      "strategy": "computed-style",
+      "automatable": true,
+      "checks": [
+        "Focus indicator é perceptível.",
+        "A área de foco corresponde à área clicável."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-6c86b93df639",
+      "recommendation": "5.1",
+      "strategy": "semantic",
+      "automatable": true,
+      "checks": [
+        "Vídeo sem áudio possui descrição textual ou sonora.",
+        "Vídeo falado possui legenda.",
+        "Player é operável por teclado."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-dc45b57b8349",
+      "recommendation": "5.2",
+      "strategy": "semantic",
+      "automatable": true,
+      "checks": [
+        "Áudio possui transcrição.",
+        "Controles do player são acessíveis."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-8f439a3c078c",
+      "recommendation": "5.3",
+      "strategy": "semantic",
+      "automatable": false,
+      "checks": [
+        "Informação visual relevante é narrada em audiodescrição."
+      ],
+      "manualReviewRequired": true
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-56cbcba602ce",
+      "recommendation": "5.4",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Áudio possui controles acessíveis de pausa, parada ou volume."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-6ea7ecc60c01",
+      "recommendation": "5.5",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "Animação automática possui controle acessível."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-dafac812b10b",
+      "recommendation": "6.1",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Input type=image possui alt.",
+        "Botões estilizados por imagem preservam valor ou nome acessível."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-b95c42b61ed3",
+      "recommendation": "6.2",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Cada campo possui label programaticamente associado."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-e101928665cc",
+      "recommendation": "6.3",
+      "strategy": "keyboard-interaction",
+      "automatable": true,
+      "checks": [
+        "A ordem de foco segue a ordem lógica dos campos.",
+        "Tabindex é usado apenas quando indispensável."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-de1efebaf255",
+      "recommendation": "6.4",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Foco não dispara navegação.",
+        "Mudanças relevantes exigem botão ou confirmação."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-01b1806c30e9",
+      "recommendation": "6.5",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Campos com formato específico possuem instrução.",
+        "Campos obrigatórios são indicados textualmente."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-cc837bbaf713",
+      "recommendation": "6.6",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Erros são descritos textualmente.",
+        "O foco retorna ao resumo ou campo com erro.",
+        "O usuário pode revisar e editar antes do envio."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+      "recommendation": "6.7",
+      "strategy": "dom",
+      "automatable": true,
+      "checks": [
+        "Campos relacionados compartilham fieldset.",
+        "Legend explica o propósito do grupo."
+      ],
+      "manualReviewRequired": false
+    },
+    {
+      "ruleId": "govbr-3.7.0-accessibility-global-a8f7ce66b1c4",
+      "recommendation": "6.8",
+      "strategy": "semantic",
+      "automatable": false,
+      "checks": [
+        "O fluxo não depende de CAPTCHA visual ou sonoro.",
+        "Existem mecanismos de segurança acessíveis alternativos."
+      ],
+      "manualReviewRequired": true
+    }
+  ]
+}

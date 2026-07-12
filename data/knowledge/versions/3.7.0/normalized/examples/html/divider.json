@@ -1,0 +1,238 @@
+{
+  "component": "divider",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 9,
+  "canonicalClassCandidate": "br-divider",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-divider",
+      "occurrences": 9
+    }
+  ],
+  "tags": {
+    "div": 22,
+    "span": 9
+  },
+  "classes": {
+    "bg-gray-60": 2,
+    "text-pure-0": 2,
+    "p-3": 2,
+    "br-divider": 9,
+    "dark-mode": 2,
+    "my-3": 7,
+    "dashed": 3,
+    "lg": 1,
+    "md": 1,
+    "sm": 1,
+    "d-flex": 2,
+    "vertical": 2,
+    "mx-3": 2
+  },
+  "ariaAttributes": {},
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {},
+  "examples": [
+    {
+      "file": "divider-dark.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-dark.html",
+      "sha256": "ae6bf3fded793e40558e4014e983422b9286be7dce39f215ac39ba262d6d1f95",
+      "byteSize": 236,
+      "tags": {
+        "div": 3,
+        "span": 1
+      },
+      "classes": {
+        "bg-gray-60": 1,
+        "text-pure-0": 1,
+        "p-3": 1,
+        "br-divider": 1,
+        "dark-mode": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-dashed-dark.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-dashed-dark.html",
+      "sha256": "d5450d826f739a0df4e9601987587a1147dcd3adc3af5fc8509a42407466de4b",
+      "byteSize": 243,
+      "tags": {
+        "div": 3,
+        "span": 1
+      },
+      "classes": {
+        "p-3": 1,
+        "bg-gray-60": 1,
+        "text-pure-0": 1,
+        "br-divider": 1,
+        "dashed": 1,
+        "dark-mode": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-dashed.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-dashed.html",
+      "sha256": "5feeff214817574418c1d81259919b6d49551a844b20483a947c83439d72f581",
+      "byteSize": 181,
+      "tags": {
+        "div": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-divider": 1,
+        "dashed": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-large.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-large.html",
+      "sha256": "8972b54e8b8a8866874296d4eb419b57b8f831eb5f8c7c0b0287bd742f5ca208",
+      "byteSize": 177,
+      "tags": {
+        "div": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-divider": 1,
+        "lg": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-medium.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-medium.html",
+      "sha256": "bba09aab0905706b7d1ab33f7540f9afa8d29e9d7251b2d555cbf792dff677f9",
+      "byteSize": 177,
+      "tags": {
+        "div": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-divider": 1,
+        "md": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-small.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-small.html",
+      "sha256": "358c53d0443296712fa964aeec22d94f319737abc4220cfbebc3175fb5447938",
+      "byteSize": 177,
+      "tags": {
+        "div": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-divider": 1,
+        "sm": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-vertical-dashed.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-vertical-dashed.html",
+      "sha256": "b299c95078a12a562b65547456f87a30397cc67a064e4eb3dddbcb46ff36e611",
+      "byteSize": 302,
+      "tags": {
+        "div": 3,
+        "span": 1
+      },
+      "classes": {
+        "d-flex": 1,
+        "br-divider": 1,
+        "vertical": 1,
+        "dashed": 1,
+        "mx-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider-vertical.html",
+      "relativePackagePath": "dist/components/divider/examples/divider-vertical.html",
+      "sha256": "fdff18a9ad38148bb062a68bee0dff5be758681032f634a7c0bf5f47e9c6ac82",
+      "byteSize": 295,
+      "tags": {
+        "div": 3,
+        "span": 1
+      },
+      "classes": {
+        "d-flex": 1,
+        "br-divider": 1,
+        "vertical": 1,
+        "mx-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "divider.html",
+      "relativePackagePath": "dist/components/divider/examples/divider.html",
+      "sha256": "14ee82841bf4c0918c800f20b0bf048dfa614889ef3ee2a7f495bd87247e8039",
+      "byteSize": 174,
+      "tags": {
+        "div": 2,
+        "span": 1
+      },
+      "classes": {
+        "br-divider": 1,
+        "my-3": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

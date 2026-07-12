@@ -1,0 +1,115 @@
+{
+  "name": "avatar",
+  "canonicalUrl": "https://www.gov.br/ds/components/avatar",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-avatar-81c7524692f0",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "anatomy",
+      "component": "avatar",
+      "title": "Superfície circular obrigatória",
+      "originalText": "Superfície circular (Obrigatório). A representação do usuário deve estar contida em uma superfície circular.",
+      "normalizedRule": "A representação do usuário no Avatar deve estar contida em superfície circular.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Forma circular.",
+        "border-radius compatível com círculo."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/avatar",
+        "pageTitle": "Padrão Digital de Governo - Avatar",
+        "tab": "designer",
+        "section": "Anatomia",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "6a327d3649f5ea6d7cd0be7149d01d606bf2af2ee8686d9f0e2d5dd7825a490d",
+        "retrievalEvidence": "turn368875search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-avatar-20abe86bec8c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "avatar",
+      "title": "Estrutura exemplificada com .br-avatar",
+      "originalText": "Os exemplos oficiais de avatar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-avatar.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-avatar como referência estrutural ao comparar a implementação com os exemplos oficiais de avatar.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-avatar."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/avatar/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "0361d9bfa7ed2802796f0f84cd9613b5ee0047c2add4eb9214bebcadc3166440"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 4,
+    "canonicalClassCandidate": "br-avatar",
+    "structureFile": "normalized/examples/html/avatar.json"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "version": "3.7.0",
+  "status": "tcc-scope-complete",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-development-global-659242ecda1d",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "development",
+      "subcategory": "sass-documentation",
+      "component": null,
+      "title": "Documentar exemplos Sass com @example",
+      "originalText": "@example, Código de exemplo de uso.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Use a anotação @example para documentar exemplos de uso de recursos Sass.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Recursos Sass reutilizáveis possuem exemplo quando necessário."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/guias/codificacao-sass",
+        "pageTitle": "Documentar exemplos Sass com @example",
+        "tab": null,
+        "section": "Exemplos",
+        "retrievedAt": "2026-07-11T07:06:33+00:00",
+        "contentHash": "d2f5a49430ee06a18071c4b561444ce3643e83a9548d6d7ea05ea8b82a88959d",
+        "retrievalEvidence": "turn753855search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-development-global-5765f1b8d2bc",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "development",
+      "subcategory": "sass-documentation",
+      "component": null,
+      "title": "Documentar tipo e descrição de parâmetros Sass",
+      "originalText": "Deve ser informado o tipo e descrição do parâmentro.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Documente o tipo e a descrição de cada parâmetro de mixins e funções Sass.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Parâmetros Sass possuem tipo e descrição documentados."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/guias/codificacao-sass",
+        "pageTitle": "Documentar tipo e descrição de parâmetros Sass",
+        "tab": null,
+        "section": "Documentação de parâmetros",
+        "retrievedAt": "2026-07-11T07:06:33+00:00",
+        "contentHash": "89f1ec9a96adef26f1da78c90d2ff8667e972bc71bd98cba886798ba0dea6aaa",
+        "retrievalEvidence": "turn199193search1",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

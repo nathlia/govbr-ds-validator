@@ -1,0 +1,120 @@
+{
+  "name": "loading",
+  "canonicalUrl": "https://www.gov.br/ds/components/loading",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-loading-55f44d018251",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "loading",
+      "title": "Estrutura exemplificada com .br-loading",
+      "originalText": "Os exemplos oficiais de loading no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-loading.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-loading como referência estrutural ao comparar a implementação com os exemplos oficiais de loading.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-loading."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/loading/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "813842147830f2f85cbca38e0ed7604e35a167079fe3adffd656f3494b617b61"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-05f6aae1d1ad",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "loading-state",
+      "component": "loading",
+      "title": "Loading determinado ou indeterminado em bloqueio",
+      "originalText": "Exemplo de loading no corpo da página. Bloqueando a tela ou parte dela. Aqui, também, deve-se utilizar o Loading Indeterminado ou Determinado em seus formatos...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Ao bloquear a tela ou uma região durante processamento, utilize Loading determinado ou indeterminado conforme a disponibilidade de progresso.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Existe indicador de carregamento durante o bloqueio.",
+        "O tipo determinado é usado quando o progresso pode ser medido."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho indexado é truncado; a formulação preserva apenas a orientação claramente visível."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/components/loading",
+        "pageTitle": "Padrão Digital de Governo - Componentes - Loading",
+        "tab": "designer",
+        "section": "Uso no corpo da página",
+        "retrievalEvidence": "turn795358search2",
+        "captureType": "official-web-search-index-excerpt",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "321f5950c6645a27bb3381cbbb3b3116ac3cb2e7d97c6fcd430f5699c6012046"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 3,
+    "canonicalClassCandidate": "br-loading",
+    "structureFile": "normalized/examples/html/loading.json"
+  },
+  "lastUpdatedBatch": 4
+}

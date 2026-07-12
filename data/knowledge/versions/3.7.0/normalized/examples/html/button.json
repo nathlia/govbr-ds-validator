@@ -1,0 +1,281 @@
+{
+  "component": "button",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 8,
+  "canonicalClassCandidate": "br-button",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 27
+    }
+  ],
+  "tags": {
+    "div": 9,
+    "button": 27,
+    "i": 9
+  },
+  "classes": {
+    "p-3": 9,
+    "bg-blue-warm-vivid-90": 3,
+    "br-button": 27,
+    "block": 6,
+    "primary": 9,
+    "dark-mode": 9,
+    "mb-3": 4,
+    "secondary": 12,
+    "circle": 9,
+    "mr-3": 14,
+    "fas": 9,
+    "fa-city": 9,
+    "large": 2,
+    "small": 2,
+    "active": 1,
+    "loading": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 9,
+    "aria-hidden": 9
+  },
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 27
+  },
+  "examples": [
+    {
+      "file": "button-block-dark-mode.html",
+      "relativePackagePath": "dist/components/button/examples/button-block-dark-mode.html",
+      "sha256": "82e9153d2b301be3950277a943948431e3710557a56bce6c1d576e385df06572",
+      "byteSize": 318,
+      "tags": {
+        "div": 1,
+        "button": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "bg-blue-warm-vivid-90": 1,
+        "br-button": 3,
+        "block": 3,
+        "primary": 1,
+        "dark-mode": 3,
+        "mb-3": 2,
+        "secondary": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-block.html",
+      "relativePackagePath": "dist/components/button/examples/button-block.html",
+      "sha256": "8c8ac3e56343c20ffc77583ce860727d5a6e8863c21dee57aa0ee5fd1022c142",
+      "byteSize": 266,
+      "tags": {
+        "div": 1,
+        "button": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "br-button": 3,
+        "block": 3,
+        "primary": 1,
+        "mb-3": 2,
+        "secondary": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-circle-dark-mode.html",
+      "relativePackagePath": "dist/components/button/examples/button-circle-dark-mode.html",
+      "sha256": "2a121a2ddd3ef6923cb671726aebc6ef5f15dec1b4d1e70eba07d193c039b792",
+      "byteSize": 525,
+      "tags": {
+        "div": 1,
+        "button": 3,
+        "i": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "bg-blue-warm-vivid-90": 1,
+        "br-button": 3,
+        "circle": 3,
+        "primary": 1,
+        "dark-mode": 3,
+        "mr-3": 2,
+        "fas": 3,
+        "fa-city": 3,
+        "secondary": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-circle.html",
+      "relativePackagePath": "dist/components/button/examples/button-circle.html",
+      "sha256": "fc6ebc670efe95b4c9bbda5f4bc7ccb86ac5373d85489fab1bcd633b619cd967",
+      "byteSize": 473,
+      "tags": {
+        "div": 1,
+        "button": 3,
+        "i": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "br-button": 3,
+        "circle": 3,
+        "primary": 1,
+        "mr-3": 2,
+        "fas": 3,
+        "fa-city": 3,
+        "secondary": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-densities.html",
+      "relativePackagePath": "dist/components/button/examples/button-densities.html",
+      "sha256": "9e2d86732f4c550251dbe3dfa4f99e0b9c0bba5ed5f28e280f703af6f6862088",
+      "byteSize": 775,
+      "tags": {
+        "div": 2,
+        "button": 6,
+        "i": 3
+      },
+      "classes": {
+        "p-3": 2,
+        "br-button": 6,
+        "secondary": 6,
+        "large": 2,
+        "mr-3": 4,
+        "small": 2,
+        "circle": 3,
+        "fas": 3,
+        "fa-city": 3
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 6
+      }
+    },
+    {
+      "file": "button-emphasys-dark-mode.html",
+      "relativePackagePath": "dist/components/button/examples/button-emphasys-dark-mode.html",
+      "sha256": "b6e121f6ae7fba42fcb2e4dcd11c8d2d44a8111c5ca335736df33c29acfa344d",
+      "byteSize": 300,
+      "tags": {
+        "div": 1,
+        "button": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "bg-blue-warm-vivid-90": 1,
+        "br-button": 3,
+        "primary": 1,
+        "dark-mode": 3,
+        "mr-3": 2,
+        "secondary": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-emphasys.html",
+      "relativePackagePath": "dist/components/button/examples/button-emphasys.html",
+      "sha256": "e8592336fa8c3e9138e9c92e4ef954e60b3350362b0df4b9832a1dc5db38f373",
+      "byteSize": 248,
+      "tags": {
+        "div": 1,
+        "button": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "br-button": 3,
+        "primary": 1,
+        "mr-3": 2,
+        "secondary": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "button-status.html",
+      "relativePackagePath": "dist/components/button/examples/button-status.html",
+      "sha256": "dbaaba8ed42886fe1eb66f89ffe1ab0bdde695d8bff3ed041f5f5ad9bfdf6874",
+      "byteSize": 286,
+      "tags": {
+        "div": 1,
+        "button": 3
+      },
+      "classes": {
+        "p-3": 1,
+        "br-button": 3,
+        "primary": 3,
+        "mr-3": 2,
+        "active": 1,
+        "loading": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

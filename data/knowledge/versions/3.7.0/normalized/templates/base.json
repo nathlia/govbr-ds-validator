@@ -1,0 +1,136 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "url": "https://www.gov.br/ds/templates/base",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-template-global-8e553b2c8bc7",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "Grid recomendada do Template Base",
+      "originalText": "O uso é recomendado para Grid de 12 colunas ou para grid de 8 colunas com breakpoint Tablet Landscape.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "No Template Base, prefira Grid de 12 colunas ou Grid de 8 colunas no breakpoint Tablet Landscape.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura utiliza uma das configurações de grid recomendadas."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base",
+        "pageTitle": "Grid recomendada do Template Base",
+        "tab": null,
+        "section": "Grid",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "bdd9249bff1fe2ef85d8ed4b7c5b3a20911f4a9be4d79c96a29d8ede2a7b46d1",
+        "retrievalEvidence": "turn796701search2",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-template-global-2387114907b1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "Skip Link no Template Base",
+      "originalText": "Oferecer um menu oculto (skip link) com âncoras para as principais áreas da página fornece benefícios para usuários que usam apenas teclado sem prejudicar aqueles que usam o mouse para navegar.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Inclua Skip Link com âncoras para as principais regiões do Template Base.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O primeiro mecanismo de navegação por teclado oferece atalhos para regiões principais."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "skiplink"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base?tab=codigos",
+        "pageTitle": "Skip Link no Template Base",
+        "tab": null,
+        "section": "Skip Link",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "3045fa382b9c7ff2a11282176cd7cab45a1b8b370888d56e0cad34dbb0230b29",
+        "retrievalEvidence": "turn462956search11",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-template-global-19f93475dc5e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "Template Base como ponto de partida",
+      "originalText": "O template base deve ser utilizado como ponto de partida para construção de uma página em projetos de layout ou como referência visual na fase de ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Use o Template Base como ponto de partida para páginas ou como referência visual durante a criação.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho indexado é truncado; a regra foi normalizada de forma conservadora."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base",
+        "pageTitle": "Template Base como ponto de partida",
+        "tab": null,
+        "section": "Uso",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "9ee7b5fe64727985d6cf59f2e4e671f1208e4f79cbbd3f0af8559ef80781bf49",
+        "retrievalEvidence": "turn462956search14",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ],
+  "packageEvidence": {
+    "file": "dist/templates/base/base.html",
+    "sha256": "d7eb8a34fded17eeef22db5729c2a0db09e9ddbfc8ebb4ac01549b5d4566f24f"
+  }
+}

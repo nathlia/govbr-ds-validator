@@ -1,0 +1,122 @@
+{
+  "name": "menu",
+  "canonicalUrl": "https://www.gov.br/ds/components/menu",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-menu-d15988e5d19b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "menu",
+      "title": "Estrutura exemplificada com .br-menu",
+      "originalText": "Os exemplos oficiais de menu no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-menu.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-menu como referência estrutural ao comparar a implementação com os exemplos oficiais de menu.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-menu."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/menu/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "7fe7d3f6feaa4f5a887d608c936a131ef12bd191cdc7c8c4025ef21b9e225fc9"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-9e90f448c581",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "surface",
+      "component": "menu",
+      "title": "Scrim condicional do Menu",
+      "originalText": "Superfície scrim (Condicional). Este elemento serve para adicionar contraste entre o componente menu e o conteúdo da tela ao fundo, direcionando a atenção do...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Use Scrim de forma condicional quando for necessário separar visualmente o Menu do conteúdo ao fundo e direcionar a atenção.",
+      "force": "permitted",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Quando presente, o Scrim aumenta a separação visual do Menu.",
+        "O Scrim não é tratado como elemento obrigatório em todos os modos."
+      ],
+      "validationStrategy": "visual",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "scrim"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho indexado é truncado e descreve o elemento como condicional."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/components/menu",
+        "pageTitle": "Padrão Digital de Governo - Componentes - Menu",
+        "tab": "designer",
+        "section": "Anatomia",
+        "retrievalEvidence": "turn795358search3",
+        "captureType": "official-web-search-index-excerpt",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "cdebcc720fb111a51a873d5ed426aeb9aecc0bed19b43d64e08e9713a0beed32"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": "br-menu",
+    "structureFile": "normalized/examples/html/menu.json"
+  },
+  "lastUpdatedBatch": 4
+}

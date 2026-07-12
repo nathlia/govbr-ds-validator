@@ -1,0 +1,4929 @@
+[
+  {
+    "name": "accordion",
+    "canonicalUrl": "https://www.gov.br/ds/components/accordion",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-accordion-bf7c66e06aa4",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "accordion",
+        "title": "Estrutura exemplificada com .br-accordion",
+        "originalText": "Os exemplos oficiais de accordion no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-accordion.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-accordion como referência estrutural ao comparar a implementação com os exemplos oficiais de accordion.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-accordion."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/accordion/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "63315a212fbfebe425d778f1741576c9f5fcaed3f6cbcb487ebdb8a6ec63846c"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-accordion",
+      "structureFile": "normalized/examples/html/accordion.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "avatar",
+    "canonicalUrl": "https://www.gov.br/ds/components/avatar",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-avatar-81c7524692f0",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "anatomy",
+        "component": "avatar",
+        "title": "Superfície circular obrigatória",
+        "originalText": "Superfície circular (Obrigatório). A representação do usuário deve estar contida em uma superfície circular.",
+        "normalizedRule": "A representação do usuário no Avatar deve estar contida em superfície circular.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Forma circular.",
+          "border-radius compatível com círculo."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/avatar",
+          "pageTitle": "Padrão Digital de Governo - Avatar",
+          "tab": "designer",
+          "section": "Anatomia",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "6a327d3649f5ea6d7cd0be7149d01d606bf2af2ee8686d9f0e2d5dd7825a490d",
+          "retrievalEvidence": "turn368875search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-avatar-20abe86bec8c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "avatar",
+        "title": "Estrutura exemplificada com .br-avatar",
+        "originalText": "Os exemplos oficiais de avatar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-avatar.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-avatar como referência estrutural ao comparar a implementação com os exemplos oficiais de avatar.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-avatar."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/avatar/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "0361d9bfa7ed2802796f0f84cd9613b5ee0047c2add4eb9214bebcadc3166440"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-avatar",
+      "structureFile": "normalized/examples/html/avatar.json"
+    }
+  },
+  {
+    "name": "breadcrumb",
+    "canonicalUrl": "https://www.gov.br/ds/components/breadcrumb",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "breadcrumb",
+        "title": "Breadcrumb navegável por teclado",
+        "originalText": "Os elementos interativos do breadcrumb devem ser acessados via navegação por teclado. Utilize a tecla Tab para avançar na navegação.",
+        "normalizedRule": "Elementos interativos do Breadcrumb devem ser alcançáveis com Tab.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Cada link interativo recebe foco por Tab."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/breadcrumb?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Breadcrumb",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "3d67385995909db5ef74ffffaae980543c229463aff93e6f50ac869affd2cbd9",
+          "retrievalEvidence": "turn984279search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-breadcrumb-0dd1577ef844",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "breadcrumb",
+        "title": "Estrutura exemplificada com .br-breadcrumb",
+        "originalText": "Os exemplos oficiais de breadcrumb no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-breadcrumb.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-breadcrumb como referência estrutural ao comparar a implementação com os exemplos oficiais de breadcrumb.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-breadcrumb."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/breadcrumb/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "48d5500303bab01fb185c417980fb5102fdc6b22b54e93bb9dabc70f6f04deee"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-breadcrumb",
+      "structureFile": "normalized/examples/html/breadcrumb.json"
+    }
+  },
+  {
+    "name": "button",
+    "canonicalUrl": "https://www.gov.br/ds/components/button",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 2
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "button",
+        "title": "Acesso por teclado",
+        "originalText": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab.",
+        "normalizedRule": "Buttons devem ser alcançáveis por navegação sequencial com a tecla Tab.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "O elemento recebe foco ao navegar com Tab.",
+          "O foco é perceptível."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/button",
+          "pageTitle": "Padrão Digital de Governo - Button",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "891fa76045034d45bcb268615582cdf828410840146e4ad5a75b226b9fc913a4",
+          "retrievalEvidence": "turn681893search0"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-accessibility-button-41d9f439e103",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "button",
+        "title": "Button acionável por Space ou Enter",
+        "originalText": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+        "normalizedRule": "Button deve receber foco por Tab e ser acionável por Space ou Enter.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Ativação por Space.",
+          "Ativação por Enter."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/button",
+          "pageTitle": "Padrão Digital de Governo - Button",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "9ee9dd8f1b92f8f20bb547338f80419267958be79b372e6e98e13ca8663e1dbc",
+          "retrievalEvidence": "turn455538search9",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-button-4d7b5f978df1",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "button",
+        "title": "Rótulo obrigatório",
+        "originalText": "O rótulo é um elemento obrigatório. A exceção ocorre na versão tipo circular uma vez que não existe rótulo.",
+        "normalizedRule": "O Button deve possuir rótulo visível, exceto na variante circular.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [
+          "Variante circular."
+        ],
+        "expectedEvidence": [
+          "Botão não circular contém texto visível.",
+          "Botão circular é identificado por outro mecanismo acessível."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/button",
+          "pageTitle": "Padrão Digital de Governo - Button",
+          "tab": "designer",
+          "section": "Anatomia",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "8ae03daa8ffee3a04ccbd607746a7d1dbe9272a5bf8543be01e2f1b8a33c372e",
+          "retrievalEvidence": "turn237587search28"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-button-b0ad831c0cdd",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "button",
+        "title": "Estrutura exemplificada com .br-button",
+        "originalText": "Os exemplos oficiais de button no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-button.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-button como referência estrutural ao comparar a implementação com os exemplos oficiais de button.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-button."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/button/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "c1083486619734f28e5f35cf74a8b2155ef2b563bcb0d2a92fa73d2d9dfbfd3c"
+        }
+      }
+    ],
+    "limitations": [
+      "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 8,
+      "canonicalClassCandidate": "br-button",
+      "structureFile": "normalized/examples/html/button.json"
+    }
+  },
+  {
+    "name": "card",
+    "canonicalUrl": "https://www.gov.br/ds/components/card",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "card",
+        "title": "Card com navegação por Tab",
+        "originalText": "Ofereça aos usuários a opção de navegação por meio do teclado. Os usuários devem poder navegar usando a tecla Tab.",
+        "normalizedRule": "Elementos interativos do Card devem ser navegáveis com Tab.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Elementos interativos do Card recebem foco por Tab."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/card?tab=codigos",
+          "pageTitle": "Padrão Digital de Governo - Card",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "9b4f8a3d275889fb6486bc61f38377f45e76743d375041c14a9dca8f9e4e9066",
+          "retrievalEvidence": "turn984279search11",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-card-a102d36a696a",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "scope",
+        "component": "card",
+        "title": "Card sobre um único assunto",
+        "originalText": "Cards são cartões (ou superfícies) que contêm conteúdo e ações diversas sobre um único assunto (ou tópico).",
+        "normalizedRule": "O conteúdo e as ações de um Card devem se referir a um único assunto ou tópico.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Conteúdo e ações possuem relação temática única."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/card?tab=codigos",
+          "pageTitle": "Padrão Digital de Governo - Card",
+          "tab": "visao-geral",
+          "section": "Definição",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "ecf55f305dbf16a073bfe9c35ef85a0b3946f816a3df99b00054866a946909f2",
+          "retrievalEvidence": "turn368875search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-card-d68fc3f602d1",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "card",
+        "title": "Estrutura exemplificada com .br-card",
+        "originalText": "Os exemplos oficiais de card no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-card.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-card como referência estrutural ao comparar a implementação com os exemplos oficiais de card.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-card."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/card/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "646ca726c10c64edde15242fa0f62128eff7731921f4a686656b0cdedf13a340"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": "br-card",
+      "structureFile": "normalized/examples/html/card.json"
+    }
+  },
+  {
+    "name": "carousel",
+    "canonicalUrl": "https://www.gov.br/ds/components/carousel",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 2
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-carousel-7b664374a2b3",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "layout",
+        "component": "carousel",
+        "title": "Espaçamento consistente",
+        "originalText": "Tenha o cuidado de manter a consistência no espaçamento entre as páginas de conteúdo de cada bloco.",
+        "normalizedRule": "Mantenha espaçamento consistente entre páginas de conteúdo do Carousel.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Gaps equivalentes entre páginas do mesmo bloco."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/carousel",
+          "pageTitle": "Padrão Digital de Governo - Carousel",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "0f8da48dccace81740fdd90fe45fdbdde4a48a8001f65870056e91154d9c4376",
+          "retrievalEvidence": "turn368875search3",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-carousel-4c92b788906b",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content-volume",
+        "component": "carousel",
+        "title": "Evitar mais de três páginas por bloco",
+        "originalText": "Se possível, evite blocos com mais de três páginas.",
+        "normalizedRule": "Evite mais de três páginas em um bloco de Carousel.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Até três páginas por bloco, salvo justificativa."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/carousel",
+          "pageTitle": "Padrão Digital de Governo - Carousel",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "5df69a376e977fd5e0a822185bfc958f490fad8a4c453fc2b95185c36cffe801",
+          "retrievalEvidence": "turn368875search3",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-carousel-a5852928b851",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "carousel",
+        "title": "Estrutura exemplificada com .br-carousel",
+        "originalText": "Os exemplos oficiais de carousel no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-carousel.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-carousel como referência estrutural ao comparar a implementação com os exemplos oficiais de carousel.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-carousel."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/carousel/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "4f0730c925a24393fb88e8a0f42d60dd4284be12bdec518206f44b130b48af15"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 6,
+      "canonicalClassCandidate": "br-carousel",
+      "structureFile": "normalized/examples/html/carousel.json"
+    }
+  },
+  {
+    "name": "checkbox",
+    "canonicalUrl": "https://www.gov.br/ds/components/checkbox",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-checkbox-6923ae0af84f",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "checkbox",
+        "title": "Seleção de múltiplas opções",
+        "originalText": "Deve ser utilizado para permitir que o usuário selecione uma ou mais opções em uma lista de opções.",
+        "normalizedRule": "Use Checkbox quando o usuário puder selecionar uma ou mais opções de uma lista.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A escolha permite múltiplas seleções quando esse é o objetivo do fluxo."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/checkbox",
+          "pageTitle": "Padrão Digital de Governo - Checkbox",
+          "tab": "visao-geral",
+          "section": "Uso",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "d5e57b6c7a296cc0258e81dc006e0e19df03f673a8f1bbd3e02f434b8fada5c6",
+          "retrievalEvidence": "turn687773search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-checkbox-4b6f893a4a30",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "checkbox",
+        "title": "Estrutura exemplificada com .br-checkbox",
+        "originalText": "Os exemplos oficiais de checkbox no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-checkbox.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-checkbox como referência estrutural ao comparar a implementação com os exemplos oficiais de checkbox.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-checkbox."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/checkbox/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "dfdda27f617fd32561014d41068cd6f5eded4f2a599f23d0ea7a1586b7387be8"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": "br-checkbox",
+      "structureFile": "normalized/examples/html/checkbox.json"
+    }
+  },
+  {
+    "name": "cookiebar",
+    "canonicalUrl": "https://www.gov.br/ds/components/cookiebar",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-cookiebar-7f95941b1616",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "cookiebar",
+        "title": "Estrutura exemplificada com .br-cookiebar",
+        "originalText": "Os exemplos oficiais de cookiebar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-cookiebar.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-cookiebar como referência estrutural ao comparar a implementação com os exemplos oficiais de cookiebar.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-cookiebar."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/cookiebar/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "2fd0e802995f034ff9c58c2da97c96cbdd4ba78e15366059c550c2b8de41f09f"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-cookiebar-e564d18c805e",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "cookiebar",
+        "title": "Uso condicionado à gestão de cookies",
+        "originalText": "O cookieBar é o componente responsável por fazer a gestão de cookies de um determinado produto, ele deve ser utilizado quando houver a necessidade de fazer...",
+        "originalTextMode": "verbatim-truncated-excerpt",
+        "normalizedRule": "Use CookieBar quando o produto precisar informar, configurar ou gerenciar cookies.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [
+          "O produto utiliza cookies sujeitos a informação ou gestão pelo usuário."
+        ],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Existe mecanismo de gestão de cookies adequado ao produto."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "O trecho indexado é truncado; a regra foi normalizada de forma conservadora."
+        ],
+        "source": {
+          "url": "https://www.gov.br/ds/components/cookiebar",
+          "pageTitle": "Padrão Digital de Governo - Componentes - CookieBar",
+          "tab": "visao-geral",
+          "section": "Uso",
+          "retrievalEvidence": "turn455640search0",
+          "captureType": "official-web-search-index-excerpt",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "6aa2d6be8deb344415d9f5d9f9d840bfd5879d75abac00a984844850f0f1d4bd"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 1,
+      "canonicalClassCandidate": "br-cookiebar",
+      "structureFile": "normalized/examples/html/cookiebar.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "datetimepicker",
+    "canonicalUrl": "https://www.gov.br/ds/components/datetimepicker",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-datetimepicker-59f978a67b46",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "datetimepicker",
+        "title": "Estrutura exemplificada com .br-datetimepicker",
+        "originalText": "Os exemplos oficiais de datetimepicker no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-datetimepicker.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-datetimepicker como referência estrutural ao comparar a implementação com os exemplos oficiais de datetimepicker.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-datetimepicker."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/datetimepicker/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "3addc370eba173f8018f1b2aeca62eeb658038f13e4ecdad7d6df6f9ed2e8af0"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-datetimepicker",
+      "structureFile": "normalized/examples/html/datetimepicker.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "divider",
+    "canonicalUrl": "https://www.gov.br/ds/components/divider",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-divider-30bbcbf3a17c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "accessibility",
+        "subcategory": "decorative",
+        "component": "divider",
+        "title": "Divider ignorado por leitores de tela",
+        "originalText": "Por se tratar de um elemento decorativo, o divider deve ser ignorado pelos leitores de tela e o foco não deve passar por ele.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Divider deve ser ignorado por tecnologias assistivas e não pode entrar na ordem de foco.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Divider não possui tabindex focável.",
+          "Elemento decorativo não é anunciado como conteúdo significativo."
+        ],
+        "validationStrategy": "accessibility-tree",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/divider?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Componentes - Divider",
+          "tab": "acessibilidade",
+          "section": "Acessibilidade",
+          "retrievalEvidence": "turn199316search0",
+          "captureType": "official-web-search-index-excerpt",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "b46fee6d647c48876d16f875cf2c1f12e272705c92d60857509877911051e2cc"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-divider-abb2a883ef61",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "divider",
+        "title": "Estrutura exemplificada com .br-divider",
+        "originalText": "Os exemplos oficiais de divider no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-divider.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-divider como referência estrutural ao comparar a implementação com os exemplos oficiais de divider.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-divider."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/divider/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "1bc134fd7a5cdc8734923ee5c7546203cfff7436823c768bb388ca1cdbb9a722"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 9,
+      "canonicalClassCandidate": "br-divider",
+      "structureFile": "normalized/examples/html/divider.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "footer",
+    "canonicalUrl": "https://www.gov.br/ds/components/footer",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-footer-22176120b991",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "footer",
+        "title": "Estrutura exemplificada com .br-footer",
+        "originalText": "Os exemplos oficiais de footer no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-footer.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-footer como referência estrutural ao comparar a implementação com os exemplos oficiais de footer.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-footer."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/footer/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "941e759657624865310a04d4fe7105baad3db3cf62971503e159ad295960f782"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-footer",
+      "structureFile": "normalized/examples/html/footer.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "header",
+    "canonicalUrl": "https://www.gov.br/ds/components/header",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-header-b6a44cb3d346",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "surface",
+        "component": "header",
+        "title": "Camada e sombra padrão do Header",
+        "originalText": "Por padrão o header se encontra na camada 1 por ser um elemento com relevância e desta forma apresenta sombra suave.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "O Header padrão utiliza a camada 1 e apresenta sombra suave.",
+        "force": "informative",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Elevação compatível com camada 1.",
+          "Sombra suave conforme os tokens oficiais."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [
+          "surface-layer-1",
+          "shadow-layer-1"
+        ],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/header",
+          "pageTitle": "Padrão Digital de Governo - Header",
+          "tab": "designer",
+          "section": "Camadas",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "a93b35e743efef0e6f0bd53e0110655f3cc992d953c1a39aba270b4008bb5e35",
+          "retrievalEvidence": "turn788987search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-header-523d98904576",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "header",
+        "title": "Estrutura exemplificada com .br-header",
+        "originalText": "Os exemplos oficiais de header no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-header.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-header como referência estrutural ao comparar a implementação com os exemplos oficiais de header.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-header."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/header/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "afa73df70d75ad39dd13df142decfff169cc282b25887f3fd91ebbf5cc5bd039"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-header-12492dba566e",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "purpose",
+        "component": "header",
+        "title": "Header como elemento principal da página",
+        "originalText": "O componente Header é o principal elemento de uma página, onde podem ser agrupados componentes predefinidos que tem como finalidade auxiliar o usuário no acesso.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Use Header como a região principal que agrupa os recursos de identificação e acesso da página.",
+        "force": "informative",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A página possui uma região de cabeçalho identificável.",
+          "Os recursos agrupados auxiliam identificação ou acesso."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/header",
+          "pageTitle": "Padrão Digital de Governo - Header",
+          "tab": "visao-geral",
+          "section": "Definição",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "222b66c826da393a2408081a20f2087588175e6b9e20f8697ff7e0709e086ade",
+          "retrievalEvidence": "turn524143search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 3,
+      "canonicalClassCandidate": "br-header",
+      "structureFile": "normalized/examples/html/header.json"
+    }
+  },
+  {
+    "name": "input",
+    "canonicalUrl": "https://www.gov.br/ds/components/input",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-input-6fe41e804955",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "input",
+        "title": "Input acessível por Tab",
+        "originalText": "Os inputs ou input Text devem ser acessíveis por meio de navegação via teclado, por meio da tecla Tab, onde cada input deve ser um ponto de foco na ordem da navegação.",
+        "normalizedRule": "Cada Input deve ser alcançável pela tecla Tab e ocupar um ponto coerente na ordem de foco.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Cada input recebe foco por Tab.",
+          "A ordem de foco acompanha a ordem lógica da interface."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/input",
+          "pageTitle": "Padrão Digital de Governo - Input",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "73b6503525e587030a433a1b56cbc03f5ac4e2b111b7036ee13258bad9170a25",
+          "retrievalEvidence": "turn548585search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-input-3788829b08fe",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "action",
+        "component": "input",
+        "title": "Botão de ação interno",
+        "originalText": "Por padrão é utilizado um Button de enfase terciária do tipo circular sempre com densidade alta, e o ícone deve representar a ação a ser realizada na interação.",
+        "normalizedRule": "A ação interna padrão do Input deve usar Button terciário circular de alta densidade, com ícone representando a ação.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Botão circular.",
+          "Ênfase terciária.",
+          "Densidade alta.",
+          "Ícone semanticamente alinhado à ação."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/input",
+          "pageTitle": "Padrão Digital de Governo - Input",
+          "tab": "designer",
+          "section": "Botão de ação",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "ad684b60e545663cc72b27f2b2f974a9818046b2f7a2dc114813705965c961b9",
+          "retrievalEvidence": "turn984279search21",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-input-4c07cef5a791",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "input",
+        "title": "Estrutura exemplificada com .br-input",
+        "originalText": "Os exemplos oficiais de input no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-input.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-input como referência estrutural ao comparar a implementação com os exemplos oficiais de input.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-input."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/input/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "19e14a9bc254886a4fdae1f6f17756512c727a8391dc92fce66ea6b42cbabc00"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 7,
+      "canonicalClassCandidate": "br-input",
+      "structureFile": "normalized/examples/html/input.json"
+    }
+  },
+  {
+    "name": "item",
+    "canonicalUrl": "https://www.gov.br/ds/components/item",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "tcc-validator-covered",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-item-0e293b295c3d",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "states",
+        "component": "item",
+        "title": "Estados suportados do Item",
+        "originalText": "Ativo, Selecionado e Desativado.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Item pode representar os estados ativo, selecionado e desativado por meio das propriedades oficiais.",
+        "force": "permitted",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "active aplica estado ativo.",
+          "selected aplica estado selecionado.",
+          "disabled aplica estado desativado."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Estados suportados do Item",
+          "tab": null,
+          "section": "Estados",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "30a56bb2c7e3a16f0729738e72a73323f477f1ce068da8c925c45d31cd805986",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-460df90778c1",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "item",
+        "title": "Estrutura exemplificada com .br-item",
+        "originalText": "Os exemplos oficiais de item no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-item.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-item como referência estrutural ao comparar a implementação com os exemplos oficiais de item.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-item."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/item/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "f909869f5d93eaa33e379af4083ebb19f277002395b69fb0bb572bd8635d8be1"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-cb5d8f6d30b9",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "spacing",
+        "component": "item",
+        "title": "Evitar espaçamentos variados no agrupamento",
+        "originalText": "Evite o uso de itens agrupados com espaçamentos variados dentro do mesmo agrupamento.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Mantenha espaçamento uniforme entre Items pertencentes ao mesmo agrupamento.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Gaps entre Items irmãos são consistentes."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Evitar espaçamentos variados no agrupamento",
+          "tab": null,
+          "section": "Alinhamento e Espaçamento",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "6d93fa752f23dd12877cb1893db0761dd57fb67567f4e75eb35bca068c48a2fc",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-c806c8feda5a",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "item",
+        "title": "Item para conteúdo repetido e ordenado",
+        "originalText": "Devem ser utilizados quando se pretende apresentar conteúdos de forma repetida e ordenada.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Use Item para apresentar unidades de conteúdo repetidas e ordenadas, normalmente dentro de componentes compostos.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "list",
+          "menu"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Item para conteúdo repetido e ordenado",
+          "tab": null,
+          "section": "Uso",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "f0df4bec5586b65c8ba06b8e345f766829101fe2f0e3baa6eedfcdcbb2f7d735",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-e08476d083e4",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "layout",
+        "component": "item",
+        "title": "Largura consistente no agrupamento",
+        "originalText": "Todos os itens de um mesmo agrupamento devam possuir a mesma largura.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Itens pertencentes ao mesmo agrupamento devem possuir largura consistente.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Itens irmãos possuem larguras equivalentes no mesmo breakpoint."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Largura consistente no agrupamento",
+          "tab": null,
+          "section": "Largura",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "967dfea4c015c86743e6cdbbe236210fb8f2093f6471340907b67ab21e8b9f32",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-739294d90299",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "composition",
+        "component": "item",
+        "title": "Não usar botões primários ou navegação na área de conteúdo",
+        "originalText": "Qualquer componente é aceitável, exceto botões primários e componentes relacionados à navegação.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Não coloque Button primário nem componentes de navegação dentro da área de conteúdo do Item.",
+        "force": "prohibited",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A área de conteúdo não contém controles de navegação proibidos."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button",
+          "carousel",
+          "pagination",
+          "tab",
+          "menu"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Não usar botões primários ou navegação na área de conteúdo",
+          "tab": null,
+          "section": "Superfície",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "4dab9e8a047c49ce758b158985f0ccd8679f0ef2edf025b55283fe96761a0e65",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-a10751502b98",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "spacing",
+        "component": "item",
+        "title": "Respeitar padding dos fundamentos",
+        "originalText": "Os componentes dentro dos itens devem respeitar as margens internas.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "O conteúdo do Item deve respeitar o padding definido pelos fundamentos de espaçamento.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "O padding computado corresponde à escala oficial."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [
+          "spacing-*"
+        ],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Respeitar padding dos fundamentos",
+          "tab": null,
+          "section": "Margens Internas",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "e809248dca4d7f3f427ee146bcb359ad26768840de9b83758452b8df8dee93aa",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-cb34ed616246",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "anatomy",
+        "component": "item",
+        "title": "Superfície e área de conteúdo obrigatórias",
+        "originalText": "Para construir um item é necessário uma superfície, uma área com no mínimo um conteúdo contido.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Todo Item deve possuir uma superfície e uma área de conteúdo com pelo menos um elemento.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Existe container .br-item.",
+          "O container possui conteúdo interno significativo."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Superfície e área de conteúdo obrigatórias",
+          "tab": null,
+          "section": "Anatomia",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "51fb751cfa0e3e8cba71a53471daf6ef5ed03e35f8485f59cc533cde84126c91",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-item-a6d29ea54434",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "interaction",
+        "component": "item",
+        "title": "Superfície inteira interativa",
+        "originalText": "Neste caso, toda a superfície do item é interativa e assume o estado hover.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Quando o Item for interativo, toda a sua superfície deve constituir a área acionável e apresentar hover.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A superfície completa responde à interação.",
+          "O estado hover é perceptível."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/item",
+          "pageTitle": "Superfície inteira interativa",
+          "tab": null,
+          "section": "Hover",
+          "retrievedAt": "2026-07-11T07:06:33+00:00",
+          "contentHash": "0dd9036708dbd9dab197e5793d7a1a64494bd8c92e53c6ac3ce1a46167bf28dd",
+          "retrievalEvidence": "turn283850search17",
+          "captureType": "official-web-search-index-excerpt",
+          "sourceFamily": "official-govbr-ds-site"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-item",
+      "structureFile": "normalized/examples/html/item.json"
+    },
+    "lastUpdatedBatch": 6
+  },
+  {
+    "name": "list",
+    "canonicalUrl": "https://www.gov.br/ds/components/list",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-list-03813ffeeb42",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "list",
+        "title": "Navegação da List por teclado",
+        "originalText": "Os usuários devem poder navegar pelo list através do teclado, usando as teclas Tab e Shift + Tab.",
+        "normalizedRule": "Elementos interativos da List devem permitir navegação com Tab e Shift+Tab.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Itens interativos entram e saem da ordem de foco corretamente."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/list?tab=acessibilidade",
+          "pageTitle": "Padrão Digital de Governo - List",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "6de177755797ae973de15b0ea2e29cc46d8c8dc6b9c51f0849af1a223c602088",
+          "retrievalEvidence": "turn310107search1"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-list-8f67e7cc7677",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "consistency",
+        "component": "list",
+        "title": "Espaçamento consistente",
+        "originalText": "Não é permitido variar o espaçamento dos itens dentro de uma mesma list.",
+        "normalizedRule": "Todos os itens de uma mesma List devem utilizar espaçamento consistente.",
+        "force": "prohibited",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Os espaçamentos equivalentes entre itens possuem o mesmo valor computado."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "divider"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/list?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - List",
+          "tab": "designer",
+          "section": "Dividers e Espaçamento",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "32ea2a0625c859424a14be190365efc8cb09f387cf9215f4c76c7c6bef881e23",
+          "retrievalEvidence": "turn237587search17"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-list-a0a88e11b600",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "list",
+        "title": "Estrutura exemplificada com .br-list",
+        "originalText": "Os exemplos oficiais de list no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-list.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-list como referência estrutural ao comparar a implementação com os exemplos oficiais de list.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-list."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/list/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "7f9b4c7b4aea1bdab2c5f4aa60add9c4dee20a903261adb089f45ccb975200f2"
+        }
+      }
+    ],
+    "limitations": [
+      "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 10,
+      "canonicalClassCandidate": "br-list",
+      "structureFile": "normalized/examples/html/list.json"
+    }
+  },
+  {
+    "name": "loading",
+    "canonicalUrl": "https://www.gov.br/ds/components/loading",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-loading-55f44d018251",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "loading",
+        "title": "Estrutura exemplificada com .br-loading",
+        "originalText": "Os exemplos oficiais de loading no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-loading.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-loading como referência estrutural ao comparar a implementação com os exemplos oficiais de loading.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-loading."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/loading/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "813842147830f2f85cbca38e0ed7604e35a167079fe3adffd656f3494b617b61"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-loading-05f6aae1d1ad",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "loading-state",
+        "component": "loading",
+        "title": "Loading determinado ou indeterminado em bloqueio",
+        "originalText": "Exemplo de loading no corpo da página. Bloqueando a tela ou parte dela. Aqui, também, deve-se utilizar o Loading Indeterminado ou Determinado em seus formatos...",
+        "originalTextMode": "verbatim-truncated-excerpt",
+        "normalizedRule": "Ao bloquear a tela ou uma região durante processamento, utilize Loading determinado ou indeterminado conforme a disponibilidade de progresso.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Existe indicador de carregamento durante o bloqueio.",
+          "O tipo determinado é usado quando o progresso pode ser medido."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "O trecho indexado é truncado; a formulação preserva apenas a orientação claramente visível."
+        ],
+        "source": {
+          "url": "https://www.gov.br/ds/components/loading",
+          "pageTitle": "Padrão Digital de Governo - Componentes - Loading",
+          "tab": "designer",
+          "section": "Uso no corpo da página",
+          "retrievalEvidence": "turn795358search2",
+          "captureType": "official-web-search-index-excerpt",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "321f5950c6645a27bb3381cbbb3b3116ac3cb2e7d97c6fcd430f5699c6012046"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 3,
+      "canonicalClassCandidate": "br-loading",
+      "structureFile": "normalized/examples/html/loading.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "magicbutton",
+    "canonicalUrl": "https://www.gov.br/ds/components/magicbutton",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-magicbutton-d421fb28a955",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "magicbutton",
+        "title": "Magic Button não substitui Button universalmente",
+        "originalText": "Atenção: tenha em mente que o button pode substituir o magic button em todos os contextos porém, o contrário não é permitido.",
+        "normalizedRule": "Magic Button não deve substituir Button em todos os contextos; Button pode substituir Magic Button.",
+        "force": "prohibited",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "O Magic Button aparece apenas nos contextos previstos pelo componente."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/magicbutton",
+          "pageTitle": "Padrão Digital de Governo - Magicbutton",
+          "tab": "designer",
+          "section": "Uso",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "0ab46a7fc66dc7e4c36c56df197c1be9859c81e8c6df3e48e66d52e9c0120f8c",
+          "retrievalEvidence": "turn624744search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": null,
+      "structureFile": "normalized/examples/html/magicbutton.json"
+    }
+  },
+  {
+    "name": "menu",
+    "canonicalUrl": "https://www.gov.br/ds/components/menu",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-menu-d15988e5d19b",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "menu",
+        "title": "Estrutura exemplificada com .br-menu",
+        "originalText": "Os exemplos oficiais de menu no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-menu.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-menu como referência estrutural ao comparar a implementação com os exemplos oficiais de menu.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-menu."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/menu/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "7fe7d3f6feaa4f5a887d608c936a131ef12bd191cdc7c8c4025ef21b9e225fc9"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-menu-9e90f448c581",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "surface",
+        "component": "menu",
+        "title": "Scrim condicional do Menu",
+        "originalText": "Superfície scrim (Condicional). Este elemento serve para adicionar contraste entre o componente menu e o conteúdo da tela ao fundo, direcionando a atenção do...",
+        "originalTextMode": "verbatim-truncated-excerpt",
+        "normalizedRule": "Use Scrim de forma condicional quando for necessário separar visualmente o Menu do conteúdo ao fundo e direcionar a atenção.",
+        "force": "permitted",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Quando presente, o Scrim aumenta a separação visual do Menu.",
+          "O Scrim não é tratado como elemento obrigatório em todos os modos."
+        ],
+        "validationStrategy": "visual",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "scrim"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "O trecho indexado é truncado e descreve o elemento como condicional."
+        ],
+        "source": {
+          "url": "https://www.gov.br/ds/components/menu",
+          "pageTitle": "Padrão Digital de Governo - Componentes - Menu",
+          "tab": "designer",
+          "section": "Anatomia",
+          "retrievalEvidence": "turn795358search3",
+          "captureType": "official-web-search-index-excerpt",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "cdebcc720fb111a51a873d5ed426aeb9aecc0bed19b43d64e08e9713a0beed32"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": "br-menu",
+      "structureFile": "normalized/examples/html/menu.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "message",
+    "canonicalUrl": "https://www.gov.br/ds/components/message",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 3
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-message-088613b94e1c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "message",
+        "title": "Evitar mensagens longas",
+        "originalText": "É importante evitar textos de mensagens muito longos, que proporcionem muitas quebras de linha.",
+        "normalizedRule": "Evite textos excessivamente longos e com muitas quebras de linha em Message.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Texto conciso.",
+          "Quantidade limitada de quebras de linha."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/message?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Message",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "993fe75fcade8926eaf7bef613c2c81e2f29c2a62cf1b80d3182a504132a93c9",
+          "retrievalEvidence": "turn554226search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-message-188aad85588b",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "message",
+        "title": "Evitar múltiplas Messages padrão",
+        "originalText": "Deve-se evitar o uso de múltiplas Mensagens do Tipo Padrão.",
+        "normalizedRule": "Evite exibir múltiplas Messages do tipo Padrão simultaneamente.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Número reduzido de Messages padrão simultâneas."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/message?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Message",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "506f32bcf847870b35407aa9c9c92a7436f5247bf986e1b2e235dcb6e966520f",
+          "retrievalEvidence": "turn554226search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-message-66b01a712e67",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "anatomy",
+        "component": "message",
+        "title": "Posicionamento dos ícones da Message",
+        "originalText": "Os ícones de função semântica devem ser posicionados à esquerda na Superfície do Message, enquanto o Botão Fechar, deve ser posicionado no topo e à direita.",
+        "normalizedRule": "Posicione o ícone semântico à esquerda e o botão Fechar no topo à direita da Message.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Ícone semântico no lado esquerdo.",
+          "Botão Fechar no topo direito."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/message?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Message",
+          "tab": "designer",
+          "section": "Anatomia",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "9941371aac03f57fc52f81eadf6506058ae3c79a09766e86a8de17ceb13da998",
+          "retrievalEvidence": "turn624744search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-message-770d2a04a8b1",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "message",
+        "title": "Estrutura exemplificada com .br-message",
+        "originalText": "Os exemplos oficiais de message no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-message.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-message como referência estrutural ao comparar a implementação com os exemplos oficiais de message.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-message."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/message/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "13c859f4f8a81750073b0becc6ca4d2dd920a54150df352a0d457439fb07fb69"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 3,
+      "canonicalClassCandidate": "br-message",
+      "structureFile": "normalized/examples/html/message.json"
+    }
+  },
+  {
+    "name": "modal",
+    "canonicalUrl": "https://www.gov.br/ds/components/modal",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 3
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-modal-64b84991229c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "modal",
+        "title": "Navegação interna da Modal",
+        "originalText": "Os usuários devem ser capazes de navegar facilmente pela janela modal, por meio da tecla Tab ou Shift + Tab para retroceder na navegação.",
+        "normalizedRule": "A Modal deve permitir navegação interna com Tab e Shift+Tab.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Tab avança entre controles.",
+          "Shift+Tab retrocede.",
+          "Foco permanece coerente com a Modal aberta."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "critical",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/modal?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Modal",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "23568369859cae52fac4f4274b9c8769110285e8da3a1b0a54770da01813e41e",
+          "retrievalEvidence": "turn984279search4",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "accessible-name",
+        "component": "modal",
+        "title": "Rotulagem da Modal",
+        "originalText": "A janela modal pode ser rotulada pelo atributo aria-label, usando a mesma string do título.",
+        "normalizedRule": "Quando aria-label for usado na Modal, seu valor deve corresponder ao título apresentado.",
+        "force": "permitted",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "O valor de aria-label corresponde ao título visível da Modal."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [
+          "Accessible Name"
+        ],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/modal",
+          "pageTitle": "Padrão Digital de Governo - Modal",
+          "tab": "acessibilidade",
+          "section": "Recomendações para Código",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "2a31cb80b96be1b7b411f6b8749ffd81c30e38bb6718f8230fca865202b8d00d",
+          "retrievalEvidence": "turn237587search22"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-accessibility-modal-65446caf1efc",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "aria",
+        "component": "modal",
+        "title": "Uso condicionado de aria-modal",
+        "originalText": "Ao utilizar o recurso de arial-modal como true, pode impedir que os usuários de tecnologias assistivas sejam impedidos de acessar o conteúdo de fora da modal, quando esta estiver aberta. Portanto, faça isso apenas quando o objetivo for realmente este e a experiência seja a mesma para todos os tipos de usuários.",
+        "normalizedRule": "Defina aria-modal=\"true\" somente quando o conteúdo externo realmente deva ficar indisponível enquanto a Modal estiver aberta.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [
+          "A Modal bloqueia intencionalmente a interação com o conteúdo externo."
+        ],
+        "exceptions": [],
+        "expectedEvidence": [
+          "O comportamento do foco e da árvore de acessibilidade corresponde à modalidade declarada."
+        ],
+        "validationStrategy": "accessibility-tree",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/modal",
+          "pageTitle": "Padrão Digital de Governo - Modal",
+          "tab": "acessibilidade",
+          "section": "Recomendações para Código",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "b1d410e64539e5e1376c751699b638534dd473c4b14d4e4b20d62a202fdd8432",
+          "retrievalEvidence": "turn237587search22"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-modal-091e0e012f86",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "actions",
+        "component": "modal",
+        "title": "Máximo recomendado de dois botões",
+        "originalText": "É recomendado que em uma modal contenha no máximo dois botões.",
+        "normalizedRule": "Uma Modal deve conter, preferencialmente, no máximo dois botões de ação.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "No máximo dois botões de ação na Modal."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/modal?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Modal",
+          "tab": "designer",
+          "section": "Botões",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "6c5ef2d4333f07ca616c6da864f6072b6905328bf944a0651fb4d888ac8d2955",
+          "retrievalEvidence": "turn554226search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-modal-c9493346e1ad",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "modal",
+        "title": "Estrutura exemplificada com .br-modal",
+        "originalText": "Os exemplos oficiais de modal no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-modal.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-modal como referência estrutural ao comparar a implementação com os exemplos oficiais de modal.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-modal."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/modal/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "9acf5699c2db19f1bed916c93ea691a9cc25fe6eba6aacab9a4b8e5008452adf"
+        }
+      }
+    ],
+    "limitations": [
+      "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-modal",
+      "structureFile": "normalized/examples/html/modal.json"
+    }
+  },
+  {
+    "name": "notification",
+    "canonicalUrl": "https://www.gov.br/ds/components/notification",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "notification",
+        "title": "Painel de notificações navegável",
+        "originalText": "Os usuários devem conseguir acessar o painel de notificações usando a tecla Tab e Shift + Tab para avançar e retroceder na navegação.",
+        "normalizedRule": "O painel de Notification deve permitir avanço com Tab e retorno com Shift+Tab.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Tab avança.",
+          "Shift+Tab retrocede.",
+          "Ordem de foco lógica."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/notification?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Notification",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "4517f02f54593856ae7d7046376ce26fb4a55bcc02b387a4ee76153f114354c3",
+          "retrievalEvidence": "turn984279search15",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-notification-a77199b18a54",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "ordering",
+        "component": "notification",
+        "title": "Agrupamento cronológico",
+        "originalText": "O agrupamento deve ser classificado de forma cronológica para que o usuário tenha uma melhor organização temporal do conteúdo.",
+        "normalizedRule": "Agrupe Notifications em ordem cronológica.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Datas ou timestamps aparecem em ordem cronológica consistente."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/notification?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Notification",
+          "tab": "designer",
+          "section": "Agrupamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "3391e99c773e971b648ed7578b05cc217d1ffe12b6bf440d05d064a1baca1ff3",
+          "retrievalEvidence": "turn368875search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-notification-47dfbe60f602",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "notification",
+        "title": "Estrutura exemplificada com .br-notification",
+        "originalText": "Os exemplos oficiais de notification no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-notification.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-notification como referência estrutural ao comparar a implementação com os exemplos oficiais de notification.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-notification."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/notification/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "87aba4945080fb24f307bfdb32677411d1e3aa84f5f93f17b2b4c061947bf196"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 1,
+      "canonicalClassCandidate": "br-notification",
+      "structureFile": "normalized/examples/html/notification.json"
+    }
+  },
+  {
+    "name": "pagination",
+    "canonicalUrl": "https://www.gov.br/ds/components/pagination",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-pagination-524ef55890db",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "pagination",
+        "title": "Estrutura exemplificada com .br-pagination",
+        "originalText": "Os exemplos oficiais de pagination no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-pagination.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-pagination como referência estrutural ao comparar a implementação com os exemplos oficiais de pagination.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-pagination."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/pagination/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "f22d27b0d2a37e24aa77b16626361c11a80cf9b35e7a49e10d38cf18e9c1285d"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-pagination-7b0ffe97e848",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "configuration",
+        "component": "pagination",
+        "title": "Módulos opcionais da Pagination contextual",
+        "originalText": "O Componente Pagination do Tipo Contextual também permite a configuração da visualização de cada módulo, independentemente. Cada módulo poderá ser usado ou não.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Na Pagination contextual, cada módulo pode ser habilitado ou omitido independentemente.",
+        "force": "permitted",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A ausência de um módulo opcional não invalida os demais.",
+          "Os módulos presentes mantêm estrutura íntegra."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/pagination?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Pagination",
+          "tab": "designer",
+          "section": "Tipo Contextual",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "805ccf89747ac19e9a38ea772ca565c1bae29bb95c87f2c1d6faf5ff61e3eccf",
+          "retrievalEvidence": "turn524143search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": "br-pagination",
+      "structureFile": "normalized/examples/html/pagination.json"
+    }
+  },
+  {
+    "name": "radio",
+    "canonicalUrl": "https://www.gov.br/ds/components/radio",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-radio-9cf59fa5bf60",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "selection",
+        "component": "radio",
+        "title": "Avaliar Select para listas extensas",
+        "originalText": "Quando a lista de opções for muito extensa, deve ser avaliada a possibilidade de uso do componente select.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Quando houver muitas opções exclusivas, avalie substituir Radio por Select.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A escolha entre Radio e Select considera a quantidade de opções."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "select"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/radio",
+          "pageTitle": "Padrão Digital de Governo - Radio",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "90b0a29c5e03710fffd8e2d74e06f438763681c23de0e03eab379f76b06c3708",
+          "retrievalEvidence": "turn685362search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-radio-ec08304a645c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "radio",
+        "title": "Estrutura exemplificada com .br-radio",
+        "originalText": "Os exemplos oficiais de radio no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-radio.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-radio como referência estrutural ao comparar a implementação com os exemplos oficiais de radio.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-radio."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/radio/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "6adaa508bd66430629c2c95731693eba33342a82c35cea344534362d043dcdb9"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 3,
+      "canonicalClassCandidate": "br-radio",
+      "structureFile": "normalized/examples/html/radio.json"
+    }
+  },
+  {
+    "name": "scrim",
+    "canonicalUrl": "https://www.gov.br/ds/components/scrim",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-scrim-d5ba51dda2b0",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "access-control",
+        "component": "scrim",
+        "title": "Bloqueio de áreas de suporte exige justificativa",
+        "originalText": "Deve existir uma boa justificativa para impedir acesso a essas áreas de suporte.",
+        "normalizedRule": "O Scrim só deve bloquear áreas de busca ou acessibilidade quando houver justificativa clara.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [
+          "O Scrim impede acesso a áreas de suporte, busca ou acessibilidade."
+        ],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Justificativa funcional explícita para o bloqueio."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/scrim",
+          "pageTitle": "Padrão Digital de Governo - Scrim",
+          "tab": "designer",
+          "section": "Cuidados",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "8a81417b236bec24b69046557b1d073f74c89cc9e0053cead2696fa1998ca964",
+          "retrievalEvidence": "turn624744search3",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-scrim-78bf4890482e",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "scrim",
+        "title": "Estrutura exemplificada com .br-scrim",
+        "originalText": "Os exemplos oficiais de scrim no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-scrim.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-scrim como referência estrutural ao comparar a implementação com os exemplos oficiais de scrim.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-scrim."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/scrim/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "fd7eeacd8bca2954cc836bed4056a34b30d9de9ee3c234db0022f09bdfc8de63"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-scrim",
+      "structureFile": "normalized/examples/html/scrim.json"
+    }
+  },
+  {
+    "name": "select",
+    "canonicalUrl": "https://www.gov.br/ds/components/select",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-select-3587924c3600",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "select",
+        "title": "Estrutura exemplificada com .br-select",
+        "originalText": "Os exemplos oficiais de select no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-select.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-select como referência estrutural ao comparar a implementação com os exemplos oficiais de select.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-select."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/select/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "23c64c66e443c15216e2b4e076c0a594e56ab22a24f1fd3b2c9e7b20b47b9642"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-select-3d506ce4d7d3",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "content",
+        "component": "select",
+        "title": "Textos curtos e objetivos no Select",
+        "originalText": "De modo geral, deve-se prezar pelo uso de textos curtos e objetivos no select e no multiselect.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Use textos curtos e objetivos nas opções e no valor selecionado de Select e Multiselect.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Rótulos de opções são concisos.",
+          "O valor selecionado permanece compreensível na largura disponível."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/select",
+          "pageTitle": "Padrão Digital de Governo - Select",
+          "tab": "designer",
+          "section": "Conteúdo",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "174326167d5fa1b9eb5c5243c6bbc6e17b8324a5fd4cb93b34f4b55a72f298c3",
+          "retrievalEvidence": "turn737144search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-select",
+      "structureFile": "normalized/examples/html/select.json"
+    }
+  },
+  {
+    "name": "signin",
+    "canonicalUrl": "https://www.gov.br/ds/components/signin",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 2
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-signin-a68a86f45877",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "signin",
+        "title": "Sign-in acionável por teclado",
+        "originalText": "É recomendado que os botões sign-in possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+        "normalizedRule": "Sign-in deve receber foco por Tab e ser acionável por Space ou Enter.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Foco por Tab.",
+          "Ativação por Space.",
+          "Ativação por Enter."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/signin",
+          "pageTitle": "Padrão Digital de Governo - Signin",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "ecb8102726c88acaf1dd4b0556189d0b40dacd0588a4199b3726c5297c45959b",
+          "retrievalEvidence": "turn162350search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-signin-837c5ed4fe6a",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "signin",
+        "title": "Rótulo conciso",
+        "originalText": "Deve-se evitar o uso excessivo de palavras no rotulo.",
+        "normalizedRule": "Evite rótulos excessivamente longos no Sign-in.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Rótulo curto e reconhecível."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/signin",
+          "pageTitle": "Padrão Digital de Governo - Signin",
+          "tab": "designer",
+          "section": "Rótulos",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "648dbe1dedf25540aefcd7509e6d1374e1a8dfd762ae22af6f35b29fa5e84285",
+          "retrievalEvidence": "turn554226search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-signin-2752fd23bbe8",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "signin",
+        "title": "Rótulo sem quebra de linha",
+        "originalText": "Nunca utilizar quebra de linhas nos rótulos do sign-in.",
+        "normalizedRule": "Não use quebra de linha no rótulo do Sign-in.",
+        "force": "prohibited",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Rótulo renderizado em uma única linha."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/signin",
+          "pageTitle": "Padrão Digital de Governo - Signin",
+          "tab": "designer",
+          "section": "Rótulos",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "c22493dd61474c4455365a72629de208338ed00f777bdfa7a04c3586d96de96b",
+          "retrievalEvidence": "turn554226search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 13,
+      "canonicalClassCandidate": null,
+      "structureFile": "normalized/examples/html/signin.json"
+    }
+  },
+  {
+    "name": "skiplink",
+    "canonicalUrl": "https://www.gov.br/ds/components/skiplink",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "document-order",
+        "component": "skiplink",
+        "title": "Skip Link após body",
+        "originalText": "Este componente deve estar logo após a tag body (deve ser a primeira coisa que um usuário de teclado acessaria em sua página).",
+        "normalizedRule": "O Skip Link deve ser o primeiro conteúdo focável após a abertura de body.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Skip Link aparece imediatamente após body.",
+          "É o primeiro elemento alcançado por Tab."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "critical",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/skiplink",
+          "pageTitle": "Padrão Digital de Governo - Skiplink",
+          "tab": "desenvolvedor",
+          "section": "Uso",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "083af03693a8d8ccb486214a326da653c3b4d9d90ca2ea0655661820aff2a47f",
+          "retrievalEvidence": "turn162350search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-skiplink-3e4560a2ead2",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "skiplink",
+        "title": "Estrutura exemplificada com .br-skiplink",
+        "originalText": "Os exemplos oficiais de skiplink no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-skiplink.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-skiplink como referência estrutural ao comparar a implementação com os exemplos oficiais de skiplink.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-skiplink."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/skiplink/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "9ce54a3d5a9052dc830e6dc82f6ff53c7fbf8447c5af05ae6712f3e8685e2fe1"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-skiplink",
+      "structureFile": "normalized/examples/html/skiplink.json"
+    }
+  },
+  {
+    "name": "step",
+    "canonicalUrl": "https://www.gov.br/ds/components/step",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-step-05a4b8044384",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "step",
+        "title": "Estrutura exemplificada com .br-step",
+        "originalText": "Os exemplos oficiais de step no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-step.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-step como referência estrutural ao comparar a implementação com os exemplos oficiais de step.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-step."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/step/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "5c5d71875ae957a12e7ea623ec6b10c03d008f8431112808769a6a3311543cc8"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 7,
+      "canonicalClassCandidate": "br-step",
+      "structureFile": "normalized/examples/html/step.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "switch",
+    "canonicalUrl": "https://www.gov.br/ds/components/switch",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-switch-3dbccb666b4f",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "switch",
+        "title": "Estrutura exemplificada com .br-switch",
+        "originalText": "Os exemplos oficiais de switch no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-switch.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-switch como referência estrutural ao comparar a implementação com os exemplos oficiais de switch.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-switch."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/switch/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "3472b50a302379bf1c4fed72779a24b4d5a559beca26ae84ee2e66bd74e30625"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-switch-d53688105360",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "layout",
+        "component": "switch",
+        "title": "Posicionamento estável do Switch",
+        "originalText": "O Switch deve ser posicionado na interface de forma firme e consistente durante o movimento da chave de alternância ou alternância de labels e surgimento de...",
+        "originalTextMode": "verbatim-truncated-excerpt",
+        "normalizedRule": "Mantenha o Switch em posição estável durante a alternância da chave, dos rótulos e de conteúdos condicionais.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Alternar o controle não desloca inesperadamente sua posição.",
+          "Mudanças de rótulo não causam salto de layout relevante."
+        ],
+        "validationStrategy": "visual",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "O trecho indexado é truncado."
+        ],
+        "source": {
+          "url": "https://www.gov.br/ds/components/switch",
+          "pageTitle": "Padrão Digital de Governo - Componentes - Switch",
+          "tab": "designer",
+          "section": "Posicionamento",
+          "retrievalEvidence": "turn795358search1",
+          "captureType": "official-web-search-index-excerpt",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "d27cd5c433c32fa48cfd6eb79f7ff78b96f736b8b28081db4e57e0da535a0b3d"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 6,
+      "canonicalClassCandidate": "br-switch",
+      "structureFile": "normalized/examples/html/switch.json"
+    },
+    "lastUpdatedBatch": 4
+  },
+  {
+    "name": "tab",
+    "canonicalUrl": "https://www.gov.br/ds/components/tab",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "queued"
+      },
+      "acessibilidade": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "accessibility",
+        "subcategory": "keyboard",
+        "component": "tab",
+        "title": "Tabs operáveis sem mouse",
+        "originalText": "Certifique-se de que as tabs possam ser acessadas e navegadas pelo teclado, sem a ajuda do mouse.",
+        "normalizedRule": "Tabs devem ser acessíveis e navegáveis inteiramente por teclado.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Foco alcança a lista de tabs.",
+          "Navegação e seleção funcionam sem mouse."
+        ],
+        "validationStrategy": "keyboard-interaction",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/tab?tab=acessibilidade",
+          "pageTitle": "Padrão Digital de Governo - Tab",
+          "tab": "acessibilidade",
+          "section": "Navegação e Comportamento",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "7011779a70ecd402e3c057c516137c18e7c8b681e8dc2e1703231389f8424eeb",
+          "retrievalEvidence": "turn699803search2",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-tab-bc811e53068f",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "tab",
+        "title": "Estrutura exemplificada com .br-tab",
+        "originalText": "Os exemplos oficiais de tab no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tab.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-tab como referência estrutural ao comparar a implementação com os exemplos oficiais de tab.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-tab."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/tab/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "f72a7ffcca8848cdb4ff62f80c6038693188a36d94091305cba122e2c42b3b88"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 5,
+      "canonicalClassCandidate": "br-tab",
+      "structureFile": "normalized/examples/html/tab.json"
+    }
+  },
+  {
+    "name": "table",
+    "canonicalUrl": "https://www.gov.br/ds/components/table",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 3
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-table-7c605ca2f85e",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "anatomy",
+        "component": "table",
+        "title": "Coluna obrigatória",
+        "originalText": "A coluna é um elemento obrigatório e essencial da tabela, pois para constituir uma tabela é necessário pelo menos uma coluna.",
+        "normalizedRule": "Toda Table deve possuir ao menos uma coluna.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A tabela possui pelo menos uma célula de cabeçalho/coluna."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "critical",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/table",
+          "pageTitle": "Padrão Digital de Governo - Table",
+          "tab": "designer",
+          "section": "Colunas",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "d0db234b5a1dabbc0569b05c1438d9e7eb768b476cb85dbf611aa8e10c179591",
+          "retrievalEvidence": "turn237587search13"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-table-88941e76c77b",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "best-practice",
+        "component": "table",
+        "title": "Evitar colunas vazias",
+        "originalText": "Evite o uso de colunas com células vazias.",
+        "normalizedRule": "Evite colunas compostas por células vazias.",
+        "force": "discouraged",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Colunas apresentam conteúdo significativo ou justificativa semântica."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/table",
+          "pageTitle": "Padrão Digital de Governo - Table",
+          "tab": "designer",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "679ab64757d8beb5a54744f575a8ae09db36b8e16f963402da96e943a0d1cdfd",
+          "retrievalEvidence": "turn237587search13"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-table-8b8d4b403cb9",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "actions",
+        "component": "table",
+        "title": "Limite recomendado de ações visíveis",
+        "originalText": "Recomendamos a utilização de até 4 ícones dispostos lado a lado na barra de título. Caso seja necessário utilizar uma quantidade maior, deve-se optar pelo uso do menu flutuante, que será acessado pelo botão Ellipsis-v.",
+        "normalizedRule": "A barra de título da Table deve exibir no máximo quatro ícones de ação lado a lado; ações adicionais devem ser agrupadas em menu flutuante.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Até quatro ações diretas.",
+          "Com mais ações, existe botão Ellipsis-v e menu associado."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "menu",
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/table",
+          "pageTitle": "Padrão Digital de Governo - Table",
+          "tab": "designer",
+          "section": "Quantidade de ícones de ação",
+          "retrievedAt": "2026-07-11T06:32:04+00:00",
+          "contentHash": "7aa0abcbfff4301c051de97917c2a095422f4ba7fad08114263a519adeb1646f",
+          "retrievalEvidence": "turn237587search13"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-table-41e9a89fb4e1",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "table",
+        "title": "Estrutura exemplificada com .br-table",
+        "originalText": "Os exemplos oficiais de table no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-table.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-table como referência estrutural ao comparar a implementação com os exemplos oficiais de table.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-table."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/table/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "2d7c09582451ff686c57f20651d028892ddf854cd5ddfe8f5061152853f34519"
+        }
+      }
+    ],
+    "limitations": [
+      "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 3,
+      "canonicalClassCandidate": "br-table",
+      "structureFile": "normalized/examples/html/table.json"
+    }
+  },
+  {
+    "name": "tag",
+    "canonicalUrl": "https://www.gov.br/ds/components/tag",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-tag-7d70c8be6a0c",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "tag",
+        "title": "Tooltip para contagens acima de três dígitos",
+        "originalText": "Atenção: em caso de números com mais de três dígitos é recomendado o uso de tooltip para especificar a quantidade exata do valor.",
+        "normalizedRule": "Use Tooltip em Tag de contagem com mais de três dígitos para informar o valor exato.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [
+          "A Tag representa uma contagem superior a 999."
+        ],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Tooltip associado contém a contagem exata."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "tooltip"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/tag",
+          "pageTitle": "Padrão Digital de Governo - Tag",
+          "tab": "designer",
+          "section": "Contagem",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "43f0b2b293f23e4b17a648f880c38e435ba454376cff02432759bea60c385fd5",
+          "retrievalEvidence": "turn455538search8",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-tag-fa30aea78fa4",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "tag",
+        "title": "Estrutura exemplificada com .br-tag",
+        "originalText": "Os exemplos oficiais de tag no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tag.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-tag como referência estrutural ao comparar a implementação com os exemplos oficiais de tag.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-tag."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/tag/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "4f95e541df5c9f130848819e660778fbecaf1eac671c26ebdaf1aa6b1177dfab"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 7,
+      "canonicalClassCandidate": "br-tag",
+      "structureFile": "normalized/examples/html/tag.json"
+    }
+  },
+  {
+    "name": "textarea",
+    "canonicalUrl": "https://www.gov.br/ds/components/textarea",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-textarea-b00a40afe0f8",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "scrolling",
+        "component": "textarea",
+        "title": "Barra de rolagem nativa",
+        "originalText": "A Barra de Rolagem será o elemento nativo renderizado pelo Navegador.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Quando Textarea precisar de rolagem, preserve a barra de rolagem nativa do navegador.",
+        "force": "informative",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A rolagem não substitui o controle nativo por implementação inacessível."
+        ],
+        "validationStrategy": "computed-style",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/textarea",
+          "pageTitle": "Padrão Digital de Governo - Textarea",
+          "tab": "designer",
+          "section": "Barra de Rolagem",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "55da6f5affe8f9f3fb44f825e902bfedf78ae4f9eaf7f426276ff806bd8c116c",
+          "retrievalEvidence": "turn737144search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-textarea-cf60e234f8de",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "textarea",
+        "title": "Estrutura exemplificada com .br-textarea",
+        "originalText": "Os exemplos oficiais de textarea no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-textarea.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-textarea como referência estrutural ao comparar a implementação com os exemplos oficiais de textarea.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-textarea."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/textarea/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "7363e5261d2ec359d097a7314160c808f3da216e0bc123fe044f953d4ea5a370"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 7,
+      "canonicalClassCandidate": "br-textarea",
+      "structureFile": "normalized/examples/html/textarea.json"
+    }
+  },
+  {
+    "name": "tooltip",
+    "canonicalUrl": "https://www.gov.br/ds/components/tooltip",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-tooltip-c028ba432407",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "content",
+        "component": "tooltip",
+        "title": "Texto curto e orientado à ação",
+        "originalText": "O texto do tooltip deve ser curto e ir direto ao ponto, deve ser informativo e não enrolado e deve ser orientado à ação.",
+        "normalizedRule": "O texto do Tooltip deve ser curto, direto, informativo e orientado à ação.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Texto conciso.",
+          "Informação objetiva.",
+          "Orientação clara de ação quando aplicável."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/tooltip?tab=designer",
+          "pageTitle": "Padrão Digital de Governo - Tooltip",
+          "tab": "designer",
+          "section": "Conteúdo",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "ee1abba37c4343162a1e18902c42b2cac51986dd5530c6d59bb1845f8bc9aac7",
+          "retrievalEvidence": "turn699803search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-tooltip-6cc61d2b3460",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "category": "component",
+        "subcategory": "usage",
+        "component": "tooltip",
+        "title": "Tooltip somente quando necessário",
+        "originalText": "Use tooltips somente quando necessário pois o uso excessivo deste recurso pode ser irritante para a experiência do usuário.",
+        "normalizedRule": "Use Tooltip somente quando necessário e evite uso excessivo.",
+        "force": "recommended",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Tooltip agrega informação não disponível de forma mais simples."
+        ],
+        "validationStrategy": "semantic",
+        "automatable": false,
+        "automationConfidence": "medium",
+        "severitySuggestion": "minor",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/tooltip?tab=visao-geral",
+          "pageTitle": "Padrão Digital de Governo - Tooltip",
+          "tab": "visao-geral",
+          "section": "Melhores Práticas",
+          "retrievedAt": "2026-07-11T06:37:25+00:00",
+          "contentHash": "9b89a2e12df86df57ec224a6553c55954c58bcad602a8c8f64539015e198f91b",
+          "retrievalEvidence": "turn699803search0",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-tooltip-1657eb316f64",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "tooltip",
+        "title": "Estrutura exemplificada com .br-tooltip",
+        "originalText": "Os exemplos oficiais de tooltip no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tooltip.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-tooltip como referência estrutural ao comparar a implementação com os exemplos oficiais de tooltip.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-tooltip."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/tooltip/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "c80fc512921573a6f62a827f1ec87d8d8167c8ebd59626eb3bac0e3a2cde62ab"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 9,
+      "canonicalClassCandidate": "br-tooltip",
+      "structureFile": "normalized/examples/html/tooltip.json"
+    }
+  },
+  {
+    "name": "upload",
+    "canonicalUrl": "https://www.gov.br/ds/components/upload",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-upload-f4726f3ce44a",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "upload",
+        "title": "Estrutura exemplificada com .br-upload",
+        "originalText": "Os exemplos oficiais de upload no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-upload.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-upload como referência estrutural ao comparar a implementação com os exemplos oficiais de upload.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-upload."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/upload/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "0d95f9e209ee052bb919bee0d0e1a18e65d188b30d06ff44c0b207a141a6e00d"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-upload-985fd2775586",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "interaction",
+        "component": "upload",
+        "title": "Upload por arrastar arquivos",
+        "originalText": "O componente upload deve disponibilizar o recurso de arrastar arquivos. Esta funcionalidade deve ser informada ao usuário na mensagem abaixo do campo.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Upload deve aceitar arrastar arquivos e informar essa possibilidade no texto de apoio do campo.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "Existe uma zona de arrastar e soltar.",
+          "O texto de apoio informa a interação por arraste."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "serious",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/upload",
+          "pageTitle": "Padrão Digital de Governo - Upload",
+          "tab": "designer",
+          "section": "Interação",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "a9c55154a2e100880c16178cd1f9c96a46ff6e50acb95270b2465ac83a646264",
+          "retrievalEvidence": "turn788987search1",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 4,
+      "canonicalClassCandidate": "br-upload",
+      "structureFile": "normalized/examples/html/upload.json"
+    }
+  },
+  {
+    "name": "wizard",
+    "canonicalUrl": "https://www.gov.br/ds/components/wizard",
+    "version": "3.7.0",
+    "pageVerified": true,
+    "status": "package-examples-captured",
+    "tabs": {
+      "desenvolvedor": {
+        "status": "queued"
+      },
+      "designer": {
+        "status": "partially-extracted",
+        "ruleCount": 1
+      },
+      "acessibilidade": {
+        "status": "queued"
+      }
+    },
+    "rules": [
+      {
+        "id": "govbr-3.7.0-component-wizard-356c3bf376a5",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "completion",
+        "component": "wizard",
+        "title": "Botão Concluir na última etapa",
+        "originalText": "Uma vez atingida a última etapa, o botão apresentado deve ser o de Concluir para sinalizar o fim das etapas.",
+        "originalTextMode": "verbatim-excerpt",
+        "normalizedRule": "Na última etapa do Wizard, apresente uma ação denominada Concluir.",
+        "force": "required",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A última etapa contém um botão cujo rótulo é Concluir."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "high",
+        "severitySuggestion": "moderate",
+        "relatedTokens": [],
+        "relatedComponents": [
+          "button"
+        ],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "source": {
+          "url": "https://www.gov.br/ds/components/wizard",
+          "pageTitle": "Padrão Digital de Governo - Wizard",
+          "tab": "designer",
+          "section": "Ações",
+          "retrievedAt": "2026-07-11T06:44:34+00:00",
+          "contentHash": "a8b6b8def519065a259e263fa45b009971ab13df7d400cd43466e07f3512763d",
+          "retrievalEvidence": "turn837999search3",
+          "captureType": "official-web-search-index-excerpt"
+        }
+      },
+      {
+        "id": "govbr-3.7.0-component-wizard-170b92a67c4b",
+        "dsVersion": "3.7.0",
+        "status": "stable",
+        "standard": "gov.br Design System",
+        "standardVersion": "3.7.0",
+        "category": "component",
+        "subcategory": "canonical-example-structure",
+        "component": "wizard",
+        "title": "Estrutura exemplificada com .br-wizard",
+        "originalText": "Os exemplos oficiais de wizard no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-wizard.",
+        "originalTextMode": "official-package-structure-derived",
+        "normalizedRule": "Use .br-wizard como referência estrutural ao comparar a implementação com os exemplos oficiais de wizard.",
+        "force": "example",
+        "rationale": null,
+        "conditions": [],
+        "exceptions": [],
+        "expectedEvidence": [
+          "A estrutura comparada pode conter a classe .br-wizard."
+        ],
+        "validationStrategy": "dom",
+        "automatable": true,
+        "automationConfidence": "medium",
+        "severitySuggestion": "informational",
+        "relatedTokens": [],
+        "relatedComponents": [],
+        "wcagReferences": [],
+        "emagReferences": [],
+        "notes": [
+          "Regra classificada como example, não como requisito.",
+          "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+        ],
+        "source": {
+          "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+          "pageTitle": "@govbr-ds/core 3.7.0",
+          "file": "dist/components/wizard/examples/",
+          "package": "@govbr-ds/core",
+          "packageVersion": "3.7.0",
+          "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+          "retrievalEvidence": "official-npm-package",
+          "captureType": "official-package-structural-index",
+          "retrievedAt": "2026-07-11T06:52:44+00:00",
+          "contentHash": "505f91e3c57e4befe5ec5aa604de7d17549f10cc965a72540e4bcb142cca25d5"
+        }
+      }
+    ],
+    "limitations": [
+      "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+    ],
+    "lastUpdatedBatch": 4,
+    "officialPackage": {
+      "name": "@govbr-ds/core",
+      "version": "3.7.0",
+      "examplesCaptured": true,
+      "exampleCount": 2,
+      "canonicalClassCandidate": "br-wizard",
+      "structureFile": "normalized/examples/html/wizard.json"
+    }
+  }
+]

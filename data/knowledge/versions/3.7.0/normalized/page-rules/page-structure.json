@@ -1,0 +1,41 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-page-global-f6e03bce515b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "page",
+      "subcategory": "governance",
+      "component": null,
+      "title": "Adoção dos padrões de interface",
+      "originalText": "O Padrão Digital de Governo apresenta os padrões de interface que devem ser seguidos por designers e desenvolvedores para garantir a experiência única na interação com os sistemas interativos.",
+      "normalizedRule": "Designers e desenvolvedores devem seguir os padrões de interface do Padrão Digital de Governo.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A implementação demonstra aderência às especificações documentadas."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "low",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/introducao/sobre",
+        "pageTitle": "Padrão Digital de Governo - Adoção dos padrões de interface",
+        "tab": null,
+        "section": "Sobre o Design System",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "eb8773df2e867dbf593e8e4dafc16d72c1cf418589218ee8e1f0dffe54447b48",
+        "retrievalEvidence": "turn237587search1"
+      }
+    }
+  ]
+}

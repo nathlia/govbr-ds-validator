@@ -1,0 +1,252 @@
+{
+  "component": "datetimepicker",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 4,
+  "canonicalClassCandidate": "br-datetimepicker",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 4
+    },
+    {
+      "class": "br-datetimepicker",
+      "occurrences": 4
+    },
+    {
+      "class": "br-input",
+      "occurrences": 4
+    }
+  ],
+  "tags": {
+    "div": 12,
+    "label": 4,
+    "input": 4,
+    "button": 4,
+    "i": 4
+  },
+  "classes": {
+    "col-sm-6": 4,
+    "col-md-4": 4,
+    "col-lg-3": 4,
+    "br-datetimepicker": 4,
+    "br-input": 4,
+    "has-icon": 4,
+    "br-button": 4,
+    "circle": 4,
+    "small": 4,
+    "fas": 4,
+    "fa-calendar-alt": 3,
+    "mb-5": 1,
+    "fa-clock": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 4,
+    "aria-hidden": 8
+  },
+  "roles": {},
+  "dataAttributes": {
+    "data-mode": 4,
+    "data-type": 4,
+    "data-input": 4,
+    "data-toggle": 4
+  },
+  "inputTypes": {
+    "datetime-local": 1,
+    "text": 2,
+    "time": 1
+  },
+  "interactiveTags": {
+    "input": 4,
+    "button": 4
+  },
+  "examples": [
+    {
+      "file": "datetimepicker-dateandtime.html",
+      "relativePackagePath": "dist/components/datetimepicker/examples/datetimepicker-dateandtime.html",
+      "sha256": "796853608159d0442e4ce2c6e629956cce4f339a2fa66777f65749180a35c238",
+      "byteSize": 677,
+      "tags": {
+        "div": 3,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-datetimepicker": 1,
+        "br-input": 1,
+        "has-icon": 1,
+        "br-button": 1,
+        "circle": 1,
+        "small": 1,
+        "fas": 1,
+        "fa-calendar-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-mode": 1,
+        "data-type": 1,
+        "data-input": 1,
+        "data-toggle": 1
+      },
+      "inputTypes": {
+        "datetime-local": 1
+      },
+      "interactiveTags": {
+        "input": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "datetimepicker-range.html",
+      "relativePackagePath": "dist/components/datetimepicker/examples/datetimepicker-range.html",
+      "sha256": "79899f048ecbf6b32eeefdf6d83fcf11b1d15dc1ddba8de556458390b8399303",
+      "byteSize": 675,
+      "tags": {
+        "div": 3,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-datetimepicker": 1,
+        "br-input": 1,
+        "has-icon": 1,
+        "br-button": 1,
+        "circle": 1,
+        "small": 1,
+        "fas": 1,
+        "fa-calendar-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-mode": 1,
+        "data-type": 1,
+        "data-input": 1,
+        "data-toggle": 1
+      },
+      "inputTypes": {
+        "text": 1
+      },
+      "interactiveTags": {
+        "input": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "datetimepicker-simple.html",
+      "relativePackagePath": "dist/components/datetimepicker/examples/datetimepicker-simple.html",
+      "sha256": "effe44c8b5b4e076d25dd843b3481a276ce89df7ab2b29f001f3088b2e5eacf4",
+      "byteSize": 628,
+      "tags": {
+        "div": 3,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "mb-5": 1,
+        "br-datetimepicker": 1,
+        "br-input": 1,
+        "has-icon": 1,
+        "br-button": 1,
+        "circle": 1,
+        "small": 1,
+        "fas": 1,
+        "fa-calendar-alt": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-mode": 1,
+        "data-type": 1,
+        "data-input": 1,
+        "data-toggle": 1
+      },
+      "inputTypes": {
+        "text": 1
+      },
+      "interactiveTags": {
+        "input": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "datetimepicker-time.html",
+      "relativePackagePath": "dist/components/datetimepicker/examples/datetimepicker-time.html",
+      "sha256": "574e8ec0d9937628da22946a19890a79a7d7205b5884bb69616d6f2fa1d43d90",
+      "byteSize": 629,
+      "tags": {
+        "div": 3,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "col-sm-6": 1,
+        "col-md-4": 1,
+        "col-lg-3": 1,
+        "br-datetimepicker": 1,
+        "br-input": 1,
+        "has-icon": 1,
+        "br-button": 1,
+        "circle": 1,
+        "small": 1,
+        "fas": 1,
+        "fa-clock": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 2
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-mode": 1,
+        "data-type": 1,
+        "data-input": 1,
+        "data-toggle": 1
+      },
+      "inputTypes": {
+        "time": 1
+      },
+      "interactiveTags": {
+        "input": 1,
+        "button": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

@@ -1,0 +1,467 @@
+[
+  {
+    "url": "https://www.gov.br/ds/components/checkbox",
+    "pageTitle": "Padrão Digital de Governo - Checkbox",
+    "tab": "visao-geral",
+    "section": "Uso",
+    "excerpt": "Deve ser utilizado para permitir que o usuário selecione uma ou mais opções em uma lista de opções.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "d5e57b6c7a296cc0258e81dc006e0e19df03f673a8f1bbd3e02f434b8fada5c6",
+    "evidenceRef": "turn687773search0",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/input",
+    "pageTitle": "Padrão Digital de Governo - Input",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Os inputs ou input Text devem ser acessíveis por meio de navegação via teclado, por meio da tecla Tab, onde cada input deve ser um ponto de foco na ordem da navegação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "73b6503525e587030a433a1b56cbc03f5ac4e2b111b7036ee13258bad9170a25",
+    "evidenceRef": "turn548585search0",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/input",
+    "pageTitle": "Padrão Digital de Governo - Input",
+    "tab": "designer",
+    "section": "Botão de ação",
+    "excerpt": "Por padrão é utilizado um Button de enfase terciária do tipo circular sempre com densidade alta, e o ícone deve representar a ação a ser realizada na interação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "ad684b60e545663cc72b27f2b2f974a9818046b2f7a2dc114813705965c961b9",
+    "evidenceRef": "turn984279search21",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/magicbutton",
+    "pageTitle": "Padrão Digital de Governo - Magicbutton",
+    "tab": "designer",
+    "section": "Uso",
+    "excerpt": "Atenção: tenha em mente que o button pode substituir o magic button em todos os contextos porém, o contrário não é permitido.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "0ab46a7fc66dc7e4c36c56df197c1be9859c81e8c6df3e48e66d52e9c0120f8c",
+    "evidenceRef": "turn624744search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/message?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Message",
+    "tab": "designer",
+    "section": "Anatomia",
+    "excerpt": "Os ícones de função semântica devem ser posicionados à esquerda na Superfície do Message, enquanto o Botão Fechar, deve ser posicionado no topo e à direita.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "9941371aac03f57fc52f81eadf6506058ae3c79a09766e86a8de17ceb13da998",
+    "evidenceRef": "turn624744search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/message?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Message",
+    "tab": "designer",
+    "section": "Melhores Práticas",
+    "excerpt": "É importante evitar textos de mensagens muito longos, que proporcionem muitas quebras de linha.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "993fe75fcade8926eaf7bef613c2c81e2f29c2a62cf1b80d3182a504132a93c9",
+    "evidenceRef": "turn554226search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/message?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Message",
+    "tab": "designer",
+    "section": "Melhores Práticas",
+    "excerpt": "Deve-se evitar o uso de múltiplas Mensagens do Tipo Padrão.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "506f32bcf847870b35407aa9c9c92a7436f5247bf986e1b2e235dcb6e966520f",
+    "evidenceRef": "turn554226search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/scrim",
+    "pageTitle": "Padrão Digital de Governo - Scrim",
+    "tab": "designer",
+    "section": "Cuidados",
+    "excerpt": "Deve existir uma boa justificativa para impedir acesso a essas áreas de suporte.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "8a81417b236bec24b69046557b1d073f74c89cc9e0053cead2696fa1998ca964",
+    "evidenceRef": "turn624744search3",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/tag",
+    "pageTitle": "Padrão Digital de Governo - Tag",
+    "tab": "designer",
+    "section": "Contagem",
+    "excerpt": "Atenção: em caso de números com mais de três dígitos é recomendado o uso de tooltip para especificar a quantidade exata do valor.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "43f0b2b293f23e4b17a648f880c38e435ba454376cff02432759bea60c385fd5",
+    "evidenceRef": "turn455538search8",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/signin",
+    "pageTitle": "Padrão Digital de Governo - Signin",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "É recomendado que os botões sign-in possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "ecb8102726c88acaf1dd4b0556189d0b40dacd0588a4199b3726c5297c45959b",
+    "evidenceRef": "turn162350search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/signin",
+    "pageTitle": "Padrão Digital de Governo - Signin",
+    "tab": "designer",
+    "section": "Rótulos",
+    "excerpt": "Deve-se evitar o uso excessivo de palavras no rotulo.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "648dbe1dedf25540aefcd7509e6d1374e1a8dfd762ae22af6f35b29fa5e84285",
+    "evidenceRef": "turn554226search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/signin",
+    "pageTitle": "Padrão Digital de Governo - Signin",
+    "tab": "designer",
+    "section": "Rótulos",
+    "excerpt": "Nunca utilizar quebra de linhas nos rótulos do sign-in.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "c22493dd61474c4455365a72629de208338ed00f777bdfa7a04c3586d96de96b",
+    "evidenceRef": "turn554226search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/skiplink",
+    "pageTitle": "Padrão Digital de Governo - Skiplink",
+    "tab": "desenvolvedor",
+    "section": "Uso",
+    "excerpt": "Este componente deve estar logo após a tag body (deve ser a primeira coisa que um usuário de teclado acessaria em sua página).",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "083af03693a8d8ccb486214a326da653c3b4d9d90ca2ea0655661820aff2a47f",
+    "evidenceRef": "turn162350search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/breadcrumb?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Breadcrumb",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Os elementos interativos do breadcrumb devem ser acessados via navegação por teclado. Utilize a tecla Tab para avançar na navegação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "3d67385995909db5ef74ffffaae980543c229463aff93e6f50ac869affd2cbd9",
+    "evidenceRef": "turn984279search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/tab?tab=acessibilidade",
+    "pageTitle": "Padrão Digital de Governo - Tab",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Certifique-se de que as tabs possam ser acessadas e navegadas pelo teclado, sem a ajuda do mouse.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "7011779a70ecd402e3c057c516137c18e7c8b681e8dc2e1703231389f8424eeb",
+    "evidenceRef": "turn699803search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/modal?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Modal",
+    "tab": "designer",
+    "section": "Botões",
+    "excerpt": "É recomendado que em uma modal contenha no máximo dois botões.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "6c5ef2d4333f07ca616c6da864f6072b6905328bf944a0651fb4d888ac8d2955",
+    "evidenceRef": "turn554226search0",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/modal?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Modal",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Os usuários devem ser capazes de navegar facilmente pela janela modal, por meio da tecla Tab ou Shift + Tab para retroceder na navegação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "23568369859cae52fac4f4274b9c8769110285e8da3a1b0a54770da01813e41e",
+    "evidenceRef": "turn984279search4",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/avatar",
+    "pageTitle": "Padrão Digital de Governo - Avatar",
+    "tab": "designer",
+    "section": "Anatomia",
+    "excerpt": "Superfície circular (Obrigatório). A representação do usuário deve estar contida em uma superfície circular.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "6a327d3649f5ea6d7cd0be7149d01d606bf2af2ee8686d9f0e2d5dd7825a490d",
+    "evidenceRef": "turn368875search0",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/notification?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Notification",
+    "tab": "designer",
+    "section": "Agrupamento",
+    "excerpt": "O agrupamento deve ser classificado de forma cronológica para que o usuário tenha uma melhor organização temporal do conteúdo.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "3391e99c773e971b648ed7578b05cc217d1ffe12b6bf440d05d064a1baca1ff3",
+    "evidenceRef": "turn368875search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/notification?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Notification",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Os usuários devem conseguir acessar o painel de notificações usando a tecla Tab e Shift + Tab para avançar e retroceder na navegação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "4517f02f54593856ae7d7046376ce26fb4a55bcc02b387a4ee76153f114354c3",
+    "evidenceRef": "turn984279search15",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/card?tab=codigos",
+    "pageTitle": "Padrão Digital de Governo - Card",
+    "tab": "visao-geral",
+    "section": "Definição",
+    "excerpt": "Cards são cartões (ou superfícies) que contêm conteúdo e ações diversas sobre um único assunto (ou tópico).",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "ecf55f305dbf16a073bfe9c35ef85a0b3946f816a3df99b00054866a946909f2",
+    "evidenceRef": "turn368875search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/card?tab=codigos",
+    "pageTitle": "Padrão Digital de Governo - Card",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Ofereça aos usuários a opção de navegação por meio do teclado. Os usuários devem poder navegar usando a tecla Tab.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "9b4f8a3d275889fb6486bc61f38377f45e76743d375041c14a9dca8f9e4e9066",
+    "evidenceRef": "turn984279search11",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/carousel",
+    "pageTitle": "Padrão Digital de Governo - Carousel",
+    "tab": "designer",
+    "section": "Melhores Práticas",
+    "excerpt": "Tenha o cuidado de manter a consistência no espaçamento entre as páginas de conteúdo de cada bloco.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "0f8da48dccace81740fdd90fe45fdbdde4a48a8001f65870056e91154d9c4376",
+    "evidenceRef": "turn368875search3",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/carousel",
+    "pageTitle": "Padrão Digital de Governo - Carousel",
+    "tab": "designer",
+    "section": "Melhores Práticas",
+    "excerpt": "Se possível, evite blocos com mais de três páginas.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "5df69a376e977fd5e0a822185bfc958f490fad8a4c453fc2b95185c36cffe801",
+    "evidenceRef": "turn368875search3",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/tooltip?tab=visao-geral",
+    "pageTitle": "Padrão Digital de Governo - Tooltip",
+    "tab": "visao-geral",
+    "section": "Melhores Práticas",
+    "excerpt": "Use tooltips somente quando necessário pois o uso excessivo deste recurso pode ser irritante para a experiência do usuário.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "9b89a2e12df86df57ec224a6553c55954c58bcad602a8c8f64539015e198f91b",
+    "evidenceRef": "turn699803search0",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/tooltip?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - Tooltip",
+    "tab": "designer",
+    "section": "Conteúdo",
+    "excerpt": "O texto do tooltip deve ser curto e ir direto ao ponto, deve ser informativo e não enrolado e deve ser orientado à ação.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "ee1abba37c4343162a1e18902c42b2cac51986dd5530c6d59bb1845f8bc9aac7",
+    "evidenceRef": "turn699803search1",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/components/button",
+    "pageTitle": "Padrão Digital de Governo - Button",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "9ee9dd8f1b92f8f20bb547338f80419267958be79b372e6e98e13ca8663e1dbc",
+    "evidenceRef": "turn455538search9",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/cores",
+    "pageTitle": "Padrão Digital de Governo - Uso obrigatório da paleta predefinida",
+    "tab": "visao-geral",
+    "section": "Cores",
+    "excerpt": "Interfaces digitais do governo devem utilizar sempre as cores pré-definidas.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "7b8b2bb704874867155805f11c3f753940aa8ca0786b27de3840ff744b038e68",
+    "evidenceRef": "turn436183search6",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/tipografia",
+    "pageTitle": "Padrão Digital de Governo - Fonte base de 16 px em 96 dpi",
+    "tab": "visao-geral",
+    "section": "Escala tipográfica",
+    "excerpt": "O padrão é que em uma janela com visualização de 96 dpi tenha a fonte base padrão de 16px, mas dificilmente essa regra se aplique em todos os casos.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "4dcd7152008b531bb49086895e0529d245ddda533e968150e1192bebb411d6e4",
+    "evidenceRef": "turn116600search2",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/grid?tab=visao-geral",
+    "pageTitle": "Padrão Digital de Governo - Espaçamento de colunas em 40 px",
+    "tab": "visao-geral",
+    "section": "Colunas",
+    "excerpt": "O espaçamento das colunas é de 40 pixels.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "85626387ead376f2054f0bb09cda5b7907a532cb0840cdde4480678add978b0f",
+    "evidenceRef": "turn116600search3",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/grid?tab=visao-geral",
+    "pageTitle": "Padrão Digital de Governo - Preferência por Grid fixa",
+    "tab": "visao-geral",
+    "section": "Tipos de Grid",
+    "excerpt": "Recomenda-se o uso da grid fixa.",
+    "retrievedAt": "2026-07-11T06:37:25+00:00",
+    "contentHash": "e02ae402b17c2945aabf457e0390d50a16df8616b391086cb643e039470cf0c5",
+    "evidenceRef": "turn116600search3",
+    "captureType": "official-web-search-index-excerpt",
+    "limitations": [
+      "Excerpt recovered from the official page's search-index representation.",
+      "Full rendered page and code examples still require browser-level capture."
+    ]
+  }
+]

@@ -1,0 +1,205 @@
+{
+  "component": "item",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 4,
+  "canonicalClassCandidate": "br-item",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 11
+    },
+    {
+      "class": "br-radio",
+      "occurrences": 4
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 3
+    },
+    {
+      "class": "br-checkbox",
+      "occurrences": 2
+    },
+    {
+      "class": "br-button",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 26,
+    "img": 2,
+    "span": 5,
+    "style": 2,
+    "a": 3,
+    "button": 2,
+    "i": 1,
+    "input": 6,
+    "label": 6
+  },
+  "classes": {
+    "br-item": 11,
+    "row": 3,
+    "align-items-center": 3,
+    "col-auto": 3,
+    "rounded": 2,
+    "col": 3,
+    "exemplo": 2,
+    "br-divider": 3,
+    "br-button": 1,
+    "circle": 1,
+    "fas": 1,
+    "fa-city": 1,
+    "br-checkbox": 2,
+    "br-radio": 4
+  },
+  "ariaAttributes": {
+    "aria-label": 1,
+    "aria-hidden": 1
+  },
+  "roles": {},
+  "dataAttributes": {
+    "data-toggle": 6
+  },
+  "inputTypes": {
+    "checkbox": 2,
+    "radio": 4
+  },
+  "interactiveTags": {
+    "a": 3,
+    "button": 2,
+    "input": 6
+  },
+  "examples": [
+    {
+      "file": "item-disabled.html",
+      "relativePackagePath": "dist/components/item/examples/item-disabled.html",
+      "sha256": "c372d250d9aee094aa27990f0fcc8dc7a2ef0d7a8396eab87e613bd8cd3a2593",
+      "byteSize": 308,
+      "tags": {
+        "div": 4,
+        "img": 1,
+        "span": 1
+      },
+      "classes": {
+        "br-item": 1,
+        "row": 1,
+        "align-items-center": 1,
+        "col-auto": 1,
+        "rounded": 1,
+        "col": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "item-elems-iteractive.html",
+      "relativePackagePath": "dist/components/item/examples/item-elems-iteractive.html",
+      "sha256": "f78251b5f3ffa7bdb80889aac70c4f71d7df4040960f3d5fa7e0ed2adfbfb277",
+      "byteSize": 1096,
+      "tags": {
+        "style": 1,
+        "div": 9,
+        "img": 1,
+        "span": 4,
+        "a": 3,
+        "button": 2,
+        "i": 1
+      },
+      "classes": {
+        "exemplo": 1,
+        "br-item": 4,
+        "row": 2,
+        "align-items-center": 2,
+        "col-auto": 2,
+        "rounded": 1,
+        "col": 2,
+        "br-divider": 3,
+        "br-button": 1,
+        "circle": 1,
+        "fas": 1,
+        "fa-city": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 3,
+        "button": 2
+      }
+    },
+    {
+      "file": "item-selection-checkbox.html",
+      "relativePackagePath": "dist/components/item/examples/item-selection-checkbox.html",
+      "sha256": "0351a3279693b2f9c93aaf481dbaacaff4be8c108aad9c71f26e611b9ee7038c",
+      "byteSize": 967,
+      "tags": {
+        "style": 1,
+        "div": 9,
+        "input": 4,
+        "label": 4
+      },
+      "classes": {
+        "exemplo": 1,
+        "br-item": 4,
+        "br-checkbox": 2,
+        "br-radio": 2
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-toggle": 4
+      },
+      "inputTypes": {
+        "checkbox": 2,
+        "radio": 2
+      },
+      "interactiveTags": {
+        "input": 4
+      }
+    },
+    {
+      "file": "item-selection-radio.html",
+      "relativePackagePath": "dist/components/item/examples/item-selection-radio.html",
+      "sha256": "d43cbbba169cfaa32400b6b5e4da7c2aee98383ad625e693024b270156b66de8",
+      "byteSize": 422,
+      "tags": {
+        "div": 4,
+        "input": 2,
+        "label": 2
+      },
+      "classes": {
+        "br-item": 2,
+        "br-radio": 2
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-toggle": 2
+      },
+      "inputTypes": {
+        "radio": 2
+      },
+      "interactiveTags": {
+        "input": 2
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

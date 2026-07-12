@@ -1,0 +1,117 @@
+{
+  "name": "textarea",
+  "canonicalUrl": "https://www.gov.br/ds/components/textarea",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-textarea-b00a40afe0f8",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "scrolling",
+      "component": "textarea",
+      "title": "Barra de rolagem nativa",
+      "originalText": "A Barra de Rolagem será o elemento nativo renderizado pelo Navegador.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Quando Textarea precisar de rolagem, preserve a barra de rolagem nativa do navegador.",
+      "force": "informative",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A rolagem não substitui o controle nativo por implementação inacessível."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/textarea",
+        "pageTitle": "Padrão Digital de Governo - Textarea",
+        "tab": "designer",
+        "section": "Barra de Rolagem",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "55da6f5affe8f9f3fb44f825e902bfedf78ae4f9eaf7f426276ff806bd8c116c",
+        "retrievalEvidence": "turn737144search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-cf60e234f8de",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "textarea",
+      "title": "Estrutura exemplificada com .br-textarea",
+      "originalText": "Os exemplos oficiais de textarea no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-textarea.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-textarea como referência estrutural ao comparar a implementação com os exemplos oficiais de textarea.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-textarea."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/textarea/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "7363e5261d2ec359d097a7314160c808f3da216e0bc123fe044f953d4ea5a370"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 7,
+    "canonicalClassCandidate": "br-textarea",
+    "structureFile": "normalized/examples/html/textarea.json"
+  }
+}

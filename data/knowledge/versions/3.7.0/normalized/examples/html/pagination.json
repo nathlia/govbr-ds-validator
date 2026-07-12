@@ -1,0 +1,406 @@
+{
+  "component": "pagination",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 5,
+  "canonicalClassCandidate": "br-pagination",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 62
+    },
+    {
+      "class": "br-button",
+      "occurrences": 35
+    },
+    {
+      "class": "br-radio",
+      "occurrences": 30
+    },
+    {
+      "class": "br-list",
+      "occurrences": 13
+    },
+    {
+      "class": "br-pagination",
+      "occurrences": 11
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 8
+    },
+    {
+      "class": "br-input",
+      "occurrences": 8
+    },
+    {
+      "class": "br-select",
+      "occurrences": 8
+    }
+  ],
+  "tags": {
+    "nav": 11,
+    "div": 106,
+    "label": 38,
+    "input": 38,
+    "button": 35,
+    "i": 35,
+    "span": 20,
+    "hr": 6,
+    "ul": 7,
+    "li": 49,
+    "a": 62
+  },
+  "classes": {
+    "br-pagination": 11,
+    "pagination-per-page": 4,
+    "br-select": 8,
+    "br-input": 8,
+    "br-button": 35,
+    "fas": 35,
+    "fa-angle-down": 8,
+    "br-list": 13,
+    "br-item": 62,
+    "br-radio": 30,
+    "br-divider": 8,
+    "d-none": 17,
+    "d-sm-block": 8,
+    "mx-3": 8,
+    "pagination-information": 4,
+    "d-sm-flex": 9,
+    "current": 4,
+    "per-page": 4,
+    "total": 4,
+    "pagination-go-to-page": 4,
+    "ml-auto": 5,
+    "pagination-arrows": 4,
+    "ml-sm-0": 1,
+    "circle": 27,
+    "fa-angle-left": 11,
+    "fa-angle-right": 11,
+    "bg-gray-60": 1,
+    "p-3": 1,
+    "dark-mode": 2,
+    "page": 30,
+    "active": 7,
+    "pagination-ellipsis": 5,
+    "fa-ellipsis-h": 5,
+    "small": 1,
+    "large": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 92,
+    "aria-hidden": 35
+  },
+  "roles": {
+    "menu": 5,
+    "menuitem": 32
+  },
+  "dataAttributes": {
+    "data-total": 11,
+    "data-current": 11,
+    "data-per-page": 4,
+    "data-trigger": 8,
+    "data-previous-page": 7,
+    "data-toggle": 5,
+    "data-next-page": 7
+  },
+  "inputTypes": {
+    "text": 8,
+    "radio": 30
+  },
+  "interactiveTags": {
+    "input": 38,
+    "button": 35,
+    "a": 62
+  },
+  "examples": [
+    {
+      "file": "pagination-contextual.html",
+      "relativePackagePath": "dist/components/pagination/examples/pagination-contextual.html",
+      "sha256": "bab85fc3dc64beb63fc27470e4c8579c50f779cb2fa1e4912b4971d578ff2ea9",
+      "byteSize": 11829,
+      "tags": {
+        "nav": 3,
+        "div": 74,
+        "label": 28,
+        "input": 28,
+        "button": 12,
+        "i": 12,
+        "span": 15,
+        "hr": 2
+      },
+      "classes": {
+        "br-pagination": 3,
+        "pagination-per-page": 3,
+        "br-select": 6,
+        "br-input": 6,
+        "br-button": 12,
+        "fas": 12,
+        "fa-angle-down": 6,
+        "br-list": 6,
+        "br-item": 22,
+        "br-radio": 22,
+        "br-divider": 6,
+        "d-none": 12,
+        "d-sm-block": 6,
+        "mx-3": 6,
+        "pagination-information": 3,
+        "d-sm-flex": 6,
+        "current": 3,
+        "per-page": 3,
+        "total": 3,
+        "pagination-go-to-page": 3,
+        "ml-auto": 4,
+        "pagination-arrows": 3,
+        "ml-sm-0": 1,
+        "circle": 6,
+        "fa-angle-left": 3,
+        "fa-angle-right": 3
+      },
+      "ariaAttributes": {
+        "aria-label": 15,
+        "aria-hidden": 12
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-total": 3,
+        "data-current": 3,
+        "data-per-page": 3,
+        "data-trigger": 6
+      },
+      "inputTypes": {
+        "text": 6,
+        "radio": 22
+      },
+      "interactiveTags": {
+        "input": 28,
+        "button": 12
+      }
+    },
+    {
+      "file": "pagination-dark.html",
+      "relativePackagePath": "dist/components/pagination/examples/pagination-dark.html",
+      "sha256": "5347384dd0a6e3781764e9c928e1a89db90f0a44f6ee10ea974aa0cc510b690d",
+      "byteSize": 6100,
+      "tags": {
+        "div": 28,
+        "nav": 2,
+        "ul": 1,
+        "li": 7,
+        "button": 7,
+        "i": 7,
+        "a": 10,
+        "hr": 1,
+        "label": 10,
+        "input": 10,
+        "span": 5
+      },
+      "classes": {
+        "bg-gray-60": 1,
+        "p-3": 1,
+        "br-pagination": 2,
+        "dark-mode": 2,
+        "br-button": 7,
+        "circle": 5,
+        "fas": 7,
+        "fa-angle-left": 2,
+        "page": 4,
+        "active": 1,
+        "pagination-ellipsis": 1,
+        "fa-ellipsis-h": 1,
+        "br-list": 3,
+        "br-item": 14,
+        "fa-angle-right": 2,
+        "pagination-per-page": 1,
+        "br-select": 2,
+        "br-input": 2,
+        "fa-angle-down": 2,
+        "br-radio": 8,
+        "br-divider": 2,
+        "d-none": 4,
+        "d-sm-block": 2,
+        "mx-3": 2,
+        "pagination-information": 1,
+        "d-sm-flex": 2,
+        "current": 1,
+        "per-page": 1,
+        "total": 1,
+        "pagination-go-to-page": 1,
+        "pagination-arrows": 1,
+        "ml-auto": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 19,
+        "aria-hidden": 7
+      },
+      "roles": {
+        "menu": 1,
+        "menuitem": 6
+      },
+      "dataAttributes": {
+        "data-total": 2,
+        "data-current": 2,
+        "data-previous-page": 1,
+        "data-toggle": 1,
+        "data-next-page": 1,
+        "data-per-page": 1,
+        "data-trigger": 2
+      },
+      "inputTypes": {
+        "text": 2,
+        "radio": 8
+      },
+      "interactiveTags": {
+        "button": 7,
+        "a": 10,
+        "input": 10
+      }
+    },
+    {
+      "file": "pagination-default.html",
+      "relativePackagePath": "dist/components/pagination/examples/pagination-default.html",
+      "sha256": "e7fd027bf8f92ebd5cf26b9200fca113458eb784726e7ea8265599288bd57d10",
+      "byteSize": 863,
+      "tags": {
+        "nav": 1,
+        "ul": 1,
+        "li": 6,
+        "button": 2,
+        "i": 2,
+        "a": 4
+      },
+      "classes": {
+        "br-pagination": 1,
+        "br-button": 2,
+        "circle": 2,
+        "fas": 2,
+        "fa-angle-left": 1,
+        "page": 4,
+        "active": 1,
+        "fa-angle-right": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 7,
+        "aria-hidden": 2
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-total": 1,
+        "data-current": 1,
+        "data-previous-page": 1,
+        "data-next-page": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 2,
+        "a": 4
+      }
+    },
+    {
+      "file": "pagination-ellipsis.html",
+      "relativePackagePath": "dist/components/pagination/examples/pagination-ellipsis.html",
+      "sha256": "1a48c169b16c11ba76c17f9c24c22d799499f0186296a17e133509cb42e56912",
+      "byteSize": 5959,
+      "tags": {
+        "nav": 3,
+        "ul": 3,
+        "li": 24,
+        "button": 10,
+        "i": 10,
+        "a": 40,
+        "div": 4,
+        "hr": 2
+      },
+      "classes": {
+        "br-pagination": 3,
+        "br-button": 10,
+        "circle": 10,
+        "fas": 10,
+        "fa-angle-left": 3,
+        "page": 14,
+        "active": 3,
+        "pagination-ellipsis": 4,
+        "fa-ellipsis-h": 4,
+        "br-list": 4,
+        "br-item": 26,
+        "fa-angle-right": 3,
+        "d-none": 1,
+        "d-sm-flex": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 37,
+        "aria-hidden": 10
+      },
+      "roles": {
+        "menu": 4,
+        "menuitem": 26
+      },
+      "dataAttributes": {
+        "data-total": 3,
+        "data-current": 3,
+        "data-previous-page": 3,
+        "data-toggle": 4,
+        "data-next-page": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 10,
+        "a": 40
+      }
+    },
+    {
+      "file": "pagination-sizes.html",
+      "relativePackagePath": "dist/components/pagination/examples/pagination-sizes.html",
+      "sha256": "319cf13670743b6bfc6ec4a68f929df6add12c1674a23c1ffbafd6b395193fcb",
+      "byteSize": 1744,
+      "tags": {
+        "nav": 2,
+        "ul": 2,
+        "li": 12,
+        "button": 4,
+        "i": 4,
+        "a": 8,
+        "hr": 1
+      },
+      "classes": {
+        "br-pagination": 2,
+        "small": 1,
+        "br-button": 4,
+        "circle": 4,
+        "fas": 4,
+        "fa-angle-left": 2,
+        "page": 8,
+        "active": 2,
+        "fa-angle-right": 2,
+        "large": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 14,
+        "aria-hidden": 4
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-total": 2,
+        "data-current": 2,
+        "data-previous-page": 2,
+        "data-next-page": 2
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4,
+        "a": 8
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

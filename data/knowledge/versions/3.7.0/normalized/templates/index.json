@@ -1,0 +1,18 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "templates": [
+    {
+      "name": "base",
+      "url": "https://www.gov.br/ds/templates/base",
+      "file": "base.json",
+      "ruleCount": 3
+    },
+    {
+      "name": "error",
+      "url": "https://www.gov.br/ds/templates/erro",
+      "file": "error.json",
+      "ruleCount": 2
+    }
+  ]
+}

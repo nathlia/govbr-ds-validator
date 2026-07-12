@@ -1,0 +1,119 @@
+{
+  "name": "wizard",
+  "canonicalUrl": "https://www.gov.br/ds/components/wizard",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-wizard-356c3bf376a5",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "completion",
+      "component": "wizard",
+      "title": "Botão Concluir na última etapa",
+      "originalText": "Uma vez atingida a última etapa, o botão apresentado deve ser o de Concluir para sinalizar o fim das etapas.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Na última etapa do Wizard, apresente uma ação denominada Concluir.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A última etapa contém um botão cujo rótulo é Concluir."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/wizard",
+        "pageTitle": "Padrão Digital de Governo - Wizard",
+        "tab": "designer",
+        "section": "Ações",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "a8b6b8def519065a259e263fa45b009971ab13df7d400cd43466e07f3512763d",
+        "retrievalEvidence": "turn837999search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-170b92a67c4b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "wizard",
+      "title": "Estrutura exemplificada com .br-wizard",
+      "originalText": "Os exemplos oficiais de wizard no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-wizard.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-wizard como referência estrutural ao comparar a implementação com os exemplos oficiais de wizard.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-wizard."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/wizard/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "505f91e3c57e4befe5ec5aa604de7d17549f10cc965a72540e4bcb142cca25d5"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 2,
+    "canonicalClassCandidate": "br-wizard",
+    "structureFile": "normalized/examples/html/wizard.json"
+  }
+}

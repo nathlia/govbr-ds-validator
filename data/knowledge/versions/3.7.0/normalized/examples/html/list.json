@@ -1,0 +1,452 @@
+{
+  "component": "list",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 10,
+  "canonicalClassCandidate": "br-list",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 57
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 41
+    },
+    {
+      "class": "br-list",
+      "occurrences": 16
+    },
+    {
+      "class": "br-checkbox",
+      "occurrences": 3
+    }
+  ],
+  "tags": {
+    "div": 289,
+    "span": 41,
+    "i": 55,
+    "input": 3,
+    "label": 3
+  },
+  "classes": {
+    "br-list": 16,
+    "header": 10,
+    "title": 10,
+    "br-divider": 41,
+    "br-item": 57,
+    "row": 49,
+    "align-items-center": 49,
+    "col-auto": 80,
+    "fas": 55,
+    "fa-heartbeat": 49,
+    "col": 49,
+    "py-3": 3,
+    "py-4": 3,
+    "content": 6,
+    "flex-fill": 6,
+    "fa-angle-down": 6,
+    "horizontal": 2,
+    "mt-5": 1,
+    "group": 3,
+    "br-checkbox": 3,
+    "hidden-label": 3
+  },
+  "ariaAttributes": {
+    "aria-hidden": 55,
+    "aria-label": 3
+  },
+  "roles": {
+    "list": 16,
+    "listitem": 57
+  },
+  "dataAttributes": {
+    "data-toggle": 6,
+    "data-target": 6
+  },
+  "inputTypes": {
+    "checkbox": 3
+  },
+  "interactiveTags": {
+    "input": 3
+  },
+  "examples": [
+    {
+      "file": "list-dense-high.html",
+      "relativePackagePath": "dist/components/list/examples/list-dense-high.html",
+      "sha256": "1343e6f3064a6baf57de27bd1eaf39d35a63433f55890ea236ccc463abec6ee3",
+      "byteSize": 1089,
+      "tags": {
+        "div": 18,
+        "span": 4,
+        "i": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 4,
+        "br-item": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-dense-medium.html",
+      "relativePackagePath": "dist/components/list/examples/list-dense-medium.html",
+      "sha256": "606e11f0d9239d311915ecb383339da15e2c18c933040049382ff41de7fd8450",
+      "byteSize": 1096,
+      "tags": {
+        "div": 18,
+        "span": 4,
+        "i": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 4,
+        "br-item": 3,
+        "py-3": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-dense-small.html",
+      "relativePackagePath": "dist/components/list/examples/list-dense-small.html",
+      "sha256": "5f7d865ae425dd282ff2ea2e0945fe9d34db3947d192b022ac330b07257b49e0",
+      "byteSize": 1095,
+      "tags": {
+        "div": 18,
+        "span": 4,
+        "i": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 4,
+        "br-item": 3,
+        "py-4": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-group-divider.html",
+      "relativePackagePath": "dist/components/list/examples/list-group-divider.html",
+      "sha256": "7689cea6aa094342b20f13cacfbc59e8b858740f1e7623674d4a887038aad789",
+      "byteSize": 2109,
+      "tags": {
+        "div": 38,
+        "span": 3,
+        "i": 7
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 3,
+        "br-item": 7,
+        "row": 7,
+        "align-items-center": 7,
+        "col-auto": 14,
+        "fas": 7,
+        "fa-heartbeat": 7,
+        "col": 7
+      },
+      "ariaAttributes": {
+        "aria-hidden": 7
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 7
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-group-expansion.html",
+      "relativePackagePath": "dist/components/list/examples/list-group-expansion.html",
+      "sha256": "ab8a657dc720ef4e6549d7d77af5520422268ea44f56fc880f69399a1a299982",
+      "byteSize": 3529,
+      "tags": {
+        "div": 51,
+        "span": 10,
+        "i": 12
+      },
+      "classes": {
+        "br-list": 4,
+        "header": 1,
+        "title": 1,
+        "br-divider": 10,
+        "br-item": 12,
+        "content": 3,
+        "flex-fill": 3,
+        "fas": 12,
+        "fa-angle-down": 3,
+        "row": 9,
+        "align-items-center": 9,
+        "col-auto": 9,
+        "fa-heartbeat": 9,
+        "col": 9
+      },
+      "ariaAttributes": {
+        "aria-hidden": 12
+      },
+      "roles": {
+        "list": 4,
+        "listitem": 12
+      },
+      "dataAttributes": {
+        "data-toggle": 3,
+        "data-target": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-group-tag.html",
+      "relativePackagePath": "dist/components/list/examples/list-group-tag.html",
+      "sha256": "366b1ac645f267a1422601d6e2d260385b66baa975cb2d7813d1798f55a9ff05",
+      "byteSize": 1890,
+      "tags": {
+        "div": 35,
+        "span": 1,
+        "i": 6
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 1,
+        "br-item": 8,
+        "row": 6,
+        "align-items-center": 6,
+        "col-auto": 12,
+        "fas": 6,
+        "fa-heartbeat": 6,
+        "col": 6
+      },
+      "ariaAttributes": {
+        "aria-hidden": 6
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 8
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-horizontal-divider.html",
+      "relativePackagePath": "dist/components/list/examples/list-horizontal-divider.html",
+      "sha256": "f6d23920d34238bca0e3b57d46faa9b46c5d4bd7305014d80a6426e235a63673",
+      "byteSize": 1157,
+      "tags": {
+        "div": 18,
+        "span": 3,
+        "i": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "horizontal": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 3,
+        "br-item": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-horizontal-expansion.html",
+      "relativePackagePath": "dist/components/list/examples/list-horizontal-expansion.html",
+      "sha256": "51e3bbeb98015a4e7e174b2b26624d5c3432bb5c43d43d78cdc4e266b8504a01",
+      "byteSize": 3814,
+      "tags": {
+        "div": 54,
+        "span": 10,
+        "i": 12
+      },
+      "classes": {
+        "br-list": 4,
+        "horizontal": 1,
+        "mt-5": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 10,
+        "group": 3,
+        "br-item": 12,
+        "content": 3,
+        "flex-fill": 3,
+        "fas": 12,
+        "fa-angle-down": 3,
+        "row": 9,
+        "align-items-center": 9,
+        "col-auto": 9,
+        "fa-heartbeat": 9,
+        "col": 9
+      },
+      "ariaAttributes": {
+        "aria-hidden": 12
+      },
+      "roles": {
+        "list": 4,
+        "listitem": 12
+      },
+      "dataAttributes": {
+        "data-toggle": 3,
+        "data-target": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "list-simples-selecionaveis.html",
+      "relativePackagePath": "dist/components/list/examples/list-simples-selecionaveis.html",
+      "sha256": "5e0471b23344094342f6e1e88010410a09b2e96f3e95d69b9ac91181f29ec112",
+      "byteSize": 1691,
+      "tags": {
+        "div": 21,
+        "span": 1,
+        "i": 3,
+        "input": 3,
+        "label": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 1,
+        "br-item": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3,
+        "br-checkbox": 3,
+        "hidden-label": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3,
+        "aria-label": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "list-vertical-simples.html",
+      "relativePackagePath": "dist/components/list/examples/list-vertical-simples.html",
+      "sha256": "0c3632424cf1ce53d32a64e0f84ff7ff3a7428d5c7653fe00f3ec3b69e81bd0d",
+      "byteSize": 1074,
+      "tags": {
+        "div": 18,
+        "span": 1,
+        "i": 3
+      },
+      "classes": {
+        "br-list": 1,
+        "header": 1,
+        "title": 1,
+        "br-divider": 1,
+        "br-item": 3,
+        "row": 3,
+        "align-items-center": 3,
+        "col-auto": 6,
+        "fas": 3,
+        "fa-heartbeat": 3,
+        "col": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "list": 1,
+        "listitem": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

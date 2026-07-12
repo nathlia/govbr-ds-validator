@@ -1,0 +1,282 @@
+{
+  "component": "textarea",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 7,
+  "canonicalClassCandidate": "br-textarea",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-textarea",
+      "occurrences": 10
+    }
+  ],
+  "tags": {
+    "div": 23,
+    "label": 10,
+    "textarea": 10,
+    "span": 9,
+    "strong": 2,
+    "p": 3,
+    "i": 3
+  },
+  "classes": {
+    "br-textarea": 10,
+    "text-base": 5,
+    "mt-1": 5,
+    "characters": 1,
+    "limit": 1,
+    "current": 1,
+    "p-3": 1,
+    "bg-gray-60": 1,
+    "dark-mode": 1,
+    "row": 3,
+    "col-auto": 1,
+    "pt-half": 1,
+    "col": 1,
+    "col-sm-6": 2,
+    "large": 1,
+    "mt-5": 3,
+    "mt-sm-0": 3,
+    "small": 1,
+    "col-sm-4": 3,
+    "success": 2,
+    "feedback": 3,
+    "fas": 3,
+    "fa-check-circle": 1,
+    "danger": 2,
+    "fa-times-circle": 1,
+    "warning": 1,
+    "fa-exclamation-triangle": 1
+  },
+  "ariaAttributes": {
+    "aria-live": 3,
+    "aria-controls": 1,
+    "aria-hidden": 3
+  },
+  "roles": {
+    "status": 1,
+    "alert": 3
+  },
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "textarea": 10
+  },
+  "examples": [
+    {
+      "file": "textarea-counter-no-limit.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-counter-no-limit.html",
+      "sha256": "9b37b87a379cac9ee78ec33c136d70eddce44cbb16b3839b3409db1232f3ec7f",
+      "byteSize": 321,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "textarea": 1,
+        "span": 1,
+        "strong": 1
+      },
+      "classes": {
+        "br-textarea": 1,
+        "text-base": 1,
+        "mt-1": 1,
+        "characters": 1
+      },
+      "ariaAttributes": {
+        "aria-live": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 1
+      }
+    },
+    {
+      "file": "textarea-counter.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-counter.html",
+      "sha256": "00be45941f8b90c6549307c9a408d962bf666943ad242ee83a0075c0ef34da51",
+      "byteSize": 427,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "textarea": 1,
+        "span": 2,
+        "strong": 1
+      },
+      "classes": {
+        "br-textarea": 1,
+        "text-base": 1,
+        "mt-1": 1,
+        "limit": 1,
+        "current": 1
+      },
+      "ariaAttributes": {
+        "aria-controls": 1,
+        "aria-live": 2
+      },
+      "roles": {
+        "status": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 1
+      }
+    },
+    {
+      "file": "textarea-default.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-default.html",
+      "sha256": "4683200b3e3ef372af5c623904d9e31b7dd6e54dbacbae600645d93d2f3a3274",
+      "byteSize": 224,
+      "tags": {
+        "div": 1,
+        "label": 1,
+        "textarea": 1,
+        "p": 1
+      },
+      "classes": {
+        "br-textarea": 1,
+        "text-base": 1,
+        "mt-1": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 1
+      }
+    },
+    {
+      "file": "textarea-inverted.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-inverted.html",
+      "sha256": "f7596514e40069fc0684af99fb918dbda27a14b98f2790067afe93eef557d23b",
+      "byteSize": 290,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "textarea": 1,
+        "p": 1
+      },
+      "classes": {
+        "p-3": 1,
+        "bg-gray-60": 1,
+        "br-textarea": 1,
+        "dark-mode": 1,
+        "text-base": 1,
+        "mt-1": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 1
+      }
+    },
+    {
+      "file": "textarea-label-left.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-label-left.html",
+      "sha256": "f2d28593e610d5c3f6e86e24dc5391159237957500ed82768debb515d5ce348e",
+      "byteSize": 354,
+      "tags": {
+        "div": 4,
+        "label": 1,
+        "textarea": 1,
+        "p": 1
+      },
+      "classes": {
+        "br-textarea": 1,
+        "row": 1,
+        "col-auto": 1,
+        "pt-half": 1,
+        "col": 1,
+        "text-base": 1,
+        "mt-1": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 1
+      }
+    },
+    {
+      "file": "textarea-sizes.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-sizes.html",
+      "sha256": "92e8b64c09c117fe8e61dd82954a717202ab0df1ac6bd4d84d056689dd38eb82",
+      "byteSize": 511,
+      "tags": {
+        "div": 5,
+        "label": 2,
+        "textarea": 2
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-6": 2,
+        "br-textarea": 2,
+        "large": 1,
+        "mt-5": 1,
+        "mt-sm-0": 1,
+        "small": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 2
+      }
+    },
+    {
+      "file": "textarea-states.html",
+      "relativePackagePath": "dist/components/textarea/examples/textarea-states.html",
+      "sha256": "27272b217698c6d3954e6e7bf221d5331e69541d0582324e90b1f9d115933cac",
+      "byteSize": 1143,
+      "tags": {
+        "div": 7,
+        "label": 3,
+        "textarea": 3,
+        "span": 6,
+        "i": 3
+      },
+      "classes": {
+        "row": 1,
+        "col-sm-4": 3,
+        "br-textarea": 3,
+        "success": 2,
+        "feedback": 3,
+        "fas": 3,
+        "fa-check-circle": 1,
+        "mt-5": 2,
+        "mt-sm-0": 2,
+        "danger": 2,
+        "fa-times-circle": 1,
+        "warning": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {
+        "alert": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "textarea": 3
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

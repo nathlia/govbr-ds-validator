@@ -1,0 +1,194 @@
+{
+  "component": "upload",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 4,
+  "canonicalClassCandidate": "br-upload",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-upload",
+      "occurrences": 4
+    }
+  ],
+  "tags": {
+    "div": 8,
+    "label": 4,
+    "span": 5,
+    "input": 4,
+    "i": 1,
+    "p": 1
+  },
+  "classes": {
+    "br-upload": 4,
+    "upload-label": 4,
+    "upload-input": 4,
+    "upload-list": 4,
+    "feedback": 1,
+    "danger": 1,
+    "mt-1": 2,
+    "fas": 1,
+    "fa-times-circle": 1,
+    "text-base": 1
+  },
+  "ariaAttributes": {
+    "aria-hidden": 5,
+    "aria-label": 4
+  },
+  "roles": {
+    "alert": 1
+  },
+  "dataAttributes": {
+    "data-danger": 1
+  },
+  "inputTypes": {
+    "file": 4
+  },
+  "interactiveTags": {
+    "input": 4
+  },
+  "examples": [
+    {
+      "file": "upload-disabled.html",
+      "relativePackagePath": "dist/components/upload/examples/upload-disabled.html",
+      "sha256": "48f616d7a46053c94c958541eb7dcef3310cdad4567445486608ce288406e386",
+      "byteSize": 293,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "span": 1,
+        "input": 1
+      },
+      "classes": {
+        "br-upload": 1,
+        "upload-label": 1,
+        "upload-input": 1,
+        "upload-list": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1,
+        "aria-label": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "file": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "upload-feedback.html",
+      "relativePackagePath": "dist/components/upload/examples/upload-feedback.html",
+      "sha256": "bdbe404e42bdee16e5a478e8f9a9898ffde58ba9b93c5260c19dc1c515cb3ca0",
+      "byteSize": 451,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "span": 2,
+        "input": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-upload": 1,
+        "upload-label": 1,
+        "upload-input": 1,
+        "upload-list": 1,
+        "feedback": 1,
+        "danger": 1,
+        "mt-1": 1,
+        "fas": 1,
+        "fa-times-circle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 2,
+        "aria-label": 1
+      },
+      "roles": {
+        "alert": 1
+      },
+      "dataAttributes": {
+        "data-danger": 1
+      },
+      "inputTypes": {
+        "file": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "upload-multiple.html",
+      "relativePackagePath": "dist/components/upload/examples/upload-multiple.html",
+      "sha256": "d40eeee60b17c50917c479db2ea07fa91ca43fe618f016f5ad0bcdbf1c440d94",
+      "byteSize": 378,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "span": 1,
+        "input": 1,
+        "p": 1
+      },
+      "classes": {
+        "br-upload": 1,
+        "upload-label": 1,
+        "upload-input": 1,
+        "upload-list": 1,
+        "text-base": 1,
+        "mt-1": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1,
+        "aria-label": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "file": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "upload-single.html",
+      "relativePackagePath": "dist/components/upload/examples/upload-single.html",
+      "sha256": "0fda50ad6f17786dc5384d4170ac605c5f77a6a2ab28fc55e68eb304ae5ab5bc",
+      "byteSize": 259,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "span": 1,
+        "input": 1
+      },
+      "classes": {
+        "br-upload": 1,
+        "upload-label": 1,
+        "upload-input": 1,
+        "upload-list": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1,
+        "aria-label": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "file": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

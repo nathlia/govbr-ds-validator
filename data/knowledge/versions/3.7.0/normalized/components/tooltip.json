@@ -1,0 +1,152 @@
+{
+  "name": "tooltip",
+  "canonicalUrl": "https://www.gov.br/ds/components/tooltip",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-tooltip-c028ba432407",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "tooltip",
+      "title": "Texto curto e orientado à ação",
+      "originalText": "O texto do tooltip deve ser curto e ir direto ao ponto, deve ser informativo e não enrolado e deve ser orientado à ação.",
+      "normalizedRule": "O texto do Tooltip deve ser curto, direto, informativo e orientado à ação.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Texto conciso.",
+        "Informação objetiva.",
+        "Orientação clara de ação quando aplicável."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/tooltip?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Tooltip",
+        "tab": "designer",
+        "section": "Conteúdo",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "ee1abba37c4343162a1e18902c42b2cac51986dd5530c6d59bb1845f8bc9aac7",
+        "retrievalEvidence": "turn699803search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-6cc61d2b3460",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "usage",
+      "component": "tooltip",
+      "title": "Tooltip somente quando necessário",
+      "originalText": "Use tooltips somente quando necessário pois o uso excessivo deste recurso pode ser irritante para a experiência do usuário.",
+      "normalizedRule": "Use Tooltip somente quando necessário e evite uso excessivo.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Tooltip agrega informação não disponível de forma mais simples."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/tooltip?tab=visao-geral",
+        "pageTitle": "Padrão Digital de Governo - Tooltip",
+        "tab": "visao-geral",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "9b89a2e12df86df57ec224a6553c55954c58bcad602a8c8f64539015e198f91b",
+        "retrievalEvidence": "turn699803search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-1657eb316f64",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "tooltip",
+      "title": "Estrutura exemplificada com .br-tooltip",
+      "originalText": "Os exemplos oficiais de tooltip no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tooltip.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-tooltip como referência estrutural ao comparar a implementação com os exemplos oficiais de tooltip.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-tooltip."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/tooltip/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "c80fc512921573a6f62a827f1ec87d8d8167c8ebd59626eb3bac0e3a2cde62ab"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 9,
+    "canonicalClassCandidate": "br-tooltip",
+    "structureFile": "normalized/examples/html/tooltip.json"
+  }
+}

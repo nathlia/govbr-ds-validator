@@ -1,0 +1,14 @@
+{
+  "batch": 5,
+  "generatedAt": "2026-07-11T06:59:57+00:00",
+  "newRules": 28,
+  "cumulativeRules": 168,
+  "newPatternRules": 8,
+  "newTemplateRules": 5,
+  "newDevelopmentRules": 12,
+  "newAccessibilityRules": 2,
+  "packageAccessibilityFindings": 6,
+  "legacyCdnFiles": 63,
+  "duplicatesSkipped": 0,
+  "complete": false
+}

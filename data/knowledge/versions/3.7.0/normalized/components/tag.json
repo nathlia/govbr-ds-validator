@@ -1,0 +1,118 @@
+{
+  "name": "tag",
+  "canonicalUrl": "https://www.gov.br/ds/components/tag",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-tag-7d70c8be6a0c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "tag",
+      "title": "Tooltip para contagens acima de três dígitos",
+      "originalText": "Atenção: em caso de números com mais de três dígitos é recomendado o uso de tooltip para especificar a quantidade exata do valor.",
+      "normalizedRule": "Use Tooltip em Tag de contagem com mais de três dígitos para informar o valor exato.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [
+        "A Tag representa uma contagem superior a 999."
+      ],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Tooltip associado contém a contagem exata."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "tooltip"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/tag",
+        "pageTitle": "Padrão Digital de Governo - Tag",
+        "tab": "designer",
+        "section": "Contagem",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "43f0b2b293f23e4b17a648f880c38e435ba454376cff02432759bea60c385fd5",
+        "retrievalEvidence": "turn455538search8",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-fa30aea78fa4",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "tag",
+      "title": "Estrutura exemplificada com .br-tag",
+      "originalText": "Os exemplos oficiais de tag no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tag.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-tag como referência estrutural ao comparar a implementação com os exemplos oficiais de tag.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-tag."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/tag/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "4f95e541df5c9f130848819e660778fbecaf1eac671c26ebdaf1aa6b1177dfab"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 7,
+    "canonicalClassCandidate": "br-tag",
+    "structureFile": "normalized/examples/html/tag.json"
+  }
+}

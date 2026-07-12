@@ -1,0 +1,173 @@
+{
+  "component": "notification",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 1,
+  "canonicalClassCandidate": "br-notification",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 7
+    },
+    {
+      "class": "br-list",
+      "occurrences": 2
+    },
+    {
+      "class": "br-tag",
+      "occurrences": 2
+    },
+    {
+      "class": "br-button",
+      "occurrences": 1
+    },
+    {
+      "class": "br-notification",
+      "occurrences": 1
+    },
+    {
+      "class": "br-tab",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 13,
+    "span": 17,
+    "br": 1,
+    "small": 1,
+    "button": 10,
+    "i": 6,
+    "nav": 1,
+    "ul": 1,
+    "li": 2
+  },
+  "classes": {
+    "br-notification": 1,
+    "notification-header": 1,
+    "row": 1,
+    "col-10": 1,
+    "text-bold": 5,
+    "col-2": 1,
+    "close": 1,
+    "text-right": 1,
+    "br-button": 1,
+    "circle": 1,
+    "small": 3,
+    "fas": 6,
+    "fa-times": 1,
+    "notification-body": 1,
+    "br-tab": 1,
+    "tab-nav": 1,
+    "tab-item": 2,
+    "notification-tooltip": 2,
+    "name": 2,
+    "fa-bell": 1,
+    "active": 2,
+    "fa-envelope": 1,
+    "tab-content": 1,
+    "tab-panel": 2,
+    "br-list": 2,
+    "br-item": 7,
+    "fa-heartbeat": 3,
+    "mr-2": 3,
+    "br-tag": 2,
+    "status": 2,
+    "warning": 2,
+    "text-medium": 4,
+    "mb-2": 4
+  },
+  "ariaAttributes": {
+    "aria-label": 5,
+    "aria-hidden": 6
+  },
+  "roles": {
+    "contentinfo": 2
+  },
+  "dataAttributes": {
+    "data-panel": 2,
+    "data-tooltip-text": 2
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 10
+  },
+  "examples": [
+    {
+      "file": "notification-full.html",
+      "relativePackagePath": "dist/components/notification/examples/notification-full.html",
+      "sha256": "3193f8b8eee17fbd68dba15ccbaf9a3132f6d4d4240562554116833cb413caa8",
+      "byteSize": 4072,
+      "tags": {
+        "div": 13,
+        "span": 17,
+        "br": 1,
+        "small": 1,
+        "button": 10,
+        "i": 6,
+        "nav": 1,
+        "ul": 1,
+        "li": 2
+      },
+      "classes": {
+        "br-notification": 1,
+        "notification-header": 1,
+        "row": 1,
+        "col-10": 1,
+        "text-bold": 5,
+        "col-2": 1,
+        "close": 1,
+        "text-right": 1,
+        "br-button": 1,
+        "circle": 1,
+        "small": 3,
+        "fas": 6,
+        "fa-times": 1,
+        "notification-body": 1,
+        "br-tab": 1,
+        "tab-nav": 1,
+        "tab-item": 2,
+        "notification-tooltip": 2,
+        "name": 2,
+        "fa-bell": 1,
+        "active": 2,
+        "fa-envelope": 1,
+        "tab-content": 1,
+        "tab-panel": 2,
+        "br-list": 2,
+        "br-item": 7,
+        "fa-heartbeat": 3,
+        "mr-2": 3,
+        "br-tag": 2,
+        "status": 2,
+        "warning": 2,
+        "text-medium": 4,
+        "mb-2": 4
+      },
+      "ariaAttributes": {
+        "aria-label": 5,
+        "aria-hidden": 6
+      },
+      "roles": {
+        "contentinfo": 2
+      },
+      "dataAttributes": {
+        "data-panel": 2,
+        "data-tooltip-text": 2
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 10
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

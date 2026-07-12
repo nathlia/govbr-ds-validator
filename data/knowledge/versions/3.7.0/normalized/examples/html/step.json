@@ -1,0 +1,386 @@
+{
+  "component": "step",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 7,
+  "canonicalClassCandidate": "br-step",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-step",
+      "occurrences": 15
+    }
+  ],
+  "tags": {
+    "div": 29,
+    "nav": 15,
+    "button": 58,
+    "span": 74,
+    "i": 8
+  },
+  "classes": {
+    "step-sample-2": 1,
+    "br-step": 15,
+    "step-progress": 15,
+    "step-progress-btn": 58,
+    "step-info": 58,
+    "step-alert": 16,
+    "step-icon": 8,
+    "fas": 7,
+    "fa-check": 5,
+    "my-5": 8,
+    "fa-lock": 1,
+    "fa-truck": 1,
+    "far": 1,
+    "fa-credit-card": 1,
+    "row": 1,
+    "col-auto": 2,
+    "mx-5": 2,
+    "vertical": 2,
+    "step-sample-3": 2,
+    "mt-5": 1,
+    "mb-5": 1
+  },
+  "ariaAttributes": {
+    "aria-orientation": 15,
+    "aria-label": 15,
+    "aria-posinset": 58,
+    "aria-setsize": 58,
+    "aria-hidden": 8
+  },
+  "roles": {
+    "none": 15,
+    "listbox": 15,
+    "option": 58
+  },
+  "dataAttributes": {
+    "data-initial": 15,
+    "data-label": 7,
+    "data-scroll": 3,
+    "data-alert": 16,
+    "data-type": 8,
+    "data-tooltip-text": 34
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 58
+  },
+  "examples": [
+    {
+      "file": "step-alert.html",
+      "relativePackagePath": "dist/components/step/examples/step-alert.html",
+      "sha256": "9410e78b4895a7f37fa6b12ab3f4d676f968e2f7337ea5204c74651e90c900e8",
+      "byteSize": 1179,
+      "tags": {
+        "div": 2,
+        "nav": 1,
+        "button": 4,
+        "span": 8,
+        "i": 1
+      },
+      "classes": {
+        "step-sample-2": 1,
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 4,
+        "step-info": 4,
+        "step-alert": 4,
+        "step-icon": 1,
+        "fas": 1,
+        "fa-check": 1
+      },
+      "ariaAttributes": {
+        "aria-orientation": 1,
+        "aria-label": 1,
+        "aria-posinset": 4,
+        "aria-setsize": 4,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "none": 1,
+        "listbox": 1,
+        "option": 4
+      },
+      "dataAttributes": {
+        "data-initial": 1,
+        "data-label": 1,
+        "data-scroll": 1,
+        "data-alert": 4
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "step-horizontal.html",
+      "relativePackagePath": "dist/components/step/examples/step-horizontal.html",
+      "sha256": "feae5711ef0684b67f954dc38ac7d81de6bfcd171656fd4b4546115e4180b3fd",
+      "byteSize": 3746,
+      "tags": {
+        "div": 8,
+        "nav": 4,
+        "button": 14,
+        "span": 18,
+        "i": 5
+      },
+      "classes": {
+        "my-5": 4,
+        "br-step": 4,
+        "step-progress": 4,
+        "step-progress-btn": 14,
+        "step-info": 14,
+        "step-alert": 4,
+        "step-icon": 5,
+        "fas": 4,
+        "fa-check": 2,
+        "fa-lock": 1,
+        "fa-truck": 1,
+        "far": 1,
+        "fa-credit-card": 1
+      },
+      "ariaAttributes": {
+        "aria-orientation": 4,
+        "aria-label": 4,
+        "aria-posinset": 14,
+        "aria-setsize": 14,
+        "aria-hidden": 5
+      },
+      "roles": {
+        "none": 4,
+        "listbox": 4,
+        "option": 14
+      },
+      "dataAttributes": {
+        "data-initial": 4,
+        "data-label": 4,
+        "data-scroll": 2,
+        "data-alert": 4
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 14
+      }
+    },
+    {
+      "file": "step-icon.html",
+      "relativePackagePath": "dist/components/step/examples/step-icon.html",
+      "sha256": "764c09255cb52962aa772daa637c198582ae99ed56593680ceefe7b57c77d27a",
+      "byteSize": 4626,
+      "tags": {
+        "div": 8,
+        "nav": 4,
+        "button": 17,
+        "span": 21,
+        "i": 1
+      },
+      "classes": {
+        "my-5": 4,
+        "br-step": 4,
+        "step-progress": 4,
+        "step-progress-btn": 17,
+        "step-info": 17,
+        "step-alert": 4,
+        "step-icon": 1,
+        "fas": 1,
+        "fa-check": 1
+      },
+      "ariaAttributes": {
+        "aria-orientation": 4,
+        "aria-label": 4,
+        "aria-posinset": 17,
+        "aria-setsize": 17,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "none": 4,
+        "listbox": 4,
+        "option": 17
+      },
+      "dataAttributes": {
+        "data-initial": 4,
+        "data-type": 4,
+        "data-tooltip-text": 17,
+        "data-alert": 4
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 17
+      }
+    },
+    {
+      "file": "step-simple.html",
+      "relativePackagePath": "dist/components/step/examples/step-simple.html",
+      "sha256": "2f2316c43f9fdc0131ff7e163d317f526580519cddebd1462bdbd6d3f45ad2a8",
+      "byteSize": 1207,
+      "tags": {
+        "nav": 1,
+        "div": 1,
+        "button": 5,
+        "span": 5
+      },
+      "classes": {
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-orientation": 1,
+        "aria-label": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-initial": 1,
+        "data-type": 1,
+        "data-tooltip-text": 5
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 5
+      }
+    },
+    {
+      "file": "step-text.html",
+      "relativePackagePath": "dist/components/step/examples/step-text.html",
+      "sha256": "edddf262eb1903f5a4bd6cb9eedb0b0f07e156acff3d9a0e790ea7b8323bc9b6",
+      "byteSize": 1205,
+      "tags": {
+        "nav": 1,
+        "div": 1,
+        "button": 5,
+        "span": 5
+      },
+      "classes": {
+        "br-step": 1,
+        "step-progress": 1,
+        "step-progress-btn": 5,
+        "step-info": 5
+      },
+      "ariaAttributes": {
+        "aria-orientation": 1,
+        "aria-label": 1,
+        "aria-posinset": 5,
+        "aria-setsize": 5
+      },
+      "roles": {
+        "none": 1,
+        "listbox": 1,
+        "option": 5
+      },
+      "dataAttributes": {
+        "data-initial": 1,
+        "data-type": 1,
+        "data-tooltip-text": 5
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 5
+      }
+    },
+    {
+      "file": "step-vertical.html",
+      "relativePackagePath": "dist/components/step/examples/step-vertical.html",
+      "sha256": "b39506b7a5fea5214b40bf6e6d984a2bacc957399b41a0ca25dcbca3c6cd90b7",
+      "byteSize": 1528,
+      "tags": {
+        "div": 5,
+        "nav": 2,
+        "button": 6,
+        "span": 6
+      },
+      "classes": {
+        "row": 1,
+        "col-auto": 2,
+        "mx-5": 2,
+        "br-step": 2,
+        "vertical": 2,
+        "step-progress": 2,
+        "step-progress-btn": 6,
+        "step-info": 6
+      },
+      "ariaAttributes": {
+        "aria-orientation": 2,
+        "aria-label": 2,
+        "aria-posinset": 6,
+        "aria-setsize": 6
+      },
+      "roles": {
+        "none": 2,
+        "listbox": 2,
+        "option": 6
+      },
+      "dataAttributes": {
+        "data-initial": 2,
+        "data-label": 2
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 6
+      }
+    },
+    {
+      "file": "step-void.html",
+      "relativePackagePath": "dist/components/step/examples/step-void.html",
+      "sha256": "931f1c81c5e40ecea93d87a8eeaf1b2be30bbd48ea6f3fafb30a7c02a6c9eb7f",
+      "byteSize": 2154,
+      "tags": {
+        "div": 4,
+        "nav": 2,
+        "button": 7,
+        "span": 11,
+        "i": 1
+      },
+      "classes": {
+        "step-sample-3": 2,
+        "mt-5": 1,
+        "mb-5": 1,
+        "br-step": 2,
+        "step-progress": 2,
+        "step-progress-btn": 7,
+        "step-info": 7,
+        "step-alert": 4,
+        "step-icon": 1,
+        "fas": 1,
+        "fa-check": 1
+      },
+      "ariaAttributes": {
+        "aria-orientation": 2,
+        "aria-label": 2,
+        "aria-posinset": 7,
+        "aria-setsize": 7,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "none": 2,
+        "listbox": 2,
+        "option": 7
+      },
+      "dataAttributes": {
+        "data-initial": 2,
+        "data-type": 2,
+        "data-tooltip-text": 7,
+        "data-alert": 4
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

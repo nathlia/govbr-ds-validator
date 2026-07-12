@@ -1,0 +1,344 @@
+{
+  "version": "3.7.0",
+  "status": "package-complete",
+  "category": "typography",
+  "tokenCount": 28,
+  "tokens": [
+    {
+      "name": "--font-family-base",
+      "value": "Rawline, Raleway, sans-serif",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-thin",
+      "value": "100",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-extra-light",
+      "value": "200",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-light",
+      "value": "300",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-regular",
+      "value": "400",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-medium",
+      "value": "500",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-semi-bold",
+      "value": "600",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-bold",
+      "value": "700",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-extra-bold",
+      "value": "800",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-weight-black",
+      "value": "900",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-base",
+      "value": "14px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-down-01",
+      "value": "11.662px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-down-02",
+      "value": "9.716px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-down-03",
+      "value": "8.106px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-01",
+      "value": "16.8px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-02",
+      "value": "20.16px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-03",
+      "value": "24.192px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-04",
+      "value": "29.036px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-05",
+      "value": "34.832px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-06",
+      "value": "41.804px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-07",
+      "value": "50.162px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-08",
+      "value": "60.2px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-09",
+      "value": "72.24px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-10",
+      "value": "86.688px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-size-scale-up-11",
+      "value": "104.02px",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-line-height-low",
+      "value": "1.15",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-line-height-medium",
+      "value": "1.45",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--font-line-height-high",
+      "value": "1.85",
+      "category": "typography",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    }
+  ]
+}

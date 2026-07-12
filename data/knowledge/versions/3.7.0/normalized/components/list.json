@@ -1,0 +1,151 @@
+{
+  "name": "list",
+  "canonicalUrl": "https://www.gov.br/ds/components/list",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-list-03813ffeeb42",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "list",
+      "title": "Navegação da List por teclado",
+      "originalText": "Os usuários devem poder navegar pelo list através do teclado, usando as teclas Tab e Shift + Tab.",
+      "normalizedRule": "Elementos interativos da List devem permitir navegação com Tab e Shift+Tab.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Itens interativos entram e saem da ordem de foco corretamente."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/list?tab=acessibilidade",
+        "pageTitle": "Padrão Digital de Governo - List",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "6de177755797ae973de15b0ea2e29cc46d8c8dc6b9c51f0849af1a223c602088",
+        "retrievalEvidence": "turn310107search1"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-list-8f67e7cc7677",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "consistency",
+      "component": "list",
+      "title": "Espaçamento consistente",
+      "originalText": "Não é permitido variar o espaçamento dos itens dentro de uma mesma list.",
+      "normalizedRule": "Todos os itens de uma mesma List devem utilizar espaçamento consistente.",
+      "force": "prohibited",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Os espaçamentos equivalentes entre itens possuem o mesmo valor computado."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "divider"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/list?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - List",
+        "tab": "designer",
+        "section": "Dividers e Espaçamento",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "32ea2a0625c859424a14be190365efc8cb09f387cf9215f4c76c7c6bef881e23",
+        "retrievalEvidence": "turn237587search17"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-list-a0a88e11b600",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "list",
+      "title": "Estrutura exemplificada com .br-list",
+      "originalText": "Os exemplos oficiais de list no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-list.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-list como referência estrutural ao comparar a implementação com os exemplos oficiais de list.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-list."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/list/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "7f9b4c7b4aea1bdab2c5f4aa60add9c4dee20a903261adb089f45ccb975200f2"
+      }
+    }
+  ],
+  "limitations": [
+    "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 10,
+    "canonicalClassCandidate": "br-list",
+    "structureFile": "normalized/examples/html/list.json"
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "component": "avatar",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 4,
+  "canonicalClassCandidate": "br-avatar",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-avatar",
+      "occurrences": 10
+    },
+    {
+      "class": "br-item",
+      "occurrences": 4
+    },
+    {
+      "class": "br-list",
+      "occurrences": 1
+    },
+    {
+      "class": "br-sign-in",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "style": 1,
+    "div": 2,
+    "button": 1,
+    "span": 22,
+    "i": 4,
+    "a": 4,
+    "img": 3
+  },
+  "classes": {
+    "br-sign-in": 1,
+    "br-avatar": 10,
+    "content": 10,
+    "bg-orange-vivid-30": 1,
+    "text-pure-0": 4,
+    "ml-2": 1,
+    "text-gray-80": 1,
+    "text-weight-regular": 1,
+    "text-weight-semi-bold": 1,
+    "fas": 4,
+    "fa-caret-down": 1,
+    "br-list": 1,
+    "br-item": 4,
+    "mr-3": 9,
+    "fa-user": 3,
+    "medium": 3,
+    "large": 3,
+    "bg-violet-50": 1,
+    "bg-orange-50": 1,
+    "bg-green-50": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 1,
+    "aria-hidden": 4,
+    "aria-labelledby": 1
+  },
+  "roles": {
+    "menu": 1,
+    "menuitem": 4
+  },
+  "dataAttributes": {
+    "data-toggle": 1,
+    "data-target": 1
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 1,
+    "a": 4
+  },
+  "examples": [
+    {
+      "file": "avatar-dropdown.html",
+      "relativePackagePath": "dist/components/avatar/examples/avatar-dropdown.html",
+      "sha256": "138fc8ee763592d4f5677bb1a4168e6a1b6e912bb621695238fb2c1991188870",
+      "byteSize": 1002,
+      "tags": {
+        "style": 1,
+        "div": 2,
+        "button": 1,
+        "span": 4,
+        "i": 1,
+        "a": 4
+      },
+      "classes": {
+        "br-sign-in": 1,
+        "br-avatar": 1,
+        "content": 1,
+        "bg-orange-vivid-30": 1,
+        "text-pure-0": 1,
+        "ml-2": 1,
+        "text-gray-80": 1,
+        "text-weight-regular": 1,
+        "text-weight-semi-bold": 1,
+        "fas": 1,
+        "fa-caret-down": 1,
+        "br-list": 1,
+        "br-item": 4
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 1,
+        "aria-labelledby": 1
+      },
+      "roles": {
+        "menu": 1,
+        "menuitem": 4
+      },
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-target": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1,
+        "a": 4
+      }
+    },
+    {
+      "file": "avatar-icon.html",
+      "relativePackagePath": "dist/components/avatar/examples/avatar-icon.html",
+      "sha256": "776bac015a63079018903ac361431c268f1bce38d7dd4b532fec0508db3ac6ee",
+      "byteSize": 418,
+      "tags": {
+        "span": 6,
+        "i": 3
+      },
+      "classes": {
+        "br-avatar": 3,
+        "mr-3": 3,
+        "content": 3,
+        "fas": 3,
+        "fa-user": 3,
+        "medium": 1,
+        "large": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "avatar-image.html",
+      "relativePackagePath": "dist/components/avatar/examples/avatar-image.html",
+      "sha256": "a46728164435a334dbdcf9b153b2a7f99fc62596446b6b1f1f2598f66f899735",
+      "byteSize": 455,
+      "tags": {
+        "span": 6,
+        "img": 3
+      },
+      "classes": {
+        "br-avatar": 3,
+        "mr-3": 3,
+        "content": 3,
+        "medium": 1,
+        "large": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "avatar-letter.html",
+      "relativePackagePath": "dist/components/avatar/examples/avatar-letter.html",
+      "sha256": "493052d8c3fb43202e6c49ae8ed0e7de73edf3a4e176378ec8997a5810fe20d0",
+      "byteSize": 357,
+      "tags": {
+        "span": 6
+      },
+      "classes": {
+        "br-avatar": 3,
+        "mr-3": 3,
+        "content": 3,
+        "bg-violet-50": 1,
+        "text-pure-0": 3,
+        "medium": 1,
+        "bg-orange-50": 1,
+        "large": 1,
+        "bg-green-50": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

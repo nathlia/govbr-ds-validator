@@ -1,0 +1,151 @@
+{
+  "component": "radio",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 3,
+  "canonicalClassCandidate": "br-radio",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-radio",
+      "occurrences": 11
+    }
+  ],
+  "tags": {
+    "p": 2,
+    "div": 15,
+    "input": 11,
+    "label": 11,
+    "span": 1,
+    "i": 1
+  },
+  "classes": {
+    "label": 1,
+    "mb-0": 1,
+    "help-text": 1,
+    "br-radio": 11,
+    "mt-3": 1,
+    "feedback": 1,
+    "warning": 1,
+    "fas": 1,
+    "fa-exclamation-triangle": 1,
+    "d-inline-block": 3,
+    "mr-5": 3,
+    "disabled": 1,
+    "invalid": 1,
+    "valid": 1
+  },
+  "ariaAttributes": {
+    "aria-hidden": 1
+  },
+  "roles": {
+    "alert": 1
+  },
+  "dataAttributes": {},
+  "inputTypes": {
+    "radio": 11
+  },
+  "interactiveTags": {
+    "input": 11
+  },
+  "examples": [
+    {
+      "file": "radio-default.html",
+      "relativePackagePath": "dist/components/radio/examples/radio-default.html",
+      "sha256": "07d64fcb674ceb291ac96be014e5d4e02d388908a237d53912d8b609df30be80",
+      "byteSize": 762,
+      "tags": {
+        "p": 2,
+        "div": 5,
+        "input": 4,
+        "label": 4,
+        "span": 1,
+        "i": 1
+      },
+      "classes": {
+        "label": 1,
+        "mb-0": 1,
+        "help-text": 1,
+        "br-radio": 4,
+        "mt-3": 1,
+        "feedback": 1,
+        "warning": 1,
+        "fas": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {
+        "alert": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "radio": 4
+      },
+      "interactiveTags": {
+        "input": 4
+      }
+    },
+    {
+      "file": "radio-inline.html",
+      "relativePackagePath": "dist/components/radio/examples/radio-inline.html",
+      "sha256": "2f6e1f41bd2e064fc501f430ffb556d64e1346c6033cfe9e3d5fd31742d4f133",
+      "byteSize": 582,
+      "tags": {
+        "div": 6,
+        "input": 3,
+        "label": 3
+      },
+      "classes": {
+        "d-inline-block": 3,
+        "mr-5": 3,
+        "br-radio": 3
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "radio": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "radio-states.html",
+      "relativePackagePath": "dist/components/radio/examples/radio-states.html",
+      "sha256": "b7ebc160e7171933bd7d30cb75323826ff83090b78c919cfec6183866b1b8705",
+      "byteSize": 783,
+      "tags": {
+        "div": 4,
+        "input": 4,
+        "label": 4
+      },
+      "classes": {
+        "br-radio": 4,
+        "disabled": 1,
+        "invalid": 1,
+        "valid": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "radio": 4
+      },
+      "interactiveTags": {
+        "input": 4
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

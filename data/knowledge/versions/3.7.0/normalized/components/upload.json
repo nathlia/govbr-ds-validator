@@ -1,0 +1,118 @@
+{
+  "name": "upload",
+  "canonicalUrl": "https://www.gov.br/ds/components/upload",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-upload-f4726f3ce44a",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "upload",
+      "title": "Estrutura exemplificada com .br-upload",
+      "originalText": "Os exemplos oficiais de upload no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-upload.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-upload como referência estrutural ao comparar a implementação com os exemplos oficiais de upload.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-upload."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/upload/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "0d95f9e209ee052bb919bee0d0e1a18e65d188b30d06ff44c0b207a141a6e00d"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-985fd2775586",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "interaction",
+      "component": "upload",
+      "title": "Upload por arrastar arquivos",
+      "originalText": "O componente upload deve disponibilizar o recurso de arrastar arquivos. Esta funcionalidade deve ser informada ao usuário na mensagem abaixo do campo.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Upload deve aceitar arrastar arquivos e informar essa possibilidade no texto de apoio do campo.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Existe uma zona de arrastar e soltar.",
+        "O texto de apoio informa a interação por arraste."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/upload",
+        "pageTitle": "Padrão Digital de Governo - Upload",
+        "tab": "designer",
+        "section": "Interação",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "a9c55154a2e100880c16178cd1f9c96a46ff6e50acb95270b2465ac83a646264",
+        "retrievalEvidence": "turn788987search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 4,
+    "canonicalClassCandidate": "br-upload",
+    "structureFile": "normalized/examples/html/upload.json"
+  }
+}

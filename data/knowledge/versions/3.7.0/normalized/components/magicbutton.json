@@ -1,0 +1,71 @@
+{
+  "name": "magicbutton",
+  "canonicalUrl": "https://www.gov.br/ds/components/magicbutton",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-magicbutton-d421fb28a955",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "usage",
+      "component": "magicbutton",
+      "title": "Magic Button não substitui Button universalmente",
+      "originalText": "Atenção: tenha em mente que o button pode substituir o magic button em todos os contextos porém, o contrário não é permitido.",
+      "normalizedRule": "Magic Button não deve substituir Button em todos os contextos; Button pode substituir Magic Button.",
+      "force": "prohibited",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O Magic Button aparece apenas nos contextos previstos pelo componente."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "button"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/magicbutton",
+        "pageTitle": "Padrão Digital de Governo - Magicbutton",
+        "tab": "designer",
+        "section": "Uso",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "0ab46a7fc66dc7e4c36c56df197c1be9859c81e8c6df3e48e66d52e9c0120f8c",
+        "retrievalEvidence": "turn624744search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": null,
+    "structureFile": "normalized/examples/html/magicbutton.json"
+  }
+}

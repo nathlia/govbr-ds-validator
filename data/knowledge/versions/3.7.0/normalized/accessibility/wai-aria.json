@@ -1,0 +1,50 @@
+{
+  "version": "3.7.0",
+  "status": "tcc-scope-complete",
+  "purpose": "Rules directly useful to semantic UI validation.",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-global-e038367bd7d6",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "accessibility",
+      "subcategory": "wai-aria",
+      "component": null,
+      "title": "Associar roles, states e properties adequados",
+      "originalText": "Os autores precisam associar elementos no documento a um role WAI-ARIA e aos states e properties apropriados.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Associe cada widget customizado ao role, estado e propriedade ARIA apropriados ao seu comportamento.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O role representa o tipo real do elemento.",
+        "Estados e propriedades ARIA refletem o estado atual do componente."
+      ],
+      "validationStrategy": "accessibility-tree",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/guias/wai-aria",
+        "pageTitle": "Associar roles, states e properties adequados",
+        "tab": null,
+        "section": "Roles, states e properties",
+        "retrievedAt": "2026-07-11T07:06:33+00:00",
+        "contentHash": "76a78eda251d11c067890172da69c421ff422e976aaebaf518f14edf404ac3e3",
+        "retrievalEvidence": "turn959505search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ],
+  "note": "eMAG remains the comprehensive accessibility rule layer. This file captures gov.br-specific WAI-ARIA guidance relevant to the validator."
+}

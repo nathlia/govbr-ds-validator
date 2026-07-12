@@ -1,0 +1,114 @@
+{
+  "name": "breadcrumb",
+  "canonicalUrl": "https://www.gov.br/ds/components/breadcrumb",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "breadcrumb",
+      "title": "Breadcrumb navegável por teclado",
+      "originalText": "Os elementos interativos do breadcrumb devem ser acessados via navegação por teclado. Utilize a tecla Tab para avançar na navegação.",
+      "normalizedRule": "Elementos interativos do Breadcrumb devem ser alcançáveis com Tab.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Cada link interativo recebe foco por Tab."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/breadcrumb?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Breadcrumb",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "3d67385995909db5ef74ffffaae980543c229463aff93e6f50ac869affd2cbd9",
+        "retrievalEvidence": "turn984279search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-breadcrumb-0dd1577ef844",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "breadcrumb",
+      "title": "Estrutura exemplificada com .br-breadcrumb",
+      "originalText": "Os exemplos oficiais de breadcrumb no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-breadcrumb.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-breadcrumb como referência estrutural ao comparar a implementação com os exemplos oficiais de breadcrumb.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-breadcrumb."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/breadcrumb/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "48d5500303bab01fb185c417980fb5102fdc6b22b54e93bb9dabc70f6f04deee"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 2,
+    "canonicalClassCandidate": "br-breadcrumb",
+    "structureFile": "normalized/examples/html/breadcrumb.json"
+  }
+}

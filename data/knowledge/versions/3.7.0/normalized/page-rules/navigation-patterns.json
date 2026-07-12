@@ -1,0 +1,46 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "navigation",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-a633e540aa5c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "navigation",
+      "component": null,
+      "title": "Página inicial com navegação principal",
+      "originalText": "É a entrada principal de seu site, sistema ou aplicativo e deve exibir o conteúdo de apresentação deste, assim como um componente principal de navegação que ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "A página inicial deve apresentar o produto e disponibilizar um mecanismo principal de navegação.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/navegacao",
+        "pageTitle": "Página inicial com navegação principal",
+        "tab": null,
+        "section": "Página inicial",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "d55890b3ffbbb9f5dac39ff95d27ce9906aba2bd35533eedb3ee5ff49929fe3e",
+        "retrievalEvidence": "turn161260search1",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

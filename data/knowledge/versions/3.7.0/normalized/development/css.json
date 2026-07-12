@@ -1,0 +1,49 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-development-global-067a1786b481",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "development",
+      "subcategory": "css-style",
+      "component": null,
+      "title": "Uma regra CSS por linha no formato indentado",
+      "originalText": "A primeira usa indentação para separar blocos de códigos e cada regra deve ser escrita numa linha única.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "No formato CSS indentado, escreva cada declaração em uma linha própria dentro do bloco.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Declarações CSS são formatadas em linhas separadas no estilo adotado."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "O trecho descreve um dos formatos de escrita apresentados pela documentação."
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/guias/boas-praticas-de-css",
+        "pageTitle": "Uma regra CSS por linha no formato indentado",
+        "tab": null,
+        "section": "Formatação",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "e0215d752b3c4493d81bddbe5b68612110c0bc44dff1c306ba2246ba0e700df0",
+        "retrievalEvidence": "turn827526search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

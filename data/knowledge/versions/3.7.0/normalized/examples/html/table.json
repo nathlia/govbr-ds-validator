@@ -1,0 +1,402 @@
+{
+  "component": "table",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 3,
+  "canonicalClassCandidate": "br-table",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 17
+    },
+    {
+      "class": "br-button",
+      "occurrences": 14
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 9
+    },
+    {
+      "class": "br-list",
+      "occurrences": 6
+    },
+    {
+      "class": "br-radio",
+      "occurrences": 6
+    },
+    {
+      "class": "br-checkbox",
+      "occurrences": 4
+    },
+    {
+      "class": "br-input",
+      "occurrences": 3
+    },
+    {
+      "class": "br-table",
+      "occurrences": 3
+    },
+    {
+      "class": "br-select",
+      "occurrences": 2
+    },
+    {
+      "class": "br-pagination",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 52,
+    "button": 25,
+    "i": 14,
+    "span": 14,
+    "table": 3,
+    "colgroup": 3,
+    "thead": 3,
+    "tr": 18,
+    "th": 17,
+    "tbody": 4,
+    "td": 57,
+    "col": 1,
+    "label": 13,
+    "input": 13,
+    "caption": 1,
+    "nav": 1
+  },
+  "classes": {
+    "br-table": 3,
+    "table-header": 3,
+    "top-bar": 3,
+    "table-title": 3,
+    "actions-trigger": 4,
+    "text-nowrap": 4,
+    "br-button": 14,
+    "circle": 11,
+    "fas": 14,
+    "fa-ellipsis-v": 4,
+    "br-list": 6,
+    "br-item": 17,
+    "br-divider": 9,
+    "border-bottom": 5,
+    "border-left": 2,
+    "border-right": 8,
+    "search-trigger": 1,
+    "fa-search": 2,
+    "search-bar": 1,
+    "br-input": 3,
+    "fa-times": 1,
+    "selected-bar": 1,
+    "info": 1,
+    "count": 1,
+    "text": 1,
+    "inverted": 1,
+    "column-collapse": 1,
+    "column-checkbox": 1,
+    "br-checkbox": 4,
+    "hidden-label": 4,
+    "small": 3,
+    "fa-chevron-down": 3,
+    "collapse": 3,
+    "table-footer": 1,
+    "br-pagination": 1,
+    "pagination-per-page": 1,
+    "br-select": 2,
+    "fa-angle-down": 2,
+    "br-radio": 6,
+    "d-none": 4,
+    "d-sm-block": 2,
+    "mx-3": 2,
+    "pagination-information": 1,
+    "d-sm-flex": 2,
+    "current": 1,
+    "per-page": 1,
+    "total": 1,
+    "pagination-go-to-page": 1,
+    "ml-auto": 2,
+    "pagination-arrows": 1,
+    "ml-sm-0": 1,
+    "fa-angle-left": 1,
+    "fa-angle-right": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 20,
+    "aria-haspopup": 4,
+    "aria-live": 3,
+    "aria-hidden": 18,
+    "aria-labelledby": 5,
+    "aria-controls": 2,
+    "aria-describedby": 3
+  },
+  "roles": {
+    "menu": 4,
+    "menuitem": 11
+  },
+  "dataAttributes": {
+    "data-toggle": 9,
+    "data-target": 7,
+    "data-density": 9,
+    "data-search": 1,
+    "data-selection": 1,
+    "data-collapse": 1,
+    "data-random": 1,
+    "data-dismiss": 1,
+    "data-parent": 1,
+    "data-child": 3,
+    "data-th": 9,
+    "data-total": 1,
+    "data-current": 1,
+    "data-per-page": 1,
+    "data-trigger": 2
+  },
+  "inputTypes": {
+    "search": 1,
+    "checkbox": 4,
+    "text": 2,
+    "radio": 6
+  },
+  "interactiveTags": {
+    "button": 25,
+    "input": 13
+  },
+  "examples": [
+    {
+      "file": "table-irregular-1.html",
+      "relativePackagePath": "dist/components/table/examples/table-irregular-1.html",
+      "sha256": "989115e821983356af11bd07883b9f433fc152a1ac8f3da430a7ac8ae8ce3cdf",
+      "byteSize": 2206,
+      "tags": {
+        "div": 6,
+        "button": 4,
+        "i": 1,
+        "span": 2,
+        "table": 1,
+        "colgroup": 1,
+        "thead": 1,
+        "tr": 6,
+        "th": 5,
+        "tbody": 2,
+        "td": 20
+      },
+      "classes": {
+        "br-table": 1,
+        "table-header": 1,
+        "top-bar": 1,
+        "table-title": 1,
+        "actions-trigger": 1,
+        "text-nowrap": 1,
+        "br-button": 1,
+        "circle": 1,
+        "fas": 1,
+        "fa-ellipsis-v": 1,
+        "br-list": 1,
+        "br-item": 3,
+        "br-divider": 2,
+        "border-bottom": 3,
+        "border-left": 2,
+        "border-right": 2
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-haspopup": 1,
+        "aria-live": 1,
+        "aria-hidden": 1,
+        "aria-labelledby": 1
+      },
+      "roles": {
+        "menu": 1,
+        "menuitem": 3
+      },
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-target": 1,
+        "data-density": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "table-irregular-2.html",
+      "relativePackagePath": "dist/components/table/examples/table-irregular-2.html",
+      "sha256": "eeaee788ad1766dc8e570e22cce5ed3f5ab100ecfe07a7d4a513f81af17f9cae",
+      "byteSize": 2425,
+      "tags": {
+        "div": 6,
+        "button": 4,
+        "i": 1,
+        "span": 2,
+        "table": 1,
+        "col": 1,
+        "colgroup": 2,
+        "thead": 1,
+        "tr": 5,
+        "th": 8,
+        "tbody": 1,
+        "td": 18
+      },
+      "classes": {
+        "br-table": 1,
+        "table-header": 1,
+        "top-bar": 1,
+        "table-title": 1,
+        "actions-trigger": 1,
+        "text-nowrap": 1,
+        "br-button": 1,
+        "circle": 1,
+        "fas": 1,
+        "fa-ellipsis-v": 1,
+        "br-list": 1,
+        "br-item": 3,
+        "br-divider": 2,
+        "border-right": 6,
+        "border-bottom": 2
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-haspopup": 1,
+        "aria-live": 1,
+        "aria-hidden": 1,
+        "aria-labelledby": 1
+      },
+      "roles": {
+        "menu": 1,
+        "menuitem": 3
+      },
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-target": 1,
+        "data-density": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "table.html",
+      "relativePackagePath": "dist/components/table/examples/table.html",
+      "sha256": "74f83e13e47e02b70aa2141739d2a7670f5982763ab09359ebffac9ede6b6aa8",
+      "byteSize": 11423,
+      "tags": {
+        "div": 40,
+        "button": 17,
+        "i": 12,
+        "span": 10,
+        "label": 13,
+        "input": 13,
+        "table": 1,
+        "caption": 1,
+        "thead": 1,
+        "tr": 7,
+        "td": 19,
+        "th": 4,
+        "tbody": 1,
+        "nav": 1
+      },
+      "classes": {
+        "br-table": 1,
+        "table-header": 1,
+        "top-bar": 1,
+        "table-title": 1,
+        "actions-trigger": 2,
+        "text-nowrap": 2,
+        "br-button": 12,
+        "circle": 9,
+        "fas": 12,
+        "fa-ellipsis-v": 2,
+        "br-list": 4,
+        "br-item": 11,
+        "br-divider": 5,
+        "search-trigger": 1,
+        "fa-search": 2,
+        "search-bar": 1,
+        "br-input": 3,
+        "fa-times": 1,
+        "selected-bar": 1,
+        "info": 1,
+        "count": 1,
+        "text": 1,
+        "inverted": 1,
+        "column-collapse": 1,
+        "column-checkbox": 1,
+        "br-checkbox": 4,
+        "hidden-label": 4,
+        "small": 3,
+        "fa-chevron-down": 3,
+        "collapse": 3,
+        "table-footer": 1,
+        "br-pagination": 1,
+        "pagination-per-page": 1,
+        "br-select": 2,
+        "fa-angle-down": 2,
+        "br-radio": 6,
+        "d-none": 4,
+        "d-sm-block": 2,
+        "mx-3": 2,
+        "pagination-information": 1,
+        "d-sm-flex": 2,
+        "current": 1,
+        "per-page": 1,
+        "total": 1,
+        "pagination-go-to-page": 1,
+        "ml-auto": 2,
+        "pagination-arrows": 1,
+        "ml-sm-0": 1,
+        "fa-angle-left": 1,
+        "fa-angle-right": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 18,
+        "aria-haspopup": 2,
+        "aria-live": 1,
+        "aria-hidden": 16,
+        "aria-labelledby": 3,
+        "aria-controls": 2,
+        "aria-describedby": 3
+      },
+      "roles": {
+        "menu": 2,
+        "menuitem": 5
+      },
+      "dataAttributes": {
+        "data-search": 1,
+        "data-selection": 1,
+        "data-collapse": 1,
+        "data-random": 1,
+        "data-toggle": 7,
+        "data-target": 5,
+        "data-density": 3,
+        "data-dismiss": 1,
+        "data-parent": 1,
+        "data-child": 3,
+        "data-th": 9,
+        "data-total": 1,
+        "data-current": 1,
+        "data-per-page": 1,
+        "data-trigger": 2
+      },
+      "inputTypes": {
+        "search": 1,
+        "checkbox": 4,
+        "text": 2,
+        "radio": 6
+      },
+      "interactiveTags": {
+        "button": 17,
+        "input": 13
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

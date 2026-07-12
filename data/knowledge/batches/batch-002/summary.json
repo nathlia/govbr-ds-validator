@@ -1,0 +1,33 @@
+{
+  "batch": 2,
+  "generatedAt": "2026-07-11T06:37:25+00:00",
+  "newAtomicRules": 31,
+  "duplicateRuleIdsSkipped": [],
+  "cumulativeAtomicRules": 46,
+  "componentsTouched": [
+    "avatar",
+    "breadcrumb",
+    "button",
+    "card",
+    "carousel",
+    "checkbox",
+    "input",
+    "magicbutton",
+    "message",
+    "modal",
+    "notification",
+    "scrim",
+    "signin",
+    "skiplink",
+    "tab",
+    "tag",
+    "tooltip"
+  ],
+  "foundationsTouched": [
+    "colors",
+    "typography",
+    "grid"
+  ],
+  "evidenceMode": "official-web-search-index-excerpts",
+  "complete": false
+}

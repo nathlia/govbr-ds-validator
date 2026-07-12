@@ -1,0 +1,118 @@
+{
+  "name": "pagination",
+  "canonicalUrl": "https://www.gov.br/ds/components/pagination",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-pagination-524ef55890db",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "pagination",
+      "title": "Estrutura exemplificada com .br-pagination",
+      "originalText": "Os exemplos oficiais de pagination no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-pagination.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-pagination como referência estrutural ao comparar a implementação com os exemplos oficiais de pagination.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-pagination."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/pagination/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "f22d27b0d2a37e24aa77b16626361c11a80cf9b35e7a49e10d38cf18e9c1285d"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-7b0ffe97e848",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "configuration",
+      "component": "pagination",
+      "title": "Módulos opcionais da Pagination contextual",
+      "originalText": "O Componente Pagination do Tipo Contextual também permite a configuração da visualização de cada módulo, independentemente. Cada módulo poderá ser usado ou não.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Na Pagination contextual, cada módulo pode ser habilitado ou omitido independentemente.",
+      "force": "permitted",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A ausência de um módulo opcional não invalida os demais.",
+        "Os módulos presentes mantêm estrutura íntegra."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/pagination?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Pagination",
+        "tab": "designer",
+        "section": "Tipo Contextual",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "805ccf89747ac19e9a38ea772ca565c1bae29bb95c87f2c1d6faf5ff61e3eccf",
+        "retrievalEvidence": "turn524143search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": "br-pagination",
+    "structureFile": "normalized/examples/html/pagination.json"
+  }
+}

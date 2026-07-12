@@ -1,0 +1,273 @@
+{
+  "component": "tab",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 5,
+  "canonicalClassCandidate": "br-tab",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-tab",
+      "occurrences": 7
+    }
+  ],
+  "tags": {
+    "div": 56,
+    "nav": 7,
+    "ul": 7,
+    "li": 40,
+    "button": 40,
+    "span": 62,
+    "p": 43,
+    "i": 12
+  },
+  "classes": {
+    "br-tab": 7,
+    "tab-nav": 7,
+    "tab-item": 40,
+    "is-active": 1,
+    "name": 46,
+    "results": 4,
+    "tab-content": 7,
+    "tab-panel": 40,
+    "active": 13,
+    "d-flex": 6,
+    "flex-column": 6,
+    "flex-sm-row": 6,
+    "icon": 6,
+    "mb-1": 6,
+    "mb-sm-0": 6,
+    "mr-sm-1": 6,
+    "fas": 12,
+    "fa-image": 12,
+    "fa-1x": 1,
+    "h4": 3,
+    "small": 1,
+    "mt-5": 3,
+    "large": 1,
+    "bg-gray-60": 1,
+    "p-3": 1,
+    "dark-mode": 1
+  },
+  "ariaAttributes": {
+    "aria-hidden": 12,
+    "aria-label": 6
+  },
+  "roles": {},
+  "dataAttributes": {
+    "data-counter": 1,
+    "data-panel": 40,
+    "data-tooltip-text": 6
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 40
+  },
+  "examples": [
+    {
+      "file": "tab-count.html",
+      "relativePackagePath": "dist/components/tab/examples/tab-count.html",
+      "sha256": "f3ee37db5fab02b7c7c6255268521a0073bc7dc6d1f330f71a2ec69dff79a941",
+      "byteSize": 1275,
+      "tags": {
+        "div": 6,
+        "nav": 1,
+        "ul": 1,
+        "li": 4,
+        "button": 4,
+        "span": 8,
+        "p": 4
+      },
+      "classes": {
+        "br-tab": 1,
+        "tab-nav": 1,
+        "tab-item": 4,
+        "is-active": 1,
+        "name": 4,
+        "results": 4,
+        "tab-content": 1,
+        "tab-panel": 4,
+        "active": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-counter": 1,
+        "data-panel": 4
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 4
+      }
+    },
+    {
+      "file": "tab-default.html",
+      "relativePackagePath": "dist/components/tab/examples/tab-default.html",
+      "sha256": "c215f629ad695873987951b0bed0256fef04ff2db7e7986acdda1461b7de435b",
+      "byteSize": 2519,
+      "tags": {
+        "div": 8,
+        "nav": 1,
+        "ul": 1,
+        "li": 6,
+        "button": 6,
+        "span": 24,
+        "i": 6,
+        "p": 6
+      },
+      "classes": {
+        "br-tab": 1,
+        "tab-nav": 1,
+        "tab-item": 6,
+        "active": 2,
+        "name": 12,
+        "d-flex": 6,
+        "flex-column": 6,
+        "flex-sm-row": 6,
+        "icon": 6,
+        "mb-1": 6,
+        "mb-sm-0": 6,
+        "mr-sm-1": 6,
+        "fas": 6,
+        "fa-image": 6,
+        "fa-1x": 1,
+        "tab-content": 1,
+        "tab-panel": 6
+      },
+      "ariaAttributes": {
+        "aria-hidden": 6
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-panel": 6
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 6
+      }
+    },
+    {
+      "file": "tab-density.html",
+      "relativePackagePath": "dist/components/tab/examples/tab-density.html",
+      "sha256": "620043e4a2b588cd8965c93712d2ffbebba8e5c5a32c3d784c512e2cf711a6e1",
+      "byteSize": 4735,
+      "tags": {
+        "p": 21,
+        "div": 24,
+        "nav": 3,
+        "ul": 3,
+        "li": 18,
+        "button": 18,
+        "span": 18
+      },
+      "classes": {
+        "h4": 3,
+        "br-tab": 3,
+        "small": 1,
+        "tab-nav": 3,
+        "tab-item": 18,
+        "active": 6,
+        "name": 18,
+        "tab-content": 3,
+        "tab-panel": 18,
+        "mt-5": 2,
+        "large": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-panel": 18
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 18
+      }
+    },
+    {
+      "file": "tab-icons.html",
+      "relativePackagePath": "dist/components/tab/examples/tab-icons.html",
+      "sha256": "3ec121a660bdd64f9bf006d3574366d1228e785aeb797a3d04d45862192aa863",
+      "byteSize": 2250,
+      "tags": {
+        "div": 9,
+        "nav": 1,
+        "ul": 1,
+        "li": 6,
+        "button": 6,
+        "span": 6,
+        "i": 6,
+        "p": 6
+      },
+      "classes": {
+        "mt-5": 1,
+        "br-tab": 1,
+        "tab-nav": 1,
+        "tab-item": 6,
+        "active": 2,
+        "name": 6,
+        "fas": 6,
+        "fa-image": 6,
+        "tab-content": 1,
+        "tab-panel": 6
+      },
+      "ariaAttributes": {
+        "aria-label": 6,
+        "aria-hidden": 6
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-panel": 6,
+        "data-tooltip-text": 6
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 6
+      }
+    },
+    {
+      "file": "tab-inverted.html",
+      "relativePackagePath": "dist/components/tab/examples/tab-inverted.html",
+      "sha256": "b7b03db7381662d7caaf9f83411d6357e419412201c33daf9cbdfe96ee3ae493",
+      "byteSize": 1764,
+      "tags": {
+        "div": 9,
+        "nav": 1,
+        "ul": 1,
+        "li": 6,
+        "button": 6,
+        "span": 6,
+        "p": 6
+      },
+      "classes": {
+        "bg-gray-60": 1,
+        "p-3": 1,
+        "br-tab": 1,
+        "dark-mode": 1,
+        "tab-nav": 1,
+        "tab-item": 6,
+        "active": 2,
+        "name": 6,
+        "tab-content": 1,
+        "tab-panel": 6
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {
+        "data-panel": 6
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 6
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

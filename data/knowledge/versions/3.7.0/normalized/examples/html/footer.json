@@ -1,0 +1,252 @@
+{
+  "component": "footer",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-footer",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 50
+    },
+    {
+      "class": "br-divider",
+      "occurrences": 26
+    },
+    {
+      "class": "br-list",
+      "occurrences": 14
+    },
+    {
+      "class": "br-button",
+      "occurrences": 8
+    },
+    {
+      "class": "br-footer",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "footer": 2,
+    "div": 112,
+    "img": 6,
+    "a": 58,
+    "i": 20,
+    "span": 26,
+    "strong": 2
+  },
+  "classes": {
+    "br-footer": 2,
+    "container-lg": 4,
+    "logo": 2,
+    "br-list": 14,
+    "horizontal": 2,
+    "col-2": 12,
+    "br-item": 50,
+    "header": 12,
+    "content": 50,
+    "text-down-01": 14,
+    "text-bold": 12,
+    "text-uppercase": 12,
+    "support": 12,
+    "fas": 12,
+    "fa-angle-down": 12,
+    "br-divider": 26,
+    "d-md-none": 24,
+    "d-none": 2,
+    "d-sm-block": 2,
+    "row": 2,
+    "align-items-end": 2,
+    "justify-content-between": 2,
+    "py-5": 2,
+    "col": 4,
+    "social-network": 2,
+    "social-network-title": 2,
+    "d-flex": 2,
+    "br-button": 8,
+    "circle": 8,
+    "fab": 8,
+    "fa-facebook-f": 2,
+    "fa-twitter": 2,
+    "fa-linkedin-in": 2,
+    "fa-whatsapp": 2,
+    "assigns": 2,
+    "text-right": 2,
+    "ml-4": 4,
+    "my-3": 2,
+    "info": 2,
+    "text-medium": 2,
+    "pb-3": 2,
+    "inverted": 1,
+    "text-sm-left": 1
+  },
+  "ariaAttributes": {
+    "aria-hidden": 20,
+    "aria-label": 8
+  },
+  "roles": {},
+  "dataAttributes": {
+    "data-toggle": 2,
+    "data-sub": 2
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "a": 58
+  },
+  "examples": [
+    {
+      "file": "footer-default.html",
+      "relativePackagePath": "dist/components/footer/examples/footer-default.html",
+      "sha256": "24e9cdd5d40892f4631016d41cb34b16f94f360ef1434ab8c3c48c6b108de2a4",
+      "byteSize": 6378,
+      "tags": {
+        "footer": 1,
+        "div": 56,
+        "img": 3,
+        "a": 29,
+        "i": 10,
+        "span": 13,
+        "strong": 1
+      },
+      "classes": {
+        "br-footer": 1,
+        "container-lg": 2,
+        "logo": 1,
+        "br-list": 7,
+        "horizontal": 1,
+        "col-2": 6,
+        "br-item": 25,
+        "header": 6,
+        "content": 25,
+        "text-down-01": 7,
+        "text-bold": 6,
+        "text-uppercase": 6,
+        "support": 6,
+        "fas": 6,
+        "fa-angle-down": 6,
+        "br-divider": 13,
+        "d-md-none": 12,
+        "d-none": 1,
+        "d-sm-block": 1,
+        "row": 1,
+        "align-items-end": 1,
+        "justify-content-between": 1,
+        "py-5": 1,
+        "col": 2,
+        "social-network": 1,
+        "social-network-title": 1,
+        "d-flex": 1,
+        "br-button": 4,
+        "circle": 4,
+        "fab": 4,
+        "fa-facebook-f": 1,
+        "fa-twitter": 1,
+        "fa-linkedin-in": 1,
+        "fa-whatsapp": 1,
+        "assigns": 1,
+        "text-right": 1,
+        "ml-4": 2,
+        "my-3": 1,
+        "info": 1,
+        "text-medium": 1,
+        "pb-3": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 10,
+        "aria-label": 4
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-sub": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 29
+      }
+    },
+    {
+      "file": "footer-inverted.html",
+      "relativePackagePath": "dist/components/footer/examples/footer-inverted.html",
+      "sha256": "d0b0810f595879b8b35528d8f32bc018d2a88954c82f780589ba1c02bba8f72a",
+      "byteSize": 6422,
+      "tags": {
+        "footer": 1,
+        "div": 56,
+        "img": 3,
+        "a": 29,
+        "i": 10,
+        "span": 13,
+        "strong": 1
+      },
+      "classes": {
+        "br-footer": 1,
+        "inverted": 1,
+        "container-lg": 2,
+        "logo": 1,
+        "text-sm-left": 1,
+        "br-list": 7,
+        "horizontal": 1,
+        "col-2": 6,
+        "br-item": 25,
+        "header": 6,
+        "content": 25,
+        "text-down-01": 7,
+        "text-bold": 6,
+        "text-uppercase": 6,
+        "support": 6,
+        "fas": 6,
+        "fa-angle-down": 6,
+        "br-divider": 13,
+        "d-md-none": 12,
+        "d-none": 1,
+        "d-sm-block": 1,
+        "row": 1,
+        "align-items-end": 1,
+        "justify-content-between": 1,
+        "py-5": 1,
+        "col": 2,
+        "social-network": 1,
+        "social-network-title": 1,
+        "d-flex": 1,
+        "br-button": 4,
+        "circle": 4,
+        "fab": 4,
+        "fa-facebook-f": 1,
+        "fa-twitter": 1,
+        "fa-linkedin-in": 1,
+        "fa-whatsapp": 1,
+        "assigns": 1,
+        "text-right": 1,
+        "ml-4": 2,
+        "my-3": 1,
+        "info": 1,
+        "text-medium": 1,
+        "pb-3": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 10,
+        "aria-label": 4
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-toggle": 1,
+        "data-sub": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 29
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

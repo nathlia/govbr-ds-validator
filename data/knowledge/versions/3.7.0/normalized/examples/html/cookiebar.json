@@ -1,0 +1,57 @@
+{
+  "component": "cookiebar",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 1,
+  "canonicalClassCandidate": "br-cookiebar",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-cookiebar",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 1
+  },
+  "classes": {
+    "br-cookiebar": 1,
+    "default": 1,
+    "d-none": 1
+  },
+  "ariaAttributes": {},
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {},
+  "examples": [
+    {
+      "file": "cookiebar-padrao.html",
+      "relativePackagePath": "dist/components/cookiebar/examples/cookiebar-padrao.html",
+      "sha256": "32592a3e870b7730949bb6097c086c4363753026504986c3661064fe9f3fefe7",
+      "byteSize": 62,
+      "tags": {
+        "div": 1
+      },
+      "classes": {
+        "br-cookiebar": 1,
+        "default": 1,
+        "d-none": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

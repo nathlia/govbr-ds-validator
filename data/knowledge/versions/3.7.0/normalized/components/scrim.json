@@ -1,0 +1,116 @@
+{
+  "name": "scrim",
+  "canonicalUrl": "https://www.gov.br/ds/components/scrim",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-scrim-d5ba51dda2b0",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "access-control",
+      "component": "scrim",
+      "title": "Bloqueio de áreas de suporte exige justificativa",
+      "originalText": "Deve existir uma boa justificativa para impedir acesso a essas áreas de suporte.",
+      "normalizedRule": "O Scrim só deve bloquear áreas de busca ou acessibilidade quando houver justificativa clara.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [
+        "O Scrim impede acesso a áreas de suporte, busca ou acessibilidade."
+      ],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Justificativa funcional explícita para o bloqueio."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/scrim",
+        "pageTitle": "Padrão Digital de Governo - Scrim",
+        "tab": "designer",
+        "section": "Cuidados",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "8a81417b236bec24b69046557b1d073f74c89cc9e0053cead2696fa1998ca964",
+        "retrievalEvidence": "turn624744search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-scrim-78bf4890482e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "scrim",
+      "title": "Estrutura exemplificada com .br-scrim",
+      "originalText": "Os exemplos oficiais de scrim no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-scrim.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-scrim como referência estrutural ao comparar a implementação com os exemplos oficiais de scrim.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-scrim."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/scrim/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "fd7eeacd8bca2954cc836bed4056a34b30d9de9ee3c234db0022f09bdfc8de63"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 2,
+    "canonicalClassCandidate": "br-scrim",
+    "structureFile": "normalized/examples/html/scrim.json"
+  }
+}

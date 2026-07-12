@@ -1,0 +1,46 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "help-communication",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-5717506ac2e6",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "help-communication",
+      "component": null,
+      "title": "Seção de ajuda claramente localizável",
+      "originalText": "Disponibilize uma seção de ajuda: O conteúdo deve ser estruturado em uma tela ou seção do sistema. Deve ficar claro para o usuário onde encontrar o conteúdo de ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Disponibilize ajuda em uma tela ou seção claramente localizável pelo usuário.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/ajuda-comunicacao",
+        "pageTitle": "Seção de ajuda claramente localizável",
+        "tab": null,
+        "section": "Seção de ajuda",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "7b35da037ae802ab6dd190aa2e4de9cef1bebb1d30e655e7df486442cbedc909",
+        "retrievalEvidence": "turn361164search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

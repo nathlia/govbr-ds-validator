@@ -1,0 +1,2141 @@
+{
+  "standard": "eMAG",
+  "version": "3.1",
+  "publication": "Abril de 2014",
+  "officialUrl": "https://emag.governoeletronico.gov.br/",
+  "status": "complete-normalized-index",
+  "recommendationCountInDocument": 45,
+  "recommendationsIndexed": 45,
+  "coverageBySection": {
+    "Marcação": 9,
+    "Comportamento (DOM)": 7,
+    "Conteúdo/Informação": 12,
+    "Apresentação/Design": 4,
+    "Multimídia": 5,
+    "Formulário": 8
+  },
+  "remainingRecommendationIds": [],
+  "invalidPreviouslyQueuedIdsRemoved": [
+    "4.5"
+  ],
+  "sourceTextPolicy": "Os títulos e localizadores oficiais foram preservados. As regras operacionais são paráfrases normalizadas ligadas ao documento oficial.",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-global-7e6420514860",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.1 – Respeitar os Padrões Web",
+      "originalText": "Recomendação 1.1 – Respeitar os Padrões Web",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Mantenha HTML, CSS e JavaScript em camadas adequadas e siga padrões Web interoperáveis.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Código válido e interoperável.",
+        "Conteúdo, apresentação e comportamento permanecem separados."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 4.1.1",
+        "WCAG 2.0 4.1.2"
+      ],
+      "emagReferences": [
+        "1.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.1",
+        "locator": "Recomendação 1.1",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "6ccfd07c75a3c92764e1ac3956fa04327d461010a9ae2552db4d42ba6034111e",
+        "retrievalEvidence": "turn760007view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-1cb2c878824b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.2 – Organizar o código HTML de forma lógica e semântica",
+      "originalText": "Recomendação 1.2 – Organizar o código HTML de forma lógica e semântica",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Use elementos HTML conforme seu significado e organize o documento em ordem lógica.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Elementos semânticos correspondem ao propósito do conteúdo.",
+        "A ordem do DOM é compreensível sem CSS."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "1.2"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.2",
+        "locator": "Recomendação 1.2",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "5e27d188a9f608eabb26a4f7ecd29298379d5c38a53421ac1dd99afd1ef0437d",
+        "retrievalEvidence": "turn760007view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-3ac0aaa53900",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.3 – Utilizar corretamente os níveis de cabeçalho",
+      "originalText": "Recomendação 1.3 – Utilizar corretamente os níveis de cabeçalho",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Estruture títulos de H1 a H6 hierarquicamente; prefira um único H1 para o conteúdo principal.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Não há saltos ilógicos de hierarquia.",
+        "O H1 identifica o conteúdo principal."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1",
+        "WCAG 2.0 2.4.10"
+      ],
+      "emagReferences": [
+        "1.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.3",
+        "locator": "Recomendação 1.3",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "8e14ada9dc873657e4de3401dab656fea151f04921bb18ef57d7e6d165fbe981",
+        "retrievalEvidence": "turn937582view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-79db88c7f55d",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.4 – Ordenar de forma lógica e intuitiva a leitura e tabulação",
+      "originalText": "Recomendação 1.4 – Ordenar de forma lógica e intuitiva a leitura e tabulação",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "A ordem do DOM deve produzir uma sequência lógica de leitura e foco; use tabindex apenas quando indispensável.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A ordem de foco acompanha a leitura.",
+        "Tabindex positivo não cria sequência artificial."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.2",
+        "WCAG 2.0 2.4.3"
+      ],
+      "emagReferences": [
+        "1.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.4",
+        "locator": "Recomendação 1.4",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "9816aad9dc8a8f62103b05e17d88534704a032db46d644936254983e4cb52060",
+        "retrievalEvidence": "turn937582view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-7d2b85f81c52",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.5 – Fornecer âncoras para ir direto a um bloco de conteúdo",
+      "originalText": "Recomendação 1.5 – Fornecer âncoras para ir direto a um bloco de conteúdo",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Forneça atalhos para blocos relevantes e faça do salto para o conteúdo o primeiro link da página.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O primeiro link focável leva ao conteúdo principal.",
+        "Existem destinos válidos para conteúdo, menu e busca quando aplicáveis."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.1"
+      ],
+      "emagReferences": [
+        "1.5"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.5",
+        "locator": "Recomendação 1.5",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "50528d73692814d695c6d20bb2f115541c05b6cc3478fd0b9f425eb3a27f11ff",
+        "retrievalEvidence": "turn937582view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-206c9fa6ae11",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.6 – Não utilizar tabelas para diagramação",
+      "originalText": "Recomendação 1.6 – Não utilizar tabelas para diagramação",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Use tabelas apenas para dados tabulares; faça a diagramação com CSS.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Elementos table representam dados, não layout."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "1.6"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.6",
+        "locator": "Recomendação 1.6",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "186bd99c9ddb3efd1f9515a3eed13143a10ee3bef17f177a5527d33f3ebc6333",
+        "retrievalEvidence": "turn937582view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cf61b3eb3c71",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.7 – Separar links adjacentes",
+      "originalText": "Recomendação 1.7 – Separar links adjacentes",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Separe links adjacentes com estrutura ou pontuação perceptível, não apenas espaços.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Links adjacentes são distinguíveis por leitores de tela e visualmente."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "1.7"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Marcação — Recomendação 1.7",
+        "locator": "Recomendação 1.7",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "de37c8429402a9c34333d8df223380dea40e0e163f79c30f75173c36aee40581",
+        "retrievalEvidence": "turn937582view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-bfba9c1f5026",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.8 – Dividir as áreas de informação",
+      "originalText": "Recomendação 1.8 – Dividir as áreas de informação",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Divida a página em regiões gerenciáveis e mantenha uma organização consistente entre páginas internas.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Regiões como topo, menu, conteúdo e rodapé são identificáveis.",
+        "Páginas internas mantêm estrutura consistente."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.2.3"
+      ],
+      "emagReferences": [
+        "1.8"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Marcação — Recomendação 1.8",
+        "locator": "Recomendação 1.8",
+        "retrievalEvidence": "turn389548view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "b87db417667b580072347542fe310304efc172476d95c8ba3c1cf6687ee97f9c"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-5be1f553cc03",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Marcação",
+      "component": null,
+      "title": "Recomendação 1.9 – Não abrir novas instâncias sem a solicitação do usuário",
+      "originalText": "Recomendação 1.9 – Não abrir novas instâncias sem a solicitação do usuário",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Não abra automaticamente novas abas, janelas ou modais; quando necessário, informe previamente o usuário e preserve o foco.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Links não forçam nova janela sem aviso.",
+        "Modais recebem foco e permitem retorno por teclado."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.2.5"
+      ],
+      "emagReferences": [
+        "1.9"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Marcação — Recomendação 1.9",
+        "locator": "Recomendação 1.9",
+        "retrievalEvidence": "turn981528view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "4006835460b46ffa46323835afd548691355f6b7cc3441b40a4f369c5ab740a9"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.1 – Disponibilizar todas as funções da página via teclado",
+      "originalText": "Recomendação 2.1 – Disponibilizar todas as funções da página via teclado",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Todas as funções devem ser operáveis por teclado, sem aprisionamento de foco.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Todas as ações possuem equivalente de teclado.",
+        "O foco percorre todos os elementos e pode sair deles."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.1.1",
+        "WCAG 2.0 2.1.2"
+      ],
+      "emagReferences": [
+        "2.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Comportamento (DOM) — Recomendação 2.1",
+        "locator": "Recomendação 2.1",
+        "retrievalEvidence": "turn601371view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "432b8e900e92a9cbb4ff4bd4dce4025136bc225ab845bf7f4f42762a2c012871"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-f639993e9416",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.2 – Garantir que os objetos programáveis sejam acessíveis",
+      "originalText": "Recomendação 2.2 – Garantir que os objetos programáveis sejam acessíveis",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Scripts, conteúdo dinâmico e objetos programáveis devem funcionar com teclado e oferecer alternativa acessível quando necessário.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Conteúdo dinâmico é operável por teclado.",
+        "Interações de arrastar possuem alternativa.",
+        "Scripts inacessíveis têm alternativa equivalente."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.1.1",
+        "WCAG 2.0 2.1.2"
+      ],
+      "emagReferences": [
+        "2.2"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Comportamento (DOM) — Recomendação 2.2",
+        "locator": "Recomendação 2.2",
+        "retrievalEvidence": "turn601371view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "3f2e1edbcf266d6316431ade8edd3c82d68ca5b574ca1a049d3bbf31ed17d00f"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cd5de9a6f164",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.3 – Não criar páginas com atualização automática periódica",
+      "originalText": "Recomendação 2.3 – Não criar páginas com atualização automática periódica",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Não atualize a página periodicamente sem controle; ofereça ação explícita e informe casos em que a atualização for indispensável.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Não existe meta refresh periódico.",
+        "Existe controle explícito para atualizar o conteúdo."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.2.5"
+      ],
+      "emagReferences": [
+        "2.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Comportamento (DOM) — Recomendação 2.3",
+        "locator": "Recomendação 2.3",
+        "retrievalEvidence": "turn601371view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "6a8509a970c405cb003f4b420ad8f05a524e6ba76cf51f612f401d2c363584c8"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-d6e816588306",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.4 – Não utilizar redirecionamento automático de páginas",
+      "originalText": "Recomendação 2.4 – Não utilizar redirecionamento automático de páginas",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Não redirecione páginas com meta refresh; faça o redirecionamento no servidor.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Não existe meta http-equiv=refresh para redirecionamento."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.2.5"
+      ],
+      "emagReferences": [
+        "2.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Comportamento (DOM) — Recomendação 2.4",
+        "locator": "Recomendação 2.4",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "1969d51dffc11cef07fb2833ed8d9cce7b384143a1b17ab838646dd2ab9061a0",
+        "retrievalEvidence": "turn937582view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-5d366ef29b04",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.5 – Fornecer alternativa para modificar limite de tempo",
+      "originalText": "Recomendação 2.5 – Fornecer alternativa para modificar limite de tempo",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Quando uma tarefa tiver limite de tempo, permita desligar, ajustar ou prolongar o prazo e informe o usuário.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O limite é comunicado.",
+        "Existe controle para ampliar, ajustar ou desativar o tempo."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.2.1"
+      ],
+      "emagReferences": [
+        "2.5"
+      ],
+      "notes": [
+        "Exceção quando o limite é intrínseco e absolutamente necessário."
+      ],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Comportamento (DOM) — Recomendação 2.5",
+        "locator": "Recomendação 2.5",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "15ca82cde80f4d93cf4d1f646076f26ebbdde2e8e93f82e32421d441e5fb3adb",
+        "retrievalEvidence": "turn937582view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-8faca42c2c9a",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.6 – Não incluir situações com intermitência de tela",
+      "originalText": "Recomendação 2.6 – Não incluir situações com intermitência de tela",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Não use efeitos piscantes, intermitentes ou cintilantes, inclusive em conteúdo de terceiros.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Não há intermitência capaz de provocar risco fotossensível."
+      ],
+      "validationStrategy": "visual",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.3.1"
+      ],
+      "emagReferences": [
+        "2.6"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Comportamento (DOM) — Recomendação 2.6",
+        "locator": "Recomendação 2.6",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "55e2c8339e21d142b93465efeace3299ca32ccd48ff1b5dbb98c221b689c33e7",
+        "retrievalEvidence": "turn937582view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-33b13d9fa271",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Comportamento (DOM)",
+      "component": null,
+      "title": "Recomendação 2.7 – Assegurar o controle do usuário sobre as alterações temporais do conteúdo",
+      "originalText": "Recomendação 2.7 – Assegurar o controle do usuário sobre as alterações temporais do conteúdo",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Conteúdo em movimento não deve iniciar sem controle; ofereça pausar, parar e reiniciar.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Controles de pausa e retomada são acessíveis.",
+        "Movimento automático pode ser interrompido."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.2.2"
+      ],
+      "emagReferences": [
+        "2.7"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Comportamento (DOM) — Recomendação 2.7",
+        "locator": "Recomendação 2.7",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "bcd4bddf9e03f73c3db95973c47063d03a7811e986a4245b00cbeb8deefadfe6",
+        "retrievalEvidence": "turn937582view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-698e0a4783a9",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.1 – Identificar o idioma principal da página",
+      "originalText": "Recomendação 3.1 – Identificar o idioma principal da página",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Declare o idioma principal em todas as páginas com o atributo lang.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O elemento html possui lang válido."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.1.1"
+      ],
+      "emagReferences": [
+        "3.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.1",
+        "locator": "Recomendação 3.1",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "43c53d8f4920b8c7a4b1dfce5fcafe609e90506a5565069bb775be438b52f3ed",
+        "retrievalEvidence": "turn311942view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-1db13803cbf8",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.2 – Informar mudança de idioma no conteúdo",
+      "originalText": "Recomendação 3.2 – Informar mudança de idioma no conteúdo",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Marque com lang trechos cujo idioma difere do idioma principal.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Trechos em idioma diferente possuem lang adequado."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.1.2"
+      ],
+      "emagReferences": [
+        "3.2"
+      ],
+      "notes": [
+        "Nomes próprios e termos técnicos compreensíveis no contexto podem ser exceções."
+      ],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.2",
+        "locator": "Recomendação 3.2",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "47aace13bbd085aca6c16620e23a85db68be37fdfefb6df7c20a296958893e93",
+        "retrievalEvidence": "turn311942view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-5d5a5f21d94b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.3 – Oferecer um título descritivo e informativo à página",
+      "originalText": "Recomendação 3.3 – Oferecer um título descritivo e informativo à página",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Defina um title descritivo que represente o conteúdo principal e identifique o sítio ou sistema.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O elemento title existe.",
+        "O título descreve o assunto principal.",
+        "Páginas internas identificam também o sítio ou sistema."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.2"
+      ],
+      "emagReferences": [
+        "3.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Conteúdo/Informação — Recomendação 3.3",
+        "locator": "Recomendação 3.3",
+        "retrievalEvidence": "turn389548view4",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "68bc22511ceb74d8061e1134e87a65f840e4fabeb00e753258af7ee91685ec79"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-75c11ccac582",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.4 – Informar o usuário sobre sua localização na página",
+      "originalText": "Recomendação 3.4 – Informar o usuário sobre sua localização na página",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Forneça um mecanismo de orientação, como breadcrumb hierárquico, que indique a localização atual.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Breadcrumb ou mecanismo equivalente existe.",
+        "A página atual não é apresentada como link.",
+        "Itens anteriores são navegáveis."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.8"
+      ],
+      "emagReferences": [
+        "3.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Conteúdo/Informação — Recomendação 3.4",
+        "locator": "Recomendação 3.4",
+        "retrievalEvidence": "turn389548view4",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "0ff1fc1a5c7509b29b34bc5ed7e48ff5ed64c5c9e53fa08abf3b211732ed5eea"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cdfbb56eebc5",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.5 – Descrever links clara e sucintamente",
+      "originalText": "Recomendação 3.5 – Descrever links clara e sucintamente",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "O texto de cada link deve indicar claramente seu destino e fazer sentido fora do contexto imediato.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Texto do link descreve o destino.",
+        "Links externos são identificados quando necessário.",
+        "Evita-se texto genérico isolado."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.4",
+        "WCAG 2.0 2.4.9"
+      ],
+      "emagReferences": [
+        "3.5"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Conteúdo/Informação — Recomendação 3.5",
+        "locator": "Recomendação 3.5",
+        "retrievalEvidence": "turn981528view7",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "3d7d116ad2a1ae4b5b931a994e8833c49ed1363ebcc205994414acea56e7bd9b"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-3a3e47354c53",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.6 – Fornecer alternativa em texto para as imagens do sítio",
+      "originalText": "Recomendação 3.6 – Fornecer alternativa em texto para as imagens do sítio",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Forneça texto alternativo apropriado ao contexto para imagens informativas.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Imagens informativas possuem alt significativo.",
+        "Imagens decorativas são tratadas de forma apropriada."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.1.1"
+      ],
+      "emagReferences": [
+        "3.6"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.6",
+        "locator": "Recomendação 3.6",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "d67b519f1d0acbc2cf702a6f6e693dd52407ad56b19788f37b199ff8ad96173f",
+        "retrievalEvidence": "turn311942view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-609e3494150c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.7 – Utilizar mapas de imagem de forma acessível",
+      "originalText": "Recomendação 3.7 – Utilizar mapas de imagem de forma acessível",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Quando mapa de imagem for indispensável, forneça alt para cada área ativa e não o utilize como menu ou seletor de regiões.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Cada area possui alt.",
+        "Mapa de imagem não substitui menu ou seleção regional."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.1.1"
+      ],
+      "emagReferences": [
+        "3.7"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Conteúdo/Informação — Recomendação 3.7",
+        "locator": "Recomendação 3.7",
+        "retrievalEvidence": "turn601371view2",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "cc69d3f04aea70fd2a7538ccb0c279be49422b5f3801d5e62435e9c688737a56"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-3a57435c3b32",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.8 – Disponibilizar documentos em formatos acessíveis",
+      "originalText": "Recomendação 3.8 – Disponibilizar documentos em formatos acessíveis",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Prefira HTML; documentos ODF devem ser acessíveis e PDFs devem possuir alternativa em HTML ou ODF.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Documentos são oferecidos em HTML quando possível.",
+        "PDF possui alternativa acessível em HTML ou ODF."
+      ],
+      "validationStrategy": "source-code",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [
+        "3.8"
+      ],
+      "notes": [
+        "O documento oficial informa que não há critério de sucesso WCAG 2.0 correspondente."
+      ],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Conteúdo/Informação — Recomendação 3.8",
+        "locator": "Recomendação 3.8",
+        "retrievalEvidence": "turn981528view9",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "98e06becfdf8abaaf2b9a5a814169ce25f6afb64dc0f129a5766ece916db2f41"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cd705eb5da2a",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.9 – Em tabelas, utilizar títulos e resumos de forma apropriada",
+      "originalText": "Recomendação 3.9 – Em tabelas, utilizar títulos e resumos de forma apropriada",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Identifique tabelas com caption e forneça descrição contextual quando a complexidade exigir.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Caption identifica a tabela.",
+        "Tabelas extensas possuem descrição ou contexto equivalente."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "3.9"
+      ],
+      "notes": [
+        "O documento original cita summary; validadores modernos devem considerar a semântica HTML vigente."
+      ],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.9",
+        "locator": "Recomendação 3.9",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "dfa55cf3c3f5ed86bd7372106639ba5cd2b869e84c72f5ba89edcd971c59408b",
+        "retrievalEvidence": "turn311942view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-1ccbc61dddbc",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.10 – Associar células de dados às células de cabeçalho",
+      "originalText": "Recomendação 3.10 – Associar células de dados às células de cabeçalho",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Use th para cabeçalhos, td para dados e associe corretamente cabeçalhos e células.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Cabeçalhos são identificáveis.",
+        "Associações permanecem corretas em tabelas complexas."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "3.10"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.10",
+        "locator": "Recomendação 3.10",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "a9d75a21d007ea04263ce4e059f45cfe0d669e890a433dc0de321321835fa517",
+        "retrievalEvidence": "turn311942view0",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-fb83eab75d8d",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.11 – Garantir a leitura e compreensão das informações",
+      "originalText": "Recomendação 3.11 – Garantir a leitura e compreensão das informações",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Escreva conteúdo de fácil leitura; explique ou simplifique textos que exigem conhecimento avançado.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Parágrafos tratam um tópico.",
+        "Sentenças são diretas.",
+        "Jargões recebem explicação."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.1.5"
+      ],
+      "emagReferences": [
+        "3.11"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.11",
+        "locator": "Recomendação 3.11",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "e52e79e3308e5ffdd8abb7c54f7fff56149134eea2eb7efa79a0fb44f8395e4b",
+        "retrievalEvidence": "turn760007view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-20c08f26d8e8",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Conteúdo/Informação",
+      "component": null,
+      "title": "Recomendação 3.12 – Disponibilizar uma explicação para siglas, abreviaturas e palavras incomuns",
+      "originalText": "Recomendação 3.12 – Disponibilizar uma explicação para siglas, abreviaturas e palavras incomuns",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Explique siglas, abreviaturas e termos incomuns na primeira ocorrência ou por glossário acessível.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Primeira ocorrência contém forma completa ou explicação.",
+        "Glossário, quando usado, é acessível."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.1.3",
+        "WCAG 2.0 3.1.4"
+      ],
+      "emagReferences": [
+        "3.12"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Conteúdo/Informação — Recomendação 3.12",
+        "locator": "Recomendação 3.12",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "66752773c990fe6603459962125073218fc7e66e9220026d68fc092368d5b0f1",
+        "retrievalEvidence": "turn760007view1",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cb09bc0c77c0",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Apresentação/Design",
+      "component": null,
+      "title": "Recomendação 4.1 – Oferecer contraste mínimo entre plano de fundo e primeiro plano",
+      "originalText": "Recomendação 4.1 – Oferecer contraste mínimo entre plano de fundo e primeiro plano",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Garanta contraste de pelo menos 4,5:1 entre texto e fundo e evite imagens atrás do texto.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Contraste calculado igual ou superior a 4,5:1.",
+        "Texto não depende de fundo visual que prejudique leitura."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.4.3"
+      ],
+      "emagReferences": [
+        "4.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Apresentação/Design — Recomendação 4.1",
+        "locator": "Recomendação 4.1",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "e7692ead08d6732485a3875208801fc1b1449cb7940dfdd59aaa48ca8cf01c2a",
+        "retrievalEvidence": "turn760007view2",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-c2f94bdc17ce",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Apresentação/Design",
+      "component": null,
+      "title": "Recomendação 4.2 – Não utilizar apenas cor ou outras características sensoriais para diferenciar elementos",
+      "originalText": "Recomendação 4.2 – Não utilizar apenas cor ou outras características sensoriais para diferenciar elementos",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Não use somente cor, forma, tamanho, posição, orientação ou som para transmitir informação.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Informações sensoriais possuem alternativa textual ou estrutural."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.3",
+        "WCAG 2.0 1.4.1"
+      ],
+      "emagReferences": [
+        "4.2"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Apresentação/Design — Recomendação 4.2",
+        "locator": "Recomendação 4.2",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "c33310a1ede37a4cc4732c5fdc57d0c6ad52a23966ccfe94216002fa29848ca3",
+        "retrievalEvidence": "turn760007view2",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-d9c42f188e2c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Apresentação/Design",
+      "component": null,
+      "title": "Recomendação 4.3 – Permitir redimensionamento sem perda de funcionalidade",
+      "originalText": "Recomendação 4.3 – Permitir redimensionamento sem perda de funcionalidade",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "A página deve permanecer legível e funcional com zoom de 200%, sem sobreposição ou rolagem horizontal indevida.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Zoom de 200% preserva conteúdo e controles.",
+        "Não há sobreposição ou corte funcional."
+      ],
+      "validationStrategy": "visual",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.4.4"
+      ],
+      "emagReferences": [
+        "4.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Apresentação/Design — Recomendação 4.3",
+        "locator": "Recomendação 4.3",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "584e3a0bc48b797aa9813dd5f71720499ea03423e10e99b2686a0473d8de4b84",
+        "retrievalEvidence": "turn760007view2",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Apresentação/Design",
+      "component": null,
+      "title": "Recomendação 4.4 – Possibilitar que o elemento com foco seja visualmente evidente",
+      "originalText": "Recomendação 4.4 – Possibilitar que o elemento com foco seja visualmente evidente",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Todo elemento focado por teclado deve possuir indicação visual clara e área acionável coerente.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Focus indicator é perceptível.",
+        "A área de foco corresponde à área clicável."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.7"
+      ],
+      "emagReferences": [
+        "4.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Apresentação/Design — Recomendação 4.4",
+        "locator": "Recomendação 4.4",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "58e78266c5ab3e2a2f8122b3428ba85068af20e03f790b8076ef13260e17212a",
+        "retrievalEvidence": "turn937582view2",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-6c86b93df639",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Multimídia",
+      "component": null,
+      "title": "Recomendação 5.1 – Fornecer alternativa para vídeo",
+      "originalText": "Recomendação 5.1 – Fornecer alternativa para vídeo",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Vídeos devem possuir alternativa textual ou sonora, legendas quando houver fala e controles acessíveis por teclado.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Vídeo sem áudio possui descrição textual ou sonora.",
+        "Vídeo falado possui legenda.",
+        "Player é operável por teclado."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.2.1",
+        "WCAG 2.0 1.2.2",
+        "WCAG 2.0 1.2.6",
+        "WCAG 2.0 1.2.8"
+      ],
+      "emagReferences": [
+        "5.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Multimídia — Recomendação 5.1",
+        "locator": "Recomendação 5.1",
+        "retrievalEvidence": "turn389548view5",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "6beb8b2c8f827c93b947ad2893f26e43e1f187a492bb87031580fc98b7d7ee26"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-dc45b57b8349",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Multimídia",
+      "component": null,
+      "title": "Recomendação 5.2 – Fornecer alternativa para áudio",
+      "originalText": "Recomendação 5.2 – Fornecer alternativa para áudio",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Conteúdo de áudio deve possuir transcrição textual e, quando aplicável, alternativa em Libras.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Áudio possui transcrição.",
+        "Controles do player são acessíveis."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.2.1",
+        "WCAG 2.0 1.2.2",
+        "WCAG 2.0 1.2.6"
+      ],
+      "emagReferences": [
+        "5.2"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Multimídia — Recomendação 5.2",
+        "locator": "Recomendação 5.2",
+        "retrievalEvidence": "turn981528view12",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "77e5390eda71c2fdd3b9aefb1bdaccf95c3990e148c92b73ac61fc43117ba216"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-8f439a3c078c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Multimídia",
+      "component": null,
+      "title": "Recomendação 5.3 – Oferecer audiodescrição para vídeo pré-gravado",
+      "originalText": "Recomendação 5.3 – Oferecer audiodescrição para vídeo pré-gravado",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Vídeos pré-gravados com informação visual não presente no áudio devem oferecer audiodescrição.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Informação visual relevante é narrada em audiodescrição."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.2.3",
+        "WCAG 2.0 1.2.5",
+        "WCAG 2.0 1.2.7"
+      ],
+      "emagReferences": [
+        "5.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Multimídia — Recomendação 5.3",
+        "locator": "Recomendação 5.3",
+        "retrievalEvidence": "turn981528view13",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "4b21b1e3ed02957343f3d4f2884ba0a1597abae1aee6fa15157b4c515390a8a9"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-56cbcba602ce",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Multimídia",
+      "component": null,
+      "title": "Recomendação 5.4 – Fornecer controle de áudio para som",
+      "originalText": "Recomendação 5.4 – Fornecer controle de áudio para som",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Ofereça controles para parar, pausar, silenciar ou ajustar o volume de sons reproduzidos na página.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Áudio possui controles acessíveis de pausa, parada ou volume."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.4.2"
+      ],
+      "emagReferences": [
+        "5.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Multimídia — Recomendação 5.4",
+        "locator": "Recomendação 5.4",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "99d38f9d360c1be159f72a2a6a37190f2b7bf2c3b569772de069f1b52a742e8a",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-6ea7ecc60c01",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Multimídia",
+      "component": null,
+      "title": "Recomendação 5.5 – Fornecer controle de animação",
+      "originalText": "Recomendação 5.5 – Fornecer controle de animação",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Animações iniciadas automaticamente devem poder ser pausadas, paradas ou ocultadas.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Animação automática possui controle acessível."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.2.2"
+      ],
+      "emagReferences": [
+        "5.5"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Multimídia — Recomendação 5.5",
+        "locator": "Recomendação 5.5",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "be81676e62d36794619a7ed9e731a4b5f412a87c6c665e0df695e20de4031b62",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-dafac812b10b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.1 – Fornecer alternativa em texto para os botões de imagem de formulários",
+      "originalText": "Recomendação 6.1 – Fornecer alternativa em texto para os botões de imagem de formulários",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Botões de imagem devem possuir nome textual acessível, usando alt ou valor descritivo conforme o tipo.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Input type=image possui alt.",
+        "Botões estilizados por imagem preservam valor ou nome acessível."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.1.1"
+      ],
+      "emagReferences": [
+        "6.1"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.1",
+        "locator": "Recomendação 6.1",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "c35a95b7ce97297eb5525c4313e6107b7d649cdafa0549aee07b5f1fa1fa0d4e",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-b95c42b61ed3",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.2 – Associar etiquetas aos seus campos",
+      "originalText": "Recomendação 6.2 – Associar etiquetas aos seus campos",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Associe label aos campos input, select e textarea usando for e id correspondentes.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Cada campo possui label programaticamente associado."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "6.2"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.2",
+        "locator": "Recomendação 6.2",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "2a420e14939cc2905f5342e01eb3efb54d05be54f33d22f81ec9c5cf704df244",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-e101928665cc",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.3 – Estabelecer uma ordem lógica de navegação",
+      "originalText": "Recomendação 6.3 – Estabelecer uma ordem lógica de navegação",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Codifique formulários primeiro na ordem lógica de navegação e só depois organize sua aparência com CSS.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A ordem de foco segue a ordem lógica dos campos.",
+        "Tabindex é usado apenas quando indispensável."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 2.4.3"
+      ],
+      "emagReferences": [
+        "6.3"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.3",
+        "locator": "Recomendação 6.3",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "eaac4a1422cc1f6639a365375b0c2d0ad22f458fa3974a187870829036819a2d",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-de1efebaf255",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.4 – Não provocar automaticamente alteração no contexto",
+      "originalText": "Recomendação 6.4 – Não provocar automaticamente alteração no contexto",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Receber foco ou alterar um campo não deve mudar automaticamente o contexto; exija ação explícita.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Foco não dispara navegação.",
+        "Mudanças relevantes exigem botão ou confirmação."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.2.2"
+      ],
+      "emagReferences": [
+        "6.4"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.4",
+        "locator": "Recomendação 6.4",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "0ad8e94b064f27c2d0cec20650c0f194ed94ece2fd9cf608075e7ffa927bfc3b",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-01b1806c30e9",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.5 – Fornecer instruções para entrada de dados",
+      "originalText": "Recomendação 6.5 – Fornecer instruções para entrada de dados",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Forneça instruções de preenchimento junto aos rótulos quando o formato ou a regra de entrada não for evidente.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Campos com formato específico possuem instrução.",
+        "Campos obrigatórios são indicados textualmente."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.3.2"
+      ],
+      "emagReferences": [
+        "6.5"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.5",
+        "locator": "Recomendação 6.5",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "87aef9c672da1c8bd23308ba46ea7e12e1388dd25cc631a96c97c88b26b15d9b",
+        "retrievalEvidence": "turn760007view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-cc837bbaf713",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.6 – Identificar e descrever erros de entrada de dados e confirmar o envio das informações",
+      "originalText": "Recomendação 6.6 – Identificar e descrever erros de entrada de dados e confirmar o envio das informações",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Identifique erros por texto, associe-os aos campos e apresente confirmação para revisão antes do envio definitivo.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Erros são descritos textualmente.",
+        "O foco retorna ao resumo ou campo com erro.",
+        "O usuário pode revisar e editar antes do envio."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 3.3.1"
+      ],
+      "emagReferences": [
+        "6.6"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Formulário — Recomendação 6.6",
+        "locator": "Recomendação 6.6",
+        "retrievalEvidence": "turn601371view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "d04b1a7667f60542c97485c611e581887f821bcdbd66a686da0a11f66db0367a"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.7 – Agrupar campos de formulário",
+      "originalText": "Recomendação 6.7 – Agrupar campos de formulário",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Agrupe campos relacionados com fieldset e descreva o grupo com legend, especialmente em formulários longos.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Campos relacionados compartilham fieldset.",
+        "Legend explica o propósito do grupo."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.3.1"
+      ],
+      "emagReferences": [
+        "6.7"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "tab": null,
+        "section": "Formulário — Recomendação 6.7",
+        "locator": "Recomendação 6.7",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "83676d1f97eafcafe8ad0051f89775cd5aaf3691c675934c2318489840420249",
+        "retrievalEvidence": "turn937582view3",
+        "captureType": "official-html-document",
+        "sourceTextNote": "The exact recommendation heading is preserved. The operative requirement is a normalized paraphrase linked to the official locator."
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-global-a8f7ce66b1c4",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "eMAG",
+      "standardVersion": "3.1",
+      "category": "accessibility",
+      "subcategory": "emag-Formulário",
+      "component": null,
+      "title": "Recomendação 6.8 – Fornecer estratégias de segurança específicas ao invés de CAPTCHA",
+      "originalText": "Recomendação 6.8 – Fornecer estratégias de segurança específicas ao invés de CAPTCHA",
+      "originalTextMode": "official-heading-only",
+      "normalizedRule": "Evite CAPTCHA e combine estratégias de segurança acessíveis, como limites de conexão, monitoramento e formulários seguros.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O fluxo não depende de CAPTCHA visual ou sonoro.",
+        "Existem mecanismos de segurança acessíveis alternativos."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [
+        "WCAG 2.0 1.1.1"
+      ],
+      "emagReferences": [
+        "6.8"
+      ],
+      "notes": [],
+      "source": {
+        "url": "https://emag.governoeletronico.gov.br/",
+        "pageTitle": "eMAG - Modelo de Acessibilidade em Governo Eletrônico",
+        "section": "Formulário — Recomendação 6.8",
+        "locator": "Recomendação 6.8",
+        "retrievalEvidence": "turn601371view4",
+        "captureType": "official-html-document",
+        "sourceTextNote": "O título oficial foi preservado literalmente; a regra operacional é uma paráfrase normalizada.",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "d4678915a45de57d2a70917597ef5d1fd0781e9368b152ec2956aa691a864f95"
+      }
+    }
+  ]
+}

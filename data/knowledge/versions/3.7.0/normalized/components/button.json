@@ -1,0 +1,190 @@
+{
+  "name": "button",
+  "canonicalUrl": "https://www.gov.br/ds/components/button",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 2
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "button",
+      "title": "Acesso por teclado",
+      "originalText": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab.",
+      "normalizedRule": "Buttons devem ser alcançáveis por navegação sequencial com a tecla Tab.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O elemento recebe foco ao navegar com Tab.",
+        "O foco é perceptível."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/button",
+        "pageTitle": "Padrão Digital de Governo - Button",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "891fa76045034d45bcb268615582cdf828410840146e4ad5a75b226b9fc913a4",
+        "retrievalEvidence": "turn681893search0"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-accessibility-button-41d9f439e103",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "button",
+      "title": "Button acionável por Space ou Enter",
+      "originalText": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+      "normalizedRule": "Button deve receber foco por Tab e ser acionável por Space ou Enter.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Ativação por Space.",
+        "Ativação por Enter."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/button",
+        "pageTitle": "Padrão Digital de Governo - Button",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "9ee9dd8f1b92f8f20bb547338f80419267958be79b372e6e98e13ca8663e1dbc",
+        "retrievalEvidence": "turn455538search9",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-button-4d7b5f978df1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "button",
+      "title": "Rótulo obrigatório",
+      "originalText": "O rótulo é um elemento obrigatório. A exceção ocorre na versão tipo circular uma vez que não existe rótulo.",
+      "normalizedRule": "O Button deve possuir rótulo visível, exceto na variante circular.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [
+        "Variante circular."
+      ],
+      "expectedEvidence": [
+        "Botão não circular contém texto visível.",
+        "Botão circular é identificado por outro mecanismo acessível."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/button",
+        "pageTitle": "Padrão Digital de Governo - Button",
+        "tab": "designer",
+        "section": "Anatomia",
+        "retrievedAt": "2026-07-11T06:32:04+00:00",
+        "contentHash": "8ae03daa8ffee3a04ccbd607746a7d1dbe9272a5bf8543be01e2f1b8a33c372e",
+        "retrievalEvidence": "turn237587search28"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-button-b0ad831c0cdd",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "button",
+      "title": "Estrutura exemplificada com .br-button",
+      "originalText": "Os exemplos oficiais de button no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-button.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-button como referência estrutural ao comparar a implementação com os exemplos oficiais de button.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-button."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/button/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "c1083486619734f28e5f35cf74a8b2155ef2b563bcb0d2a92fa73d2d9dfbfd3c"
+      }
+    }
+  ],
+  "limitations": [
+    "Este é um extrato inicial; a página ainda requer captura integral e inspeção de todos os painéis dinâmicos."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 8,
+    "canonicalClassCandidate": "br-button",
+    "structureFile": "normalized/examples/html/button.json"
+  }
+}

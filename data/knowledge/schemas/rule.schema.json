@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/govbr-ds-rule.schema.json",
+  "title": "gov.br DS Atomic Rule",
+  "type": "object",
+  "required": [
+    "id",
+    "dsVersion",
+    "status",
+    "category",
+    "title",
+    "originalText",
+    "normalizedRule",
+    "force",
+    "validationStrategy",
+    "automatable",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dsVersion": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "stable",
+        "legacy",
+        "alpha",
+        "beta",
+        "unknown"
+      ]
+    },
+    "category": {
+      "type": "string"
+    },
+    "component": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "originalText": {
+      "type": "string"
+    },
+    "normalizedRule": {
+      "type": "string"
+    },
+    "force": {
+      "enum": [
+        "required",
+        "prohibited",
+        "recommended",
+        "discouraged",
+        "permitted",
+        "informative",
+        "example",
+        "unclear"
+      ]
+    },
+    "validationStrategy": {
+      "type": "string"
+    },
+    "automatable": {
+      "type": "boolean"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "url",
+        "retrievedAt",
+        "contentHash"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "retrievedAt": {
+          "type": "string"
+        },
+        "contentHash": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

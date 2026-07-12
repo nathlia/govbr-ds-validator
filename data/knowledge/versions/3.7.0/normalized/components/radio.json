@@ -1,0 +1,119 @@
+{
+  "name": "radio",
+  "canonicalUrl": "https://www.gov.br/ds/components/radio",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-radio-9cf59fa5bf60",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "selection",
+      "component": "radio",
+      "title": "Avaliar Select para listas extensas",
+      "originalText": "Quando a lista de opções for muito extensa, deve ser avaliada a possibilidade de uso do componente select.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Quando houver muitas opções exclusivas, avalie substituir Radio por Select.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A escolha entre Radio e Select considera a quantidade de opções."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "select"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/radio",
+        "pageTitle": "Padrão Digital de Governo - Radio",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "90b0a29c5e03710fffd8e2d74e06f438763681c23de0e03eab379f76b06c3708",
+        "retrievalEvidence": "turn685362search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-ec08304a645c",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "radio",
+      "title": "Estrutura exemplificada com .br-radio",
+      "originalText": "Os exemplos oficiais de radio no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-radio.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-radio como referência estrutural ao comparar a implementação com os exemplos oficiais de radio.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-radio."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/radio/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "6adaa508bd66430629c2c95731693eba33342a82c35cea344534362d043dcdb9"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 3,
+    "canonicalClassCandidate": "br-radio",
+    "structureFile": "normalized/examples/html/radio.json"
+  }
+}

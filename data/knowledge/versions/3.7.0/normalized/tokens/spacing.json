@@ -1,0 +1,656 @@
+{
+  "version": "3.7.0",
+  "status": "package-complete",
+  "category": "spacing",
+  "tokenCount": 54,
+  "tokens": [
+    {
+      "name": "--grid-breakpoint-xs",
+      "value": "0",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-xs-max-width",
+      "value": "100%",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-sm",
+      "value": "576px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-sm-max-width",
+      "value": "536px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-md",
+      "value": "992px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-md-max-width",
+      "value": "952px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-lg",
+      "value": "1280px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-lg-max-width",
+      "value": "1200px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-xl",
+      "value": "1600px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-breakpoint-xl-max-width",
+      "value": "1560px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-portrait-maxwidth",
+      "value": "100%",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-portrait-gutter",
+      "value": "16px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-portrait-columns",
+      "value": "4",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-portrait-margin",
+      "value": "8px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tablet-maxwidth",
+      "value": "100%",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tablet-gutter",
+      "value": "24px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tablet-columns",
+      "value": "8",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tablet-margin",
+      "value": "40px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-desktop-maxwidth",
+      "value": "1200px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-desktop-gutter",
+      "value": "24px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-desktop-columns",
+      "value": "12",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-desktop-margin",
+      "value": "40px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tv-maxwidth",
+      "value": "1520px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tv-gutter",
+      "value": "40px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tv-columns",
+      "value": "12",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--grid-tv-margin",
+      "value": "40px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-vertical-top",
+      "value": "top",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-vertical-center",
+      "value": "center",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-vertical-bottom",
+      "value": "bottom",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-horizontal-left",
+      "value": "left",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-horizontal-center",
+      "value": "center",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-horizontal-right",
+      "value": "right",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-default",
+      "value": "0",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-half",
+      "value": "4px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-base",
+      "value": "8px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-baseh",
+      "value": "12px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-2x",
+      "value": "16px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-2xh",
+      "value": "20px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-3x",
+      "value": "24px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-3xh",
+      "value": "28px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-4x",
+      "value": "32px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-4xh",
+      "value": "36px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-5x",
+      "value": "40px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-5xh",
+      "value": "44px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-6x",
+      "value": "48px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-6xh",
+      "value": "52px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-7x",
+      "value": "56px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-7xh",
+      "value": "60px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-8x",
+      "value": "64px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-8xh",
+      "value": "68px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-9x",
+      "value": "72px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-9xh",
+      "value": "76px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-10x",
+      "value": "80px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    },
+    {
+      "name": "--spacing-scale-10xh",
+      "value": "84px",
+      "category": "spacing",
+      "isAlias": false,
+      "source": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "file": "dist/core-tokens.css",
+        "fileSha256": "3d4f48ac58e2a1dafaca823072245e4c4816c376d0aaa4ef40a74e03127cb3d6"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "onboarding",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-abaec84ff915",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "onboarding",
+      "component": null,
+      "title": "Onboarding incentiva interação e oferece opções",
+      "originalText": "Incentive o Usuário: Sua interface deve incentivar a interação do usuário. Quando apresentar um tour através de Onboarding, sempre que possível, ofereça opções ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "O Onboarding deve incentivar a interação e, quando possível, oferecer escolhas ao usuário durante o tour.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/onboarding",
+        "pageTitle": "Onboarding incentiva interação e oferece opções",
+        "tab": null,
+        "section": "Incentive o Usuário",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "5ece9b13fc4663ae068eb0e0e2edfed9dcfda7ac65fe32c90b7701f85dab4839",
+        "retrievalEvidence": "turn361164search2",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

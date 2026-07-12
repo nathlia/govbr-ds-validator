@@ -1,0 +1,333 @@
+{
+  "batch": 3,
+  "retrievedAt": "2026-07-11T06:44:34+00:00",
+  "designSystemExcerpts": [
+    {
+      "url": "https://www.gov.br/ds/components/header",
+      "section": "Definição",
+      "excerpt": "O componente Header é o principal elemento de uma página, onde podem ser agrupados componentes predefinidos que tem como finalidade auxiliar o usuário no acesso.",
+      "contentHash": "222b66c826da393a2408081a20f2087588175e6b9e20f8697ff7e0709e086ade",
+      "evidenceRef": "turn524143search0",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/header",
+      "section": "Camadas",
+      "excerpt": "Por padrão o header se encontra na camada 1 por ser um elemento com relevância e desta forma apresenta sombra suave.",
+      "contentHash": "a93b35e743efef0e6f0bd53e0110655f3cc992d953c1a39aba270b4008bb5e35",
+      "evidenceRef": "turn788987search0",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/upload",
+      "section": "Interação",
+      "excerpt": "O componente upload deve disponibilizar o recurso de arrastar arquivos. Esta funcionalidade deve ser informada ao usuário na mensagem abaixo do campo.",
+      "contentHash": "a9c55154a2e100880c16178cd1f9c96a46ff6e50acb95270b2465ac83a646264",
+      "evidenceRef": "turn788987search1",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/pagination?tab=designer",
+      "section": "Tipo Contextual",
+      "excerpt": "O Componente Pagination do Tipo Contextual também permite a configuração da visualização de cada módulo, independentemente. Cada módulo poderá ser usado ou não.",
+      "contentHash": "805ccf89747ac19e9a38ea772ca565c1bae29bb95c87f2c1d6faf5ff61e3eccf",
+      "evidenceRef": "turn524143search2",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/radio",
+      "section": "Melhores Práticas",
+      "excerpt": "Quando a lista de opções for muito extensa, deve ser avaliada a possibilidade de uso do componente select.",
+      "contentHash": "90b0a29c5e03710fffd8e2d74e06f438763681c23de0e03eab379f76b06c3708",
+      "evidenceRef": "turn685362search2",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/select",
+      "section": "Conteúdo",
+      "excerpt": "De modo geral, deve-se prezar pelo uso de textos curtos e objetivos no select e no multiselect.",
+      "contentHash": "174326167d5fa1b9eb5c5243c6bbc6e17b8324a5fd4cb93b34f4b55a72f298c3",
+      "evidenceRef": "turn737144search1",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/textarea",
+      "section": "Barra de Rolagem",
+      "excerpt": "A Barra de Rolagem será o elemento nativo renderizado pelo Navegador.",
+      "contentHash": "55da6f5affe8f9f3fb44f825e902bfedf78ae4f9eaf7f426276ff806bd8c116c",
+      "evidenceRef": "turn737144search0",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/components/wizard",
+      "section": "Ações",
+      "excerpt": "Uma vez atingida a última etapa, o botão apresentado deve ser o de Concluir para sinalizar o fim das etapas.",
+      "contentHash": "a8b6b8def519065a259e263fa45b009971ab13df7d400cd43466e07f3512763d",
+      "evidenceRef": "turn837999search3",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/como-comecar/fluxo-dev",
+      "section": "Biblioteca de Web Components",
+      "excerpt": "O uso da nossa biblioteca de Web Components é a abordagem recomendada para projetos modernos.",
+      "contentHash": "89f93a2337c8b00117b1b76223f0b3e4095272d93bdcede685b339c79842e702",
+      "evidenceRef": "turn423071search14",
+      "captureType": "official-web-search-index-excerpt"
+    },
+    {
+      "url": "https://www.gov.br/ds/acessibilidade",
+      "section": "Acessibilidade nos serviços do Governo",
+      "excerpt": "Os softwares avaliadores, mesmo quando não encontram erros, não podem garantir a qualidade e a compreensão do conteúdo.",
+      "contentHash": "dbdd404e113df5691a5c3bdc4b2951072fd92aca5ed7233ac5366e67727a4fad",
+      "evidenceRef": "turn423071search10",
+      "captureType": "official-web-search-index-excerpt"
+    }
+  ],
+  "emagRecommendationIndex": [
+    {
+      "recommendation": "1.1",
+      "heading": "Recomendação 1.1 – Respeitar os Padrões Web",
+      "normalizedRule": "Mantenha HTML, CSS e JavaScript em camadas adequadas e siga padrões Web interoperáveis.",
+      "sourceLocator": "Recomendação 1.1",
+      "evidenceRef": "turn760007view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.2",
+      "heading": "Recomendação 1.2 – Organizar o código HTML de forma lógica e semântica",
+      "normalizedRule": "Use elementos HTML conforme seu significado e organize o documento em ordem lógica.",
+      "sourceLocator": "Recomendação 1.2",
+      "evidenceRef": "turn760007view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.3",
+      "heading": "Recomendação 1.3 – Utilizar corretamente os níveis de cabeçalho",
+      "normalizedRule": "Estruture títulos de H1 a H6 hierarquicamente; prefira um único H1 para o conteúdo principal.",
+      "sourceLocator": "Recomendação 1.3",
+      "evidenceRef": "turn937582view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.4",
+      "heading": "Recomendação 1.4 – Ordenar de forma lógica e intuitiva a leitura e tabulação",
+      "normalizedRule": "A ordem do DOM deve produzir uma sequência lógica de leitura e foco; use tabindex apenas quando indispensável.",
+      "sourceLocator": "Recomendação 1.4",
+      "evidenceRef": "turn937582view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.5",
+      "heading": "Recomendação 1.5 – Fornecer âncoras para ir direto a um bloco de conteúdo",
+      "normalizedRule": "Forneça atalhos para blocos relevantes e faça do salto para o conteúdo o primeiro link da página.",
+      "sourceLocator": "Recomendação 1.5",
+      "evidenceRef": "turn937582view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.6",
+      "heading": "Recomendação 1.6 – Não utilizar tabelas para diagramação",
+      "normalizedRule": "Use tabelas apenas para dados tabulares; faça a diagramação com CSS.",
+      "sourceLocator": "Recomendação 1.6",
+      "evidenceRef": "turn937582view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "1.7",
+      "heading": "Recomendação 1.7 – Separar links adjacentes",
+      "normalizedRule": "Separe links adjacentes com estrutura ou pontuação perceptível, não apenas espaços.",
+      "sourceLocator": "Recomendação 1.7",
+      "evidenceRef": "turn937582view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "2.4",
+      "heading": "Recomendação 2.4 – Não utilizar redirecionamento automático de páginas",
+      "normalizedRule": "Não redirecione páginas com meta refresh; faça o redirecionamento no servidor.",
+      "sourceLocator": "Recomendação 2.4",
+      "evidenceRef": "turn937582view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "2.5",
+      "heading": "Recomendação 2.5 – Fornecer alternativa para modificar limite de tempo",
+      "normalizedRule": "Quando uma tarefa tiver limite de tempo, permita desligar, ajustar ou prolongar o prazo e informe o usuário.",
+      "sourceLocator": "Recomendação 2.5",
+      "evidenceRef": "turn937582view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "2.6",
+      "heading": "Recomendação 2.6 – Não incluir situações com intermitência de tela",
+      "normalizedRule": "Não use efeitos piscantes, intermitentes ou cintilantes, inclusive em conteúdo de terceiros.",
+      "sourceLocator": "Recomendação 2.6",
+      "evidenceRef": "turn937582view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "2.7",
+      "heading": "Recomendação 2.7 – Assegurar o controle do usuário sobre as alterações temporais do conteúdo",
+      "normalizedRule": "Conteúdo em movimento não deve iniciar sem controle; ofereça pausar, parar e reiniciar.",
+      "sourceLocator": "Recomendação 2.7",
+      "evidenceRef": "turn937582view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.1",
+      "heading": "Recomendação 3.1 – Identificar o idioma principal da página",
+      "normalizedRule": "Declare o idioma principal em todas as páginas com o atributo lang.",
+      "sourceLocator": "Recomendação 3.1",
+      "evidenceRef": "turn311942view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.2",
+      "heading": "Recomendação 3.2 – Informar mudança de idioma no conteúdo",
+      "normalizedRule": "Marque com lang trechos cujo idioma difere do idioma principal.",
+      "sourceLocator": "Recomendação 3.2",
+      "evidenceRef": "turn311942view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.6",
+      "heading": "Recomendação 3.6 – Fornecer alternativa em texto para as imagens do sítio",
+      "normalizedRule": "Forneça texto alternativo apropriado ao contexto para imagens informativas.",
+      "sourceLocator": "Recomendação 3.6",
+      "evidenceRef": "turn311942view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.9",
+      "heading": "Recomendação 3.9 – Em tabelas, utilizar títulos e resumos de forma apropriada",
+      "normalizedRule": "Identifique tabelas com caption e forneça descrição contextual quando a complexidade exigir.",
+      "sourceLocator": "Recomendação 3.9",
+      "evidenceRef": "turn311942view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.10",
+      "heading": "Recomendação 3.10 – Associar células de dados às células de cabeçalho",
+      "normalizedRule": "Use th para cabeçalhos, td para dados e associe corretamente cabeçalhos e células.",
+      "sourceLocator": "Recomendação 3.10",
+      "evidenceRef": "turn311942view0",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.11",
+      "heading": "Recomendação 3.11 – Garantir a leitura e compreensão das informações",
+      "normalizedRule": "Escreva conteúdo de fácil leitura; explique ou simplifique textos que exigem conhecimento avançado.",
+      "sourceLocator": "Recomendação 3.11",
+      "evidenceRef": "turn760007view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "3.12",
+      "heading": "Recomendação 3.12 – Disponibilizar uma explicação para siglas, abreviaturas e palavras incomuns",
+      "normalizedRule": "Explique siglas, abreviaturas e termos incomuns na primeira ocorrência ou por glossário acessível.",
+      "sourceLocator": "Recomendação 3.12",
+      "evidenceRef": "turn760007view1",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "4.1",
+      "heading": "Recomendação 4.1 – Oferecer contraste mínimo entre plano de fundo e primeiro plano",
+      "normalizedRule": "Garanta contraste de pelo menos 4,5:1 entre texto e fundo e evite imagens atrás do texto.",
+      "sourceLocator": "Recomendação 4.1",
+      "evidenceRef": "turn760007view2",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "4.2",
+      "heading": "Recomendação 4.2 – Não utilizar apenas cor ou outras características sensoriais para diferenciar elementos",
+      "normalizedRule": "Não use somente cor, forma, tamanho, posição, orientação ou som para transmitir informação.",
+      "sourceLocator": "Recomendação 4.2",
+      "evidenceRef": "turn760007view2",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "4.3",
+      "heading": "Recomendação 4.3 – Permitir redimensionamento sem perda de funcionalidade",
+      "normalizedRule": "A página deve permanecer legível e funcional com zoom de 200%, sem sobreposição ou rolagem horizontal indevida.",
+      "sourceLocator": "Recomendação 4.3",
+      "evidenceRef": "turn760007view2",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "4.4",
+      "heading": "Recomendação 4.4 – Possibilitar que o elemento com foco seja visualmente evidente",
+      "normalizedRule": "Todo elemento focado por teclado deve possuir indicação visual clara e área acionável coerente.",
+      "sourceLocator": "Recomendação 4.4",
+      "evidenceRef": "turn937582view2",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "5.4",
+      "heading": "Recomendação 5.4 – Fornecer controle de áudio para som",
+      "normalizedRule": "Ofereça controles para parar, pausar, silenciar ou ajustar o volume de sons reproduzidos na página.",
+      "sourceLocator": "Recomendação 5.4",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "5.5",
+      "heading": "Recomendação 5.5 – Fornecer controle de animação",
+      "normalizedRule": "Animações iniciadas automaticamente devem poder ser pausadas, paradas ou ocultadas.",
+      "sourceLocator": "Recomendação 5.5",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.1",
+      "heading": "Recomendação 6.1 – Fornecer alternativa em texto para os botões de imagem de formulários",
+      "normalizedRule": "Botões de imagem devem possuir nome textual acessível, usando alt ou valor descritivo conforme o tipo.",
+      "sourceLocator": "Recomendação 6.1",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.2",
+      "heading": "Recomendação 6.2 – Associar etiquetas aos seus campos",
+      "normalizedRule": "Associe label aos campos input, select e textarea usando for e id correspondentes.",
+      "sourceLocator": "Recomendação 6.2",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.3",
+      "heading": "Recomendação 6.3 – Estabelecer uma ordem lógica de navegação",
+      "normalizedRule": "Codifique formulários primeiro na ordem lógica de navegação e só depois organize sua aparência com CSS.",
+      "sourceLocator": "Recomendação 6.3",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.4",
+      "heading": "Recomendação 6.4 – Não provocar automaticamente alteração no contexto",
+      "normalizedRule": "Receber foco ou alterar um campo não deve mudar automaticamente o contexto; exija ação explícita.",
+      "sourceLocator": "Recomendação 6.4",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.5",
+      "heading": "Recomendação 6.5 – Fornecer instruções para entrada de dados",
+      "normalizedRule": "Forneça instruções de preenchimento junto aos rótulos quando o formato ou a regra de entrada não for evidente.",
+      "sourceLocator": "Recomendação 6.5",
+      "evidenceRef": "turn760007view3",
+      "sourceTextMode": "official-heading-only"
+    },
+    {
+      "recommendation": "6.7",
+      "heading": "Recomendação 6.7 – Agrupar campos de formulário",
+      "normalizedRule": "Agrupe campos relacionados com fieldset e descreva o grupo com legend, especialmente em formulários longos.",
+      "sourceLocator": "Recomendação 6.7",
+      "evidenceRef": "turn937582view3",
+      "sourceTextMode": "official-heading-only"
+    }
+  ],
+  "limitations": [
+    "gov.br component entries are indexed excerpts, not complete rendered pages.",
+    "For eMAG, exact headings and locators are retained while operative text is normalized.",
+    "No complete reproduction of the eMAG document is included."
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "name": "card",
+  "canonicalUrl": "https://www.gov.br/ds/components/card",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "card",
+      "title": "Card com navegação por Tab",
+      "originalText": "Ofereça aos usuários a opção de navegação por meio do teclado. Os usuários devem poder navegar usando a tecla Tab.",
+      "normalizedRule": "Elementos interativos do Card devem ser navegáveis com Tab.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Elementos interativos do Card recebem foco por Tab."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/card?tab=codigos",
+        "pageTitle": "Padrão Digital de Governo - Card",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "9b4f8a3d275889fb6486bc61f38377f45e76743d375041c14a9dca8f9e4e9066",
+        "retrievalEvidence": "turn984279search11",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-card-a102d36a696a",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "scope",
+      "component": "card",
+      "title": "Card sobre um único assunto",
+      "originalText": "Cards são cartões (ou superfícies) que contêm conteúdo e ações diversas sobre um único assunto (ou tópico).",
+      "normalizedRule": "O conteúdo e as ações de um Card devem se referir a um único assunto ou tópico.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Conteúdo e ações possuem relação temática única."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/card?tab=codigos",
+        "pageTitle": "Padrão Digital de Governo - Card",
+        "tab": "visao-geral",
+        "section": "Definição",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "ecf55f305dbf16a073bfe9c35ef85a0b3946f816a3df99b00054866a946909f2",
+        "retrievalEvidence": "turn368875search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-card-d68fc3f602d1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "card",
+      "title": "Estrutura exemplificada com .br-card",
+      "originalText": "Os exemplos oficiais de card no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-card.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-card como referência estrutural ao comparar a implementação com os exemplos oficiais de card.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-card."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/card/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "646ca726c10c64edde15242fa0f62128eff7731921f4a686656b0cdedf13a340"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": "br-card",
+    "structureFile": "normalized/examples/html/card.json"
+  }
+}

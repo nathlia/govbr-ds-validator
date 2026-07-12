@@ -1,0 +1,48 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "chart",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-46a1ae2f366b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "chart",
+      "component": null,
+      "title": "Máximo recomendado de sete categorias",
+      "originalText": "Use sete ou menos categorias, pois fica cada vez mais fácil perceber o tamanho relativo de cada segmento, ao trabalhar com mais de sete categorias fica mais ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Use no máximo sete categorias em gráficos de segmentos, salvo justificativa clara.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O gráfico apresenta sete categorias ou menos."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/grafico",
+        "pageTitle": "Máximo recomendado de sete categorias",
+        "tab": null,
+        "section": "Categorias",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "980c68d7624723760a8e3c600d994ae9b5e1b8a4696cd219096fc7334c1ddf2b",
+        "retrievalEvidence": "turn178530search3",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

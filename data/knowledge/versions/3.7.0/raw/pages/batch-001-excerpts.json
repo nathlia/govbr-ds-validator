@@ -1,0 +1,167 @@
+[
+  {
+    "url": "https://www.gov.br/ds/introducao/sobre",
+    "pageTitle": "Padrão Digital de Governo - Adoção dos padrões de interface",
+    "tab": null,
+    "section": "Sobre o Design System",
+    "excerpt": "O Padrão Digital de Governo apresenta os padrões de interface que devem ser seguidos por designers e desenvolvedores para garantir a experiência única na interação com os sistemas interativos.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "eb8773df2e867dbf593e8e4dafc16d72c1cf418589218ee8e1f0dffe54447b48",
+    "evidenceRef": "turn237587search1",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/button",
+    "pageTitle": "Padrão Digital de Governo - Button",
+    "tab": "designer",
+    "section": "Anatomia",
+    "excerpt": "O rótulo é um elemento obrigatório. A exceção ocorre na versão tipo circular uma vez que não existe rótulo.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "8ae03daa8ffee3a04ccbd607746a7d1dbe9272a5bf8543be01e2f1b8a33c372e",
+    "evidenceRef": "turn237587search28",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/button",
+    "pageTitle": "Padrão Digital de Governo - Button",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "891fa76045034d45bcb268615582cdf828410840146e4ad5a75b226b9fc913a4",
+    "evidenceRef": "turn681893search0",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/list?tab=designer",
+    "pageTitle": "Padrão Digital de Governo - List",
+    "tab": "designer",
+    "section": "Dividers e Espaçamento",
+    "excerpt": "Não é permitido variar o espaçamento dos itens dentro de uma mesma list.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "32ea2a0625c859424a14be190365efc8cb09f387cf9215f4c76c7c6bef881e23",
+    "evidenceRef": "turn237587search17",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/list?tab=acessibilidade",
+    "pageTitle": "Padrão Digital de Governo - List",
+    "tab": "acessibilidade",
+    "section": "Navegação e Comportamento",
+    "excerpt": "Os usuários devem poder navegar pelo list através do teclado, usando as teclas Tab e Shift + Tab.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "6de177755797ae973de15b0ea2e29cc46d8c8dc6b9c51f0849af1a223c602088",
+    "evidenceRef": "turn310107search1",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/modal",
+    "pageTitle": "Padrão Digital de Governo - Modal",
+    "tab": "acessibilidade",
+    "section": "Recomendações para Código",
+    "excerpt": "A janela modal pode ser rotulada pelo atributo aria-label, usando a mesma string do título.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "2a31cb80b96be1b7b411f6b8749ffd81c30e38bb6718f8230fca865202b8d00d",
+    "evidenceRef": "turn237587search22",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/modal",
+    "pageTitle": "Padrão Digital de Governo - Modal",
+    "tab": "acessibilidade",
+    "section": "Recomendações para Código",
+    "excerpt": "Ao utilizar o recurso de arial-modal como true, pode impedir que os usuários de tecnologias assistivas sejam impedidos de acessar o conteúdo de fora da modal, quando esta estiver aberta. Portanto, faça isso apenas quando o objetivo for realmente este e a experiência seja a mesma para todos os tipos de usuários.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "b1d410e64539e5e1376c751699b638534dd473c4b14d4e4b20d62a202fdd8432",
+    "evidenceRef": "turn237587search22",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/table",
+    "pageTitle": "Padrão Digital de Governo - Table",
+    "tab": "designer",
+    "section": "Quantidade de ícones de ação",
+    "excerpt": "Recomendamos a utilização de até 4 ícones dispostos lado a lado na barra de título. Caso seja necessário utilizar uma quantidade maior, deve-se optar pelo uso do menu flutuante, que será acessado pelo botão Ellipsis-v.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "7aa0abcbfff4301c051de97917c2a095422f4ba7fad08114263a519adeb1646f",
+    "evidenceRef": "turn237587search13",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/table",
+    "pageTitle": "Padrão Digital de Governo - Table",
+    "tab": "designer",
+    "section": "Colunas",
+    "excerpt": "A coluna é um elemento obrigatório e essencial da tabela, pois para constituir uma tabela é necessário pelo menos uma coluna.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "d0db234b5a1dabbc0569b05c1438d9e7eb768b476cb85dbf611aa8e10c179591",
+    "evidenceRef": "turn237587search13",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/components/table",
+    "pageTitle": "Padrão Digital de Governo - Table",
+    "tab": "designer",
+    "section": "Melhores Práticas",
+    "excerpt": "Evite o uso de colunas com células vazias.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "679ab64757d8beb5a54744f575a8ae09db36b8e16f963402da96e943a0d1cdfd",
+    "evidenceRef": "turn237587search13",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/iconografia",
+    "pageTitle": "Padrão Digital de Governo - Área de toque mínima de ícones",
+    "tab": null,
+    "section": "Área de Toque",
+    "excerpt": "A área de toque deve ser de 48x48px, garantindo que a experiência do usuário seja satisfatória no momento de acessar as funcionalidades através dos ícones, em dispositivos móveis ou artefatos digitais.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "6372c6d696b2cf623889221285f9ea0b0311dd5d1c06ce26d2974e58141afad6",
+    "evidenceRef": "turn237587search18",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/fundamentos-visuais/iconografia",
+    "pageTitle": "Padrão Digital de Governo - Tamanho-base de ícones",
+    "tab": null,
+    "section": "Tamanho Padrão no Design System",
+    "excerpt": "O tamanho base para os ícones possui o valor de corpo 16px.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "505bb5b410e0cb5b1242e82a3aa3bea191d4e9d8b67b64bcce5dd91c795e5a09",
+    "evidenceRef": "turn237587search18",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/como-comecar/fluxo-dev",
+    "pageTitle": "Padrão Digital de Governo - Fonte oficial Rawline",
+    "tab": null,
+    "section": "Rawline (Oficial)",
+    "excerpt": "A fonte oficial utilizada pelo Governo Federal é a Rawline.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "df25d6abc8211f3eed84d350410ee96445150e7a20737cf56abc90f8576f64ec",
+    "evidenceRef": "turn237587search12",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/como-comecar/fluxo-dev",
+    "pageTitle": "Padrão Digital de Governo - Raleway como alternativa",
+    "tab": null,
+    "section": "Raleway (Alternativa)",
+    "excerpt": "Use quando a Rawline não estiver disponível.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "39c7df2be78dfd46f851c378e2b94a16bd01ad9deffc5226fe3d639f520584ca",
+    "evidenceRef": "turn237587search12",
+    "captureType": "search-index excerpt"
+  },
+  {
+    "url": "https://www.gov.br/ds/como-comecar/fluxo-dev",
+    "pageTitle": "Padrão Digital de Governo - Evitar CDN legado",
+    "tab": null,
+    "section": "CDN do Design System GOV.BR",
+    "excerpt": "Nas versões mais recentes, recomendamos evitar o uso desse CDN e priorizar a instalação via npm ou fazer o download dos arquivos localmente para o seu projeto.",
+    "retrievedAt": "2026-07-11T06:32:04+00:00",
+    "contentHash": "291e0e705025a02caa61083dcde7b80d0246a005e9de2c22abc45cc2f07fac2b",
+    "evidenceRef": "turn237587search12",
+    "captureType": "search-index excerpt"
+  }
+]

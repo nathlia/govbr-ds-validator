@@ -1,0 +1,7 @@
+{
+  "version": "3.7.0",
+  "status": "excluded-from-tcc-validator-scope",
+  "reason": "Browser-version policy does not contribute materially to the thesis validation hypothesis or the MCP rule engine.",
+  "archivedCopy": "archive/non-validator-context/supported-browsers.json",
+  "activeRules": []
+}

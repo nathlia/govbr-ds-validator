@@ -1,0 +1,144 @@
+{
+  "name": "signin",
+  "canonicalUrl": "https://www.gov.br/ds/components/signin",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 2
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-signin-a68a86f45877",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "signin",
+      "title": "Sign-in acionável por teclado",
+      "originalText": "É recomendado que os botões sign-in possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+      "normalizedRule": "Sign-in deve receber foco por Tab e ser acionável por Space ou Enter.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Foco por Tab.",
+        "Ativação por Space.",
+        "Ativação por Enter."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/signin",
+        "pageTitle": "Padrão Digital de Governo - Signin",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "ecb8102726c88acaf1dd4b0556189d0b40dacd0588a4199b3726c5297c45959b",
+        "retrievalEvidence": "turn162350search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-837c5ed4fe6a",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "signin",
+      "title": "Rótulo conciso",
+      "originalText": "Deve-se evitar o uso excessivo de palavras no rotulo.",
+      "normalizedRule": "Evite rótulos excessivamente longos no Sign-in.",
+      "force": "discouraged",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Rótulo curto e reconhecível."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/signin",
+        "pageTitle": "Padrão Digital de Governo - Signin",
+        "tab": "designer",
+        "section": "Rótulos",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "648dbe1dedf25540aefcd7509e6d1374e1a8dfd762ae22af6f35b29fa5e84285",
+        "retrievalEvidence": "turn554226search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-2752fd23bbe8",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content",
+      "component": "signin",
+      "title": "Rótulo sem quebra de linha",
+      "originalText": "Nunca utilizar quebra de linhas nos rótulos do sign-in.",
+      "normalizedRule": "Não use quebra de linha no rótulo do Sign-in.",
+      "force": "prohibited",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Rótulo renderizado em uma única linha."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/signin",
+        "pageTitle": "Padrão Digital de Governo - Signin",
+        "tab": "designer",
+        "section": "Rótulos",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "c22493dd61474c4455365a72629de208338ed00f777bdfa7a04c3586d96de96b",
+        "retrievalEvidence": "turn554226search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 13,
+    "canonicalClassCandidate": null,
+    "structureFile": "normalized/examples/html/signin.json"
+  }
+}

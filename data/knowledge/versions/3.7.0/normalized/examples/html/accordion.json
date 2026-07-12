@@ -1,0 +1,179 @@
+{
+  "component": "accordion",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 4,
+  "canonicalClassCandidate": "br-accordion",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-accordion",
+      "occurrences": 4
+    }
+  ],
+  "tags": {
+    "div": 60,
+    "button": 28,
+    "span": 56,
+    "i": 28
+  },
+  "classes": {
+    "br-accordion": 4,
+    "item": 28,
+    "header": 28,
+    "icon": 28,
+    "fas": 28,
+    "fa-angle-down": 28,
+    "title": 28,
+    "content": 28
+  },
+  "ariaAttributes": {
+    "aria-controls": 28,
+    "aria-hidden": 28
+  },
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 28
+  },
+  "examples": [
+    {
+      "file": "accordion-default-negative.html",
+      "relativePackagePath": "dist/components/accordion/examples/accordion-default-negative.html",
+      "sha256": "865b961e695f490bf571e84116375ac69e1bba803971de5664aa35ba864c05ea",
+      "byteSize": 2797,
+      "tags": {
+        "div": 15,
+        "button": 7,
+        "span": 14,
+        "i": 7
+      },
+      "classes": {
+        "br-accordion": 1,
+        "item": 7,
+        "header": 7,
+        "icon": 7,
+        "fas": 7,
+        "fa-angle-down": 7,
+        "title": 7,
+        "content": 7
+      },
+      "ariaAttributes": {
+        "aria-controls": 7,
+        "aria-hidden": 7
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "accordion-default.html",
+      "relativePackagePath": "dist/components/accordion/examples/accordion-default.html",
+      "sha256": "12efa542111b3585bc1b685a098cce8c7c71e442ec890e8f9881843d85c1efa3",
+      "byteSize": 2766,
+      "tags": {
+        "div": 15,
+        "button": 7,
+        "span": 14,
+        "i": 7
+      },
+      "classes": {
+        "br-accordion": 1,
+        "item": 7,
+        "header": 7,
+        "icon": 7,
+        "fas": 7,
+        "fa-angle-down": 7,
+        "title": 7,
+        "content": 7
+      },
+      "ariaAttributes": {
+        "aria-controls": 7,
+        "aria-hidden": 7
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "accordion-single-negative.html",
+      "relativePackagePath": "dist/components/accordion/examples/accordion-single-negative.html",
+      "sha256": "170780b161881ede40d64a0ce516ccfa3345a18f97cdcc5367b8932adee591c7",
+      "byteSize": 2818,
+      "tags": {
+        "div": 15,
+        "button": 7,
+        "span": 14,
+        "i": 7
+      },
+      "classes": {
+        "br-accordion": 1,
+        "item": 7,
+        "header": 7,
+        "icon": 7,
+        "fas": 7,
+        "fa-angle-down": 7,
+        "title": 7,
+        "content": 7
+      },
+      "ariaAttributes": {
+        "aria-controls": 7,
+        "aria-hidden": 7
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    },
+    {
+      "file": "accordion-single.html",
+      "relativePackagePath": "dist/components/accordion/examples/accordion-single.html",
+      "sha256": "32da543d2657c3708953616c51cbd3d84bf9079a850e61d189aa07573fbc2f1e",
+      "byteSize": 2821,
+      "tags": {
+        "div": 15,
+        "button": 7,
+        "span": 14,
+        "i": 7
+      },
+      "classes": {
+        "br-accordion": 1,
+        "item": 7,
+        "header": 7,
+        "icon": 7,
+        "fas": 7,
+        "fa-angle-down": 7,
+        "title": 7,
+        "content": 7
+      },
+      "ariaAttributes": {
+        "aria-controls": 7,
+        "aria-hidden": 7
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 7
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

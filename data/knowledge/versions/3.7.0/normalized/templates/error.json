@@ -1,0 +1,93 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "url": "https://www.gov.br/ds/templates/erro",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-template-global-3d795df32a0e",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "error",
+      "component": null,
+      "title": "Imagem apenas como apoio à mensagem de erro",
+      "originalText": "Tanto ilustrações como fotos podem ser utilizadas como imagem a fim de apoiarem visualmente a mensagem de erro.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Use ilustrações ou fotos somente como apoio visual à mensagem de erro, não como substituição do texto.",
+      "force": "permitted",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A mensagem de erro permanece compreensível sem a imagem."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/erro",
+        "pageTitle": "Imagem apenas como apoio à mensagem de erro",
+        "tab": null,
+        "section": "Imagem",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "a37de6574ff4ee8fd522d3912efdf3e45625326eadcfc7453022db5a3bb9492f",
+        "retrievalEvidence": "turn796701search0",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-template-global-9cbfa5906031",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "error",
+      "component": null,
+      "title": "Template de erro adaptado à grid",
+      "originalText": "O conteúdo da tela de erro deve se ajustar na grid da resolução correspondente.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "A tela de erro deve adaptar seu conteúdo à Grid do breakpoint atual.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "O conteúdo se ajusta às grids documentadas sem corte ou sobreposição."
+      ],
+      "validationStrategy": "visual",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/erro",
+        "pageTitle": "Template de erro adaptado à grid",
+        "tab": null,
+        "section": "Responsividade",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "5afd1a900685143801ab46b7e4f4db9b9d629eec93a4a982fab5fee0bbe59e10",
+        "retrievalEvidence": "turn705861search1",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ],
+  "packageEvidence": {
+    "file": "dist/templates/erro/erro.html",
+    "sha256": "019c2db35becb7ebe3508e549f9ce701e701f0c2fbf5d03b567338bbe7fd356b"
+  }
+}

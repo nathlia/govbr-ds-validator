@@ -1,0 +1,80 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-foundation-global-0578aa6c2828",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "foundation",
+      "subcategory": "grid",
+      "component": null,
+      "title": "Espaçamento de colunas em 40 px",
+      "originalText": "O espaçamento das colunas é de 40 pixels.",
+      "normalizedRule": "A Grid utiliza espaçamento de 40 px entre colunas.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "column-gap ou gutter equivalente a 40 px."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [
+        "grid-gutter"
+      ],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/fundamentos-visuais/grid?tab=visao-geral",
+        "pageTitle": "Padrão Digital de Governo - Espaçamento de colunas em 40 px",
+        "tab": "visao-geral",
+        "section": "Colunas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "85626387ead376f2054f0bb09cda5b7907a532cb0840cdde4480678add978b0f",
+        "retrievalEvidence": "turn116600search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-foundation-global-9ef740ba1f28",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "foundation",
+      "subcategory": "grid",
+      "component": null,
+      "title": "Preferência por Grid fixa",
+      "originalText": "Recomenda-se o uso da grid fixa.",
+      "normalizedRule": "Prefira a Grid fixa.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Layout usa configuração fixa quando aplicável."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/fundamentos-visuais/grid?tab=visao-geral",
+        "pageTitle": "Padrão Digital de Governo - Preferência por Grid fixa",
+        "tab": "visao-geral",
+        "section": "Tipos de Grid",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "e02ae402b17c2945aabf457e0390d50a16df8616b391086cb643e039470cf0c5",
+        "retrievalEvidence": "turn116600search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ]
+}

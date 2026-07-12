@@ -1,0 +1,153 @@
+{
+  "name": "notification",
+  "canonicalUrl": "https://www.gov.br/ds/components/notification",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "notification",
+      "title": "Painel de notificações navegável",
+      "originalText": "Os usuários devem conseguir acessar o painel de notificações usando a tecla Tab e Shift + Tab para avançar e retroceder na navegação.",
+      "normalizedRule": "O painel de Notification deve permitir avanço com Tab e retorno com Shift+Tab.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Tab avança.",
+        "Shift+Tab retrocede.",
+        "Ordem de foco lógica."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/notification?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Notification",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "4517f02f54593856ae7d7046376ce26fb4a55bcc02b387a4ee76153f114354c3",
+        "retrievalEvidence": "turn984279search15",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-a77199b18a54",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "ordering",
+      "component": "notification",
+      "title": "Agrupamento cronológico",
+      "originalText": "O agrupamento deve ser classificado de forma cronológica para que o usuário tenha uma melhor organização temporal do conteúdo.",
+      "normalizedRule": "Agrupe Notifications em ordem cronológica.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Datas ou timestamps aparecem em ordem cronológica consistente."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/notification?tab=designer",
+        "pageTitle": "Padrão Digital de Governo - Notification",
+        "tab": "designer",
+        "section": "Agrupamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "3391e99c773e971b648ed7578b05cc217d1ffe12b6bf440d05d064a1baca1ff3",
+        "retrievalEvidence": "turn368875search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-47dfbe60f602",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "notification",
+      "title": "Estrutura exemplificada com .br-notification",
+      "originalText": "Os exemplos oficiais de notification no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-notification.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-notification como referência estrutural ao comparar a implementação com os exemplos oficiais de notification.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-notification."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/notification/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "87aba4945080fb24f307bfdb32677411d1e3aa84f5f93f17b2b4c061947bf196"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 1,
+    "canonicalClassCandidate": "br-notification",
+    "structureFile": "normalized/examples/html/notification.json"
+  }
+}

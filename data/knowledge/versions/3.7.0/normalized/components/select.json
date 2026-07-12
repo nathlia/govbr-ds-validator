@@ -1,0 +1,118 @@
+{
+  "name": "select",
+  "canonicalUrl": "https://www.gov.br/ds/components/select",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-select-3587924c3600",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "select",
+      "title": "Estrutura exemplificada com .br-select",
+      "originalText": "Os exemplos oficiais de select no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-select.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-select como referência estrutural ao comparar a implementação com os exemplos oficiais de select.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-select."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/select/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "23c64c66e443c15216e2b4e076c0a594e56ab22a24f1fd3b2c9e7b20b47b9642"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-select-3d506ce4d7d3",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "content",
+      "component": "select",
+      "title": "Textos curtos e objetivos no Select",
+      "originalText": "De modo geral, deve-se prezar pelo uso de textos curtos e objetivos no select e no multiselect.",
+      "originalTextMode": "verbatim-excerpt",
+      "normalizedRule": "Use textos curtos e objetivos nas opções e no valor selecionado de Select e Multiselect.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Rótulos de opções são concisos.",
+        "O valor selecionado permanece compreensível na largura disponível."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/select",
+        "pageTitle": "Padrão Digital de Governo - Select",
+        "tab": "designer",
+        "section": "Conteúdo",
+        "retrievedAt": "2026-07-11T06:44:34+00:00",
+        "contentHash": "174326167d5fa1b9eb5c5243c6bbc6e17b8324a5fd4cb93b34f4b55a72f298c3",
+        "retrievalEvidence": "turn737144search1",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 2,
+    "canonicalClassCandidate": "br-select",
+    "structureFile": "normalized/examples/html/select.json"
+  }
+}

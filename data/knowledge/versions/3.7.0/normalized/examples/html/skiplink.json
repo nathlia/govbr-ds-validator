@@ -1,0 +1,122 @@
+{
+  "component": "skiplink",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-skiplink",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-item",
+      "occurrences": 8
+    },
+    {
+      "class": "br-tag",
+      "occurrences": 8
+    },
+    {
+      "class": "br-skiplink",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "p": 2,
+    "nav": 2,
+    "a": 8,
+    "span": 12
+  },
+  "classes": {
+    "br-skiplink": 2,
+    "full": 1,
+    "br-item": 8,
+    "br-tag": 8,
+    "text": 8,
+    "ml-1": 8
+  },
+  "ariaAttributes": {
+    "aria-hidden": 12
+  },
+  "roles": {
+    "menubar": 2,
+    "menuitem": 8
+  },
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "a": 8
+  },
+  "examples": [
+    {
+      "file": "skiplink-full.html",
+      "relativePackagePath": "dist/components/skiplink/examples/skiplink-full.html",
+      "sha256": "14a588aa1ec8796285338b835ee427eb23889e455919037131dd1d69523f3bcd",
+      "byteSize": 730,
+      "tags": {
+        "p": 1,
+        "nav": 1,
+        "a": 4,
+        "span": 4
+      },
+      "classes": {
+        "br-skiplink": 1,
+        "full": 1,
+        "br-item": 4,
+        "br-tag": 4,
+        "text": 4,
+        "ml-1": 4
+      },
+      "ariaAttributes": {
+        "aria-hidden": 4
+      },
+      "roles": {
+        "menubar": 1,
+        "menuitem": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 4
+      }
+    },
+    {
+      "file": "skiplink-simple.html",
+      "relativePackagePath": "dist/components/skiplink/examples/skiplink-simple.html",
+      "sha256": "909b1b3f75d8cfbbc1b1bdc1a0bae3316095e5114f3abd49813ffe4d698bf350",
+      "byteSize": 877,
+      "tags": {
+        "p": 1,
+        "nav": 1,
+        "a": 4,
+        "span": 8
+      },
+      "classes": {
+        "br-skiplink": 1,
+        "br-item": 4,
+        "br-tag": 4,
+        "text": 4,
+        "ml-1": 4
+      },
+      "ariaAttributes": {
+        "aria-hidden": 8
+      },
+      "roles": {
+        "menubar": 1,
+        "menuitem": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 4
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

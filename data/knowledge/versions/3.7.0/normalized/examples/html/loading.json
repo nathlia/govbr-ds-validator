@@ -1,0 +1,129 @@
+{
+  "component": "loading",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 3,
+  "canonicalClassCandidate": "br-loading",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-loading",
+      "occurrences": 3
+    },
+    {
+      "class": "br-loading-fill",
+      "occurrences": 2
+    },
+    {
+      "class": "br-loading-mask",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "div": 7
+  },
+  "classes": {
+    "br-loading": 3,
+    "medium": 1,
+    "br-loading-mask": 2,
+    "full": 1,
+    "br-loading-fill": 2
+  },
+  "ariaAttributes": {
+    "aria-label": 3,
+    "aria-valuemin": 1,
+    "aria-valuenow": 1,
+    "aria-valuemax": 1
+  },
+  "roles": {
+    "progressbar": 3
+  },
+  "dataAttributes": {
+    "data-progress": 1
+  },
+  "inputTypes": {},
+  "interactiveTags": {},
+  "examples": [
+    {
+      "file": "loading-md.html",
+      "relativePackagePath": "dist/components/loading/examples/loading-md.html",
+      "sha256": "0f446614ff4169161efe48ffa37f0aa500c5b9fde353539f520823d8749d4190",
+      "byteSize": 104,
+      "tags": {
+        "div": 1
+      },
+      "classes": {
+        "br-loading": 1,
+        "medium": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1
+      },
+      "roles": {
+        "progressbar": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "loading-progress.html",
+      "relativePackagePath": "dist/components/loading/examples/loading-progress.html",
+      "sha256": "bbf49aeecf07e956c126ca34f777dbbdb1c625f91ac0d002adbcd43a2173a1cc",
+      "byteSize": 341,
+      "tags": {
+        "div": 5
+      },
+      "classes": {
+        "br-loading": 1,
+        "br-loading-mask": 2,
+        "full": 1,
+        "br-loading-fill": 2
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-valuemin": 1,
+        "aria-valuenow": 1,
+        "aria-valuemax": 1
+      },
+      "roles": {
+        "progressbar": 1
+      },
+      "dataAttributes": {
+        "data-progress": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "loading-sml.html",
+      "relativePackagePath": "dist/components/loading/examples/loading-sml.html",
+      "sha256": "91a5fcc0da21691cc7daf9e44f733a71a30615fa202f8525dc7a269c0e12fcf4",
+      "byteSize": 104,
+      "tags": {
+        "div": 1
+      },
+      "classes": {
+        "br-loading": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1
+      },
+      "roles": {
+        "progressbar": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

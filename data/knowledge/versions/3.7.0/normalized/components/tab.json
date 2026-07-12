@@ -1,0 +1,115 @@
+{
+  "name": "tab",
+  "canonicalUrl": "https://www.gov.br/ds/components/tab",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "keyboard",
+      "component": "tab",
+      "title": "Tabs operáveis sem mouse",
+      "originalText": "Certifique-se de que as tabs possam ser acessadas e navegadas pelo teclado, sem a ajuda do mouse.",
+      "normalizedRule": "Tabs devem ser acessíveis e navegáveis inteiramente por teclado.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Foco alcança a lista de tabs.",
+        "Navegação e seleção funcionam sem mouse."
+      ],
+      "validationStrategy": "keyboard-interaction",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/tab?tab=acessibilidade",
+        "pageTitle": "Padrão Digital de Governo - Tab",
+        "tab": "acessibilidade",
+        "section": "Navegação e Comportamento",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "7011779a70ecd402e3c057c516137c18e7c8b681e8dc2e1703231389f8424eeb",
+        "retrievalEvidence": "turn699803search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-bc811e53068f",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "tab",
+      "title": "Estrutura exemplificada com .br-tab",
+      "originalText": "Os exemplos oficiais de tab no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tab.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-tab como referência estrutural ao comparar a implementação com os exemplos oficiais de tab.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-tab."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/tab/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "f72a7ffcca8848cdb4ff62f80c6038693188a36d94091305cba122e2c42b3b88"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": "br-tab",
+    "structureFile": "normalized/examples/html/tab.json"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "content-overflow",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-9d9f1c9bf1ed",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "content-overflow",
+      "component": null,
+      "title": "Não truncar conteúdo crítico",
+      "originalText": "O truncamento não deve ser utilizado em cabeçalhos de página, títulos, menus, rótulos de botões, mensagens de erro, mensagens de validação ou ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Não trunque cabeçalhos, títulos, menus, rótulos de botões, erros ou mensagens de validação.",
+      "force": "prohibited",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Conteúdo crítico permanece integralmente visível ou acessível."
+      ],
+      "validationStrategy": "visual",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "serious",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/contentoverflow",
+        "pageTitle": "Não truncar conteúdo crítico",
+        "tab": null,
+        "section": "Truncamento",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "30239528b19f7b433bc735ba4625d9f6e911136414e44c74fadb212b1a6f8dac",
+        "retrievalEvidence": "turn178530search1",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

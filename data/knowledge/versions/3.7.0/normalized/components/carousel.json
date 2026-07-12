@@ -1,0 +1,150 @@
+{
+  "name": "carousel",
+  "canonicalUrl": "https://www.gov.br/ds/components/carousel",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "partially-extracted",
+      "ruleCount": 2
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-carousel-7b664374a2b3",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "layout",
+      "component": "carousel",
+      "title": "Espaçamento consistente",
+      "originalText": "Tenha o cuidado de manter a consistência no espaçamento entre as páginas de conteúdo de cada bloco.",
+      "normalizedRule": "Mantenha espaçamento consistente entre páginas de conteúdo do Carousel.",
+      "force": "recommended",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Gaps equivalentes entre páginas do mesmo bloco."
+      ],
+      "validationStrategy": "computed-style",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/carousel",
+        "pageTitle": "Padrão Digital de Governo - Carousel",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "0f8da48dccace81740fdd90fe45fdbdde4a48a8001f65870056e91154d9c4376",
+        "retrievalEvidence": "turn368875search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-4c92b788906b",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "content-volume",
+      "component": "carousel",
+      "title": "Evitar mais de três páginas por bloco",
+      "originalText": "Se possível, evite blocos com mais de três páginas.",
+      "normalizedRule": "Evite mais de três páginas em um bloco de Carousel.",
+      "force": "discouraged",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Até três páginas por bloco, salvo justificativa."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "minor",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/carousel",
+        "pageTitle": "Padrão Digital de Governo - Carousel",
+        "tab": "designer",
+        "section": "Melhores Práticas",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "5df69a376e977fd5e0a822185bfc958f490fad8a4c453fc2b95185c36cffe801",
+        "retrievalEvidence": "turn368875search3",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-a5852928b851",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "carousel",
+      "title": "Estrutura exemplificada com .br-carousel",
+      "originalText": "Os exemplos oficiais de carousel no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-carousel.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-carousel como referência estrutural ao comparar a implementação com os exemplos oficiais de carousel.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-carousel."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/carousel/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "4f0730c925a24393fb88e8a0f42d60dd4284be12bdec518206f44b130b48af15"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 6,
+    "canonicalClassCandidate": "br-carousel",
+    "structureFile": "normalized/examples/html/carousel.json"
+  }
+}

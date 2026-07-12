@@ -1,0 +1,169 @@
+{
+  "component": "magicbutton",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 5,
+  "canonicalClassCandidate": null,
+  "canonicalClassObserved": false,
+  "rootClassCandidates": [
+    {
+      "class": "br-button",
+      "occurrences": 5
+    },
+    {
+      "class": "br-magic-button",
+      "occurrences": 5
+    }
+  ],
+  "tags": {
+    "div": 5,
+    "button": 5,
+    "i": 1
+  },
+  "classes": {
+    "br-magic-button": 5,
+    "br-button": 5,
+    "circle": 1,
+    "fas": 1,
+    "fa-cart-plus": 1,
+    "large": 1,
+    "medium": 1,
+    "small": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 1,
+    "aria-hidden": 1
+  },
+  "roles": {},
+  "dataAttributes": {},
+  "inputTypes": {},
+  "interactiveTags": {
+    "button": 5
+  },
+  "examples": [
+    {
+      "file": "magicbutton-icon.html",
+      "relativePackagePath": "dist/components/magicbutton/examples/magicbutton-icon.html",
+      "sha256": "1114474627e816581a376f861b33036d4fc772c662b66824ad5176692b8bcd48",
+      "byteSize": 173,
+      "tags": {
+        "div": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "br-magic-button": 1,
+        "br-button": 1,
+        "circle": 1,
+        "fas": 1,
+        "fa-cart-plus": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "magicbutton-large.html",
+      "relativePackagePath": "dist/components/magicbutton/examples/magicbutton-large.html",
+      "sha256": "17583a2c39582e993a008f65499baa915fd6d5115e2576583b2a3fa89d49a041",
+      "byteSize": 103,
+      "tags": {
+        "div": 1,
+        "button": 1
+      },
+      "classes": {
+        "br-magic-button": 1,
+        "large": 1,
+        "br-button": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "magicbutton-medium.html",
+      "relativePackagePath": "dist/components/magicbutton/examples/magicbutton-medium.html",
+      "sha256": "afc344586288f972abef18db1d7250fc82c72d788ca7113a3b1cd7c1b67f21a4",
+      "byteSize": 104,
+      "tags": {
+        "div": 1,
+        "button": 1
+      },
+      "classes": {
+        "br-magic-button": 1,
+        "medium": 1,
+        "br-button": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "magicbutton-small.html",
+      "relativePackagePath": "dist/components/magicbutton/examples/magicbutton-small.html",
+      "sha256": "8cf5767fb0223332d6b9719290057e03dee7c3fa19640f18ab58e04cd1d8a39b",
+      "byteSize": 103,
+      "tags": {
+        "div": 1,
+        "button": 1
+      },
+      "classes": {
+        "br-magic-button": 1,
+        "small": 1,
+        "br-button": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    },
+    {
+      "file": "magicbutton-text.html",
+      "relativePackagePath": "dist/components/magicbutton/examples/magicbutton-text.html",
+      "sha256": "18c31da21f6f4125c5a75801d5deb6980141ff3c228e2a6c8930f08b1cd8a6e6",
+      "byteSize": 97,
+      "tags": {
+        "div": 1,
+        "button": 1
+      },
+      "classes": {
+        "br-magic-button": 1,
+        "br-button": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

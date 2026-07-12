@@ -1,0 +1,364 @@
+{
+  "component": "input",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 7,
+  "canonicalClassCandidate": "br-input",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-input",
+      "occurrences": 21
+    },
+    {
+      "class": "br-button",
+      "occurrences": 6
+    }
+  ],
+  "tags": {
+    "div": 58,
+    "label": 21,
+    "input": 21,
+    "button": 6,
+    "i": 16,
+    "p": 1,
+    "span": 5
+  },
+  "classes": {
+    "col-sm-5": 3,
+    "col-lg-3": 6,
+    "mb-3": 20,
+    "br-input": 21,
+    "input-button": 4,
+    "br-button": 6,
+    "fas": 16,
+    "fa-eye": 1,
+    "small": 4,
+    "fa-arrow-right": 1,
+    "large": 4,
+    "fa-search": 3,
+    "col-sm-8": 1,
+    "col-lg-5": 1,
+    "col-sm-10": 6,
+    "col-lg-8": 3,
+    "input-highlight": 4,
+    "sr-only": 3,
+    "input-group": 5,
+    "input-icon": 5,
+    "fa-user": 2,
+    "col-sm-6": 3,
+    "col-lg-4": 3,
+    "fa-user-tie": 1,
+    "fa-users": 1,
+    "col-lg-7": 3,
+    "input-inline": 3,
+    "input-label": 3,
+    "text-nowrap": 3,
+    "input-content": 3,
+    "fa-edit": 1,
+    "fa-heart": 1,
+    "col-sm-4": 8,
+    "success": 2,
+    "feedback": 5,
+    "fa-check-circle": 1,
+    "danger": 2,
+    "fa-times-circle": 1,
+    "info": 2,
+    "fa-info-circle": 1,
+    "warning": 3,
+    "fa-exclamation-triangle": 2
+  },
+  "ariaAttributes": {
+    "aria-label": 6,
+    "aria-checked": 1,
+    "aria-hidden": 16,
+    "aria-describedby": 5
+  },
+  "roles": {
+    "switch": 1,
+    "alert": 5
+  },
+  "dataAttributes": {},
+  "inputTypes": {
+    "password": 1,
+    "text": 17,
+    "search": 3
+  },
+  "interactiveTags": {
+    "input": 21,
+    "button": 6
+  },
+  "examples": [
+    {
+      "file": "input-buttons.html",
+      "relativePackagePath": "dist/components/input/examples/input-buttons.html",
+      "sha256": "94d857c2c6912b1c15c6524422a6821a08db7381d0c8b769523942e19fb975d4",
+      "byteSize": 1111,
+      "tags": {
+        "div": 6,
+        "label": 3,
+        "input": 3,
+        "button": 3,
+        "i": 3
+      },
+      "classes": {
+        "col-sm-5": 3,
+        "col-lg-3": 3,
+        "mb-3": 3,
+        "br-input": 3,
+        "input-button": 3,
+        "br-button": 3,
+        "fas": 3,
+        "fa-eye": 1,
+        "small": 1,
+        "fa-arrow-right": 1,
+        "large": 1,
+        "fa-search": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-checked": 1,
+        "aria-hidden": 3
+      },
+      "roles": {
+        "switch": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "password": 1,
+        "text": 1,
+        "search": 1
+      },
+      "interactiveTags": {
+        "input": 3,
+        "button": 3
+      }
+    },
+    {
+      "file": "input-default.html",
+      "relativePackagePath": "dist/components/input/examples/input-default.html",
+      "sha256": "c9f9f726a99daeb35d2d66c621e1bb9ddad90db88332605afb9986a3991eb5d1",
+      "byteSize": 253,
+      "tags": {
+        "div": 2,
+        "label": 1,
+        "input": 1,
+        "p": 1
+      },
+      "classes": {
+        "col-sm-8": 1,
+        "col-lg-5": 1,
+        "br-input": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "input-highlight.html",
+      "relativePackagePath": "dist/components/input/examples/input-highlight.html",
+      "sha256": "e53aeab5bab79e66636ffd0f0c2a1064c0c02406d25cf86d1a94d97a2166ca56",
+      "byteSize": 1227,
+      "tags": {
+        "div": 8,
+        "label": 3,
+        "input": 3,
+        "button": 2,
+        "i": 3
+      },
+      "classes": {
+        "col-sm-10": 3,
+        "col-lg-8": 3,
+        "mb-3": 3,
+        "br-input": 3,
+        "input-highlight": 4,
+        "sr-only": 3,
+        "br-button": 2,
+        "fas": 3,
+        "fa-search": 2,
+        "input-group": 1,
+        "input-icon": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 2,
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 1,
+        "search": 2
+      },
+      "interactiveTags": {
+        "input": 3,
+        "button": 2
+      }
+    },
+    {
+      "file": "input-icons.html",
+      "relativePackagePath": "dist/components/input/examples/input-icons.html",
+      "sha256": "8a646abb77ab9220c03a2e1078055c422be10952f83915363b140cd6ab62c951",
+      "byteSize": 1028,
+      "tags": {
+        "div": 12,
+        "label": 3,
+        "i": 3,
+        "input": 3
+      },
+      "classes": {
+        "col-sm-6": 3,
+        "col-lg-4": 3,
+        "mb-3": 3,
+        "br-input": 3,
+        "input-group": 3,
+        "input-icon": 3,
+        "fas": 3,
+        "fa-user-tie": 1,
+        "small": 2,
+        "fa-user": 1,
+        "large": 2,
+        "fa-users": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "input-inline.html",
+      "relativePackagePath": "dist/components/input/examples/input-inline.html",
+      "sha256": "90709628500a35b6ef4b6148111f36b16fb29e34b092ec4bcf73a2b74c87efa4",
+      "byteSize": 1243,
+      "tags": {
+        "div": 14,
+        "label": 3,
+        "input": 3,
+        "i": 2,
+        "button": 1
+      },
+      "classes": {
+        "col-sm-10": 3,
+        "col-lg-7": 3,
+        "mb-3": 3,
+        "br-input": 3,
+        "input-inline": 3,
+        "input-label": 3,
+        "text-nowrap": 3,
+        "input-content": 3,
+        "input-group": 1,
+        "input-icon": 1,
+        "fas": 2,
+        "fa-edit": 1,
+        "input-button": 1,
+        "br-button": 1,
+        "fa-heart": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 2,
+        "aria-label": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 3
+      },
+      "interactiveTags": {
+        "input": 3,
+        "button": 1
+      }
+    },
+    {
+      "file": "input-sizes.html",
+      "relativePackagePath": "dist/components/input/examples/input-sizes.html",
+      "sha256": "981104d81d16fdd531199b6795fb711861b7b2fa6bde416935a5117904bfae8d",
+      "byteSize": 612,
+      "tags": {
+        "div": 6,
+        "label": 3,
+        "input": 3
+      },
+      "classes": {
+        "col-sm-4": 3,
+        "col-lg-3": 3,
+        "mb-3": 3,
+        "br-input": 3,
+        "small": 1,
+        "large": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "input-states.html",
+      "relativePackagePath": "dist/components/input/examples/input-states.html",
+      "sha256": "3948f98fe1800cc153e74d775d39c4d26763700478ef732f863e6ce6ce6f5523",
+      "byteSize": 1899,
+      "tags": {
+        "div": 10,
+        "label": 5,
+        "input": 5,
+        "span": 5,
+        "i": 5
+      },
+      "classes": {
+        "col-sm-4": 5,
+        "mb-3": 5,
+        "br-input": 5,
+        "success": 2,
+        "feedback": 5,
+        "fas": 5,
+        "fa-check-circle": 1,
+        "danger": 2,
+        "fa-times-circle": 1,
+        "info": 2,
+        "fa-info-circle": 1,
+        "warning": 3,
+        "fa-exclamation-triangle": 2
+      },
+      "ariaAttributes": {
+        "aria-describedby": 5,
+        "aria-hidden": 5
+      },
+      "roles": {
+        "alert": 5
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "text": 5
+      },
+      "interactiveTags": {
+        "input": 5
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

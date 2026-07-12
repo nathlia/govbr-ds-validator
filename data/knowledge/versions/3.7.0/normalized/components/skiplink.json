@@ -1,0 +1,115 @@
+{
+  "name": "skiplink",
+  "canonicalUrl": "https://www.gov.br/ds/components/skiplink",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "partially-extracted",
+      "ruleCount": 1
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "accessibility",
+      "subcategory": "document-order",
+      "component": "skiplink",
+      "title": "Skip Link após body",
+      "originalText": "Este componente deve estar logo após a tag body (deve ser a primeira coisa que um usuário de teclado acessaria em sua página).",
+      "normalizedRule": "O Skip Link deve ser o primeiro conteúdo focável após a abertura de body.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Skip Link aparece imediatamente após body.",
+        "É o primeiro elemento alcançado por Tab."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "critical",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/skiplink",
+        "pageTitle": "Padrão Digital de Governo - Skiplink",
+        "tab": "desenvolvedor",
+        "section": "Uso",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "083af03693a8d8ccb486214a326da653c3b4d9d90ca2ea0655661820aff2a47f",
+        "retrievalEvidence": "turn162350search2",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-3e4560a2ead2",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "skiplink",
+      "title": "Estrutura exemplificada com .br-skiplink",
+      "originalText": "Os exemplos oficiais de skiplink no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-skiplink.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-skiplink como referência estrutural ao comparar a implementação com os exemplos oficiais de skiplink.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-skiplink."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/skiplink/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "9ce54a3d5a9052dc830e6dc82f6ff53c7fbf8447c5af05ae6712f3e8685e2fe1"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 2,
+    "canonicalClassCandidate": "br-skiplink",
+    "structureFile": "normalized/examples/html/skiplink.json"
+  }
+}

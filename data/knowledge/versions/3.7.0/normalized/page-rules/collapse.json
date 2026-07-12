@@ -1,0 +1,51 @@
+{
+  "version": "3.7.0",
+  "status": "partially-extracted",
+  "pattern": "collapse",
+  "rules": [
+    {
+      "id": "govbr-3.7.0-pattern-global-eebb093156e7",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "pattern",
+      "subcategory": "collapse",
+      "component": null,
+      "title": "Área de destaque inteira aciona Collapse",
+      "originalText": "Por padrão, o Acionador deve ser toda área de conteúdo de destaque, como demonstrado na figura, e esta deve conter o ícone identificador de expansão/retração (1) ...",
+      "originalTextMode": "verbatim-truncated-excerpt",
+      "normalizedRule": "Use toda a área de destaque como acionador do Collapse e inclua o ícone de expansão ou retração.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "Toda a área de destaque é clicável.",
+        "Há ícone que comunica o estado de expansão."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "accordion"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [],
+      "source": {
+        "url": "https://www.gov.br/ds/padroes/design/collapse",
+        "pageTitle": "Área de destaque inteira aciona Collapse",
+        "tab": null,
+        "section": "Acionador",
+        "retrievedAt": "2026-07-11T06:59:57+00:00",
+        "contentHash": "fea3c3e91f277cb499bda723a2f97dc71405067a33b94387078bb16f1515800f",
+        "retrievalEvidence": "turn270293search1",
+        "captureType": "official-web-search-index-excerpt",
+        "sourceFamily": "official-govbr-ds-site"
+      }
+    }
+  ]
+}

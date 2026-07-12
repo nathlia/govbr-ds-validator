@@ -1,0 +1,243 @@
+{
+  "component": "switch",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 6,
+  "canonicalClassCandidate": "br-switch",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-switch",
+      "occurrences": 11
+    }
+  ],
+  "tags": {
+    "div": 24,
+    "input": 11,
+    "label": 11
+  },
+  "classes": {
+    "row": 3,
+    "col-md": 8,
+    "br-switch": 11,
+    "mr-5": 5,
+    "mt-3": 5,
+    "mt-md-0": 5,
+    "right": 1,
+    "top": 1,
+    "small": 1,
+    "medium": 3,
+    "large": 1,
+    "disabled": 1,
+    "icon": 1,
+    "switch-data": 2
+  },
+  "ariaAttributes": {},
+  "roles": {
+    "presentation": 11,
+    "switch": 11
+  },
+  "dataAttributes": {
+    "data-enabled": 2,
+    "data-disabled": 2
+  },
+  "inputTypes": {
+    "checkbox": 11
+  },
+  "interactiveTags": {
+    "input": 11
+  },
+  "examples": [
+    {
+      "file": "switch-alignments.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-alignments.html",
+      "sha256": "25bb8a9c2face060b5cd2d383067ba06eaac0c9d0bbb3507588de4a6e8d6138c",
+      "byteSize": 812,
+      "tags": {
+        "div": 7,
+        "input": 3,
+        "label": 3
+      },
+      "classes": {
+        "row": 1,
+        "col-md": 3,
+        "br-switch": 3,
+        "mr-5": 3,
+        "mt-3": 2,
+        "mt-md-0": 2,
+        "right": 1,
+        "top": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 3,
+        "switch": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "switch-default.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-default.html",
+      "sha256": "180d539a3a506f6193ec49d493ce3c751f66f0612d26d27f295a0306a685928f",
+      "byteSize": 196,
+      "tags": {
+        "div": 1,
+        "input": 1,
+        "label": 1
+      },
+      "classes": {
+        "br-switch": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 1,
+        "switch": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "switch-density.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-density.html",
+      "sha256": "456411ae6239ad2e3e5343e94b1ba943fd442976a5c3f76e1c9b13821187689a",
+      "byteSize": 837,
+      "tags": {
+        "div": 7,
+        "input": 3,
+        "label": 3
+      },
+      "classes": {
+        "row": 1,
+        "col-md": 3,
+        "br-switch": 3,
+        "small": 1,
+        "mr-5": 2,
+        "mt-3": 2,
+        "mt-md-0": 2,
+        "medium": 1,
+        "large": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 3,
+        "switch": 3
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "switch-disabled.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-disabled.html",
+      "sha256": "55488a0d7b2a8537b46b25662a6e35db6049f148d1eb6544a1a76ff41d962878",
+      "byteSize": 240,
+      "tags": {
+        "div": 1,
+        "input": 1,
+        "label": 1
+      },
+      "classes": {
+        "br-switch": 1,
+        "disabled": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 1,
+        "switch": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "switch-icon.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-icon.html",
+      "sha256": "1678912bfd2951c2794a4ed2d4e5b1365400f713a48814e9cde7c4ba4c7b4b4f",
+      "byteSize": 192,
+      "tags": {
+        "div": 1,
+        "input": 1,
+        "label": 1
+      },
+      "classes": {
+        "br-switch": 1,
+        "icon": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 1,
+        "switch": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "switch-labels.html",
+      "relativePackagePath": "dist/components/switch/examples/switch-labels.html",
+      "sha256": "83684da4d10fea1c7bcfc2b62643d699cf4561a54b6525348cb344fdfe04b9ea",
+      "byteSize": 739,
+      "tags": {
+        "div": 7,
+        "input": 2,
+        "label": 2
+      },
+      "classes": {
+        "row": 1,
+        "col-md": 2,
+        "br-switch": 2,
+        "medium": 2,
+        "switch-data": 2,
+        "mt-3": 1,
+        "mt-md-0": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "presentation": 2,
+        "switch": 2
+      },
+      "dataAttributes": {
+        "data-enabled": 2,
+        "data-disabled": 2
+      },
+      "inputTypes": {
+        "checkbox": 2
+      },
+      "interactiveTags": {
+        "input": 2
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

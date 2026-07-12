@@ -1,0 +1,407 @@
+{
+  "component": "tooltip",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 9,
+  "canonicalClassCandidate": "br-tooltip",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-tooltip",
+      "occurrences": 16
+    },
+    {
+      "class": "br-button",
+      "occurrences": 4
+    },
+    {
+      "class": "br-input",
+      "occurrences": 2
+    }
+  ],
+  "tags": {
+    "div": 61,
+    "a": 15,
+    "span": 32,
+    "label": 2,
+    "input": 2,
+    "button": 4,
+    "i": 6,
+    "img": 2
+  },
+  "classes": {
+    "mb-3": 16,
+    "h5": 14,
+    "br-tooltip": 16,
+    "text": 14,
+    "subtext": 16,
+    "br-input": 2,
+    "input-button": 2,
+    "br-button": 4,
+    "fas": 6,
+    "fa-eye": 2,
+    "popover-icon": 4,
+    "fa-ban": 2,
+    "fa-3x": 4,
+    "div": 6,
+    "popover-header": 5,
+    "popover-body": 7,
+    "fa-exclamation-triangle": 2,
+    "popover-footer": 3,
+    "primary": 2,
+    "popover-image": 2,
+    "link": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 2,
+    "aria-checked": 2,
+    "aria-hidden": 6
+  },
+  "roles": {
+    "tooltip": 25,
+    "switch": 2
+  },
+  "dataAttributes": {},
+  "inputTypes": {
+    "password": 2
+  },
+  "interactiveTags": {
+    "a": 15,
+    "input": 2,
+    "button": 4
+  },
+  "examples": [
+    {
+      "file": "tooltip-error-right.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-error-right.html",
+      "sha256": "f5a76c2cb2905db160a473f4c8aa267de9de1bd5dbcb8203cf607654dedd8584",
+      "byteSize": 269,
+      "tags": {
+        "div": 2,
+        "a": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "text": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "tooltip": 2
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1
+      }
+    },
+    {
+      "file": "tooltip-info-top.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-info-top.html",
+      "sha256": "299611ab3006646911a629c8cf4229306a09343488ea689d4cfdaaf73beb1b4d",
+      "byteSize": 1695,
+      "tags": {
+        "div": 11,
+        "a": 4,
+        "span": 10,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1
+      },
+      "classes": {
+        "mb-3": 5,
+        "h5": 4,
+        "br-tooltip": 5,
+        "text": 5,
+        "subtext": 5,
+        "br-input": 1,
+        "input-button": 1,
+        "br-button": 1,
+        "fas": 1,
+        "fa-eye": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-checked": 1,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "tooltip": 10,
+        "switch": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "password": 1
+      },
+      "interactiveTags": {
+        "a": 4,
+        "input": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "tooltip-popover-icon-error.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-popover-icon-error.html",
+      "sha256": "3c6a554efab42d6b6b489bfaf53f88b8635b0836d84813312d9787660daf108b",
+      "byteSize": 579,
+      "tags": {
+        "div": 6,
+        "a": 1,
+        "i": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "popover-icon": 1,
+        "fas": 1,
+        "fa-ban": 1,
+        "fa-3x": 1,
+        "div": 1,
+        "popover-header": 1,
+        "text": 1,
+        "popover-body": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {
+        "tooltip": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1
+      }
+    },
+    {
+      "file": "tooltip-popover-icon-warning.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-popover-icon-warning.html",
+      "sha256": "c697e36ee53e8baac65a93aeeb37a5d58bd9f678f4f360abe289248cd7e380b4",
+      "byteSize": 637,
+      "tags": {
+        "div": 6,
+        "a": 1,
+        "i": 1,
+        "span": 2,
+        "button": 1
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "popover-icon": 1,
+        "fas": 1,
+        "fa-exclamation-triangle": 1,
+        "fa-3x": 1,
+        "div": 1,
+        "popover-body": 1,
+        "subtext": 1,
+        "popover-footer": 1,
+        "br-button": 1,
+        "primary": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 1
+      },
+      "roles": {
+        "tooltip": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "tooltip-popover-image.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-popover-image.html",
+      "sha256": "399f8afde6acb2636103ee310eb2d51dc208e8740e7fc452b15faf1b5f3ec8fb",
+      "byteSize": 513,
+      "tags": {
+        "div": 6,
+        "a": 1,
+        "img": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "popover-image": 1,
+        "div": 1,
+        "popover-header": 1,
+        "text": 1,
+        "popover-body": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "tooltip": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1
+      }
+    },
+    {
+      "file": "tooltip-popover.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-popover.html",
+      "sha256": "c53273136a1973d9102728081578c09964ea5fce51230c40f9e32f99c6ca9da5",
+      "byteSize": 2269,
+      "tags": {
+        "div": 23,
+        "a": 5,
+        "span": 8,
+        "img": 1,
+        "i": 2,
+        "button": 1
+      },
+      "classes": {
+        "mb-3": 4,
+        "h5": 4,
+        "br-tooltip": 4,
+        "popover-header": 3,
+        "text": 3,
+        "popover-body": 4,
+        "subtext": 4,
+        "popover-footer": 2,
+        "link": 1,
+        "popover-image": 1,
+        "div": 3,
+        "popover-icon": 2,
+        "fas": 2,
+        "fa-ban": 1,
+        "fa-3x": 2,
+        "fa-exclamation-triangle": 1,
+        "br-button": 1,
+        "primary": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 2
+      },
+      "roles": {
+        "tooltip": 4
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 5,
+        "button": 1
+      }
+    },
+    {
+      "file": "tooltip-success-left.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-success-left.html",
+      "sha256": "9a975f38af280a04df43e3b1cc7cc406757f40a00f09821ef68123f9d861c498",
+      "byteSize": 271,
+      "tags": {
+        "div": 2,
+        "a": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "text": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "tooltip": 2
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1
+      }
+    },
+    {
+      "file": "tooltip-warning-bottom-timer.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-warning-bottom-timer.html",
+      "sha256": "6cb0783ea1e44fae41cf5317d9235b38bf86844bc92c1fc3523b3e35ba0f019e",
+      "byteSize": 598,
+      "tags": {
+        "div": 3,
+        "label": 1,
+        "input": 1,
+        "button": 1,
+        "i": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "br-input": 1,
+        "input-button": 1,
+        "br-button": 1,
+        "fas": 1,
+        "fa-eye": 1,
+        "br-tooltip": 1,
+        "text": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-checked": 1,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "switch": 1,
+        "tooltip": 2
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "password": 1
+      },
+      "interactiveTags": {
+        "input": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "tooltip-warning-bottom.html",
+      "relativePackagePath": "dist/components/tooltip/examples/tooltip-warning-bottom.html",
+      "sha256": "77abf951faa690670eef0ce5c4973981b10e4fffd0534ea1519ffe6c428c64d4",
+      "byteSize": 289,
+      "tags": {
+        "div": 2,
+        "a": 1,
+        "span": 2
+      },
+      "classes": {
+        "mb-3": 1,
+        "h5": 1,
+        "br-tooltip": 1,
+        "text": 1,
+        "subtext": 1
+      },
+      "ariaAttributes": {},
+      "roles": {
+        "tooltip": 2
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 1
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

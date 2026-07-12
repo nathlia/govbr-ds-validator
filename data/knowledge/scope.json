@@ -1,0 +1,43 @@
+{
+  "profile": "tcc-validator-core",
+  "version": 1,
+  "definedAt": "2026-07-11T07:06:33+00:00",
+  "status": "complete",
+  "goal": "Provide machine-readable domain knowledge for an MCP agent that validates gov.br Design System structure, tokens, accessibility and selected semantic rules.",
+  "included": [
+    "gov.br DS 3.7.0 official tokens",
+    "Official package component structures and example metadata",
+    "eMAG 3.1 recommendations (45/45)",
+    "Selected component composition, behavior and accessibility rules",
+    "WAI-ARIA and semantic HTML guidance",
+    "Relevant development lifecycle guidance",
+    "Relevant page patterns and templates",
+    "Evidence-backed package anomalies and conflicts"
+  ],
+  "excludedByUserDecision": [
+    {
+      "area": "Migration and release history",
+      "reason": "Not needed for the TCC validation artifact."
+    },
+    {
+      "area": "Exhaustive textual extraction of every component tab",
+      "reason": "The validator already has official package structures, tokens, examples and targeted textual rules. Exhaustive transcription adds cost with limited research value."
+    },
+    {
+      "area": "Browser-version support matrix",
+      "reason": "Low relevance to the thesis hypothesis and validation metrics."
+    },
+    {
+      "area": "Full broken-link and full-site completeness audits",
+      "reason": "The deliverable is a validator knowledge base, not a preservation-grade mirror."
+    }
+  ],
+  "retainedIntegrityChecks": [
+    "JSON parse validation",
+    "JSONL line validation",
+    "Unique rule IDs",
+    "Required source URL and normalizedRule fields",
+    "Manifest file hashes"
+  ],
+  "notAFullSiteMirror": true
+}

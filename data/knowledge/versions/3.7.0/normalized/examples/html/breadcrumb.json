@@ -1,0 +1,158 @@
+{
+  "component": "breadcrumb",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 2,
+  "canonicalClassCandidate": "br-breadcrumb",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-breadcrumb",
+      "occurrences": 2
+    },
+    {
+      "class": "br-button",
+      "occurrences": 2
+    },
+    {
+      "class": "br-tooltip",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "nav": 2,
+    "ol": 2,
+    "li": 11,
+    "a": 9,
+    "span": 5,
+    "i": 11,
+    "div": 1
+  },
+  "classes": {
+    "br-breadcrumb": 2,
+    "crumb-list": 2,
+    "crumb": 11,
+    "home": 2,
+    "br-button": 2,
+    "circle": 2,
+    "sr-only": 2,
+    "fas": 11,
+    "fa-home": 2,
+    "icon": 9,
+    "fa-chevron-right": 9,
+    "br-tooltip": 1,
+    "text": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 2,
+    "aria-current": 2
+  },
+  "roles": {
+    "list": 2,
+    "tooltip": 2
+  },
+  "dataAttributes": {
+    "data-active": 2
+  },
+  "inputTypes": {},
+  "interactiveTags": {
+    "a": 9
+  },
+  "examples": [
+    {
+      "file": "breadcrumb-default.html",
+      "relativePackagePath": "dist/components/breadcrumb/examples/breadcrumb-default.html",
+      "sha256": "b2c01696f3590aa5c11953b70505f73689c761c37a0ee53422aeb3734a227305",
+      "byteSize": 803,
+      "tags": {
+        "nav": 1,
+        "ol": 1,
+        "li": 5,
+        "a": 4,
+        "span": 2,
+        "i": 5
+      },
+      "classes": {
+        "br-breadcrumb": 1,
+        "crumb-list": 1,
+        "crumb": 5,
+        "home": 1,
+        "br-button": 1,
+        "circle": 1,
+        "sr-only": 1,
+        "fas": 5,
+        "fa-home": 1,
+        "icon": 4,
+        "fa-chevron-right": 4
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-current": 1
+      },
+      "roles": {
+        "list": 1
+      },
+      "dataAttributes": {
+        "data-active": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 4
+      }
+    },
+    {
+      "file": "breadcrumb-truncate.html",
+      "relativePackagePath": "dist/components/breadcrumb/examples/breadcrumb-truncate.html",
+      "sha256": "3c53032d9e934077e47b2dbba7b68a72f0e4c0b290c1499328bc3dd45e2411fe",
+      "byteSize": 1106,
+      "tags": {
+        "nav": 1,
+        "ol": 1,
+        "li": 6,
+        "a": 5,
+        "span": 3,
+        "i": 6,
+        "div": 1
+      },
+      "classes": {
+        "br-breadcrumb": 1,
+        "crumb-list": 1,
+        "crumb": 6,
+        "home": 1,
+        "br-button": 1,
+        "circle": 1,
+        "sr-only": 1,
+        "fas": 6,
+        "fa-home": 1,
+        "icon": 5,
+        "fa-chevron-right": 5,
+        "br-tooltip": 1,
+        "text": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 1,
+        "aria-current": 1
+      },
+      "roles": {
+        "list": 1,
+        "tooltip": 2
+      },
+      "dataAttributes": {
+        "data-active": 1
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "a": 5
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

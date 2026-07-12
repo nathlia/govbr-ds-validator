@@ -1,0 +1,327 @@
+{
+  "component": "tag",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 7,
+  "canonicalClassCandidate": "br-tag",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-tag",
+      "occurrences": 26
+    },
+    {
+      "class": "br-button",
+      "occurrences": 3
+    },
+    {
+      "class": "br-tooltip",
+      "occurrences": 1
+    }
+  ],
+  "tags": {
+    "div": 13,
+    "span": 47,
+    "i": 15,
+    "button": 3,
+    "p": 2,
+    "input": 5,
+    "label": 5
+  },
+  "classes": {
+    "d-flex": 9,
+    "align-items-center": 9,
+    "br-tag": 26,
+    "count": 4,
+    "bg-danger": 6,
+    "br-tooltip": 1,
+    "text": 1,
+    "bg-orange-vivid-50": 1,
+    "small": 3,
+    "bg-green-warm-vivid-50": 1,
+    "medium": 2,
+    "bg-indigo-warm-vivid-50": 1,
+    "large": 3,
+    "icon": 3,
+    "bg-magenta-vivid-50": 1,
+    "fas": 15,
+    "fa-car": 7,
+    "bg-orange-50": 1,
+    "fa-search": 1,
+    "bg-violet-warm-vivid-70": 2,
+    "fa-user": 1,
+    "interaction": 3,
+    "br-button": 3,
+    "inverted": 1,
+    "circle": 1,
+    "fa-times": 3,
+    "row": 1,
+    "col-md": 2,
+    "h4": 2,
+    "interaction-select": 5,
+    "fa-bicycle": 1,
+    "selected": 3,
+    "fa-ship": 2,
+    "disabled": 1,
+    "status": 6,
+    "bg-warning": 2,
+    "bg-success": 2,
+    "mt-1": 1,
+    "ml-1": 3,
+    "bg-mint-cool-vivid-70": 1
+  },
+  "ariaAttributes": {
+    "aria-hidden": 19,
+    "aria-describedby": 11,
+    "aria-label": 3
+  },
+  "roles": {
+    "tooltip": 2
+  },
+  "dataAttributes": {
+    "data-dismiss": 3
+  },
+  "inputTypes": {
+    "checkbox": 3,
+    "radio": 2
+  },
+  "interactiveTags": {
+    "button": 3,
+    "input": 5
+  },
+  "examples": [
+    {
+      "file": "tag-count.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-count.html",
+      "sha256": "1b03edc96ea76e7dd11d94bdce60390b8318d7c45b573fb937c8d8746fff89db",
+      "byteSize": 633,
+      "tags": {
+        "div": 2,
+        "span": 9
+      },
+      "classes": {
+        "d-flex": 1,
+        "align-items-center": 1,
+        "br-tag": 4,
+        "count": 4,
+        "bg-danger": 4,
+        "br-tooltip": 1,
+        "text": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 4
+      },
+      "roles": {
+        "tooltip": 2
+      },
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "tag-density.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-density.html",
+      "sha256": "95e62d1696861e97ed05afef68f869c63403a1e64f3da81afd86238dc841a510",
+      "byteSize": 415,
+      "tags": {
+        "div": 1,
+        "span": 6
+      },
+      "classes": {
+        "d-flex": 1,
+        "align-items-center": 1,
+        "br-tag": 3,
+        "bg-orange-vivid-50": 1,
+        "small": 1,
+        "bg-green-warm-vivid-50": 1,
+        "medium": 1,
+        "bg-indigo-warm-vivid-50": 1,
+        "large": 1
+      },
+      "ariaAttributes": {
+        "aria-describedby": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "tag-icon.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-icon.html",
+      "sha256": "f04e3a8fdc98f5a2d0965969afa433ccf6cc0d5b51fc24198717d1cf34f01d7b",
+      "byteSize": 416,
+      "tags": {
+        "div": 1,
+        "span": 3,
+        "i": 3
+      },
+      "classes": {
+        "d-flex": 1,
+        "align-items-center": 1,
+        "br-tag": 3,
+        "icon": 3,
+        "bg-magenta-vivid-50": 1,
+        "fas": 3,
+        "fa-car": 1,
+        "bg-orange-50": 1,
+        "fa-search": 1,
+        "bg-violet-warm-vivid-70": 1,
+        "fa-user": 1
+      },
+      "ariaAttributes": {
+        "aria-hidden": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "tag-interaction.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-interaction.html",
+      "sha256": "acaf805400aa2137b0a69b2b2129767011841c17eea3cf57c8dd74c59e0d154a",
+      "byteSize": 1068,
+      "tags": {
+        "div": 1,
+        "span": 6,
+        "i": 6,
+        "button": 3
+      },
+      "classes": {
+        "d-flex": 1,
+        "align-items-center": 1,
+        "br-tag": 3,
+        "interaction": 3,
+        "fas": 6,
+        "fa-car": 3,
+        "br-button": 3,
+        "inverted": 1,
+        "circle": 1,
+        "fa-times": 3
+      },
+      "ariaAttributes": {
+        "aria-hidden": 6,
+        "aria-label": 3,
+        "aria-describedby": 3
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-dismiss": 3
+      },
+      "inputTypes": {},
+      "interactiveTags": {
+        "button": 3
+      }
+    },
+    {
+      "file": "tag-selections.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-selections.html",
+      "sha256": "ce89ef43cc9b46a9aa5fcef343015f3e9848eddd59c582340cfa516cc963361d",
+      "byteSize": 1626,
+      "tags": {
+        "div": 5,
+        "p": 2,
+        "span": 10,
+        "input": 5,
+        "label": 5,
+        "i": 5
+      },
+      "classes": {
+        "row": 1,
+        "col-md": 2,
+        "h4": 2,
+        "d-flex": 2,
+        "align-items-center": 2,
+        "br-tag": 5,
+        "interaction-select": 5,
+        "fas": 5,
+        "fa-bicycle": 1,
+        "selected": 3,
+        "fa-ship": 2,
+        "disabled": 1,
+        "fa-car": 2
+      },
+      "ariaAttributes": {
+        "aria-hidden": 5
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3,
+        "radio": 2
+      },
+      "interactiveTags": {
+        "input": 5
+      }
+    },
+    {
+      "file": "tag-status.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-status.html",
+      "sha256": "bb201db7f4369f0b9b32b52acd28039cc87aa5db0710cb7d1bda999ccfcb345e",
+      "byteSize": 762,
+      "tags": {
+        "div": 2,
+        "span": 9
+      },
+      "classes": {
+        "d-flex": 2,
+        "align-items-center": 2,
+        "br-tag": 6,
+        "status": 6,
+        "bg-danger": 2,
+        "large": 2,
+        "bg-warning": 2,
+        "medium": 1,
+        "bg-success": 2,
+        "small": 2,
+        "mt-1": 1,
+        "ml-1": 3
+      },
+      "ariaAttributes": {
+        "aria-describedby": 3
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    },
+    {
+      "file": "tag-text.html",
+      "relativePackagePath": "dist/components/tag/examples/tag-text.html",
+      "sha256": "48201e61b0cff4121931edb72a4bd46317cfe7daa3a6407096316845bbfd9e48",
+      "byteSize": 331,
+      "tags": {
+        "div": 1,
+        "span": 4,
+        "i": 1
+      },
+      "classes": {
+        "d-flex": 1,
+        "align-items-center": 1,
+        "br-tag": 2,
+        "bg-mint-cool-vivid-70": 1,
+        "fas": 1,
+        "fa-car": 1,
+        "bg-violet-warm-vivid-70": 1
+      },
+      "ariaAttributes": {
+        "aria-describedby": 2,
+        "aria-hidden": 1
+      },
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {},
+      "interactiveTags": {}
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

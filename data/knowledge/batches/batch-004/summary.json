@@ -1,0 +1,17 @@
+{
+  "batch": 4,
+  "generatedAt": "2026-07-11T06:52:44+00:00",
+  "newRules": 54,
+  "newEmagRules": 15,
+  "newSiteRules": 5,
+  "newExampleDerivedRules": 34,
+  "cumulativeRules": 140,
+  "emagRecommendationsIndexed": 45,
+  "officialPackageComponents": 36,
+  "officialPackageExamples": 172,
+  "officialPackageTokens": 1253,
+  "componentsWithTextRules": 31,
+  "componentsWithAnyRules": 36,
+  "componentExamplesCaptured": 36,
+  "complete": false
+}

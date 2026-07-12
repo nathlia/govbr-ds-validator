@@ -1,0 +1,209 @@
+{
+  "component": "checkbox",
+  "package": "@govbr-ds/core",
+  "packageVersion": "3.7.0",
+  "exampleCount": 5,
+  "canonicalClassCandidate": "br-checkbox",
+  "canonicalClassObserved": true,
+  "rootClassCandidates": [
+    {
+      "class": "br-checkbox",
+      "occurrences": 15
+    }
+  ],
+  "tags": {
+    "p": 2,
+    "div": 19,
+    "input": 15,
+    "label": 15,
+    "span": 1,
+    "i": 1
+  },
+  "classes": {
+    "label": 1,
+    "mb-0": 1,
+    "text-down-01": 1,
+    "br-checkbox": 15,
+    "mt-3": 1,
+    "feedback": 1,
+    "warning": 1,
+    "fas": 1,
+    "fa-exclamation-triangle": 1,
+    "d-inline-block": 3,
+    "mr-5": 3,
+    "hidden-label": 1,
+    "disabled": 1,
+    "invalid": 1,
+    "valid": 1
+  },
+  "ariaAttributes": {
+    "aria-label": 7,
+    "aria-hidden": 1
+  },
+  "roles": {
+    "alert": 1
+  },
+  "dataAttributes": {
+    "data-parent": 1,
+    "data-child": 3
+  },
+  "inputTypes": {
+    "checkbox": 15
+  },
+  "interactiveTags": {
+    "input": 15
+  },
+  "examples": [
+    {
+      "file": "checkbox-default.html",
+      "relativePackagePath": "dist/components/checkbox/examples/checkbox-default.html",
+      "sha256": "535aba35e8540fb26910265f16fc79dbc3e194e512cc7554bf0e2417685c1e5b",
+      "byteSize": 744,
+      "tags": {
+        "p": 2,
+        "div": 4,
+        "input": 3,
+        "label": 3,
+        "span": 1,
+        "i": 1
+      },
+      "classes": {
+        "label": 1,
+        "mb-0": 1,
+        "text-down-01": 1,
+        "br-checkbox": 3,
+        "mt-3": 1,
+        "feedback": 1,
+        "warning": 1,
+        "fas": 1,
+        "fa-exclamation-triangle": 1
+      },
+      "ariaAttributes": {
+        "aria-label": 3,
+        "aria-hidden": 1
+      },
+      "roles": {
+        "alert": 1
+      },
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "checkbox-indeterminate.html",
+      "relativePackagePath": "dist/components/checkbox/examples/checkbox-indeterminate.html",
+      "sha256": "bb01cb8b952a607e94a5a63f3ae08d2505e24971cdf4c3ed4311efcf086508f8",
+      "byteSize": 829,
+      "tags": {
+        "div": 4,
+        "input": 4,
+        "label": 4
+      },
+      "classes": {
+        "br-checkbox": 4
+      },
+      "ariaAttributes": {
+        "aria-label": 4
+      },
+      "roles": {},
+      "dataAttributes": {
+        "data-parent": 1,
+        "data-child": 3
+      },
+      "inputTypes": {
+        "checkbox": 4
+      },
+      "interactiveTags": {
+        "input": 4
+      }
+    },
+    {
+      "file": "checkbox-inline.html",
+      "relativePackagePath": "dist/components/checkbox/examples/checkbox-inline.html",
+      "sha256": "e701ae99cce5545b745ecc7746932996eddbd01bb39c1dcddaa6ab4ad5f75174",
+      "byteSize": 579,
+      "tags": {
+        "div": 6,
+        "input": 3,
+        "label": 3
+      },
+      "classes": {
+        "d-inline-block": 3,
+        "mr-5": 3,
+        "br-checkbox": 3
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 3
+      },
+      "interactiveTags": {
+        "input": 3
+      }
+    },
+    {
+      "file": "checkbox-no-label.html",
+      "relativePackagePath": "dist/components/checkbox/examples/checkbox-no-label.html",
+      "sha256": "46fdf214cc8df2cc312fb729a37319919c964591cfd52d30e463c631ba6b0e8b",
+      "byteSize": 148,
+      "tags": {
+        "div": 1,
+        "input": 1,
+        "label": 1
+      },
+      "classes": {
+        "br-checkbox": 1,
+        "hidden-label": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 1
+      },
+      "interactiveTags": {
+        "input": 1
+      }
+    },
+    {
+      "file": "checkbox-states.html",
+      "relativePackagePath": "dist/components/checkbox/examples/checkbox-states.html",
+      "sha256": "0af14e9651c9e5e35e5958fba8efc4a6aacf2f60fc7674d8e2262ac91338e9e6",
+      "byteSize": 715,
+      "tags": {
+        "div": 4,
+        "input": 4,
+        "label": 4
+      },
+      "classes": {
+        "br-checkbox": 4,
+        "disabled": 1,
+        "invalid": 1,
+        "valid": 1
+      },
+      "ariaAttributes": {},
+      "roles": {},
+      "dataAttributes": {},
+      "inputTypes": {
+        "checkbox": 4
+      },
+      "interactiveTags": {
+        "input": 4
+      }
+    }
+  ],
+  "source": {
+    "package": "@govbr-ds/core",
+    "version": "3.7.0",
+    "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+    "homepage": "https://www.gov.br/ds/",
+    "license": "MIT",
+    "retrievedAt": "2026-07-11T06:52:44+00:00"
+  },
+  "interpretation": "Estrutura observada nos exemplos oficiais do pacote. A presença em exemplos não implica obrigatoriedade normativa sem confirmação na documentação textual."
+}

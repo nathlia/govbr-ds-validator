@@ -1,0 +1,113 @@
+{
+  "name": "checkbox",
+  "canonicalUrl": "https://www.gov.br/ds/components/checkbox",
+  "version": "3.7.0",
+  "pageVerified": true,
+  "status": "package-examples-captured",
+  "tabs": {
+    "desenvolvedor": {
+      "status": "queued"
+    },
+    "designer": {
+      "status": "queued"
+    },
+    "acessibilidade": {
+      "status": "queued"
+    }
+  },
+  "rules": [
+    {
+      "id": "govbr-3.7.0-component-checkbox-6923ae0af84f",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "category": "component",
+      "subcategory": "usage",
+      "component": "checkbox",
+      "title": "Seleção de múltiplas opções",
+      "originalText": "Deve ser utilizado para permitir que o usuário selecione uma ou mais opções em uma lista de opções.",
+      "normalizedRule": "Use Checkbox quando o usuário puder selecionar uma ou mais opções de uma lista.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A escolha permite múltiplas seleções quando esse é o objetivo do fluxo."
+      ],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "medium",
+      "severitySuggestion": "moderate",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "source": {
+        "url": "https://www.gov.br/ds/components/checkbox",
+        "pageTitle": "Padrão Digital de Governo - Checkbox",
+        "tab": "visao-geral",
+        "section": "Uso",
+        "retrievedAt": "2026-07-11T06:37:25+00:00",
+        "contentHash": "d5e57b6c7a296cc0258e81dc006e0e19df03f673a8f1bbd3e02f434b8fada5c6",
+        "retrievalEvidence": "turn687773search0",
+        "captureType": "official-web-search-index-excerpt"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-4b6f893a4a30",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "component",
+      "subcategory": "canonical-example-structure",
+      "component": "checkbox",
+      "title": "Estrutura exemplificada com .br-checkbox",
+      "originalText": "Os exemplos oficiais de checkbox no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-checkbox.",
+      "originalTextMode": "official-package-structure-derived",
+      "normalizedRule": "Use .br-checkbox como referência estrutural ao comparar a implementação com os exemplos oficiais de checkbox.",
+      "force": "example",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [
+        "A estrutura comparada pode conter a classe .br-checkbox."
+      ],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "medium",
+      "severitySuggestion": "informational",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "Regra classificada como example, não como requisito.",
+        "A obrigatoriedade deve ser confirmada pela documentação textual do componente."
+      ],
+      "source": {
+        "url": "https://www.npmjs.com/package/@govbr-ds/core/v/3.7.0",
+        "pageTitle": "@govbr-ds/core 3.7.0",
+        "file": "dist/components/checkbox/examples/",
+        "package": "@govbr-ds/core",
+        "packageVersion": "3.7.0",
+        "repository": "gitlab:govbr-ds/govbr-ds-dev/govbr-ds-dev-core",
+        "retrievalEvidence": "official-npm-package",
+        "captureType": "official-package-structural-index",
+        "retrievedAt": "2026-07-11T06:52:44+00:00",
+        "contentHash": "dfdda27f617fd32561014d41068cd6f5eded4f2a599f23d0ea7a1586b7387be8"
+      }
+    }
+  ],
+  "limitations": [
+    "O conteúdo integral e os exemplos de código ainda não foram preservados neste primeiro lote."
+  ],
+  "lastUpdatedBatch": 4,
+  "officialPackage": {
+    "name": "@govbr-ds/core",
+    "version": "3.7.0",
+    "examplesCaptured": true,
+    "exampleCount": 5,
+    "canonicalClassCandidate": "br-checkbox",
+    "structureFile": "normalized/examples/html/checkbox.json"
+  }
+}
