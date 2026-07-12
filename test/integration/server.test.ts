@@ -40,6 +40,7 @@ describe("surface", () => {
         "check_token_compliance",
         "get_component_spec",
         "get_design_tokens",
+        "get_ds_rules",
         "get_emag_rules",
         "get_page_rules",
         "inspect_computed_styles",
@@ -56,6 +57,7 @@ describe("surface", () => {
     const uris = resources.map((r) => r.uri);
     expect(uris).toContain("govbr://schema/finding");
     expect(uris).toContain("govbr://tokens");
+    expect(uris).toContain("govbr://knowledge/conflicts");
     expect(uris.some((u) => u.startsWith("govbr://emag/"))).toBe(true);
     expect(uris.some((u) => u.startsWith("govbr://components/"))).toBe(true);
   });
@@ -115,6 +117,201 @@ describe("oracle knowledge tools", () => {
     const data = JSON.parse(textOf(res));
     expect(data.error).toBeDefined();
     expect(data.available).toContain("button");
+  });
+});
+
+describe("get_ds_rules — the KB rule store (D-11)", () => {
+  it("force=required returns the 107 required rules", async () => {
+    const res = await client.callTool({ name: "get_ds_rules", arguments: { force: "required" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBe(107);
+    expect(data.rules.every((r: { force: string }) => r.force === "required")).toBe(true);
+  });
+
+  it("component=button returns only button rules with the full projection", async () => {
+    const res = await client.callTool({ name: "get_ds_rules", arguments: { component: "button" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBeGreaterThan(0);
+    for (const r of data.rules) {
+      expect(r.component).toBe("button");
+      expect(r.id).toMatch(/^govbr-3\.7\.0-/);
+      expect(r.normalizedRule.length).toBeGreaterThan(0);
+      expect(r).toHaveProperty("validationStrategy");
+      expect(r).toHaveProperty("expectedEvidence");
+      expect(r).toHaveProperty("wcagReferences");
+      expect(r).toHaveProperty("emagReferences");
+      expect(r).toHaveProperty("sourceUrl");
+    }
+  });
+
+  it("filters compose: the D-12 candidate set (required + automatable + high)", async () => {
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { force: "required", automatable: true, automationConfidence: "high" },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBeGreaterThan(0);
+    expect(
+      data.rules.every(
+        (r: { automatable: boolean; automationConfidence: string }) =>
+          r.automatable && r.automationConfidence === "high"
+      )
+    ).toBe(true);
+  });
+
+  it("never mixes evidence into normative listings (D-10 precedence)", async () => {
+    const res = await client.callTool({ name: "get_ds_rules", arguments: {} });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBe(152);
+    expect(data.rules.some((r: { force: string }) => r.force === "example")).toBe(false);
+  });
+
+  it("serves evidence only through the separate 'evidence' channel", async () => {
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { component: "accordion", include_evidence: true },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.rules.some((r: { force: string }) => r.force === "example")).toBe(false);
+    expect(data.evidence.items.length).toBeGreaterThan(0);
+    expect(data.evidence.items.every((r: { force: string }) => r.force === "example")).toBe(true);
+    expect(data.evidence.note).toContain("NÃO normas");
+  });
+
+  it("fetches a full rule record by exact id", async () => {
+    const list = JSON.parse(
+      textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "prohibited" } }))
+    );
+    const id = list.rules[0].id;
+    const res = await client.callTool({ name: "get_ds_rules", arguments: { id } });
+    const data = JSON.parse(textOf(res));
+    expect(data.kind).toBe("normative");
+    expect(data.rule.id).toBe(id);
+    expect(data.rule.originalText.length).toBeGreaterThan(0);
+    expect(data.rule.source.url).toMatch(/^https?:/);
+  });
+});
+
+describe("defect awareness (D-10 bucket 3 / Phase 2.4)", () => {
+  it("get_component_spec warns about the card examples' missing alt", async () => {
+    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "card" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.warnings).toHaveLength(4);
+    expect(data.warnings.every((w: { type: string }) => w.type === "image-missing-alt")).toBe(true);
+  });
+
+  it("get_component_spec warns about the wizard examples' broken aria-labelledby", async () => {
+    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "wizard" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.warnings).toHaveLength(2);
+  });
+
+  it("clean components carry no warnings", async () => {
+    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "button" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.warnings).toEqual([]);
+  });
+
+  it("serves the conflicts resource with the 6 package anomalies", async () => {
+    const res = await client.readResource({ uri: "govbr://knowledge/conflicts" });
+    const data = JSON.parse((res.contents[0] as { text: string }).text);
+    expect(data.packageAudit.accessibilityFindings).toHaveLength(6);
+  });
+});
+
+describe("get_emag_rules — KB enrichment (Phase 2.6)", () => {
+  it("attaches the KB validation template to a rule lookup", async () => {
+    const res = await client.callTool({ name: "get_emag_rules", arguments: { id: "6.2" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.title).toContain("etiquetas");
+    expect(data.validationTemplate).toBeDefined();
+    expect(data.validationTemplate.recommendation).toBe("6.2");
+    expect(Array.isArray(data.validationTemplate.checks)).toBe(true);
+  });
+
+  it("serves the recommendations previously missing from the oracle (5.5, 6.7, 6.8)", async () => {
+    for (const id of ["5.5", "6.7", "6.8"]) {
+      const res = await client.callTool({ name: "get_emag_rules", arguments: { id } });
+      const data = JSON.parse(textOf(res));
+      expect(data.error).toBeUndefined();
+      expect(data.id).toBe(id);
+      expect(data.validationTemplate.recommendation).toBe(id);
+    }
+  });
+});
+
+describe("verification gate — KB rule ids (D-11 exact-id matching)", () => {
+  const baseFinding = {
+    element: { locator: "#x", page: "http://localhost:3000" },
+    evidence: { observed: "algo", expected: "outra coisa" },
+    severity: "moderate",
+    nature: "semantic",
+    mode: "display",
+    pathway: "heuristic",
+  };
+
+  it("confirms a finding citing a real normative KB rule id", async () => {
+    const list = JSON.parse(
+      textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "required" } }))
+    );
+    const rule = list.rules[0];
+    const res = JSON.parse(
+      textOf(
+        await client.callTool({
+          name: "verify_finding",
+          arguments: {
+            finding: {
+              ...baseFinding,
+              id: "F-920",
+              rule: { id: rule.id, source: "govbr-ds-kb", description: rule.normalizedRule },
+            },
+          },
+        })
+      )
+    );
+    expect(res.verification.verdict).toBe("confirmed");
+  });
+
+  it("rejects a hallucinated KB rule id", async () => {
+    const res = JSON.parse(
+      textOf(
+        await client.callTool({
+          name: "verify_finding",
+          arguments: {
+            finding: {
+              ...baseFinding,
+              id: "F-921",
+              rule: { id: "govbr-3.7.0-component-fake-000000000000", source: "govbr-ds-kb", description: "inventada" },
+            },
+          },
+        })
+      )
+    );
+    expect(res.verification.verdict).toBe("rejected");
+  });
+
+  it("rejects a finding that cites evidence (force=example) as the violated rule", async () => {
+    const evidence = JSON.parse(
+      textOf(
+        await client.callTool({ name: "get_ds_rules", arguments: { component: "accordion", include_evidence: true } })
+      )
+    ).evidence.items[0];
+    const res = JSON.parse(
+      textOf(
+        await client.callTool({
+          name: "verify_finding",
+          arguments: {
+            finding: {
+              ...baseFinding,
+              id: "F-922",
+              rule: { id: evidence.id, source: "govbr-ds-kb", description: evidence.title },
+            },
+          },
+        })
+      )
+    );
+    expect(res.verification.verdict).toBe("rejected");
+    expect(res.verification.detail).toContain("evidência");
   });
 });
 

@@ -18,6 +18,7 @@ import { z } from "zod";
 
 /** Where the violated rule comes from. */
 export const RuleSourceSchema = z.enum([
+  "govbr-ds-kb", // knowledge-base rule (data/knowledge rules.jsonl) — cite the exact KB id
   "govbr-ds-token", // design token registry parsed from @govbr-ds/core
   "govbr-ds-structure", // canonical component structure from @govbr-ds/core examples
   "govbr-ds-page", // page-level structural guidelines from the official docs
@@ -63,7 +64,9 @@ export type Verdict = z.infer<typeof VerdictSchema>;
 export const RuleRefSchema = z.object({
   id: z
     .string()
-    .describe("Rule identifier, e.g. 'emag-3.5', 'token-color', 'br-button-structure', 'color-contrast' (axe)"),
+    .describe(
+      "Rule identifier, e.g. 'govbr-3.7.0-…' (KB id — preferred when the rule came from get_ds_rules), 'emag-3.5', 'token-color', 'br-button-structure', 'color-contrast' (axe)"
+    ),
   source: RuleSourceSchema,
   description: z.string().describe("What the rule requires, quoted or paraphrased from the source"),
   wcag: z.string().optional().describe("Related WCAG success criterion, e.g. '1.4.3'"),

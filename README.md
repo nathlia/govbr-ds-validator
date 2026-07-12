@@ -19,7 +19,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 
 | Req | What | Where |
 |-----|------|-------|
-| A1 | Rules as queryable tools/resources, never prompt text | all tools + `govbr://` resources |
+| A1 | Rules as queryable tools/resources, never prompt text | `get_ds_rules` over the KB (`data/knowledge/`, 186 rules — D-11) + all tools + `govbr://` resources |
 | A2 | e-MAG 3.1 alongside WCAG checks | `get_emag_rules`, axe→e-MAG cross-refs |
 | A3 | Canonical component examples/specs | `get_component_spec`, `data/component-specs.json` |
 | A4 | Token registry + hex→token reverse index | `get_design_tokens`, `data/tokens.json` |
@@ -36,8 +36,9 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 ## Tools
 
 **Oracle knowledge** (read-only):
+- `get_ds_rules (id?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?)` — the authoritative KB rule store (`data/knowledge/`, 186 atomic rules with deterministic ids and provenance). Normative rules only; canonical `@govbr-ds/core` fragments (`force=example`) come back in a separate `evidence` channel and **never override required/prohibited rules** (D-10)
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
-- `get_emag_rules (section?, id?)` — complete e-MAG 3.1
+- `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines
 - `list_components ()` / `get_component_spec (component)` — canonical structure contracts extracted from `@govbr-ds/core` official examples (tags, variant classes, ARIA usage, consumed tokens, example fragments)
 
@@ -55,7 +56,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 
 **Prompt**: `validate_page (url, scope?, max_iterations?)` — the standardized two-phase procedure with dual pathway and iteration cap.
 
-**Resources**: `govbr://schema/finding`, `govbr://tokens`, `govbr://emag/{1–6}`, `govbr://components/{name}`.
+**Resources**: `govbr://schema/finding`, `govbr://tokens`, `govbr://emag/{1–6}`, `govbr://components/{name}`, `govbr://knowledge/conflicts` (the 6 accessibility anomalies in the official package's own examples + legacy-CDN and documentation defects — why example evidence is not the oracle).
 
 ## Development
 
@@ -63,7 +64,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 npm install
 npx playwright install chromium   # once
 npm run build:data                # regenerate data/ after upgrading @govbr-ds/core
-npm test                          # 58 tests: unit + in-memory MCP integration + live browser e2e
+npm test                          # 93 tests: unit + in-memory MCP integration + live browser e2e
 npm run build                     # tsc → dist/
 ```
 
@@ -83,3 +84,9 @@ Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_
 - One shared headless Chromium per server process (the PoC relaunched per call).
 - All data assets are generated from the *installed* `@govbr-ds/core` (v3.7.0) — upgrade the
   package, re-run `build:data`, and the oracle follows the DS version.
+- The **knowledge base** (`data/knowledge/` — see its README) is versioned separately: the server
+  warns at startup when the installed `@govbr-ds/core` diverges from the KB `dsVersion`. The DS
+  has **36** components (tarball-verified — see `docs/README.md` and the KB conflicts report).
+- Three-way epistemic separation (D-10): normative rules ≠ implementation evidence ≠ observed
+  defects. Enforced in code: `get_ds_rules` listings never mix `force=example` records into
+  normative results, and `verify_finding` rejects findings that cite evidence as the violated rule.

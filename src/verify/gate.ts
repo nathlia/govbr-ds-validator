@@ -13,6 +13,7 @@
  */
 import type { Finding, Verification } from "../schema/finding.js";
 import { findEmagRule, getComponentSpecs, getPageRules, getTokenRegistry } from "../data/load.js";
+import { getRuleById } from "../data/knowledge.js";
 import { normalizeColor } from "../checkers/color.js";
 import { inspectComputedStyles } from "../evidence/inspect.js";
 
@@ -48,6 +49,26 @@ function verifyRuleExists(finding: Finding): Verification | null {
   const { id, source } = finding.rule;
 
   switch (source) {
+    case "govbr-ds-kb": {
+      const rule = getRuleById(id);
+      if (!rule) {
+        return {
+          verdict: "rejected",
+          verifiedBy: "kb-rule-index",
+          detail: `Regra '${id}' não existe no knowledge base. Use get_ds_rules para obter ids válidos (formato govbr-<versão>-…).`,
+        };
+      }
+      // D-10 precedence: evidence records are not norms — a finding cannot
+      // cite a canonical example as the violated rule.
+      if (rule.force === "example") {
+        return {
+          verdict: "rejected",
+          verifiedBy: "kb-rule-index",
+          detail: `'${id}' é evidência de implementação (force=example), não uma regra normativa. Cite uma regra required/prohibited/recommended do get_ds_rules.`,
+        };
+      }
+      return null;
+    }
     case "emag": {
       const ruleId = id.replace(/^emag-/, "");
       const rule = findEmagRule(ruleId);
@@ -55,7 +76,7 @@ function verifyRuleExists(finding: Finding): Verification | null {
         return {
           verdict: "rejected",
           verifiedBy: "emag-rule-index",
-          detail: `Regra e-MAG '${ruleId}' não existe. Ids válidos: 1.1–1.9, 2.1–2.7, 3.1–3.12, 4.1–4.4, 5.1–5.4, 6.1–6.6.`,
+          detail: `Regra e-MAG '${ruleId}' não existe. Ids válidos: 1.1–1.9, 2.1–2.7, 3.1–3.12, 4.1–4.4, 5.1–5.5, 6.1–6.8.`,
         };
       }
       return null;
@@ -112,7 +133,7 @@ function verifyRuleExists(finding: Finding): Verification | null {
       return {
         verdict: "rejected",
         verifiedBy: "rule-source-index",
-        detail: `Fonte de regra desconhecida: '${String(source)}'. Fontes válidas: govbr-ds-token, govbr-ds-structure, govbr-ds-page, emag, wcag, axe-core.`,
+        detail: `Fonte de regra desconhecida: '${String(source)}'. Fontes válidas: govbr-ds-kb, govbr-ds-token, govbr-ds-structure, govbr-ds-page, emag, wcag, axe-core.`,
       };
   }
 }

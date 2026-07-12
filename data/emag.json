@@ -64,7 +64,8 @@
         { "id": "5.1", "title": "Fornecer alternativa para vídeo", "description": "All video content must have captions (for the deaf) and audio description (for the blind). Pre-recorded video must have both.", "wcag": "1.2.1, 1.2.2, 1.2.3" },
         { "id": "5.2", "title": "Fornecer alternativa para áudio", "description": "Audio-only content must have a text transcript.", "wcag": "1.2.1" },
         { "id": "5.3", "title": "Não reproduzir áudio automaticamente", "description": "Do not auto-play audio that lasts more than 3 seconds without providing a mechanism to stop it.", "wcag": "1.4.2" },
-        { "id": "5.4", "title": "Fornecer controles de áudio para som em segundo plano", "description": "If audio plays automatically for more than 3 seconds, provide volume controls or a mute mechanism.", "wcag": "1.4.2" }
+        { "id": "5.4", "title": "Fornecer controles de áudio para som em segundo plano", "description": "If audio plays automatically for more than 3 seconds, provide volume controls or a mute mechanism.", "wcag": "1.4.2" },
+        { "id": "5.5", "title": "Fornecer controle de animação", "description": "Animations that start automatically must be pausable, stoppable, or hideable by the user.", "wcag": "2.2.2" }
       ]
     },
     "6": {
@@ -76,7 +77,9 @@
         { "id": "6.3", "title": "Indicar claramente que campos são obrigatórios", "description": "Required fields must be indicated both visually (asterisk * with legend, or 'obrigatório' text) AND programmatically via aria-required='true' or the required HTML attribute. The visual indicator alone is insufficient.", "wcag": "3.3.2" },
         { "id": "6.4", "title": "Não provocar automaticamente alteração no contexto", "description": "Do not auto-submit forms or navigate away when a field value changes (e.g., on select change). Actions must be explicitly initiated by the user via a button.", "wcag": "3.2.2" },
         { "id": "6.5", "title": "Fornecer instruções para entrada de dados", "description": "Complex inputs (CPF, CNPJ, date, phone, CEP) must have format instructions visible BEFORE the field — not only as placeholder text. Use <small> or a hint element linked via aria-describedby.", "wcag": "3.3.2" },
-        { "id": "6.6", "title": "Identificar e descrever os erros", "description": "Error messages must: (a) exist in the DOM as text (not only color or icon), (b) be linked to the offending input via aria-describedby, (c) use aria-invalid='true' on the input, (d) describe the error and how to fix it. Error summary at the top of the page is recommended for multi-field forms.", "wcag": "3.3.1, 3.3.3, 4.1.3" }
+        { "id": "6.6", "title": "Identificar e descrever os erros", "description": "Error messages must: (a) exist in the DOM as text (not only color or icon), (b) be linked to the offending input via aria-describedby, (c) use aria-invalid='true' on the input, (d) describe the error and how to fix it. Error summary at the top of the page is recommended for multi-field forms.", "wcag": "3.3.1, 3.3.3, 4.1.3" },
+        { "id": "6.7", "title": "Agrupar campos de formulário", "description": "Group related fields with fieldset and describe the group with legend, especially in long forms.", "wcag": "1.3.1" },
+        { "id": "6.8", "title": "Fornecer estratégias de segurança específicas ao invés de CAPTCHA", "description": "Avoid CAPTCHA; combine accessible security strategies such as connection limits, monitoring, and secure forms. When unavoidable, CAPTCHA must have accessible alternatives.", "wcag": "1.1.1" }
       ]
     }
   }

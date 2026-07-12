@@ -28,6 +28,19 @@ import {
   getComponentSpecs,
   findEmagRule,
 } from "./data/load.js";
+import {
+  getKnowledgeBase,
+  filterRules,
+  getEvidence,
+  getRuleById,
+  getKnowledgeConflicts,
+  getComponentDefects,
+  getEmagValidationTemplate,
+  warnOnVersionMismatch,
+  NORMATIVE_FORCES,
+  type KnowledgeRule,
+  type RuleForce,
+} from "./data/knowledge.js";
 import { checkTokenCompliance, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
 import { checkComponentStructure } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
@@ -47,6 +60,31 @@ function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
+/** Compact projection of a KB rule for get_ds_rules list responses. */
+function projectRule(r: KnowledgeRule) {
+  return {
+    id: r.id,
+    title: r.title,
+    normalizedRule: r.normalizedRule,
+    force: r.force,
+    category: r.category,
+    subcategory: r.subcategory ?? null,
+    component: r.component,
+    validationStrategy: r.validationStrategy,
+    automatable: r.automatable,
+    automationConfidence: r.automationConfidence ?? null,
+    severitySuggestion: r.severitySuggestion ?? null,
+    expectedEvidence: r.expectedEvidence,
+    rationale: r.rationale,
+    conditions: r.conditions,
+    exceptions: r.exceptions,
+    wcagReferences: r.wcagReferences,
+    emagReferences: r.emagReferences,
+    standard: r.standard ?? null,
+    sourceUrl: r.source.url,
+  };
+}
+
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
 
@@ -55,9 +93,85 @@ export function createServer(options: ServerOptions = {}): McpServer {
     version: "2.0.0",
   });
 
+  // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
+  // the same DS release (logs to stderr — stdout is the MCP transport).
+  warnOnVersionMismatch();
+
   // ══════════════════════════════════════════════════════════════════════════
   // Oracle knowledge tools (A1–A4)
   // ══════════════════════════════════════════════════════════════════════════
+
+  server.registerTool(
+    "get_ds_rules",
+    {
+      title: "Regras atômicas do gov.br DS (knowledge base)",
+      description:
+        "Loja de regras autoritativa do oráculo (A1/D-11): 186 regras atômicas extraídas da documentação oficial do gov.br DS 3.7.0 + e-MAG 3.1, com id determinístico, força normativa, estratégia de validação e proveniência. Achados devem citar o id da regra (source 'govbr-ds-kb') — o verify_finding confere por igualdade exata. Listagens retornam apenas regras NORMATIVAS; fragmentos canônicos do @govbr-ds/core (force=example) são EVIDÊNCIA de implementação, servidos no campo separado 'evidence' (include_evidence=true) e NUNCA sobrepõem regras required/prohibited — a implementação oficial contém defeitos conhecidos (veja govbr://knowledge/conflicts).",
+      inputSchema: {
+        id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
+        component: z.string().optional().describe("Componente, ex.: 'button', 'card'"),
+        category: z
+          .enum(["accessibility", "component", "development", "foundation", "page", "pattern", "template"])
+          .optional(),
+        force: z
+          .enum(["required", "prohibited", "recommended", "discouraged", "permitted", "informative", "unclear"])
+          .optional()
+          .describe("Força normativa ('example' não é aceito aqui — use include_evidence)"),
+        validationStrategy: z
+          .enum([
+            "dom",
+            "semantic",
+            "computed-style",
+            "keyboard-interaction",
+            "source-code",
+            "manual",
+            "visual",
+            "accessibility-tree",
+            "responsive-viewport",
+          ])
+          .optional()
+          .describe("Mecanismo de verificação exigido pela regra"),
+        automatable: z.boolean().optional(),
+        automationConfidence: z.enum(["high", "medium", "low"]).optional(),
+        severitySuggestion: z
+          .enum(["critical", "serious", "moderate", "minor", "informational"])
+          .optional(),
+        standard: z.enum(["gov.br Design System", "eMAG"]).optional(),
+        query: z.string().optional().describe("Busca textual em título/regra/texto original"),
+        include_evidence: z
+          .boolean()
+          .optional()
+          .describe("Anexar fragmentos canônicos (force=example) no campo separado 'evidence'"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ id, include_evidence, ...filter }) => {
+      const kb = getKnowledgeBase();
+      if (id) {
+        const rule = getRuleById(id);
+        if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.` });
+        return json({
+          kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+          rule,
+        });
+      }
+      const rules = filterRules(filter);
+      const response: Record<string, unknown> = {
+        meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+        count: rules.length,
+        rules: rules.map(projectRule),
+      };
+      if (include_evidence) {
+        const evidence = getEvidence(filter.component);
+        response.evidence = {
+          note: "Fragmentos canônicos do @govbr-ds/core — evidência de implementação, NÃO normas. Não sobrepõem regras required/prohibited.",
+          count: evidence.length,
+          items: evidence.map(projectRule),
+        };
+      }
+      return json(response);
+    }
+  );
 
   server.registerTool(
     "get_design_tokens",
@@ -97,7 +211,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const emag = getEmag();
       if (id) {
         const rule = findEmagRule(id);
-        return json(rule ?? { error: `Regra '${id}' não encontrada. Use section para listar ids válidos.` });
+        if (!rule) return json({ error: `Regra '${id}' não encontrada. Use section para listar ids válidos.` });
+        // KB enrichment (Phase 2.6): how to verify this recommendation.
+        const template = getEmagValidationTemplate(id);
+        return json(template ? { ...rule, validationTemplate: template } : rule);
       }
       if (section) {
         return json({ meta: emag.meta, section: emag.sections[String(section)] ?? `Seção ${section} não encontrada` });
@@ -189,8 +306,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
       }
       const includeExamples = include_examples ?? true;
+      // Defect awareness (D-10/Phase 2.4): the canonical examples of some
+      // components are themselves non-conformant — warn at spec-serving time.
+      const defects = getComponentDefects(component);
       return json({
         ...spec,
+        warnings: defects.map((d) => ({
+          type: d.type,
+          severity: d.severity,
+          file: d.file,
+          element: d.element,
+          evidence: d.evidence,
+          note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
+        })),
         examples: includeExamples
           ? spec.examples.slice(0, 5)
           : spec.examples.map((e) => ({ name: e.name, html: "(omitido — use include_examples=true)" })),
@@ -360,6 +488,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // ══════════════════════════════════════════════════════════════════════════
 
   server.registerResource(
+    "knowledge-conflicts",
+    "govbr://knowledge/conflicts",
+    {
+      title: "Contradições e defeitos observados (D-10)",
+      description:
+        "Conflitos do knowledge base: 6 anomalias de acessibilidade nos exemplos canônicos do próprio @govbr-ds/core (4 img sem alt, 2 aria-labelledby quebrados), arquivos no CDN legado e erros factuais da documentação. A implementação oficial é evidência, não oráculo.",
+      mimeType: "application/json",
+    },
+    async (uri) => ({
+      contents: [{ uri: uri.href, text: JSON.stringify(getKnowledgeConflicts(), null, 2) }],
+    })
+  );
+
+  server.registerResource(
     "finding-schema",
     "govbr://schema/finding",
     {
@@ -428,10 +570,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     async (uri, { name }) => {
       const spec = getComponentSpecs().components[String(name)];
+      const payload = spec
+        ? { ...spec, warnings: getComponentDefects(String(name)) }
+        : { error: `Componente ${name} não encontrado` };
       return {
-        contents: [
-          { uri: uri.href, text: JSON.stringify(spec ?? { error: `Componente ${name} não encontrado` }, null, 2) },
-        ],
+        contents: [{ uri: uri.href, text: JSON.stringify(payload, null, 2) }],
       };
     }
   );
