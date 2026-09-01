@@ -23,7 +23,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 | A2 | e-MAG 3.1 alongside WCAG checks | `get_emag_rules`, axe→e-MAG cross-refs |
 | A3 | Canonical component examples/specs | `get_component_spec`, `data/component-specs.json` |
 | A4 | Token registry + hex→token reverse index | `get_design_tokens`, `data/tokens.json` |
-| A5 | Responses as structured feedback signals | Finding schema everywhere; per-field errors on `save_report`; nearest-token hints |
+| A5 | Responses as structured feedback signals | Bounded summary/evidence/full pages, Finding detail store, per-field errors on `save_report` |
 | A6 | Procedure as MCP prompt primitive | `validate_page` prompt (procedure only) |
 | B1 | Deterministic token/structure checks | `check_token_compliance`, `check_component_structure` |
 | B2 | axe-core deterministic pass (+ F2 baseline) | `run_axe_scan` |
@@ -36,23 +36,29 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 ## Tools
 
 **Oracle knowledge** (read-only):
-- `get_ds_rules (id?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?)` — the authoritative KB rule store (`data/knowledge/`, 186 atomic rules with deterministic ids and provenance). Normative rules only; canonical `@govbr-ds/core` fragments (`force=example`) come back in a separate `evidence` channel and **never override required/prohibited rules** (D-10)
+- `get_ds_rules (id?, ids?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?)` — authoritative KB store; exact ids can be fetched in one batch
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines
-- `list_components ()` / `get_component_spec (component)` — canonical structure contracts extracted from `@govbr-ds/core` official examples (tags, variant classes, ARIA usage, consumed tokens, example fragments)
+- `list_components ()` / `get_component_spec (component, include_examples?)` — canonical structure contracts; HTML examples are opt-in
 
 **Evidence (C5 phase 1)**:
-- `inspect_computed_styles (url, selector?)` — computed CSS + `:focus` styles + ARIA attributes + stable locators (what `@playwright/mcp` doesn't expose)
+- `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
-**Deterministic checkers (no LLM)** — output in the Finding schema:
-- `check_token_compliance (url, selector?, checks?)` — colors/fonts/radii/spacing vs. token registry, with nearest-token hints by RGB distance
-- `check_component_structure (url, component?)` — DOM vs. canonical spec (root tag, variants, icon-only accessible name)
-- `run_axe_scan (url, selector?)` — axe-core with e-MAG cross-references
+**Deterministic checkers (no LLM)** — bounded pages, compact by default:
+- `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?)` — batched colors/fonts/radii/spacing vs. token registry
+- `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched DOM vs. canonical spec
+- `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched axe-core with e-MAG cross-references
+- `get_finding_details (ids? | scanId?, detail?, cursor?, limit?, maxChars?)` — retrieves selected evidence or continues a stored scan without rerunning it
+
+All three scanners default to `detail="summary"`, return explicit `truncated`/`nextCursor`, and
+respect an approximate 12,000-character budget. Use `detail="evidence"` for adjudication and
+`get_finding_details(..., detail="full")` only when a complete Finding is required.
+Scanner output also reports deterministic deduplication counts and the exact merge key.
 
 **Gate + report**:
 - `verify_finding (finding, live?)` — layered verification: rule exists in oracle → token claims consistent → optional live DOM re-inspection
-- `save_report (url, findings, notes?)` — schema validation with per-field errors, heuristic-without-verification refusal, dual-format persistence
+- `save_report (url, finding_ids?, findings?, notes?)` — stored deterministic ids + agent-created Findings, validation and dual-format persistence
 
 **Prompt**: `validate_page (url, scope?, max_iterations?)` — the standardized two-phase procedure with dual pathway and iteration cap.
 
@@ -64,7 +70,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 npm install
 npx playwright install chromium   # once
 npm run build:data                # regenerate data/ after upgrading @govbr-ds/core
-npm test                          # 93 tests: unit + in-memory MCP integration + live browser e2e
+npm test                          # unit + in-memory MCP integration + live browser e2e
 npm run build                     # tsc → dist/
 ```
 

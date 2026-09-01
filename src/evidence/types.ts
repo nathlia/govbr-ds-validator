@@ -58,14 +58,19 @@ export interface ElementEvidence {
     hasIconOnly: boolean;
   };
   inlineStyle: string | null;
-  computed: ComputedStyleEvidence;
-  focused: FocusStyleEvidence;
+  /** Only properties requested by the caller are present. */
+  computed: Partial<ComputedStyleEvidence>;
+  /** Empty when no focus-state property was requested. */
+  focused: Partial<FocusStyleEvidence>;
   outerHTML: string;
 }
 
 export interface PageEvidence {
   url: string;
+  /** Combined selector retained for backward-compatible consumers. */
   selector: string;
+  selectors: string[];
+  properties: string[];
   count: number;
   elements: ElementEvidence[];
 }

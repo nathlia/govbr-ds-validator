@@ -10,11 +10,40 @@ import { withPage } from "./browser.js";
 export const DEFAULT_SELECTOR =
   "button, a, input, select, textarea, [role='button'], [role='link'], [role='checkbox'], [role='radio'], [class*='br-']";
 
-export async function inspectComputedStyles(url: string, selector?: string): Promise<PageEvidence> {
-  const target = selector ?? DEFAULT_SELECTOR;
+export const COMPUTED_STYLE_PROPERTIES = [
+  "backgroundColor", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight",
+  "borderRadius", "borderColor", "border", "padding", "margin", "outline", "cursor", "opacity",
+] as const;
+
+export const FOCUS_STYLE_PROPERTIES = [
+  "outline", "outlineColor", "outlineWidth", "outlineStyle", "outlineOffset", "boxShadow",
+] as const;
+
+export const STYLE_PROPERTIES = [...COMPUTED_STYLE_PROPERTIES, ...FOCUS_STYLE_PROPERTIES] as const;
+export type StyleProperty = (typeof STYLE_PROPERTIES)[number];
+
+function normalizeSelectors(selector?: string | string[]): string[] {
+  const values = selector === undefined ? [DEFAULT_SELECTOR] : Array.isArray(selector) ? selector : [selector];
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+export async function inspectComputedStyles(
+  url: string,
+  selector?: string | string[],
+  properties: StyleProperty[] = [...STYLE_PROPERTIES]
+): Promise<PageEvidence> {
+  const selectors = normalizeSelectors(selector);
+  const target = selectors.join(", ");
+  const requested = [...new Set(properties)];
+  const computedProperties = requested.filter((p) =>
+    (COMPUTED_STYLE_PROPERTIES as readonly string[]).includes(p)
+  );
+  const focusProperties = requested.filter((p) =>
+    (FOCUS_STYLE_PROPERTIES as readonly string[]).includes(p)
+  );
 
   const elements = await withPage(url, (page) =>
-    page.evaluate((sel: string) => {
+    page.evaluate(({ sel, computedProps, focusProps }) => {
       // Build a stable, unique CSS locator for an element
       function locatorFor(el: Element): string {
         if (el.id) return `#${CSS.escape(el.id)}`;
@@ -46,7 +75,7 @@ export async function inspectComputedStyles(url: string, selector?: string): Pro
       return Array.from(document.querySelectorAll(sel)).map((el) => {
         const htmlEl = el as HTMLElement;
         const computed = window.getComputedStyle(el);
-        const snapshot = {
+        const allComputed = {
           backgroundColor: computed.backgroundColor,
           color: computed.color,
           fontFamily: computed.fontFamily,
@@ -63,18 +92,28 @@ export async function inspectComputedStyles(url: string, selector?: string): Pro
           opacity: computed.opacity,
         };
 
-        // Capture focus-state styles by briefly focusing the element
-        htmlEl.focus({ preventScroll: true });
-        const fc = window.getComputedStyle(el);
-        const focused = {
-          outline: fc.outline,
-          outlineColor: fc.outlineColor,
-          outlineWidth: fc.outlineWidth,
-          outlineStyle: fc.outlineStyle,
-          outlineOffset: fc.outlineOffset,
-          boxShadow: fc.boxShadow,
-        };
-        htmlEl.blur();
+        const snapshot = Object.fromEntries(
+          computedProps.map((property) => [property, allComputed[property as keyof typeof allComputed]])
+        );
+
+        let focused: Record<string, string> = {};
+        if (focusProps.length > 0) {
+          // Capture focus-state styles only when requested.
+          htmlEl.focus({ preventScroll: true });
+          const fc = window.getComputedStyle(el);
+          const allFocused = {
+            outline: fc.outline,
+            outlineColor: fc.outlineColor,
+            outlineWidth: fc.outlineWidth,
+            outlineStyle: fc.outlineStyle,
+            outlineOffset: fc.outlineOffset,
+            boxShadow: fc.boxShadow,
+          };
+          focused = Object.fromEntries(
+            focusProps.map((property) => [property, allFocused[property as keyof typeof allFocused]])
+          );
+          htmlEl.blur();
+        }
 
         const text = el.textContent?.trim() ?? "";
         return {
@@ -108,8 +147,15 @@ export async function inspectComputedStyles(url: string, selector?: string): Pro
           outerHTML: el.outerHTML.slice(0, 500),
         };
       });
-    }, target)
+    }, { sel: target, computedProps: computedProperties, focusProps: focusProperties })
   );
 
-  return { url, selector: target, count: elements.length, elements: elements as ElementEvidence[] };
+  return {
+    url,
+    selector: target,
+    selectors,
+    properties: requested,
+    count: elements.length,
+    elements: elements as ElementEvidence[],
+  };
 }

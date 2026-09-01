@@ -99,6 +99,23 @@ describe("inspect_computed_styles", () => {
     expect(compliant.classes).toContain("br-button");
     expect(compliant.focused).toHaveProperty("outlineColor");
   });
+
+  it("batches selectors and returns only requested style properties", async () => {
+    const res = await client.callTool({
+      name: "inspect_computed_styles",
+      arguments: {
+        url: baseUrl,
+        selectors: ["#btn-compliant", "#btn-danger"],
+        properties: ["backgroundColor"],
+      },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBe(2);
+    expect(data.selectors).toEqual(["#btn-compliant", "#btn-danger"]);
+    expect(data.properties).toEqual(["backgroundColor"]);
+    expect(Object.keys(data.elements[0].computed)).toEqual(["backgroundColor"]);
+    expect(data.elements[0].focused).toEqual({});
+  });
 });
 
 describe("check_token_compliance (V1, V2, V6)", () => {
@@ -108,9 +125,25 @@ describe("check_token_compliance (V1, V2, V6)", () => {
     // to be a systematic false positive here.
     const res = await client.callTool({
       name: "check_token_compliance",
-      arguments: { url: baseUrl, selector: ".br-button" },
+      arguments: { url: baseUrl, selectors: [".br-button", "button.br-button"], limit: 1 },
     });
-    const data = JSON.parse(textOf(res));
+    const compact = JSON.parse(textOf(res));
+    expect(compact.detail).toBe("summary");
+    expect(compact.truncated).toBe(true);
+    expect(compact.nextCursor).toBe(1);
+    expect(compact.scanId).toMatch(/^S-tokens-/);
+    expect(compact.elementsInspected).toBe(7);
+    expect(compact.deduplication).toEqual(expect.objectContaining({ merged: 0 }));
+    expect(compact.findings[0]).not.toHaveProperty("evidence.data");
+
+    const detailRes = await client.callTool({
+      name: "get_finding_details",
+      arguments: { scanId: compact.scanId, detail: "full", limit: 200 },
+    });
+    const data = JSON.parse(textOf(detailRes));
+    expect(data.missing).toEqual([]);
+    expect(data.detail).toBe("full");
+    expect(data.count).toBe(data.total);
 
     const byLocator = (loc: string) => data.findings.filter((f: { element: { locator: string } }) => f.element.locator === loc);
     expect(byLocator("#btn-compliant")).toEqual([]);
@@ -142,7 +175,7 @@ describe("check_component_structure (V3, V4)", () => {
   it("flags the <a class=br-button> and the unlabeled icon-only button", async () => {
     const res = await client.callTool({
       name: "check_component_structure",
-      arguments: { url: baseUrl, component: "button" },
+      arguments: { url: baseUrl, component: "button", detail: "full" },
     });
     const data = JSON.parse(textOf(res));
     expect(data.componentsFound).toContain("button");
@@ -159,7 +192,7 @@ describe("check_component_structure (V3, V4)", () => {
 
 describe("run_axe_scan (V4, V5)", () => {
   it("detects button-name and html-has-lang with e-MAG cross-references", async () => {
-    const res = await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl } });
+    const res = await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl, detail: "full" } });
     const data = JSON.parse(textOf(res));
     expect(data.engine.name).toBe("axe-core");
 
@@ -171,5 +204,16 @@ describe("run_axe_scan (V4, V5)", () => {
     expect(langFinding.evidence.data.emagId).toBe("3.1");
     expect(langFinding.rule.description).toContain("e-MAG 3.1");
     expect(langFinding.pathway).toBe("deterministic");
+
+    const saved = JSON.parse(
+      textOf(
+        await client.callTool({
+          name: "save_report",
+          arguments: { url: baseUrl, finding_ids: data.findings.map((f: { id: string }) => f.id) },
+        })
+      )
+    );
+    expect(saved.accepted).toBe(data.findings.length);
+    expect(saved.rejected).toEqual([]);
   });
 });

@@ -44,20 +44,100 @@ import {
 import { checkTokenCompliance, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
 import { checkComponentStructure } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
-import { inspectComputedStyles } from "./evidence/inspect.js";
+import {
+  inspectComputedStyles,
+  STYLE_PROPERTIES,
+  type StyleProperty,
+} from "./evidence/inspect.js";
 import { verifyFinding } from "./verify/gate.js";
 import { validateFindings, buildReport, persistReport, summarize } from "./report/report.js";
 import { buildValidatePagePrompt } from "./prompts/validatePage.js";
+import { ToolTelemetry, instrumentTool, type ToolTelemetryOptions } from "./telemetry.js";
+import {
+  FindingDetailSchema,
+  FindingPageInputShape,
+  FindingStore,
+  buildFindingPage,
+  deduplicateFindings,
+} from "./responses/findings.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
 
 export interface ServerOptions {
   reportsDir?: string;
+  telemetry?: ToolTelemetryOptions;
 }
 
 function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+
+const StylePropertySchema = z.enum(STYLE_PROPERTIES);
+
+function selectorBatch(selector?: string, selectors?: string[]): string | string[] | undefined {
+  const batch = [...(selector ? [selector] : []), ...(selectors ?? [])];
+  return batch.length > 0 ? batch : undefined;
+}
+
+function tokenProperties(checks: typeof ALL_TOKEN_CHECKS): StyleProperty[] {
+  const properties = new Set<StyleProperty>();
+  if (checks.includes("color")) {
+    properties.add("backgroundColor");
+    properties.add("color");
+    properties.add("borderColor");
+  }
+  if (checks.includes("font")) {
+    properties.add("fontFamily");
+    properties.add("fontSize");
+  }
+  if (checks.includes("radius")) {
+    properties.add("borderRadius");
+    properties.add("fontSize");
+  }
+  if (checks.includes("spacing")) {
+    properties.add("padding");
+    properties.add("margin");
+  }
+  return [...properties];
+}
+
+/**
+ * Projeção mínima para varredura (D-26).
+ *
+ * Medido: as 152 regras normativas na projeção completa custam ~35 mil tokens; nesta, ~14 mil; e
+ * uma página de 40, ~3,4 mil. O agente que está decidindo QUAIS regras importam precisa do id
+ * (para citar), do texto normalizado (para julgar), da força e de como se verifica. O resto —
+ * proveniência, referências cruzadas, evidência esperada — é o que ele consulta depois de já ter
+ * escolhido a regra, e aí vem por `id` ou por `detail: "full"`.
+ */
+function briefRule(r: KnowledgeRule) {
+  return {
+    id: r.id,
+    title: r.title,
+    normalizedRule: r.normalizedRule,
+    force: r.force,
+    component: r.component ?? null,
+    validationStrategy: r.validationStrategy,
+  };
+}
+
+/** Contagens por dimensão — o índice barato que substitui a listagem sem filtro (~320 tokens). */
+function ruleFacets(rules: KnowledgeRule[]) {
+  const count = (pick: (r: KnowledgeRule) => string) => {
+    const out: Record<string, number> = {};
+    for (const r of rules) {
+      const k = pick(r);
+      out[k] = (out[k] ?? 0) + 1;
+    }
+    return Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]));
+  };
+  return {
+    force: count(r => r.force),
+    category: count(r => r.category),
+    validationStrategy: count(r => r.validationStrategy),
+    component: count(r => r.component ?? "(global)"),
+  };
 }
 
 /** Compact projection of a KB rule for get_ds_rules list responses. */
@@ -87,6 +167,8 @@ function projectRule(r: KnowledgeRule) {
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
+  const telemetry = new ToolTelemetry(options.telemetry);
+  const findingStore = new FindingStore();
 
   const server = new McpServer({
     name: "govbr-ds-validator",
@@ -109,6 +191,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "Loja de regras autoritativa do oráculo (A1/D-11): 186 regras atômicas extraídas da documentação oficial do gov.br DS 3.7.0 + e-MAG 3.1, com id determinístico, força normativa, estratégia de validação e proveniência. Achados devem citar o id da regra (source 'govbr-ds-kb') — o verify_finding confere por igualdade exata. Listagens retornam apenas regras NORMATIVAS; fragmentos canônicos do @govbr-ds/core (force=example) são EVIDÊNCIA de implementação, servidos no campo separado 'evidence' (include_evidence=true) e NUNCA sobrepõem regras required/prohibited — a implementação oficial contém defeitos conhecidos (veja govbr://knowledge/conflicts).",
       inputSchema: {
         id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
+        ids: z
+          .array(z.string())
+          .min(1)
+          .max(20)
+          .optional()
+          .describe("Até 20 ids exatos em lote; usa detail brief por padrão"),
         component: z.string().optional().describe("Componente, ex.: 'button', 'card'"),
         category: z
           .enum(["accessibility", "component", "development", "foundation", "page", "pattern", "template"])
@@ -142,11 +230,24 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .boolean()
           .optional()
           .describe("Anexar fragmentos canônicos (force=example) no campo separado 'evidence'"),
+        detail: z
+          .enum(["brief", "full"])
+          .optional()
+          .describe("Detalhe da listagem: 'brief' (padrão) traz id/título/regra/força/estratégia; 'full' traz o registro projetado inteiro"),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Máximo de regras por página (padrão 40)"),
+        offset: z.number().int().min(0).optional().describe("Deslocamento da paginação (padrão 0)"),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ id, include_evidence, ...filter }) => {
+    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, include_evidence, detail, limit, offset, ...filter }) => {
       const kb = getKnowledgeBase();
+      if (id && ids) return json({ error: "Informe id ou ids, não ambos." });
       if (id) {
         const rule = getRuleById(id);
         if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.` });
@@ -155,22 +256,75 @@ export function createServer(options: ServerOptions = {}): McpServer {
           rule,
         });
       }
+      if (ids) {
+        const found = ids.map((ruleId) => getRuleById(ruleId)).filter((rule): rule is KnowledgeRule => Boolean(rule));
+        const foundIds = new Set(found.map((rule) => rule.id));
+        const project = detail === "full" ? projectRule : briefRule;
+        return json({
+          requested: ids.length,
+          count: found.length,
+          detail: detail ?? "brief",
+          missing: ids.filter((ruleId) => !foundIds.has(ruleId)),
+          rules: found.map((rule) => ({
+            kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+            ...project(rule),
+          })),
+        });
+      }
+
+      const semFiltro = Object.values(filter).every(v => v === undefined);
       const rules = filterRules(filter);
+
+      // Sem nenhum filtro, devolver a KB inteira custava ~35 mil tokens por chamada. Devolve-se o
+      // índice de facetas (~320) e as dimensões pelas quais estreitar. Mesmo desenho que
+      // get_page_rules e get_design_tokens já usavam — o get_ds_rules é que destoava (D-26).
+      if (semFiltro) {
+        return json({
+          meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+          note:
+            "Índice, não listagem: chamar sem filtro devolveria a base normativa inteira. Estreite por " +
+            "component, category, force, validationStrategy ou query — ou peça uma regra por id. " +
+            "Para paginar a base inteira mesmo assim, passe limit/offset explicitamente.",
+          total: rules.length,
+          facets: ruleFacets(rules),
+        });
+      }
+
+      const take = limit ?? 40;
+      const skip = offset ?? 0;
+      const page = rules.slice(skip, skip + take);
+      const project = detail === "full" ? projectRule : briefRule;
+
       const response: Record<string, unknown> = {
         meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
-        count: rules.length,
-        rules: rules.map(projectRule),
+        total: rules.length,
+        offset: skip,
+        count: page.length,
+        detail: detail ?? "brief",
+        rules: page.map(project),
       };
+      if (skip + page.length < rules.length) {
+        response.more = {
+          remaining: rules.length - (skip + page.length),
+          nextOffset: skip + page.length,
+          note: "Peça a próxima página com o mesmo filtro e offset=nextOffset.",
+        };
+      }
+      if (detail !== "full") {
+        response.detailNote =
+          "Projeção mínima. Para evidência esperada, condições, exceções, referências cruzadas e " +
+          "proveniência, peça a regra por id ou repita com detail='full'.";
+      }
       if (include_evidence) {
         const evidence = getEvidence(filter.component);
         response.evidence = {
           note: "Fragmentos canônicos do @govbr-ds/core — evidência de implementação, NÃO normas. Não sobrepõem regras required/prohibited.",
           count: evidence.length,
-          items: evidence.map(projectRule),
+          items: evidence.map(project),
         };
       }
       return json(response);
-    }
+    })
   );
 
   server.registerTool(
@@ -184,7 +338,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ query }) => {
+    instrumentTool(telemetry, "get_design_tokens", async ({ query }) => {
       const registry = getTokenRegistry();
       if (!query) {
         return json({ meta: registry.meta, semantic: registry.semantic, hexLookup: registry.hexLookup });
@@ -192,7 +346,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const q = query.toLowerCase();
       const matches = Object.fromEntries(Object.entries(registry.all).filter(([k]) => k.toLowerCase().includes(q)));
       return json({ query, count: Object.keys(matches).length, tokens: matches });
-    }
+    })
   );
 
   server.registerTool(
@@ -207,7 +361,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ section, id }) => {
+    instrumentTool(telemetry, "get_emag_rules", async ({ section, id }) => {
       const emag = getEmag();
       if (id) {
         const rule = findEmagRule(id);
@@ -219,8 +373,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (section) {
         return json({ meta: emag.meta, section: emag.sections[String(section)] ?? `Seção ${section} não encontrada` });
       }
-      return json(emag);
-    }
+      return json({
+        meta: emag.meta,
+        sections: Object.entries(emag.sections).map(([id, value]) => ({
+          id,
+          title: value.title,
+          ruleCount: value.rules.length,
+        })),
+        note: "Índice compacto. Use section para listar regras ou id para buscar uma recomendação específica.",
+      });
+    })
   );
 
   server.registerTool(
@@ -250,7 +412,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ category }) => {
+    instrumentTool(telemetry, "get_page_rules", async ({ category }) => {
       const pageRules = getPageRules();
       if (!category) {
         return json({
@@ -259,7 +421,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
       }
       return json(pageRules.categories[category] ?? { error: `Categoria '${category}' não encontrada.` });
-    }
+    })
   );
 
   server.registerTool(
@@ -270,7 +432,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
-    async () => {
+    instrumentTool(telemetry, "list_components", async () => {
       const { meta, components } = getComponentSpecs();
       return json({
         meta,
@@ -281,7 +443,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           variantClasses,
         })),
       });
-    }
+    })
   );
 
   server.registerTool(
@@ -292,11 +454,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "Especificação estrutural canônica de um componente do gov.br DS, extraída dos exemplos oficiais do @govbr-ds/core: tags de elemento válidas, classes de variação documentadas, atributos ARIA usados, tokens consumidos pelo CSS do componente e fragmentos de exemplo oficiais.",
       inputSchema: {
         component: z.string().describe("Nome do componente, ex.: 'button', 'input', 'select'"),
-        include_examples: z.boolean().optional().describe("Incluir fragmentos HTML canônicos (padrão: true, até 5)"),
+        include_examples: z.boolean().optional().describe("Incluir fragmentos HTML canônicos (padrão: false, até 5)"),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ component, include_examples }) => {
+    instrumentTool(telemetry, "get_component_spec", async ({ component, include_examples }) => {
       const specs = getComponentSpecs();
       const spec = specs.components[component];
       if (!spec) {
@@ -305,7 +467,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           available: Object.keys(specs.components),
         });
       }
-      const includeExamples = include_examples ?? true;
+      const includeExamples = include_examples ?? false;
       // Defect awareness (D-10/Phase 2.4): the canonical examples of some
       // components are themselves non-conformant — warn at spec-serving time.
       const defects = getComponentDefects(component);
@@ -319,12 +481,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           evidence: d.evidence,
           note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
         })),
-        examples: includeExamples
-          ? spec.examples.slice(0, 5)
-          : spec.examples.map((e) => ({ name: e.name, html: "(omitido — use include_examples=true)" })),
+        examples: includeExamples ? spec.examples.slice(0, 5) : [],
         availableExamples: spec.examples.map((e) => e.name),
       });
-    }
+    })
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -336,14 +496,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Inspecionar estilos computados",
       description:
-        "Abre a página em navegador headless e retorna, por elemento: estilos computados (cores, tipografia, raios, espaçamentos), estilos no estado :focus, atributos ARIA e localizador CSS estável. É a evidência que o @playwright/mcp não expõe (ele dá a árvore de acessibilidade; isto dá o CSS computado). Fase de coleta — não julga nada.",
+        "Coleta estilos computados, foco e evidência estrutural sem julgar. Agrupe alvos em selectors e peça somente as properties necessárias; omiti-las mantém a resposta completa legada.",
       inputSchema: {
         url: z.string().describe("URL da página"),
-        selector: z.string().optional().describe("Seletor CSS para restringir (padrão: elementos interativos + [class*='br-'])"),
+        selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS avaliados no mesmo carregamento"),
+        properties: z
+          .array(StylePropertySchema)
+          .max(STYLE_PROPERTIES.length)
+          .optional()
+          .describe("Somente propriedades necessárias; omitir mantém o contrato completo legado"),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ url, selector }) => json(await inspectComputedStyles(url, selector))
+    instrumentTool(telemetry, "inspect_computed_styles", async ({ url, selector, selectors, properties }) =>
+      json(await inspectComputedStyles(url, selectorBatch(selector, selectors), properties))
+    )
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -355,22 +523,48 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Verificação determinística de tokens",
       description:
-        "Camada sintática (sem LLM): compara os estilos computados da página com o registro de tokens do DS via índice reverso hex→token. Retorna achados no esquema Finding com sugestão de token mais próximo por distância RGB. Cores, família/escala tipográfica, raios de borda e escala de espaçamento.",
+        "Compara cores, tipografia, raios e espaçamento computados com o registro de tokens. Retorna referências compactas por padrão; use get_finding_details para evidência ou objetos Finding completos.",
       inputSchema: {
         url: z.string().describe("URL da página"),
-        selector: z.string().optional().describe("Seletor CSS para restringir a verificação"),
+        selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS verificados no mesmo carregamento"),
         checks: z
           .array(z.enum(["color", "font", "radius", "spacing"]))
           .optional()
           .describe("Subconjunto de verificações (padrão: todas)"),
+        ...FindingPageInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ url, selector, checks }) => {
-      const evidence = await inspectComputedStyles(url, selector);
-      const findings = checkTokenCompliance({ url }, evidence.elements, getTokenRegistry(), checks ?? ALL_TOKEN_CHECKS);
-      return json({ url, elementsInspected: evidence.count, summary: summarize(findings), findings });
-    }
+    instrumentTool(
+      telemetry,
+      "check_token_compliance",
+      async ({ url, selector, selectors, checks, detail, cursor, limit, maxChars }) => {
+        const activeChecks = checks ?? ALL_TOKEN_CHECKS;
+        const evidence = await inspectComputedStyles(
+          url,
+          selectorBatch(selector, selectors),
+          tokenProperties(activeChecks)
+        );
+        const rawFindings = checkTokenCompliance({ url }, evidence.elements, getTokenRegistry(), activeChecks);
+        const deduplication = deduplicateFindings(rawFindings);
+        const findings = deduplication.findings;
+        const scanId = findingStore.putBatch("tokens", findings);
+        return json({
+          url,
+          scanId,
+          elementsInspected: evidence.count,
+          summary: summarize(findings),
+          deduplication: {
+            input: deduplication.inputCount,
+            output: deduplication.outputCount,
+            merged: deduplication.merged,
+            key: deduplication.key,
+          },
+          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+        });
+      }
+    )
   );
 
   server.registerTool(
@@ -378,36 +572,58 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Verificação determinística de estrutura",
       description:
-        "Camada sintática (sem LLM): compara elementos br-* da página com a especificação canônica extraída dos exemplos oficiais — tag do elemento raiz, classes de variação documentadas, nome acessível em elementos apenas-ícone. Retorna achados no esquema Finding.",
+        "Compara elementos br-* com tags, variantes e requisitos de nome acessível da especificação canônica. Retorna referências compactas por padrão; detalhe completo é recuperado por id.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         component: z
           .string()
           .optional()
           .describe("Componente específico (ex.: 'button'). Omitir para validar todos os br-* presentes."),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS verificados no mesmo carregamento"),
+        ...FindingPageInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ url, component }) => {
-      const specs = getComponentSpecs().components;
-      const targets = component ? [component] : Object.keys(specs);
-      const selector = component ? `.br-${component}` : "[class*='br-']";
-      const evidence = await inspectComputedStyles(url, selector);
+    instrumentTool(
+      telemetry,
+      "check_component_structure",
+      async ({ url, component, selectors, detail, cursor, limit, maxChars }) => {
+        const specs = getComponentSpecs().components;
+        const targets = component ? [component] : Object.keys(specs);
+        const selector = selectors ?? (component ? `.br-${component}` : "[class*='br-']");
+        const evidence = await inspectComputedStyles(url, selector, []);
 
-      const findings = targets.flatMap((name) => {
-        const spec = specs[name];
-        if (!spec) return [];
-        return checkComponentStructure({ url }, evidence.elements, spec);
-      });
+        const rawFindings = targets.flatMap((name) => {
+          const spec = specs[name];
+          if (!spec) return [];
+          return checkComponentStructure({ url }, evidence.elements, spec);
+        });
 
-      const componentsFound = [
-        ...new Set(
-          evidence.elements.flatMap((el) => el.classes.filter((c) => /^br-[a-z]+$/.test(c)).map((c) => c.slice(3)))
-        ),
-      ];
+        const deduplication = deduplicateFindings(rawFindings);
+        const findings = deduplication.findings;
+        const componentsFound = [
+          ...new Set(
+            evidence.elements.flatMap((el) => el.classes.filter((c) => /^br-[a-z]+$/.test(c)).map((c) => c.slice(3)))
+          ),
+        ];
 
-      return json({ url, componentsFound, elementsInspected: evidence.count, summary: summarize(findings), findings });
-    }
+        const scanId = findingStore.putBatch("structure", findings);
+        return json({
+          url,
+          scanId,
+          componentsFound,
+          elementsInspected: evidence.count,
+          summary: summarize(findings),
+          deduplication: {
+            input: deduplication.inputCount,
+            output: deduplication.outputCount,
+            merged: deduplication.merged,
+            key: deduplication.key,
+          },
+          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+        });
+      }
+    )
   );
 
   server.registerTool(
@@ -415,24 +631,76 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Varredura axe-core",
       description:
-        "Camada determinística de acessibilidade: executa axe-core na página e devolve as violações já no esquema Finding, com referência cruzada para o e-MAG 3.1 quando o mapeamento WCAG coincide. Também é a linha de base (baseline) da avaliação.",
+        "Executa axe-core e cruza regras compatíveis com o e-MAG 3.1. Retorna referências compactas por padrão e preserva Findings completos para recuperação por id.",
       inputSchema: {
         url: z.string().describe("URL da página"),
-        selector: z.string().optional().describe("Restringir a um subtree (seletor CSS)"),
+        selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Subtrees avaliadas na mesma varredura"),
+        ...FindingPageInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ url, selector }) => {
-      const result = await runAxeScan(url, selector);
-      return json({
-        url,
-        engine: result.engine,
-        passes: result.passeCount,
-        incomplete: result.incompleteCount,
-        summary: summarize(result.findings),
-        findings: result.findings,
-      });
-    }
+    instrumentTool(
+      telemetry,
+      "run_axe_scan",
+      async ({ url, selector, selectors, detail, cursor, limit, maxChars }) => {
+        const result = await runAxeScan(url, selectorBatch(selector, selectors)?.toString());
+        const deduplication = deduplicateFindings(result.findings);
+        const findings = deduplication.findings;
+        const scanId = findingStore.putBatch("axe", findings);
+        return json({
+          url,
+          scanId,
+          engine: result.engine,
+          passes: result.passeCount,
+          incomplete: result.incompleteCount,
+          summary: summarize(findings),
+          deduplication: {
+            input: deduplication.inputCount,
+            output: deduplication.outputCount,
+            merged: deduplication.merged,
+            key: deduplication.key,
+          },
+          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+        });
+      }
+    )
+  );
+
+  server.registerTool(
+    "get_finding_details",
+    {
+      title: "Detalhes de findings já produzidos",
+      description:
+        "Recupera candidatos por ids ou continua uma página pelo scanId, sem executar novamente o scanner. Use full somente quando o objeto Finding completo for indispensável.",
+      inputSchema: {
+        ids: z.array(z.string()).min(1).max(50).optional().describe("Finding ids retornados nesta sessão MCP"),
+        scanId: z.string().optional().describe("Id do lote retornado por um scanner; use com cursor para continuar sem repetir a varredura"),
+        detail: FindingDetailSchema.optional().describe("summary, evidence (padrão para ids) ou full"),
+        cursor: FindingPageInputShape.cursor,
+        limit: FindingPageInputShape.limit,
+        maxChars: FindingPageInputShape.maxChars,
+      },
+      annotations: { readOnlyHint: true },
+    },
+    instrumentTool(
+      telemetry,
+      "get_finding_details",
+      async ({ ids, scanId, detail, cursor, limit, maxChars }) => {
+        if ((!ids && !scanId) || (ids && scanId)) {
+          return json({ error: "Informe exatamente um de ids ou scanId." });
+        }
+        const batch = scanId ? findingStore.getBatch(scanId) : undefined;
+        if (scanId && !batch) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
+        const { found, missing } = ids ? findingStore.get(ids) : { found: batch ?? [], missing: [] };
+        return json({
+          requested: ids?.length ?? found.length,
+          ...(scanId ? { scanId } : {}),
+          missing,
+          ...buildFindingPage(found, { detail: detail ?? (scanId ? "summary" : "evidence"), cursor, limit, maxChars }),
+        });
+      }
+    )
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -451,10 +719,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ finding, live }) => {
+    instrumentTool(telemetry, "verify_finding", async ({ finding, live }) => {
       const verification = await verifyFinding({ finding, live: live ?? false });
       return json({ findingId: finding.id, verification });
-    }
+    })
   );
 
   server.registerTool(
@@ -462,15 +730,30 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Consolidar e persistir relatório",
       description:
-        "Valida os achados contra o esquema Finding (erros por campo são devolvidos para correção — nada é descartado em silêncio), recusa achados heurísticos sem verificação confirmada, e persiste o relatório em JSON (máquina/CI) e Markdown (revisão humana), com trilhas de raciocínio por achado.",
+        "Persiste o relatório validado. Reuse finding_ids dos scanners sem reenviar objetos completos; envie findings somente para achados criados pelo agente.",
       inputSchema: {
         url: z.string().describe("URL da página validada"),
-        findings: z.array(z.record(z.unknown())).describe("Achados no esquema Finding (veja govbr://schema/finding)"),
+        finding_ids: z
+          .array(z.string())
+          .max(500)
+          .optional()
+          .describe("Ids determinísticos guardados nesta sessão; evita recuperar e reenviar Findings completos"),
+        findings: z
+          .array(z.record(z.unknown()))
+          .optional()
+          .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos)"),
         notes: z.string().optional().describe("Notas gerais da validação (contexto, limitações desta rodada)"),
       },
     },
-    async ({ url, findings, notes }) => {
-      const { accepted, rejected } = validateFindings(findings);
+    instrumentTool(telemetry, "save_report", async ({ url, finding_ids, findings, notes }) => {
+      const stored = findingStore.get(finding_ids ?? []);
+      if (stored.missing.length) {
+        return json({
+          error: "Alguns finding_ids não existem nesta sessão MCP; o relatório não foi salvo.",
+          missingFindingIds: stored.missing,
+        });
+      }
+      const { accepted, rejected } = validateFindings([...stored.found, ...(findings ?? [])]);
       const report = buildReport(url, accepted, notes);
       const persisted = persistReport(report, reportsDir);
       return json({
@@ -480,7 +763,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         jsonPath: persisted.jsonPath,
         markdownPath: persisted.markdownPath,
       });
-    }
+    })
   );
 
   // ══════════════════════════════════════════════════════════════════════════

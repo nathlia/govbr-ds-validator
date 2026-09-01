@@ -4,12 +4,13 @@
  * network).
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
+import type { ToolTelemetryEvent } from "../../src/telemetry.js";
 
 let client: Client;
 
@@ -31,6 +32,42 @@ afterAll(async () => {
 });
 
 describe("surface", () => {
+  it("records call telemetry without adding it to the tool response", async () => {
+    const events: ToolTelemetryEvent[] = [];
+    const telemetryFile = join(mkdtempSync(join(tmpdir(), "govbr-telemetry-")), "calls.ndjson");
+    const telemetryServer = createServer({
+      reportsDir: mkdtempSync(join(tmpdir(), "govbr-reports-")),
+      telemetry: { runId: "test-run", file: telemetryFile, onEvent: (event) => events.push(event) },
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const telemetryClient = new Client({ name: "telemetry-test", version: "1.0.0" });
+    await telemetryServer.connect(serverTransport);
+    await telemetryClient.connect(clientTransport);
+
+    try {
+      const result = await telemetryClient.callTool({
+        name: "get_ds_rules",
+        arguments: { component: "button", limit: 2 },
+      });
+      expect(textOf(result)).not.toContain("requestBytes");
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        runId: "test-run",
+        tool: "get_ds_rules",
+        status: "ok",
+        outputRecords: 2,
+      });
+      expect(events[0].requestBytes).toBeGreaterThan(0);
+      expect(events[0].responseBytes).toBeGreaterThan(0);
+      expect(events[0].durationMs).toBeGreaterThanOrEqual(0);
+      const persisted = readFileSync(telemetryFile, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+      expect(persisted).toHaveLength(1);
+      expect(persisted[0]).toMatchObject({ runId: "test-run", tool: "get_ds_rules", status: "ok" });
+    } finally {
+      await telemetryClient.close();
+    }
+  });
+
   it("exposes the full tool set", async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
@@ -42,6 +79,7 @@ describe("surface", () => {
         "get_design_tokens",
         "get_ds_rules",
         "get_emag_rules",
+        "get_finding_details",
         "get_page_rules",
         "inspect_computed_styles",
         "list_components",
@@ -50,6 +88,32 @@ describe("surface", () => {
         "verify_finding",
       ].sort()
     );
+  });
+
+  it("get_finding_details reports ids that are absent from the current MCP session", async () => {
+    const res = await client.callTool({
+      name: "get_finding_details",
+      arguments: { ids: ["F-does-not-exist"] },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data).toMatchObject({ requested: 1, missing: ["F-does-not-exist"], count: 0, detail: "evidence" });
+  });
+
+  it("get_finding_details requires exactly one retrieval mode", async () => {
+    const res = await client.callTool({ name: "get_finding_details", arguments: {} });
+    const data = JSON.parse(textOf(res));
+    expect(data.error).toContain("exatamente um");
+  });
+
+  it("save_report refuses missing stored ids instead of silently dropping them", async () => {
+    const res = await client.callTool({
+      name: "save_report",
+      arguments: { url: "http://example.test", finding_ids: ["F-does-not-exist"] },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.error).toContain("não existem");
+    expect(data.missingFindingIds).toEqual(["F-does-not-exist"]);
+    expect(data.jsonPath).toBeUndefined();
   });
 
   it("exposes resources including the finding schema", async () => {
@@ -103,13 +167,31 @@ describe("oracle knowledge tools", () => {
     expect(data.section).toBe("6");
   });
 
+  it("get_emag_rules returns a compact section index when called without filters", async () => {
+    const res = await client.callTool({ name: "get_emag_rules", arguments: {} });
+    const data = JSON.parse(textOf(res));
+    expect(data.sections).toHaveLength(6);
+    expect(data.sections[0]).toEqual(expect.objectContaining({ id: "1", ruleCount: expect.any(Number) }));
+    expect(data.sections[0].rules).toBeUndefined();
+  });
+
   it("get_component_spec returns the canonical button contract", async () => {
-    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "button" } });
+    const res = await client.callTool({
+      name: "get_component_spec",
+      arguments: { component: "button", include_examples: true },
+    });
     const data = JSON.parse(textOf(res));
     expect(data.rootClass).toBe("br-button");
     expect(data.tags).toEqual(["button"]);
     expect(data.variantClasses).toContain("circle");
     expect(data.examples.length).toBeGreaterThan(0);
+  });
+
+  it("get_component_spec omits HTML examples by default", async () => {
+    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "button" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.examples).toEqual([]);
+    expect(data.availableExamples.length).toBeGreaterThan(0);
   });
 
   it("get_component_spec lists alternatives for unknown components", async () => {
@@ -122,14 +204,20 @@ describe("oracle knowledge tools", () => {
 
 describe("get_ds_rules — the KB rule store (D-11)", () => {
   it("force=required returns the 107 required rules", async () => {
-    const res = await client.callTool({ name: "get_ds_rules", arguments: { force: "required" } });
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { force: "required", limit: 200 },
+    });
     const data = JSON.parse(textOf(res));
     expect(data.count).toBe(107);
     expect(data.rules.every((r: { force: string }) => r.force === "required")).toBe(true);
   });
 
   it("component=button returns only button rules with the full projection", async () => {
-    const res = await client.callTool({ name: "get_ds_rules", arguments: { component: "button" } });
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { component: "button", detail: "full" },
+    });
     const data = JSON.parse(textOf(res));
     expect(data.count).toBeGreaterThan(0);
     for (const r of data.rules) {
@@ -147,7 +235,13 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
   it("filters compose: the D-12 candidate set (required + automatable + high)", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",
-      arguments: { force: "required", automatable: true, automationConfidence: "high" },
+      arguments: {
+        force: "required",
+        automatable: true,
+        automationConfidence: "high",
+        detail: "full",
+        limit: 200,
+      },
     });
     const data = JSON.parse(textOf(res));
     expect(data.count).toBeGreaterThan(0);
@@ -159,11 +253,13 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     ).toBe(true);
   });
 
-  it("never mixes evidence into normative listings (D-10 precedence)", async () => {
+  it("returns a normative facet index instead of the whole KB when called without filters", async () => {
     const res = await client.callTool({ name: "get_ds_rules", arguments: {} });
     const data = JSON.parse(textOf(res));
-    expect(data.count).toBe(152);
-    expect(data.rules.some((r: { force: string }) => r.force === "example")).toBe(false);
+    expect(data.meta.totalNormative).toBe(152);
+    expect(data.rules).toBeUndefined();
+    expect(data.facets.force.example).toBeUndefined();
+    expect(data.note).toContain("Índice, não listagem");
   });
 
   it("serves evidence only through the separate 'evidence' channel", async () => {
@@ -189,6 +285,26 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     expect(data.rule.id).toBe(id);
     expect(data.rule.originalText.length).toBeGreaterThan(0);
     expect(data.rule.source.url).toMatch(/^https?:/);
+  });
+
+  it("fetches multiple exact rule ids in one compact call", async () => {
+    const seed = JSON.parse(
+      textOf(await client.callTool({
+        name: "get_ds_rules",
+        arguments: { force: "prohibited", limit: 2 },
+      }))
+    );
+    const ids = seed.rules.map((rule: { id: string }) => rule.id);
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { ids: [...ids, "govbr-3.7.0-missing"] },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.count).toBe(ids.length);
+    expect(data.rules.map((rule: { id: string }) => rule.id)).toEqual(ids);
+    expect(data.rules.every((rule: { kind: string }) => rule.kind === "normative")).toBe(true);
+    expect(data.rules[0]).not.toHaveProperty("expectedEvidence");
+    expect(data.missing).toEqual(["govbr-3.7.0-missing"]);
   });
 });
 

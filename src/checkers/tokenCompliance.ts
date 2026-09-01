@@ -182,7 +182,7 @@ export function checkTokenCompliance(
       if (radius && !radius.includes(" ") && radius !== "50%") {
         const px = parsePx(radius);
         if (px !== null && px > 0) {
-          const fontPx = parsePx(el.computed.fontSize);
+          const fontPx = el.computed.fontSize ? parsePx(el.computed.fontSize) : null;
           const onPxScale = [...radiusPxScale].some((r) => Math.abs(r - px) < 0.5);
           const isPill =
             fontPx !== null && [...radiusEmFactors].some((f) => Math.abs(f * fontPx - px) < 1);

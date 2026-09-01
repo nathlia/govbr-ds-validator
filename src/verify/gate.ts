@@ -188,6 +188,7 @@ async function verifyLive(finding: Finding): Promise<Verification> {
     if (observedHex) {
       const el = evidence.elements[0];
       const pageColors = [el.computed.backgroundColor, el.computed.color, el.computed.borderColor]
+        .filter((c): c is string => typeof c === "string")
         .map((c) => normalizeColor(c))
         .filter(Boolean);
       if (!pageColors.includes(observedHex)) {

@@ -12,3 +12,11 @@ promoted into this repo at `data/knowledge/` in Phase 1; raw batches 01–06 arc
 (the DS has **36** components, not 37 — verified against the `@govbr-ds/core` 3.7.0 tarball,
 sha256 `2b8f13b0a1427f101f9f7aa81751b1bafe829e17305b1727fc2a0e3326781247`; see
 `data/knowledge/versions/3.7.0/reports/conflicts.json`).
+
+## Telemetria de ferramentas
+
+Quando `GOVBR_VALIDATOR_TELEMETRY_FILE` está definido, cada chamada de ferramenta gera uma linha
+NDJSON fora da resposta enviada ao cliente. `GOVBR_VALIDATOR_RUN_ID` correlaciona as linhas com a
+execução. O evento contém ferramenta, horário, duração, status, bytes de entrada/saída, contagens
+compactas disponíveis, nível de detalhe e sinal de truncamento. O pipeline de avaliação configura
+esses valores automaticamente e agrega os eventos no bloco `cost.mcp` do resultado arquivado.

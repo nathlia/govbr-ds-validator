@@ -42,12 +42,16 @@ Siga o procedimento à risca. Não invente regras: toda regra citada deve vir da
    - check_token_compliance(url) → violações sintáticas de tokens (cores, fontes, raios, espaçamentos)
    - run_axe_scan(url) → violações de acessibilidade detectáveis por axe-core
    - check_component_structure(url) para cada componente br-* presente
+   As três ferramentas devolvem resumos paginados. Guarde scanId e os ids; continue nextCursor com
+   get_finding_details(scanId, cursor) sem repetir o scanner. Busque evidência por ids somente para
+   candidatos relevantes; não peça todos os objetos completos antecipadamente.
 2. Colete evidência para o julgamento semântico:
-   - inspect_computed_styles(url) → estilos computados + estados de foco + atributos ARIA
+   - inspect_computed_styles(url, selectors, properties) → agrupe alvos e peça somente os estilos necessários + atributos ARIA
    - Se houver um cliente Playwright MCP disponível, use browser_snapshot para a árvore de acessibilidade (modo snapshot/texto; não use modo visual)
 3. Identifique quais componentes br-* aparecem e busque o conhecimento correspondente:
    - get_component_spec(<componente>) para cada um
-   - get_emag_rules() das seções pertinentes ao conteúdo observado
+   - get_emag_rules() para o índice e depois as seções pertinentes ao conteúdo observado
+   - get_ds_rules(ids) quando várias regras candidatas já estiverem identificadas
    - get_design_tokens() para os tokens semânticos
    - get_page_rules(<categoria>) quando a página tiver formulários/navegação/estrutura relevante
 
@@ -77,6 +81,8 @@ Monte cada achado no esquema Finding (veja o recurso govbr://schema/finding ou a
 - pathway (deterministic|explicit|heuristic) + verification quando heurística
 - trace: registre sucintamente POR QUE julgou violação (auditabilidade)
 
-Inclua os achados determinísticos da Fase 1 como vieram (pathway "deterministic").
-Finalize chamando save_report(url, findings, notes?). O relatório é uma primeira triagem para revisão humana — não um veredito final.`;
+Passe os ids dos achados determinísticos em save_report.finding_ids. Envie em save_report.findings
+somente os achados explícitos/heurísticos que você próprio montou; não recupere e reenvie objetos
+determinísticos completos.
+Finalize chamando save_report(url, finding_ids, findings, notes?). O relatório é uma primeira triagem para revisão humana — não um veredito final.`;
 }
