@@ -46,6 +46,32 @@ export interface ComponentSpec {
   examples: { name: string; html: string }[];
 }
 
+export interface ComponentConstraint {
+  /** Stable checker/specification id shared by normative and deterministic profiles. */
+  id: string;
+  kind: "root-tag";
+  description: string;
+  rootClass: string;
+  allowedTags: string[];
+}
+
+/**
+ * Machine-readable claims exposed with a component specification.
+ *
+ * The deterministic checker already emitted these ids. Returning them from the normative
+ * surface prevents agents from borrowing an unrelated broad KB rule merely because a structural
+ * constraint did not have a citable identity (D-29).
+ */
+export function constraintsForComponent(spec: ComponentSpec): ComponentConstraint[] {
+  return spec.tags.length === 0 ? [] : [{
+    id: `ds-structure-${spec.name}-tag`,
+    kind: "root-tag",
+    description: `${spec.rootClass} deve ser aplicado a <${spec.tags.join("> ou <")}>.`,
+    rootClass: spec.rootClass,
+    allowedTags: [...spec.tags],
+  }];
+}
+
 export interface ComponentSpecsData {
   meta: { source: string; version: string; generatedAt: string; totalComponents: number };
   components: Record<string, ComponentSpec>;

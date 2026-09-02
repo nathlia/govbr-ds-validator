@@ -50,6 +50,7 @@ export interface KnowledgeRule {
   component: string | null;
   title: string;
   originalText: string;
+  originalTextMode?: string;
   normalizedRule: string;
   force: RuleForce;
   rationale: string | null;

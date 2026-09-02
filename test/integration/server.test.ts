@@ -236,8 +236,25 @@ describe("oracle knowledge tools", () => {
     const data = JSON.parse(textOf(res));
     expect(data.rootClass).toBe("br-button");
     expect(data.tags).toEqual(["button"]);
+    expect(data.constraints).toContainEqual({
+      id: "ds-structure-button-tag",
+      kind: "root-tag",
+      description: "br-button deve ser aplicado a <button>.",
+      rootClass: "br-button",
+      allowedTags: ["button"],
+    });
     expect(data.variantClasses).toContain("circle");
     expect(data.examples.length).toBeGreaterThan(0);
+  });
+
+  it("get_component_spec gives input root-tag evidence a citable checker id", async () => {
+    const res = await client.callTool({ name: "get_component_spec", arguments: { component: "input" } });
+    const data = JSON.parse(textOf(res));
+    expect(data.constraints).toContainEqual(expect.objectContaining({
+      id: "ds-structure-input-tag",
+      rootClass: "br-input",
+      allowedTags: ["div"],
+    }));
   });
 
   it("get_component_spec omits HTML examples by default", async () => {
@@ -256,6 +273,15 @@ describe("oracle knowledge tools", () => {
 });
 
 describe("get_ds_rules — the KB rule store (D-11)", () => {
+  it("warns that a truncated template excerpt cannot entail a mandatory footer", async () => {
+    const res = await client.callTool({
+      name: "get_ds_rules",
+      arguments: { ids: ["govbr-3.7.0-template-global-19f93475dc5e"] },
+    });
+    const data = JSON.parse(textOf(res));
+    expect(data.rules[0].caveats).toContainEqual(expect.stringMatching(/não derive obrigatoriedade/i));
+  });
+
   it("force=required returns the 107 required rules", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",

@@ -26,6 +26,7 @@ import {
   getEmag,
   getPageRules,
   getComponentSpecs,
+  constraintsForComponent,
   findEmagRule,
 } from "./data/load.js";
 import {
@@ -115,6 +116,16 @@ function tokenProperties(checks: typeof ALL_TOKEN_CHECKS): StyleProperty[] {
  * proveniência, referências cruzadas, evidência esperada — é o que ele consulta depois de já ter
  * escolhido a regra, e aí vem por `id` ou por `detail: "full"`.
  */
+function inferenceCaveats(r: KnowledgeRule): string[] {
+  const caveats: string[] = [];
+  if (r.originalTextMode === "verbatim-truncated-excerpt" || /truncad/i.test(r.notes ?? "")) {
+    caveats.push(
+      "Fonte textual truncada: não derive obrigatoriedade de regiões, subcomponentes ou comportamentos que a regra não declara explicitamente.",
+    );
+  }
+  return caveats;
+}
+
 function briefRule(r: KnowledgeRule) {
   return {
     id: r.id,
@@ -123,6 +134,7 @@ function briefRule(r: KnowledgeRule) {
     force: r.force,
     component: r.component ?? null,
     validationStrategy: r.validationStrategy,
+    caveats: inferenceCaveats(r),
   };
 }
 
@@ -166,6 +178,8 @@ function projectRule(r: KnowledgeRule) {
     emagReferences: r.emagReferences,
     standard: r.standard ?? null,
     sourceUrl: r.source.url,
+    notes: r.notes ?? null,
+    caveats: inferenceCaveats(r),
   };
 }
 
@@ -487,6 +501,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const defects = getComponentDefects(component);
       return json({
         ...spec,
+        constraints: constraintsForComponent(spec),
         warnings: defects.map((d) => ({
           type: d.type,
           severity: d.severity,
