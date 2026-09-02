@@ -58,6 +58,13 @@ export interface ElementEvidence {
     hasIconOnly: boolean;
   };
   inlineStyle: string | null;
+  /**
+   * Declarações CSS de autoria da página que alcançam diretamente o elemento, por propriedade
+   * computada inspecionada. A lista preserva a ordem das folhas de estilo e termina com o estilo
+   * inline, quando houver. Um mapa presente sem a propriedade significa que o valor observado
+   * veio de herança, resolução de layout ou estilo do agente de usuário — não da página.
+   */
+  authored?: Partial<Record<keyof ComputedStyleEvidence, string[]>>;
   /** Only properties requested by the caller are present. */
   computed: Partial<ComputedStyleEvidence>;
   /** Empty when no focus-state property was requested. */

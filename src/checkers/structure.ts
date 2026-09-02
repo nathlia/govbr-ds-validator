@@ -13,6 +13,11 @@ import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
 
 const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea"]);
 
+/** D-28: <hr> expressa separação temática nativamente; o exemplo <span> não prevalece sobre HTML. */
+function isSemanticDividerException(el: ElementEvidence, spec: ComponentSpec): boolean {
+  return spec.name === "divider" && el.tagName.toLowerCase() === "hr";
+}
+
 export function checkComponentStructure(
   page: { url: string },
   elements: ElementEvidence[],
@@ -32,7 +37,7 @@ export function checkComponentStructure(
     };
 
     // 1. Root element tag must match the canonical examples
-    if (spec.tags.length > 0 && !spec.tags.includes(el.tagName.toLowerCase())) {
+    if (spec.tags.length > 0 && !spec.tags.includes(el.tagName.toLowerCase()) && !isSemanticDividerException(el, spec)) {
       findings.push({
         id: nextFindingId(),
         rule: {
@@ -118,6 +123,15 @@ export function collectStructureObservations(
 
   for (const el of elements) {
     if (!el.classes.includes(spec.rootClass)) continue;
+    if (isSemanticDividerException(el, spec)) {
+      observations.push({
+        kind: "structure-semantic-native-tag",
+        element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: page.url },
+        note: "br-divider aplicado a <hr>: diverge do exemplo canônico em <span>, mas preserva a semântica nativa de separação temática do HTML.",
+        whyNotAFinding: "A anatomia do exemplo oficial não justifica rebaixar um elemento HTML semanticamente correto; caso de conflito especificação × semântica registrado no D-28.",
+        data: { component: spec.name, observedTag: "hr", canonicalTags: spec.tags },
+      });
+    }
     const unknown = unknownClasses(el, spec);
     if (unknown.length === 0) continue;
 

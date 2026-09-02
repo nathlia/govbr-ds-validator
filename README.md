@@ -90,6 +90,23 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Capability profiles (D-28)
+
+`GOVBR_VALIDATOR_TOOL_PROFILE` separates the causal contribution of the server. The profile is
+part of the run configuration and must not be pooled across measurements:
+
+| Profile | Exposed capability |
+|---|---|
+| `normative` | DS/e-MAG rules, tokens, page rules and component specifications |
+| `deterministic` | `scan_page` plus retrieval of scanner findings |
+| `evidence` | raw authored/computed-style inspection, without rules or scanner verdicts |
+| `evaluation` | compatibility profile combining the three pathways plus the verification gate |
+| `full` | authoring/development surface, including individual checkers and report persistence |
+
+The deterministic profile exposes no normative resources, and the normative profile exposes no
+scanner. This makes norms-only, scanner-only and evidence-only arms mechanically distinct instead
+of treating “the oracle” as one indivisible package.
+
 ## Architecture notes
 
 - The **agent is integrated, not implemented** (N+M): any MCP client LLM drives the tools; this

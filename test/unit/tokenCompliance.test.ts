@@ -47,6 +47,32 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     expect(findings.some((f) => f.rule.id === "ds-token-font-size")).toBe(true);
   });
 
+  it("does not attribute a browser default color to the page", () => {
+    const el = makeElement({
+      authored: {},
+      computed: { color: "rgb(128, 128, 128)" } as never,
+    });
+    expect(checkTokenCompliance(page, [el], registry, ["color"])).toEqual([]);
+  });
+
+  it("does not treat margin:auto resolved by flex layout as authored pixels", () => {
+    const el = makeElement({
+      authored: { margin: ["0 0 0 auto"] },
+      computed: { margin: "0px 0px 0px 143.641px" } as never,
+    });
+    expect(checkTokenCompliance(page, [el], registry, ["spacing"])).toEqual([]);
+  });
+
+  it("still flags an off-scale value explicitly authored by the page", () => {
+    const el = makeElement({
+      authored: { padding: ["13px"] },
+      computed: { padding: "13px" } as never,
+    });
+    const findings = checkTokenCompliance(page, [el], registry, ["spacing"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].evidence.data?.authoredDeclarations).toEqual(["13px"]);
+  });
+
   it("flags an off-scale border radius but accepts the DS scale", () => {
     const bad = makeElement({ computed: { borderRadius: "7px" } as never });
     const good = makeElement({ computed: { borderRadius: "4px" } as never });

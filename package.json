@@ -12,6 +12,7 @@
     "build:data": "tsx scripts/build-data.ts",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
+    "scan:json": "node dist/cli/scan-page.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

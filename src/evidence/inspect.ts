@@ -191,6 +191,55 @@ export async function inspectPageComputedStyles(
           computedProps.map((property) => [property, allComputed[property as keyof typeof allComputed]])
         );
 
+        // getComputedStyle mistura três origens que o verificador não pode confundir: CSS da
+        // página, valores resolvidos pelo layout (por exemplo margin:auto) e defaults do browser.
+        // Guardamos separadamente as declarações AUTORAIS que casam diretamente com o elemento.
+        // O checker usa esta prova de autoria; o valor computado continua sendo contexto visual.
+        const cssNames: Record<string, string[]> = {
+          backgroundColor: ["background-color", "background"],
+          color: ["color"],
+          fontFamily: ["font-family", "font"],
+          fontSize: ["font-size", "font"],
+          fontWeight: ["font-weight", "font"],
+          lineHeight: ["line-height", "font"],
+          borderRadius: ["border-radius", "border"],
+          borderColor: ["border-color", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border"],
+          border: ["border", "border-top", "border-right", "border-bottom", "border-left"],
+          padding: ["padding", "padding-top", "padding-right", "padding-bottom", "padding-left"],
+          margin: ["margin", "margin-top", "margin-right", "margin-bottom", "margin-left"],
+          outline: ["outline"],
+          cursor: ["cursor"],
+          opacity: ["opacity"],
+        };
+        const authored: Record<string, string[]> = {};
+        const collect = (style: CSSStyleDeclaration) => {
+          for (const property of computedProps) {
+            for (const cssName of cssNames[property] ?? []) {
+              const value = style.getPropertyValue(cssName).trim();
+              if (value) (authored[property] ??= []).push(value + (style.getPropertyPriority(cssName) ? " !important" : ""));
+            }
+          }
+        };
+        const visitRules = (rules: CSSRuleList) => {
+          for (const rule of Array.from(rules)) {
+            if (rule instanceof CSSStyleRule) {
+              try {
+                if (el.matches(rule.selectorText)) collect(rule.style);
+              } catch { /* seletor não suportado pelo browser desta medição */ }
+              continue;
+            }
+            if (rule instanceof CSSMediaRule && !matchMedia(rule.conditionText).matches) continue;
+            if (rule instanceof CSSSupportsRule && !CSS.supports(rule.conditionText)) continue;
+            const nested = (rule as CSSGroupingRule).cssRules;
+            if (nested) visitRules(nested);
+          }
+        };
+        for (const sheet of Array.from(document.styleSheets)) {
+          try { if (sheet.cssRules) visitRules(sheet.cssRules); }
+          catch { /* folha cross-origin: não é autoria inspecionável da página */ }
+        }
+        collect(htmlEl.style);
+
         let focused: Record<string, string> = {};
         if (focusProps.length > 0) {
           // Capture focus-state styles only when requested.
@@ -237,6 +286,7 @@ export async function inspectPageComputedStyles(
             hasIconOnly: !text && el.querySelector("i, svg, img") !== null,
           },
           inlineStyle: el.getAttribute("style"),
+          authored,
           computed: snapshot,
           focused,
           outerHTML: el.outerHTML.slice(0, 500),

@@ -122,6 +122,27 @@ describe("surface", () => {
     }
   });
 
+  it.each([
+    ["normative", ["get_component_spec", "get_design_tokens", "get_ds_rules", "get_emag_rules", "get_page_rules"]],
+    ["deterministic", ["get_finding_details", "scan_page"]],
+    ["evidence", ["inspect_computed_styles"]],
+  ] as const)("isolates the %s capability profile", async (profile, expected) => {
+    const profiledServer = createServer({
+      reportsDir: mkdtempSync(join(tmpdir(), "govbr-reports-")),
+      toolProfile: profile,
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const profiledClient = new Client({ name: `${profile}-profile-test`, version: "1.0.0" });
+    await profiledServer.connect(serverTransport);
+    await profiledClient.connect(clientTransport);
+    try {
+      const { tools } = await profiledClient.listTools();
+      expect(tools.map((tool) => tool.name).sort()).toEqual([...expected].sort());
+    } finally {
+      await profiledClient.close();
+    }
+  });
+
   it("get_finding_details reports ids that are absent from the current MCP session", async () => {
     const res = await client.callTool({
       name: "get_finding_details",

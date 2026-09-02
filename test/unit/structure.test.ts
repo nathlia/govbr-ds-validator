@@ -6,6 +6,7 @@ import { makeElement } from "../helpers/fixtures.js";
 
 const page = { url: "http://localhost:3000/test" };
 const buttonSpec = getComponentSpecs().components.button;
+const dividerSpec = getComponentSpecs().components.divider;
 
 beforeEach(resetFindingIds);
 
@@ -21,6 +22,17 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(tagFinding).toBeDefined();
     expect(tagFinding?.severity).toBe("serious");
     expect(tagFinding?.evidence.observed).toContain("<a>");
+  });
+
+  it("keeps semantic <hr class=br-divider> as an observation, not a finding (D-28)", () => {
+    const el = makeElement({
+      tagName: "hr",
+      classes: ["br-divider"],
+      outerHTML: '<hr class="br-divider">',
+    });
+    expect(checkComponentStructure(page, [el], dividerSpec)).toEqual([]);
+    const observations = collectStructureObservations(page, [el], dividerSpec);
+    expect(observations.some(observation => observation.kind === "structure-semantic-native-tag")).toBe(true);
   });
 
   it("flags an icon-only button without aria-label (e-MAG 2.2)", () => {

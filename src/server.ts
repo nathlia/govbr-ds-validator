@@ -70,7 +70,7 @@ export interface ServerOptions {
   reportsDir?: string;
   telemetry?: ToolTelemetryOptions;
   /** Full authoring surface, or the smaller surface used by controlled evaluations. */
-  toolProfile?: "full" | "evaluation";
+  toolProfile?: "full" | "evaluation" | "normative" | "deterministic" | "evidence";
 }
 
 function json(data: unknown) {
@@ -171,8 +171,15 @@ function projectRule(r: KnowledgeRule) {
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
-  const toolProfile = options.toolProfile ??
-    (process.env.GOVBR_VALIDATOR_TOOL_PROFILE === "evaluation" ? "evaluation" : "full");
+  const requestedProfile = options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE ?? "full";
+  const toolProfile = (["full", "evaluation", "normative", "deterministic", "evidence"] as const)
+    .includes(requestedProfile as never)
+    ? requestedProfile as NonNullable<ServerOptions["toolProfile"]>
+    : "full";
+  const hasNorms = toolProfile === "full" || toolProfile === "evaluation" || toolProfile === "normative";
+  const hasDeterministic = toolProfile === "full" || toolProfile === "evaluation" || toolProfile === "deterministic";
+  const hasEvidence = toolProfile === "full" || toolProfile === "evidence";
+  const hasCombinedGate = toolProfile === "full" || toolProfile === "evaluation";
   const telemetry = new ToolTelemetry(options.telemetry);
   const findingStore = new FindingStore();
   const pageScanCache = new PageScanCache();
@@ -190,7 +197,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Oracle knowledge tools (A1–A4)
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerTool(
+  if (hasNorms) server.registerTool(
     "get_ds_rules",
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
@@ -334,7 +341,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (hasNorms) server.registerTool(
     "get_design_tokens",
     {
       title: "Design tokens do gov.br DS",
@@ -356,7 +363,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (hasNorms) server.registerTool(
     "get_emag_rules",
     {
       title: "Regras e-MAG 3.1",
@@ -392,7 +399,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (hasNorms) server.registerTool(
     "get_page_rules",
     {
       title: "Diretrizes de página do gov.br DS",
@@ -453,7 +460,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (hasNorms) server.registerTool(
     "get_component_spec",
     {
       title: "Especificação canônica de componente",
@@ -498,7 +505,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Evidence tool (C5 phase 1)
   // ══════════════════════════════════════════════════════════════════════════
 
-  if (toolProfile === "full") server.registerTool(
+  if (hasEvidence) server.registerTool(
     "inspect_computed_styles",
     {
       title: "Inspecionar estilos computados",
@@ -525,7 +532,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Deterministic checkers (B1/B2) — findings come out in the D2 schema
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerTool(
+  if (hasDeterministic) server.registerTool(
     "scan_page",
     {
       title: "Varredura determinística agregada",
@@ -778,7 +785,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     )
   );
 
-  server.registerTool(
+  if (hasDeterministic) server.registerTool(
     "get_finding_details",
     {
       title: "Detalhes de findings já produzidos",
@@ -820,7 +827,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Verification gate (C3) and report (D2–D4)
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerTool(
+  if (hasCombinedGate) server.registerTool(
     "verify_finding",
     {
       title: "Portão de verificação anti-alucinação",
@@ -883,7 +890,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Resources (A1) — the same knowledge, addressable by URI
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerResource(
+  if (hasNorms) server.registerResource(
     "knowledge-conflicts",
     "govbr://knowledge/conflicts",
     {
@@ -897,7 +904,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerResource(
+  if (hasDeterministic || hasCombinedGate) server.registerResource(
     "finding-schema",
     "govbr://schema/finding",
     {
@@ -910,7 +917,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerResource(
+  if (hasNorms) server.registerResource(
     "tokens",
     "govbr://tokens",
     {
@@ -924,7 +931,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     }
   );
 
-  server.registerResource(
+  if (hasNorms) server.registerResource(
     "emag-section",
     new ResourceTemplate("govbr://emag/{section}", {
       list: async () => ({
@@ -948,7 +955,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     }
   );
 
-  server.registerResource(
+  if (hasNorms) server.registerResource(
     "component-spec",
     new ResourceTemplate("govbr://components/{name}", {
       list: async () => ({
@@ -979,7 +986,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Prompt (A6) — the standardized validation procedure
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerPrompt(
+  if (hasCombinedGate) server.registerPrompt(
     "validate_page",
     {
       title: "Procedimento padronizado de validação",

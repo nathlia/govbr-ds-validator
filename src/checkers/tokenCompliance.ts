@@ -31,6 +31,20 @@ function tokenListLabel(tokens: string[]): string {
   return tokens.slice(0, 3).join(", ") + (tokens.length > 3 ? ", …" : "");
 }
 
+/**
+ * `undefined` significa fixture/consumidor legado sem prova de autoria: conserva o comportamento
+ * anterior. Uma lista vazia significa que a coleta nova provou que a página não declarou a
+ * propriedade diretamente — nesse caso o checker não atribui o valor ao autor.
+ */
+function authored(el: ElementEvidence, prop: keyof ElementEvidence["computed"]): string[] | undefined {
+  if (!el.authored) return undefined;
+  return el.authored[prop] ?? [];
+}
+
+function stripImportant(value: string): string {
+  return value.replace(/\s*!important\s*$/i, "").trim();
+}
+
 /** Follow var(--x) chains in the raw token map (e.g. --radius: var(--surface-rounder-pill)). */
 function resolveVar(value: string, all: Record<string, string>, depth = 0): string {
   if (depth > 5) return value;
@@ -96,6 +110,8 @@ export function checkTokenCompliance(
       for (const { prop, label } of COLOR_PROPS) {
         const raw = el.computed[prop];
         if (!raw) continue;
+        const declarations = authored(el, prop);
+        if (declarations?.length === 0) continue;
         const hex = normalizeColor(raw);
         if (!hex) continue; // transparent / unparseable — nothing to compare
         if (hexLookup[hex]) continue; // exact token value — compliant
@@ -121,6 +137,7 @@ export function checkTokenCompliance(
               nearestToken: nearest?.token ?? null,
               nearestHex: nearest?.hex ?? null,
               rgbDistance: nearest?.distance ?? null,
+              authoredDeclarations: declarations ?? null,
             },
           },
           severity: "moderate",
@@ -133,7 +150,8 @@ export function checkTokenCompliance(
 
     if (checks.includes("font")) {
       const family = el.computed.fontFamily;
-      if (family && !DS_FONT.test(family)) {
+      const familyDeclarations = authored(el, "fontFamily");
+      if (family && familyDeclarations?.length !== 0 && !DS_FONT.test(family)) {
         findings.push({
           id: nextFindingId(),
           rule: {
@@ -146,7 +164,7 @@ export function checkTokenCompliance(
           evidence: {
             observed: `font-family: ${family}`,
             expected: `Família contendo Rawline/Raleway (token ${registry.semantic["font-family"]?.token}: ${registry.semantic["font-family"]?.value})`,
-            data: { property: "font-family", observed: family },
+            data: { property: "font-family", observed: family, authoredDeclarations: familyDeclarations ?? null },
           },
           severity: "moderate",
           nature: "syntactic",
@@ -156,7 +174,8 @@ export function checkTokenCompliance(
       }
 
       const size = el.computed.fontSize;
-      if (size && !inFontScale(size)) {
+      const sizeDeclarations = authored(el, "fontSize");
+      if (size && sizeDeclarations?.length !== 0 && !inFontScale(size)) {
         findings.push({
           id: nextFindingId(),
           rule: {
@@ -169,7 +188,7 @@ export function checkTokenCompliance(
           evidence: {
             observed: `font-size: ${size} fora da escala do DS`,
             expected: `Um dos valores da escala: ${tokenListLabel(fontSizePxScale.map((v) => `${v}px`))}`,
-            data: { property: "font-size", observed: size, allowedScale: fontSizePxScale.map((v) => `${v}px`) },
+            data: { property: "font-size", observed: size, allowedScale: fontSizePxScale.map((v) => `${v}px`), authoredDeclarations: sizeDeclarations ?? null },
           },
           severity: "minor",
           nature: "syntactic",
@@ -181,9 +200,10 @@ export function checkTokenCompliance(
 
     if (checks.includes("radius")) {
       const radius = el.computed.borderRadius;
+      const radiusDeclarations = authored(el, "borderRadius");
       // Only single-value radii are comparable against the discrete scale;
       // 50% is the circle variant.
-      if (radius && !radius.includes(" ") && radius !== "50%") {
+      if (radius && radiusDeclarations?.length !== 0 && !radius.includes(" ") && radius !== "50%") {
         const px = parsePx(radius);
         if (px !== null && px > 0) {
           const fontPx = el.computed.fontSize ? parsePx(el.computed.fontSize) : null;
@@ -208,6 +228,7 @@ export function checkTokenCompliance(
                   observed: radius,
                   allowedPxScale: [...radiusPxScale].sort((a, b) => a - b),
                   pillEmFactors: [...radiusEmFactors].sort((a, b) => a - b),
+                  authoredDeclarations: radiusDeclarations ?? null,
                 },
               },
               severity: "minor",
@@ -224,7 +245,15 @@ export function checkTokenCompliance(
       for (const prop of ["padding", "margin"] as const) {
         const value = el.computed[prop];
         if (!value) continue;
-        const parts = value.split(/\s+/);
+        const declarations = authored(el, prop);
+        if (declarations?.length === 0) continue;
+        const rawParts = declarations
+          ?.flatMap((declaration) => stripImportant(declaration).split(/\s+/))
+          .filter((part) => part && part.toLowerCase() !== "auto");
+        // Declarações numéricas são julgadas como escritas. var()/calc() precisam do valor
+        // computado para comparação; fixtures legadas sem `authored` também usam o computado.
+        const authoredHasResolvableExpression = rawParts?.some((p) => /^(?:var|calc|min|max|clamp)\(/i.test(p));
+        const parts = rawParts && !authoredHasResolvableExpression ? rawParts : value.split(/\s+/);
         const offScale = parts.filter((p) => {
           const px = parsePx(p);
           return px !== null && px !== 0 && Math.abs(px % (spacingBase / 2)) > 0.01;
@@ -242,7 +271,7 @@ export function checkTokenCompliance(
             evidence: {
               observed: `${prop}: ${value} (fora da escala: ${offScale.join(", ")})`,
               expected: `Múltiplos de ${spacingBase / 2}px`,
-              data: { property: prop, observed: value, offScale, spacingBase },
+              data: { property: prop, observed: value, offScale, spacingBase, authoredDeclarations: declarations ?? null },
             },
             severity: "minor",
             nature: "syntactic",
