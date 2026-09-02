@@ -29,7 +29,7 @@ export interface FindingPageOptions {
 export const FINDING_DEDUPLICATION_KEY =
   "rule.source + rule.id + element.page + element.locator + evidence.data.property/evidence.observed";
 
-function findingKey(finding: Finding): string {
+export function findingIdentity(finding: Finding): string {
   const property = finding.evidence.data?.property;
   return [
     finding.rule.source,
@@ -49,7 +49,7 @@ export function deduplicateFindings(input: Finding[]): {
 } {
   const unique = new Map<string, Finding>();
   for (const finding of input) {
-    const key = findingKey(finding);
+    const key = findingIdentity(finding);
     if (!unique.has(key)) unique.set(key, finding);
   }
   const findings = [...unique.values()];
@@ -62,20 +62,34 @@ export function deduplicateFindings(input: Finding[]): {
   };
 }
 
+export function diffFindings(previous: Finding[], current: Finding[]) {
+  const previousByKey = new Map(previous.map((finding) => [findingIdentity(finding), finding]));
+  const currentByKey = new Map(current.map((finding) => [findingIdentity(finding), finding]));
+  return {
+    added: [...currentByKey.entries()]
+      .filter(([key]) => !previousByKey.has(key))
+      .map(([, finding]) => finding.id),
+    removed: [...previousByKey.entries()]
+      .filter(([key]) => !currentByKey.has(key))
+      .map(([, finding]) => finding.id),
+    unchanged: [...currentByKey.keys()].filter((key) => previousByKey.has(key)).length,
+  };
+}
+
 export class FindingStore {
   private readonly findings = new Map<string, Finding>();
-  private readonly batches = new Map<string, Finding[]>();
+  private readonly batches = new Map<string, { findings: Finding[]; metadata?: Record<string, unknown> }>();
   private batchCounter = 0;
 
   put(items: Finding[]): void {
     for (const finding of items) this.findings.set(finding.id, finding);
   }
 
-  putBatch(kind: string, items: Finding[]): string {
+  putBatch(kind: string, items: Finding[], metadata?: Record<string, unknown>): string {
     this.put(items);
     this.batchCounter += 1;
     const scanId = `S-${kind}-${String(this.batchCounter).padStart(3, "0")}`;
-    this.batches.set(scanId, [...items]);
+    this.batches.set(scanId, { findings: [...items], metadata });
     return scanId;
   }
 
@@ -92,7 +106,12 @@ export class FindingStore {
 
   getBatch(scanId: string): Finding[] | undefined {
     const batch = this.batches.get(scanId);
-    return batch ? [...batch] : undefined;
+    return batch ? [...batch.findings] : undefined;
+  }
+
+  getBatchMetadata(scanId: string): Record<string, unknown> | undefined {
+    const metadata = this.batches.get(scanId)?.metadata;
+    return metadata ? { ...metadata } : undefined;
   }
 }
 

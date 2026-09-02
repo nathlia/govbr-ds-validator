@@ -3,12 +3,31 @@
  * + accessibility attributes for elements on a page. This is the one piece of
  * evidence @playwright/mcp does not expose (it gives the accessibility tree,
  * not computed styles).
+ *
+ * Shadow DOM. `document.querySelectorAll` stops at every shadow boundary, and the gov.br web
+ * components (`@govbr-ds/webcomponents`) render their entire content inside an OPEN shadow root.
+ * A real portal built on them showed the consequence: axe, which traverses open shadow trees,
+ * reported the violations inside a component, and these checkers reported nothing — they were
+ * looking at empty host elements. So the traversal here descends into every open shadow root,
+ * and locators cross the boundary with ` >>> `:
+ *
+ *     br-input >>> input.br-input      → the <input> inside the component's shadow tree
+ *
+ * The separator is part of the contract, not decoration: a locator has to find its way back to
+ * the element it names — `verify_finding` re-inspects live by locator, and the scoring anchors
+ * resolve the agent's selector and the ground truth's to the same node. A path flattened into a
+ * plain CSS selector would resolve to the host, or to nothing, and the mistake would be silent.
+ * Closed shadow roots stay invisible to everyone, including axe; nothing here can change that.
  */
 import type { PageEvidence, ElementEvidence } from "./types.js";
 import { withPage } from "./browser.js";
+import type { Page } from "playwright";
 
 export const DEFAULT_SELECTOR =
   "button, a, input, select, textarea, [role='button'], [role='link'], [role='checkbox'], [role='radio'], [class*='br-']";
+
+/** Separator between shadow trees in a locator: `host >>> element-inside-the-shadow-root`. */
+export const SHADOW_STEP = ">>>";
 
 export const COMPUTED_STYLE_PROPERTIES = [
   "backgroundColor", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight",
@@ -32,6 +51,16 @@ export async function inspectComputedStyles(
   selector?: string | string[],
   properties: StyleProperty[] = [...STYLE_PROPERTIES]
 ): Promise<PageEvidence> {
+  return withPage(url, (page) => inspectPageComputedStyles(page, url, selector, properties));
+}
+
+/** Collect evidence from an already-loaded page so aggregate scans share one exact DOM state. */
+export async function inspectPageComputedStyles(
+  page: Page,
+  url: string,
+  selector?: string | string[],
+  properties: StyleProperty[] = [...STYLE_PROPERTIES]
+): Promise<PageEvidence> {
   const selectors = normalizeSelectors(selector);
   const target = selectors.join(", ");
   const requested = [...new Set(properties)];
@@ -42,10 +71,40 @@ export async function inspectComputedStyles(
     (FOCUS_STYLE_PROPERTIES as readonly string[]).includes(p)
   );
 
-  const elements = await withPage(url, (page) =>
-    page.evaluate(({ sel, computedProps, focusProps }) => {
-      // Build a stable, unique CSS locator for an element
-      function locatorFor(el: Element): string {
+  const elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps }) => {
+      /**
+       * Every element matching `selector`, in this root and in every open shadow root below it.
+       * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
+       * each hop resolves inside the previous hop's shadow root, never across it.
+       */
+      function deepQueryAll(selector: string): Element[] {
+        if (selector.includes(shadowStep)) {
+          const hops = selector.split(shadowStep).map((s) => s.trim()).filter(Boolean);
+          let roots: (Document | ShadowRoot)[] = [document];
+          let found: Element[] = [];
+          hops.forEach((hop, i) => {
+            found = roots.flatMap((root) => Array.from(root.querySelectorAll(hop)));
+            if (i < hops.length - 1) {
+              roots = found
+                .map((el) => el.shadowRoot)
+                .filter((r): r is ShadowRoot => r !== null);
+            }
+          });
+          return found;
+        }
+        const out: Element[] = [];
+        const visit = (root: Document | ShadowRoot) => {
+          out.push(...Array.from(root.querySelectorAll(selector)));
+          for (const el of Array.from(root.querySelectorAll("*"))) {
+            if (el.shadowRoot) visit(el.shadowRoot);
+          }
+        };
+        visit(document);
+        return out;
+      }
+
+      // Build a stable, unique CSS locator for an element, within its own root.
+      function locatorWithinRoot(el: Element): string {
         if (el.id) return `#${CSS.escape(el.id)}`;
         const testId = el.getAttribute("data-testid");
         if (testId) return `[data-testid="${testId}"]`;
@@ -53,7 +112,19 @@ export async function inspectComputedStyles(
         let node: Element | null = el;
         while (node && node !== document.body && parts.length < 5) {
           const parent: Element | null = node.parentElement;
-          if (!parent) break;
+          if (!parent) {
+            // Top of a shadow tree: there is no parent element, but the node still needs a
+            // segment — without one the locator ends at the host and points at nothing.
+            const root = node.getRootNode();
+            const tag = node.tagName.toLowerCase();
+            const siblings =
+              root instanceof ShadowRoot
+                ? Array.from(root.children).filter((c) => c.tagName === node!.tagName)
+                : [];
+            const idx = siblings.indexOf(node) + 1;
+            parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
+            break;
+          }
           const tag = node.tagName.toLowerCase();
           const siblings = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
           const idx = siblings.indexOf(node) + 1;
@@ -72,7 +143,31 @@ export async function inspectComputedStyles(
         return parts.join(" > ");
       }
 
-      return Array.from(document.querySelectorAll(sel)).map((el) => {
+      /** Full locator: one segment per shadow tree crossed, joined by ` >>> `. */
+      function locatorFor(el: Element): string {
+        const segments: string[] = [];
+        let node: Element = el;
+        for (let depth = 0; depth < 6; depth += 1) {
+          segments.unshift(locatorWithinRoot(node));
+          const root = node.getRootNode();
+          if (root instanceof ShadowRoot) node = root.host;
+          else break;
+        }
+        return segments.join(` ${shadowStep} `);
+      }
+
+      const matched: Element[] = [];
+      const seen = new Set<Element>();
+      for (const selector of sels) {
+        for (const el of deepQueryAll(selector)) {
+          if (!seen.has(el)) {
+            seen.add(el);
+            matched.push(el);
+          }
+        }
+      }
+
+      return matched.map((el) => {
         const htmlEl = el as HTMLElement;
         const computed = window.getComputedStyle(el);
         const allComputed = {
@@ -145,10 +240,15 @@ export async function inspectComputedStyles(
           computed: snapshot,
           focused,
           outerHTML: el.outerHTML.slice(0, 500),
+          inShadowDom: el.getRootNode() instanceof ShadowRoot,
         };
       });
-    }, { sel: target, computedProps: computedProperties, focusProps: focusProperties })
-  );
+    }, {
+      sels: selectors,
+      shadowStep: SHADOW_STEP,
+      computedProps: computedProperties,
+      focusProps: focusProperties,
+    });
 
   return {
     url,

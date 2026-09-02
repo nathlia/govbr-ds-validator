@@ -46,6 +46,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
 **Deterministic checkers (no LLM)** — bounded pages, compact by default:
+- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path with bounded setup actions, state/finding diffs, exact cache and evidence ledger
 - `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?)` — batched colors/fonts/radii/spacing vs. token registry
 - `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched DOM vs. canonical spec
 - `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched axe-core with e-MAG cross-references
@@ -55,6 +56,12 @@ All three scanners default to `detail="summary"`, return explicit `truncated`/`n
 respect an approximate 12,000-character budget. Use `detail="evidence"` for adjudication and
 `get_finding_details(..., detail="full")` only when a complete Finding is required.
 Scanner output also reports deterministic deduplication counts and the exact merge key.
+`scan_page` is the preferred first pass: its LRU cache is process-local and keyed by the rendered
+state SHA-256 plus normalized scope. A changed DOM, route, viewport, focus, control state, selector
+or check set cannot reuse an earlier scan. The MCP process is fresh per battery run, so evidence
+does not cross experimental executions.
+Interactive states must be reproduced through `scan_page.actions`; the validator cannot inherit the
+state of another MCP server's browser. Supported actions are bounded click, fill, key press and wait.
 
 **Gate + report**:
 - `verify_finding (finding, live?)` — layered verification: rule exists in oracle → token claims consistent → optional live DOM re-inspection

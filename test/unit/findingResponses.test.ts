@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Finding } from "../../src/schema/finding.js";
-import { FindingStore, buildFindingPage, deduplicateFindings } from "../../src/responses/findings.js";
+import { FindingStore, buildFindingPage, deduplicateFindings, diffFindings } from "../../src/responses/findings.js";
 
 function finding(id: string): Finding {
   return {
@@ -87,5 +87,16 @@ describe("bounded finding responses", () => {
     expect(result.findings).toHaveLength(2);
     expect(result.merged).toBe(1);
     expect(result.key).toContain("rule.id");
+  });
+
+  it("diffs finding batches by stable identity rather than process-local ids", () => {
+    const before = [finding("F-001")];
+    const sameWithNewId = { ...finding("F-999"), element: { ...before[0].element } };
+    const added = finding("F-002");
+    expect(diffFindings(before, [sameWithNewId, added])).toEqual({
+      added: ["F-002"],
+      removed: [],
+      unchanged: 1,
+    });
   });
 });

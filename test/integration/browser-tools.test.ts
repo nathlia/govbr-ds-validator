@@ -53,13 +53,21 @@ const FIXTURE_HTML = `<!DOCTYPE html>
     <button id="btn-bad-radius" class="br-button secondary" type="button">Raio errado</button>
     <a id="link-as-button" class="br-button primary" href="#">Sou um link</a>
     <button id="btn-icon-only" class="br-button circle primary" type="button"><svg width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg></button>
+    <button id="state-toggle" type="button" aria-expanded="false">Alternar estado</button>
   </main>
+  <script>
+    document.querySelector('#state-toggle').addEventListener('click', (event) => {
+      event.currentTarget.setAttribute('aria-expanded', 'true');
+      event.currentTarget.className = 'br-button unexpected-state-class';
+    });
+  </script>
 </body>
 </html>`;
 
 let httpServer: Server;
 let baseUrl: string;
 let client: Client;
+let documentRequests = 0;
 
 function textOf(result: { content?: unknown }): string {
   const content = result.content as { type: string; text: string }[];
@@ -67,7 +75,8 @@ function textOf(result: { content?: unknown }): string {
 }
 
 beforeAll(async () => {
-  httpServer = createHttpServer((_req, res) => {
+  httpServer = createHttpServer((req, res) => {
+    if (req.headers["sec-fetch-dest"] === "document") documentRequests += 1;
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(FIXTURE_HTML);
   });
@@ -215,5 +224,100 @@ describe("run_axe_scan (V4, V5)", () => {
     );
     expect(saved.accepted).toBe(data.findings.length);
     expect(saved.rejected).toEqual([]);
+  });
+});
+
+describe("scan_page aggregate fast path", () => {
+  it("runs selected checks on one state and reuses only an exact fingerprint+scope match", async () => {
+    const args = {
+      url: baseUrl,
+      selectors: [".br-button"],
+      checks: ["tokens", "structure", "axe"],
+      tokenChecks: ["color", "font", "radius"],
+      components: ["button"],
+      limit: 200,
+    };
+    const requestsBefore = documentRequests;
+    const first = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: args })));
+    expect(documentRequests - requestsBefore).toBe(1);
+    expect(first.cacheHit).toBe(false);
+    expect(first.cacheMissReason).toBe("no-exact-fingerprint-and-scope-match");
+    expect(first.stateFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(first.coverage).toEqual(expect.objectContaining({
+      checks: ["axe", "structure", "tokens"],
+      elementsInspected: 7,
+      componentsRequested: ["button"],
+    }));
+    expect(first.coverage.axe.engine.name).toBe("axe-core");
+    const ruleIds = first.findings.map((finding: { rule: { id: string } }) => finding.rule.id);
+    expect(ruleIds).toContain("ds-token-color");
+    expect(ruleIds).toContain("ds-structure-button-tag");
+    expect(ruleIds).toContain("button-name");
+
+    const second = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: args })));
+    expect(second.cacheHit).toBe(true);
+    expect(second.cacheMissReason).toBeUndefined();
+    expect(second.stateFingerprint).toBe(first.stateFingerprint);
+    expect(second.findings.map((finding: { id: string }) => finding.id)).toEqual(
+      first.findings.map((finding: { id: string }) => finding.id)
+    );
+
+    const ledger = JSON.parse(textOf(await client.callTool({
+      name: "get_finding_details",
+      arguments: { scanId: second.scanId, limit: 1 },
+    })));
+    expect(ledger.ledger).toEqual(expect.objectContaining({
+      stateFingerprint: first.stateFingerprint,
+      cacheHit: true,
+    }));
+
+    const changedScope = JSON.parse(textOf(await client.callTool({
+      name: "scan_page",
+      arguments: { ...args, tokenChecks: ["color"] },
+    })));
+    expect(changedScope.cacheHit).toBe(false);
+    expect(changedScope.cacheMissReason).toBe("no-exact-fingerprint-and-scope-match");
+    expect(changedScope.stateFingerprint).toBe(first.stateFingerprint);
+  });
+
+  it("reproduces interactions before fingerprinting instead of assuming browser state is shared", async () => {
+    const baseArgs = {
+      url: baseUrl,
+      selectors: ["#state-toggle"],
+      checks: ["structure"],
+      components: ["button"],
+    };
+    const idle = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: baseArgs })));
+    const expanded = JSON.parse(textOf(await client.callTool({
+      name: "scan_page",
+      arguments: {
+        ...baseArgs,
+        actions: [{ action: "click", selector: "#state-toggle" }],
+        compareToScanId: idle.scanId,
+      },
+    })));
+    expect(expanded.cacheHit).toBe(false);
+    expect(expanded.stateFingerprint).not.toBe(idle.stateFingerprint);
+    expect(expanded.coverage.actionsApplied).toEqual([
+      { action: "click", selector: "#state-toggle" },
+    ]);
+    expect(expanded.stateDiff).toEqual(expect.objectContaining({
+      previousScanId: idle.scanId,
+      stateChanged: true,
+      elementsInspectedDelta: 0,
+    }));
+    expect(expanded.stateDiff.findings.added).toHaveLength(1);
+    expect(expanded.stateDiff.findings.removed).toEqual([]);
+
+    const repeated = JSON.parse(textOf(await client.callTool({
+      name: "scan_page",
+      arguments: {
+        ...baseArgs,
+        actions: [{ action: "click", selector: "#state-toggle" }],
+        compareToScanId: idle.scanId,
+      },
+    })));
+    expect(repeated.cacheHit).toBe(true);
+    expect(repeated.stateFingerprint).toBe(expanded.stateFingerprint);
   });
 });

@@ -11,6 +11,8 @@ import type { Finding, Severity } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
 import { findEmagRule } from "../data/load.js";
 import { withPage } from "../evidence/browser.js";
+import { SHADOW_STEP } from "../evidence/inspect.js";
+import type { Page } from "playwright";
 
 const require = createRequire(import.meta.url);
 
@@ -72,9 +74,27 @@ const IMPACT_TO_SEVERITY: Record<string, Severity> = {
 const INTERACTION_RULE = /focus|keyboard|tabindex|bypass|skip|aria-hidden-focus/;
 
 interface AxeNodeResult {
-  target: string[];
+  /**
+   * Axe returns a selector per frame/shadow hop, and a hop is itself an array when it crosses a
+   * shadow boundary: `[["br-input", "input"]]` means "the <input> inside br-input's shadow root".
+   */
+  target: (string | string[])[];
   html: string;
   failureSummary?: string;
+}
+
+/**
+ * Flatten axe's target into the locator format the evidence layer resolves.
+ *
+ * Joining the array with a space or a comma is the bug this replaces: `["br-input","input"]`
+ * became `br-input input` (a descendant selector that matches nothing, since the input is not a
+ * light-DOM descendant) or `br-input,input` (a selector list that matches the wrong elements).
+ * Both fail silently, which is worse than not reporting the element at all.
+ */
+export function axeLocator(target: (string | string[])[]): string {
+  return target
+    .map((hop) => (Array.isArray(hop) ? hop.join(` ${SHADOW_STEP} `) : hop))
+    .join(` ${SHADOW_STEP} `);
 }
 
 interface AxeViolation {
@@ -112,15 +132,18 @@ export interface AxeScanResult {
 }
 
 export async function runAxeScan(url: string, selector?: string): Promise<AxeScanResult> {
+  return withPage(url, (page) => runAxeScanOnPage(page, url, selector));
+}
+
+/** Run axe against an already-loaded page so aggregate scans do not navigate twice. */
+export async function runAxeScanOnPage(page: Page, url: string, selector?: string): Promise<AxeScanResult> {
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
-  const results = await withPage(url, async (page) => {
-    await page.evaluate(axeSource);
-    return page.evaluate(async (sel: string | null) => {
-      // @ts-expect-error axe is injected into the page context above
-      return (await axe.run(sel ?? document, { resultTypes: ["violations", "passes", "incomplete"] })) as unknown;
-    }, selector ?? null);
-  });
+  await page.evaluate(axeSource);
+  const results = await page.evaluate(async (sel: string | null) => {
+    // @ts-expect-error axe is injected into the page context above
+    return (await axe.run(sel ?? document, { resultTypes: ["violations", "passes", "incomplete"] })) as unknown;
+  }, selector ?? null);
 
   const axeResults = results as AxeResults;
   const findings: Finding[] = [];
@@ -142,7 +165,7 @@ export async function runAxeScan(url: string, selector?: string): Promise<AxeSca
           wcag,
         },
         element: {
-          locator: node.target.join(" "),
+          locator: axeLocator(node.target),
           snippet: node.html.slice(0, 300),
           page: url,
         },

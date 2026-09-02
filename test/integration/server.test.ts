@@ -84,6 +84,7 @@ describe("surface", () => {
         "inspect_computed_styles",
         "list_components",
         "run_axe_scan",
+        "scan_page",
         "save_report",
         "verify_finding",
       ].sort()

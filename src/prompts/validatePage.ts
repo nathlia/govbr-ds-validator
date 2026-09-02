@@ -38,13 +38,13 @@ Siga o procedimento à risca. Não invente regras: toda regra citada deve vir da
 
 ## Fase 1 — Coleta de evidências (não julgue ainda)
 
-1. Execute as verificações determinísticas — elas NÃO passam pelo seu julgamento:
-   - check_token_compliance(url) → violações sintáticas de tokens (cores, fontes, raios, espaçamentos)
-   - run_axe_scan(url) → violações de acessibilidade detectáveis por axe-core
-   - check_component_structure(url) para cada componente br-* presente
-   As três ferramentas devolvem resumos paginados. Guarde scanId e os ids; continue nextCursor com
-   get_finding_details(scanId, cursor) sem repetir o scanner. Busque evidência por ids somente para
-   candidatos relevantes; não peça todos os objetos completos antecipadamente.
+1. Execute scan_page(url) para rodar tokens, estrutura e axe na mesma carga e no mesmo estado.
+   Use check_token_compliance, run_axe_scan ou check_component_structure isoladamente apenas para
+   uma investigação direcionada que a varredura agregada não resolveu. Guarde scanId, fingerprint
+   e ids; continue nextCursor com get_finding_details(scanId, cursor) sem repetir o scanner. Busque
+   evidência por ids somente para candidatos relevantes; não peça todos os objetos completos.
+   Para um estado interativo, reproduza as ações em scan_page.actions e passe compareToScanId para
+   receber o diff contra o estado anterior; outro servidor MCP não compartilha esta página.
 2. Colete evidência para o julgamento semântico:
    - inspect_computed_styles(url, selectors, properties) → agrupe alvos e peça somente os estilos necessários + atributos ARIA
    - Se houver um cliente Playwright MCP disponível, use browser_snapshot para a árvore de acessibilidade (modo snapshot/texto; não use modo visual)

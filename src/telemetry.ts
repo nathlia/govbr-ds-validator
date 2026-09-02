@@ -13,6 +13,9 @@ export interface ToolTelemetryEvent {
   outputRecords?: number;
   detail?: string;
   truncated?: boolean;
+  cacheHit?: boolean;
+  cacheMissReason?: string;
+  stateFingerprint?: string;
   error?: string;
 }
 
@@ -115,6 +118,18 @@ export class ToolTelemetry {
         truncated:
           parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).truncated === "boolean"
             ? Boolean((parsed as Record<string, unknown>).truncated)
+            : undefined,
+        cacheHit:
+          parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).cacheHit === "boolean"
+            ? Boolean((parsed as Record<string, unknown>).cacheHit)
+            : undefined,
+        cacheMissReason:
+          parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).cacheMissReason === "string"
+            ? String((parsed as Record<string, unknown>).cacheMissReason)
+            : undefined,
+        stateFingerprint:
+          parsed && typeof parsed === "object" && typeof (parsed as Record<string, unknown>).stateFingerprint === "string"
+            ? String((parsed as Record<string, unknown>).stateFingerprint)
             : undefined,
       });
       return result;

@@ -63,6 +63,12 @@ export interface ElementEvidence {
   /** Empty when no focus-state property was requested. */
   focused: Partial<FocusStyleEvidence>;
   outerHTML: string;
+  /**
+   * True when the element lives inside an open shadow root — its `locator` then crosses one or
+   * more boundaries with ` >>> `. Worth surfacing: a defect inside a web component belongs to the
+   * component's author, not to the page that used it, and the two are different findings.
+   */
+  inShadowDom: boolean;
 }
 
 export interface PageEvidence {

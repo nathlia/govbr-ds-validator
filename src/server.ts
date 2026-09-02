@@ -59,7 +59,9 @@ import {
   FindingStore,
   buildFindingPage,
   deduplicateFindings,
+  diffFindings,
 } from "./responses/findings.js";
+import { PageScanCache, scanPage } from "./scan/pageScan.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
@@ -169,6 +171,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
   const telemetry = new ToolTelemetry(options.telemetry);
   const findingStore = new FindingStore();
+  const pageScanCache = new PageScanCache();
 
   const server = new McpServer({
     name: "govbr-ds-validator",
@@ -519,6 +522,101 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // ══════════════════════════════════════════════════════════════════════════
 
   server.registerTool(
+    "scan_page",
+    {
+      title: "Varredura determinística agregada",
+      description:
+        "Carrega a página uma vez e executa tokens, estrutura e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão.",
+      inputSchema: {
+        url: z.string().describe("URL da página"),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
+        checks: z
+          .array(z.enum(["tokens", "structure", "axe"]))
+          .min(1)
+          .max(3)
+          .optional()
+          .describe("Checks agregados (padrão: todos)"),
+        tokenChecks: z
+          .array(z.enum(["color", "font", "radius", "spacing"]))
+          .min(1)
+          .max(4)
+          .optional()
+          .describe("Subchecks de tokens quando tokens estiver habilitado"),
+        components: z.array(z.string()).min(1).max(36).optional().describe("Componentes estruturais a validar"),
+        actions: z
+          .array(
+            z.discriminatedUnion("action", [
+              z.object({ action: z.literal("click"), selector: z.string() }),
+              z.object({ action: z.literal("fill"), selector: z.string(), value: z.string().max(2_000) }),
+              z.object({ action: z.literal("press"), key: z.string(), selector: z.string().optional() }),
+              z.object({
+                action: z.literal("wait"),
+                selector: z.string().optional(),
+                ms: z.number().int().min(0).max(5_000).optional(),
+              }),
+            ])
+          )
+          .max(20)
+          .optional()
+          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura"),
+        compareToScanId: z
+          .string()
+          .optional()
+          .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
+        ...FindingPageInputShape,
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    instrumentTool(
+      telemetry,
+      "scan_page",
+      async ({ url, selectors, checks, tokenChecks, components, actions, compareToScanId, detail, cursor, limit, maxChars }) => {
+        const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
+        const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
+        if (compareToScanId && !previousFindings) {
+          return json({ error: `compareToScanId '${compareToScanId}' não existe nesta sessão MCP.` });
+        }
+        const result = await scanPage(
+          { url, selectors, checks, tokenChecks, components, actions },
+          pageScanCache
+        );
+        const scanId = findingStore.putBatch("page", result.findings, {
+          stateFingerprint: result.stateFingerprint,
+          cacheHit: result.cacheHit,
+          ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
+          coverage: result.coverage,
+        });
+        const stateDiff = compareToScanId && previousFindings
+          ? {
+              previousScanId: compareToScanId,
+              previousFingerprint: previousLedger?.stateFingerprint ?? null,
+              currentFingerprint: result.stateFingerprint,
+              stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
+              findings: diffFindings(previousFindings, result.findings),
+              elementsInspectedDelta:
+                typeof (previousLedger?.coverage as { elementsInspected?: unknown } | undefined)?.elementsInspected === "number"
+                  ? result.coverage.elementsInspected -
+                    Number((previousLedger?.coverage as { elementsInspected: number }).elementsInspected)
+                  : null,
+            }
+          : undefined;
+        return json({
+          url,
+          scanId,
+          stateFingerprint: result.stateFingerprint,
+          cacheHit: result.cacheHit,
+          ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
+          coverage: result.coverage,
+          summary: summarize(result.findings),
+          deduplication: result.deduplication,
+          ...(stateDiff ? { stateDiff } : {}),
+          ...buildFindingPage(result.findings, { detail, cursor, limit, maxChars }),
+        });
+      }
+    )
+  );
+
+  server.registerTool(
     "check_token_compliance",
     {
       title: "Verificação determinística de tokens",
@@ -691,11 +789,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return json({ error: "Informe exatamente um de ids ou scanId." });
         }
         const batch = scanId ? findingStore.getBatch(scanId) : undefined;
+        const ledger = scanId ? findingStore.getBatchMetadata(scanId) : undefined;
         if (scanId && !batch) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
         const { found, missing } = ids ? findingStore.get(ids) : { found: batch ?? [], missing: [] };
         return json({
           requested: ids?.length ?? found.length,
           ...(scanId ? { scanId } : {}),
+          ...(ledger ? { ledger } : {}),
           missing,
           ...buildFindingPage(found, { detail: detail ?? (scanId ? "summary" : "evidence"), cursor, limit, maxChars }),
         });
