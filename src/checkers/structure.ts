@@ -4,11 +4,12 @@
  * extracted from the official @govbr-ds/core examples (A3: automatic
  * comparison implementation × specification).
  */
-import type { Finding } from "../schema/finding.js";
+import type { Finding, Observation } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
 import type { ComponentSpec } from "../data/load.js";
 import { findEmagRule } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
+import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
 
 const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea"]);
 
@@ -38,6 +39,7 @@ export function checkComponentStructure(
           id: `ds-structure-${spec.name}-tag`,
           source: "govbr-ds-structure",
           description: `Nos exemplos oficiais do gov.br DS, ${spec.rootClass} é aplicado a <${spec.tags.join(">/<")}>.`,
+          implements: groundingFor("structure-tag"),
         },
         ...base,
         evidence: {
@@ -65,6 +67,7 @@ export function checkComponentStructure(
             emag?.description ??
             "Garantir que os objetos programáveis sejam acessíveis — elementos interativos precisam de nome acessível.",
           wcag: "4.1.2",
+          implements: groundingFor("structure-accessible-name"),
         },
         ...base,
         evidence: {
@@ -79,36 +82,53 @@ export function checkComponentStructure(
       });
     }
 
-    // 3. Variant classes not present in any canonical example — review signal
-    const unknown = el.classes.filter(
-      (c) =>
-        c !== spec.rootClass &&
-        c.startsWith(`${spec.rootClass}-`) === false &&
-        !spec.variantClasses.includes(c) &&
-        !/^(?:[mp][trblxy]?-(?:n?\d+|auto)|bg-[\w-]+|text-[\w-]+|d-[\w-]+|col(?:-[\w-]+)?|row)$/.test(c) &&
-        !c.startsWith("br-") // other DS components composed on the same element
-    );
-    if (unknown.length > 0) {
-      findings.push({
-        id: nextFindingId(),
-        rule: {
-          id: `ds-structure-${spec.name}-variant`,
-          source: "govbr-ds-structure",
-          description: `Classes de variação de ${spec.rootClass} devem ser as documentadas nos exemplos e na folha de estilo oficiais (${spec.variantClasses.join(", ")}).`,
-        },
-        ...base,
-        evidence: {
-          observed: `Classes não canônicas em ${spec.rootClass}: ${unknown.join(", ")}`,
-          expected: `Variantes documentadas: ${spec.variantClasses.join(", ")}`,
-          data: { component: spec.name, unknownClasses: unknown, canonicalVariants: spec.variantClasses },
-        },
-        severity: "minor",
-        nature: "syntactic",
-        mode: "display",
-        pathway: "deterministic",
-      });
-    }
+    // 3. Classes fora do vocabulário canônico — ver `collectStructureObservations`. NÃO é achado:
+    //    nenhuma regra do gov.br DS proíbe classe extra num componente (D-27).
   }
 
   return findings;
+}
+
+/** Classes que não são variante canônica nem utilitária conhecida nem outro componente `br-*`. */
+function unknownClasses(el: ElementEvidence, spec: ComponentSpec): string[] {
+  return el.classes.filter(
+    (c) =>
+      c !== spec.rootClass &&
+      c.startsWith(`${spec.rootClass}-`) === false &&
+      !spec.variantClasses.includes(c) &&
+      !/^(?:[mp][trblxy]?-(?:n?\d+|auto)|bg-[\w-]+|text-[\w-]+|d-[\w-]+|col(?:-[\w-]+)?|row)$/.test(c) &&
+      !c.startsWith("br-") // other DS components composed on the same element
+  );
+}
+
+/**
+ * Sinais de revisão da estrutura (D-27) — informação para quem olha a página, fora da pontuação.
+ *
+ * A classe fora do vocabulário canônico costumava sair como achado de severidade `minor`. Ela não
+ * tem norma que a sustente, e o custo de fingir que tem era alto: numa tela realista virava a maior
+ * fonte isolada de falso positivo, concentrada justamente nos elementos que o D-24 tornou
+ * conformes — isto é, penalizando o braço COM oráculo por uma decisão do corpus.
+ */
+export function collectStructureObservations(
+  page: { url: string },
+  elements: ElementEvidence[],
+  spec: ComponentSpec
+): Observation[] {
+  const observations: Observation[] = [];
+
+  for (const el of elements) {
+    if (!el.classes.includes(spec.rootClass)) continue;
+    const unknown = unknownClasses(el, spec);
+    if (unknown.length === 0) continue;
+
+    observations.push({
+      kind: "structure-unknown-classes",
+      element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: page.url },
+      note: `Classes fora do vocabulário canônico em ${spec.rootClass}: ${unknown.join(", ")}. Variantes documentadas: ${spec.variantClasses.join(", ") || "(nenhuma)"}.`,
+      whyNotAFinding: CHECK_GROUNDING["structure-unknown-classes"].basis,
+      data: { component: spec.name, unknownClasses: unknown, canonicalVariants: spec.variantClasses },
+    });
+  }
+
+  return observations;
 }

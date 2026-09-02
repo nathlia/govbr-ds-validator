@@ -3,11 +3,11 @@ import type { Page } from "playwright";
 import { withPage } from "../evidence/browser.js";
 import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { checkTokenCompliance, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
-import { checkComponentStructure } from "../checkers/structure.js";
+import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
-import type { Finding } from "../schema/finding.js";
+import type { Finding, Observation } from "../schema/finding.js";
 
 export type PageScanCheck = "tokens" | "structure" | "axe";
 export type PageScanAction =
@@ -31,6 +31,8 @@ export interface PageScanResult {
   cacheHit: boolean;
   cacheMissReason?: "no-exact-fingerprint-and-scope-match";
   findings: Finding[];
+  /** Sinais de revisão fora da pontuação (D-27). */
+  observations: Observation[];
   coverage: {
     checks: PageScanCheck[];
     /** Explicit selectors from the request; empty means each checker uses its documented default. */
@@ -161,6 +163,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
     const componentTargets = normalized.components.length ? normalized.components : Object.keys(specs);
     const selectors = normalized.selectors.length ? normalized.selectors : [DEFAULT_SELECTOR];
     const rawFindings: Finding[] = [];
+    const observations: Observation[] = [];
     let elementsInspected = 0;
     let componentsFound: string[] = [];
 
@@ -183,7 +186,9 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
       if (checks.includes("structure")) {
         for (const component of componentTargets) {
           const spec = specs[component];
-          if (spec) rawFindings.push(...checkComponentStructure({ url: request.url }, evidence.elements, spec));
+          if (!spec) continue;
+          rawFindings.push(...checkComponentStructure({ url: request.url }, evidence.elements, spec));
+          observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
       }
     }
@@ -208,6 +213,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
       url: request.url,
       stateFingerprint,
       findings: deduplicated.findings,
+      observations,
       coverage: {
         checks,
         selectors: normalized.selectors,

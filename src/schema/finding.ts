@@ -70,6 +70,14 @@ export const RuleRefSchema = z.object({
   source: RuleSourceSchema,
   description: z.string().describe("What the rule requires, quoted or paraphrased from the source"),
   wcag: z.string().optional().describe("Related WCAG success criterion, e.g. '1.4.3'"),
+  implements: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Normative rule ids (KB 'govbr-…' or 'emag-n.n') this check implements. Required for the " +
+        "deterministic checkers: a check that cannot name a rule of the oracle does not produce a " +
+        "Finding, it produces a review Observation (D-27)."
+    ),
 });
 export type RuleRef = z.infer<typeof RuleRefSchema>;
 
@@ -116,6 +124,23 @@ export type Finding = z.infer<typeof FindingSchema>;
 
 /** Raw ZodRawShape variants for MCP registerTool input/output schemas. */
 export const FindingShape = FindingSchema.shape;
+
+/**
+ * Sinal de revisão (D-27) — o que um verificador observa mas não pode afirmar como violação,
+ * porque não há regra normativa que o sustente.
+ *
+ * Deliberadamente NÃO é um Finding e não tem severidade: se entrasse no mesmo canal, entraria
+ * também na precisão, e o oráculo estaria cobrando por uma norma que o design system não escreveu.
+ * Serve a quem revisa a página, não à pontuação.
+ */
+export const ObservationSchema = z.object({
+  kind: z.string().describe("Which check produced it, e.g. 'structure-unknown-classes'"),
+  element: ElementRefSchema,
+  note: z.string().describe("What was observed, in plain terms"),
+  whyNotAFinding: z.string().describe("Why this is not asserted as a violation"),
+  data: z.record(z.string(), z.unknown()).optional(),
+});
+export type Observation = z.infer<typeof ObservationSchema>;
 
 let counter = 0;
 

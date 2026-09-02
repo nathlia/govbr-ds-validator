@@ -56,9 +56,14 @@ const FIXTURE_HTML = `<!DOCTYPE html>
     <button id="state-toggle" type="button" aria-expanded="false">Alternar estado</button>
   </main>
   <script>
+    // A interação transforma o botão num br-button só-ícone SEM nome acessível: um defeito real
+    // (e-MAG 2.2) que só existe depois do clique. Antes do D-27 este teste se apoiava na regra de
+    // classe não canônica, que deixou de ser achado por não ter norma — e um teste de detecção
+    // dependente de estado não pode se apoiar justamente na verificação sem fundamento.
     document.querySelector('#state-toggle').addEventListener('click', (event) => {
       event.currentTarget.setAttribute('aria-expanded', 'true');
-      event.currentTarget.className = 'br-button unexpected-state-class';
+      event.currentTarget.className = 'br-button circle primary unexpected-state-class';
+      event.currentTarget.innerHTML = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
     });
   </script>
 </body>
@@ -308,6 +313,13 @@ describe("scan_page aggregate fast path", () => {
     }));
     expect(expanded.stateDiff.findings.added).toHaveLength(1);
     expect(expanded.stateDiff.findings.removed).toEqual([]);
+
+    // O achado que nasce da interação é fundamentado: cita a norma que aplica (D-27).
+    const nascido = expanded.findings.find((f: { rule: { id: string } }) => f.rule.id === "emag-2.2");
+    expect(nascido).toBeDefined();
+    // A classe não canônica que a interação também introduz sai por fora da pontuação.
+    expect(expanded.observations.some((o: { kind: string }) => o.kind === "structure-unknown-classes")).toBe(true);
+    expect(expanded.findings.every((f: { rule: { id: string } }) => !/variant/.test(f.rule.id))).toBe(true);
 
     const repeated = JSON.parse(textOf(await client.callTool({
       name: "scan_page",

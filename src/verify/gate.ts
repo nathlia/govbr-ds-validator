@@ -45,6 +45,50 @@ export async function verifyFinding({ finding, live = false }: GateInput): Promi
   };
 }
 
+/**
+ * D-27 — as fontes dos próprios verificadores conferiam FORMATO, não existência: bastava o id
+ * começar com `ds-token-`, ou nomear um componente conhecido, para passar. Um id inventado dentro
+ * da família certa era aceito, e foi assim que uma verificação sem norma nenhuma viveu como achado.
+ *
+ * Agora o id da família continua sendo o rótulo do verificador, mas ele tem de declarar em
+ * `implements` a regra normativa que aplica, e essa regra tem de existir no oráculo.
+ */
+function verifyImplementedRules(finding: Finding): Verification | null {
+  // A exigência recai sobre o ORÁCULO, não sobre o agente. Um achado heurístico que cita a
+  // família de um verificador continua sendo julgado pela consistência das suas alegações
+  // (camada 2) — o que ele não pode é usar a fonte do verificador para escapar dela.
+  if (finding.pathway !== "deterministic") return null;
+
+  const declarados = finding.rule.implements ?? [];
+
+  if (declarados.length === 0) {
+    return {
+      verdict: "rejected",
+      verifiedBy: "rule-grounding-index",
+      detail:
+        `'${finding.rule.id}' não declara qual regra normativa implementa. Verificação determinística ` +
+        "sem norma nomeada não produz achado — produz observação de revisão (D-27).",
+    };
+  }
+
+  const inexistentes = declarados.filter((ruleId) => {
+    if (ruleId.startsWith("emag-")) return !findEmagRule(ruleId.replace(/^emag-/, ""));
+    return !getRuleById(ruleId);
+  });
+
+  if (inexistentes.length > 0) {
+    return {
+      verdict: "rejected",
+      verifiedBy: "rule-grounding-index",
+      detail:
+        `'${finding.rule.id}' declara implementar ${inexistentes.join(", ")}, que não existe(m) no ` +
+        "oráculo. Use um id do get_ds_rules ou do get_emag_rules.",
+    };
+  }
+
+  return null;
+}
+
 function verifyRuleExists(finding: Finding): Verification | null {
   const { id, source } = finding.rule;
 
@@ -82,7 +126,6 @@ function verifyRuleExists(finding: Finding): Verification | null {
       return null;
     }
     case "govbr-ds-token": {
-      // Rule ids are checker-defined; accept the known family
       if (!/^ds-token-/.test(id)) {
         return {
           verdict: "rejected",
@@ -90,7 +133,7 @@ function verifyRuleExists(finding: Finding): Verification | null {
           detail: `Id de regra de token desconhecido: '${id}'. Família válida: ds-token-*.`,
         };
       }
-      return null;
+      return verifyImplementedRules(finding);
     }
     case "govbr-ds-structure": {
       const m = id.match(/^ds-structure-([\w]+)/);
@@ -102,7 +145,7 @@ function verifyRuleExists(finding: Finding): Verification | null {
           detail: `Componente desconhecido em '${id}'. Componentes válidos: ${Object.keys(getComponentSpecs().components).join(", ")}.`,
         };
       }
-      return null;
+      return verifyImplementedRules(finding);
     }
     case "govbr-ds-page": {
       const categories = Object.keys(getPageRules().categories);

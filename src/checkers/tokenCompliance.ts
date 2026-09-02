@@ -12,6 +12,7 @@ import { nextFindingId } from "../schema/finding.js";
 import type { TokenRegistry } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { normalizeColor, nearestToken, parsePx } from "./color.js";
+import { groundingFor } from "./grounding.js";
 
 export type TokenCheck = "color" | "font" | "radius" | "spacing";
 
@@ -103,6 +104,7 @@ export function checkTokenCompliance(
           id: nextFindingId(),
           rule: {
             id: "ds-token-color",
+              implements: groundingFor("token-color"),
             source: "govbr-ds-token",
             description:
               "Cores devem usar valores do registro de tokens do gov.br DS (Padrão Digital de Governo); valores arbitrários quebram a identidade visual e o theming.",
@@ -136,6 +138,7 @@ export function checkTokenCompliance(
           id: nextFindingId(),
           rule: {
             id: "ds-token-font-family",
+              implements: groundingFor("token-font-family"),
             source: "govbr-ds-token",
             description: "A tipografia do gov.br DS usa Rawline (com Raleway como alternativa).",
           },
@@ -158,6 +161,7 @@ export function checkTokenCompliance(
           id: nextFindingId(),
           rule: {
             id: "ds-token-font-size",
+              implements: groundingFor("token-font-size"),
             source: "govbr-ds-token",
             description: "Tamanhos de fonte devem seguir a escala tipográfica do DS (--font-size-scale-*).",
           },
@@ -191,6 +195,7 @@ export function checkTokenCompliance(
               id: nextFindingId(),
               rule: {
                 id: "ds-token-radius",
+              implements: groundingFor("token-radius"),
                 source: "govbr-ds-token",
                 description: "Cantos arredondados devem usar os tokens de superfície (--surface-rounder-sm/md/lg) ou o pill (--button-radius/--surface-rounder-pill).",
               },
@@ -229,6 +234,7 @@ export function checkTokenCompliance(
             id: nextFindingId(),
             rule: {
               id: "ds-token-spacing",
+              implements: groundingFor("token-spacing"),
               source: "govbr-ds-token",
               description: `Espaçamentos devem seguir a escala do DS (múltiplos de ${spacingBase / 2}px, base ${spacingBase}px).`,
             },
