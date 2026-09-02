@@ -91,6 +91,37 @@ describe("surface", () => {
     );
   });
 
+  it("exposes only the compact evaluation tool profile", async () => {
+    const evaluationServer = createServer({
+      reportsDir: mkdtempSync(join(tmpdir(), "govbr-reports-")),
+      toolProfile: "evaluation",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const evaluationClient = new Client({ name: "evaluation-profile-test", version: "1.0.0" });
+    await evaluationServer.connect(serverTransport);
+    await evaluationClient.connect(clientTransport);
+
+    try {
+      const { tools } = await evaluationClient.listTools();
+      expect(tools.map((tool) => tool.name).sort()).toEqual(
+        [
+          "get_component_spec",
+          "get_design_tokens",
+          "get_ds_rules",
+          "get_emag_rules",
+          "get_finding_details",
+          "get_page_rules",
+          "scan_page",
+          "verify_finding",
+        ].sort()
+      );
+      const fullSurface = (await client.listTools()).tools;
+      expect(JSON.stringify(tools).length).toBeLessThan(JSON.stringify(fullSurface).length * 0.75);
+    } finally {
+      await evaluationClient.close();
+    }
+  });
+
   it("get_finding_details reports ids that are absent from the current MCP session", async () => {
     const res = await client.callTool({
       name: "get_finding_details",

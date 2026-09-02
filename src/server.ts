@@ -42,7 +42,7 @@ import {
   type RuleForce,
 } from "./data/knowledge.js";
 import { checkTokenCompliance, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
-import { checkComponentStructure } from "./checkers/structure.js";
+import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
 import {
   inspectComputedStyles,
@@ -69,6 +69,8 @@ const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
 export interface ServerOptions {
   reportsDir?: string;
   telemetry?: ToolTelemetryOptions;
+  /** Full authoring surface, or the smaller surface used by controlled evaluations. */
+  toolProfile?: "full" | "evaluation";
 }
 
 function json(data: unknown) {
@@ -169,6 +171,8 @@ function projectRule(r: KnowledgeRule) {
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
+  const toolProfile = options.toolProfile ??
+    (process.env.GOVBR_VALIDATOR_TOOL_PROFILE === "evaluation" ? "evaluation" : "full");
   const telemetry = new ToolTelemetry(options.telemetry);
   const findingStore = new FindingStore();
   const pageScanCache = new PageScanCache();
@@ -191,7 +195,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
       description:
-        "Loja de regras autoritativa do oráculo (A1/D-11): 186 regras atômicas extraídas da documentação oficial do gov.br DS 3.7.0 + e-MAG 3.1, com id determinístico, força normativa, estratégia de validação e proveniência. Achados devem citar o id da regra (source 'govbr-ds-kb') — o verify_finding confere por igualdade exata. Listagens retornam apenas regras NORMATIVAS; fragmentos canônicos do @govbr-ds/core (force=example) são EVIDÊNCIA de implementação, servidos no campo separado 'evidence' (include_evidence=true) e NUNCA sobrepõem regras required/prohibited — a implementação oficial contém defeitos conhecidos (veja govbr://knowledge/conflicts).",
+        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Use a projeção breve para triagem e detalhe completo somente para regras candidatas.",
       inputSchema: {
         id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
         ids: z
@@ -335,7 +339,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Design tokens do gov.br DS",
       description:
-        "Registro de tokens do gov.br Design System (Padrão Digital de Governo) extraído do @govbr-ds/core instalado. Sem query: destaques semânticos + índice reverso hex→token. Com query: filtra tokens por fragmento de nome (ex.: 'blue', 'spacing', 'font-size').",
+        "Consulta tokens do gov.br DS por nome. Sem filtro, retorna apenas destaques semânticos e o índice reverso de cores.",
       inputSchema: {
         query: z.string().optional().describe("Fragmento de nome para filtrar (omitir para destaques semânticos + índice hex)"),
       },
@@ -357,7 +361,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras e-MAG 3.1",
       description:
-        "e-MAG 3.1 (Modelo de Acessibilidade em Governo Eletrônico) completo — padrão brasileiro obrigatório para portais gov.br, não coberto por ferramentas genéricas. Filtre por seção (1 Marcação, 2 Comportamento, 3 Conteúdo, 4 Apresentação, 5 Multimídia, 6 Formulário) ou por id de regra (ex.: '6.2').",
+        "Consulta recomendações do e-MAG por seção ou id. Sem filtro, retorna somente o índice de seções.",
       inputSchema: {
         section: z.number().min(1).max(6).optional().describe("Seção 1–6"),
         id: z.string().optional().describe("Id de regra específica, ex.: '4.1'"),
@@ -393,7 +397,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Diretrizes estruturais do gov.br DS extraídas da documentação oficial — anatomia de página, padrões de formulário e navegação, grid, boas práticas HTML/WAI-ARIA. Sem categoria: lista as categorias disponíveis.",
+        "Consulta diretrizes de página por categoria. Sem categoria, retorna somente o índice disponível.",
       inputSchema: {
         category: z
           .enum([
@@ -427,7 +431,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "list_components",
     {
       title: "Componentes do gov.br DS",
@@ -454,7 +458,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Especificação canônica de componente",
       description:
-        "Especificação estrutural canônica de um componente do gov.br DS, extraída dos exemplos oficiais do @govbr-ds/core: tags de elemento válidas, classes de variação documentadas, atributos ARIA usados, tokens consumidos pelo CSS do componente e fragmentos de exemplo oficiais.",
+        "Consulta estrutura, variantes, atributos e tokens de um componente. Exemplos HTML são opcionais e podem conter alertas conhecidos.",
       inputSchema: {
         component: z.string().describe("Nome do componente, ex.: 'button', 'input', 'select'"),
         include_examples: z.boolean().optional().describe("Incluir fragmentos HTML canônicos (padrão: false, até 5)"),
@@ -494,7 +498,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Evidence tool (C5 phase 1)
   // ══════════════════════════════════════════════════════════════════════════
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "inspect_computed_styles",
     {
       title: "Inspecionar estilos computados",
@@ -607,6 +611,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
+          // Fora da pontuação, de propósito (D-27): o que o oráculo observa mas não afirma.
+          observations: result.observations,
           summary: summarize(result.findings),
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),
@@ -616,7 +622,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     )
   );
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "check_token_compliance",
     {
       title: "Verificação determinística de tokens",
@@ -665,7 +671,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     )
   );
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "check_component_structure",
     {
       title: "Verificação determinística de estrutura",
@@ -696,6 +702,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
           if (!spec) return [];
           return checkComponentStructure({ url }, evidence.elements, spec);
         });
+        // Canal separado, fora da pontuação (D-27): o que se observa mas não se pode afirmar.
+        const observations = targets.flatMap((name) => {
+          const spec = specs[name];
+          if (!spec) return [];
+          return collectStructureObservations({ url }, evidence.elements, spec);
+        });
 
         const deduplication = deduplicateFindings(rawFindings);
         const findings = deduplication.findings;
@@ -711,6 +723,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           scanId,
           componentsFound,
           elementsInspected: evidence.count,
+          observations,
           summary: summarize(findings),
           deduplication: {
             input: deduplication.inputCount,
@@ -724,7 +737,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     )
   );
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "run_axe_scan",
     {
       title: "Varredura axe-core",
@@ -812,7 +825,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Portão de verificação anti-alucinação",
       description:
-        "OBRIGATÓRIO para achados heurísticos (iniciativa do agente) antes de entrarem no relatório. Verifica: (1) a regra citada existe no oráculo; (2) alegações verificáveis batem com o registro de tokens; (3) opcionalmente re-inspeciona o elemento na página (live=true). Retorna verdict confirmed/rejected/unverifiable — inclua o objeto retornado no campo 'verification' do achado.",
+        "Confere se a regra e a evidência de um Finding heurístico são sustentáveis. Use live somente quando precisar reabrir a página.",
       inputSchema: {
         finding: FindingSchema.describe("O achado candidato, no esquema Finding"),
         live: z.boolean().optional().describe("Re-inspecionar o elemento na página (padrão: false)"),
@@ -825,7 +838,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     })
   );
 
-  server.registerTool(
+  if (toolProfile === "full") server.registerTool(
     "save_report",
     {
       title: "Consolidar e persistir relatório",
