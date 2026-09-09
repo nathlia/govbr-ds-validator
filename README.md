@@ -40,7 +40,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines
-- `list_components ()` / `get_component_spec (component, include_examples?)` — canonical structure contracts; HTML examples are opt-in
+- `list_components ()` / `get_component_spec (component, include_examples?)` — canonical structure contracts; HTML examples are opt-in. Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
 
 **Evidence (C5 phase 1)**:
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
@@ -120,3 +120,14 @@ of treating “the oracle” as one indivisible package.
 - Three-way epistemic separation (D-10): normative rules ≠ implementation evidence ≠ observed
   defects. Enforced in code: `get_ds_rules` listings never mix `force=example` records into
   normative results, and `verify_finding` rejects findings that cite evidence as the violated rule.
+- A deterministic checker that cannot name the norm it implements **produces no finding** (D-27).
+  Each checker declares its rule via `implements`, and reports that id; the gate checks the id
+  *exists* in the oracle, not merely that it is well-formed. Non-canonical class variants
+  (`ds-structure-*-variant`) left the Findings channel entirely — a class the DS does not publish
+  is an observation, not a violation.
+- Rules derived from a **truncated source** carry an explicit inference caveat (D-29): the Template
+  Base being a starting point does not imply a mandatory footer or any other region the source
+  never declares. The caveat travels with the rule so an agent cannot quietly infer subcomponents.
+- `relatedSelectors[]` lets a rule name the other participants of a **relational** requirement (a
+  form, its field, and the dynamic message that announces the error), so scoring stops being
+  sensitive to which of the three nodes an agent chose to narrate the same failure from.
