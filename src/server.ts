@@ -42,7 +42,20 @@ import {
   type KnowledgeRule,
   type RuleForce,
 } from "./data/knowledge.js";
+import { readFileSync } from "node:fs";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
+
+/**
+ * A versão que o servidor anuncia no handshake MCP.
+ *
+ * Lida do package.json de propósito: estava escrita à mão aqui e já tinha divergido — o servidor
+ * dizia 2.0.0 enquanto o pacote ia em 2.1.0. Não é detalhe cosmético: o scorer agrupa execuções por
+ * versão do validator (D-26), então dois oráculos com semântica diferente anunciando o mesmo número
+ * fariam a incomparabilidade virar lembrança em vez de mecanismo.
+ */
+const VERSAO: string = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
 import {
@@ -200,7 +213,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
 
   const server = new McpServer({
     name: "govbr-ds-validator",
-    version: "2.0.0",
+    version: VERSAO,
   });
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
