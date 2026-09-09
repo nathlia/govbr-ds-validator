@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { checkTokenCompliance } from "../../src/checkers/tokenCompliance.js";
+import { checkTokenCompliance, collectTokenObservations } from "../../src/checkers/tokenCompliance.js";
 import { getTokenRegistry } from "../../src/data/load.js";
 import { resetFindingIds } from "../../src/schema/finding.js";
 import { makeElement } from "../helpers/fixtures.js";
@@ -37,14 +37,32 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
   it("tolerates browser rounding of scale font sizes", () => {
     // --font-size-scale-down-01 = 11.662px; browser may report 11.6625px
     const el = makeElement({ computed: { fontSize: "11.6625px" } as never });
-    const findings = checkTokenCompliance(page, [el], registry, ["font"]);
-    expect(findings.filter((f) => f.rule.id === "ds-token-font-size")).toEqual([]);
+    expect(collectTokenObservations(page, [el], registry)).toEqual([]);
   });
 
-  it("flags an off-scale font size", () => {
+  // D-32: a escala tipográfica não sustenta afirmação binária — a única regra da KB sobre tamanho
+  // de fonte é informativa, e o veredito passava a depender de onde se corta a tolerância. O desvio
+  // continua sendo reportado; deixa de ser cobrado.
+  it("reports an off-scale font size as an observation, never as a finding", () => {
     const el = makeElement({ computed: { fontSize: "13px" } as never });
+
     const findings = checkTokenCompliance(page, [el], registry, ["font"]);
-    expect(findings.some((f) => f.rule.id === "ds-token-font-size")).toBe(true);
+    expect(findings.some((f) => f.rule.id === "ds-token-font-size")).toBe(false);
+
+    const observations = collectTokenObservations(page, [el], registry);
+    expect(observations).toHaveLength(1);
+    expect(observations[0].kind).toBe("token-font-size-off-scale");
+    expect(observations[0].note).toContain("13px");
+    expect(observations[0].whyNotAFinding).toContain("NÃO HÁ NORMA");
+    // Observação não tem severidade: se tivesse, entraria na pontuação pela porta dos fundos.
+    expect(observations[0]).not.toHaveProperty("severity");
+  });
+
+  it("keeps every emitted token finding grounded in a named rule (D-27)", () => {
+    const el = makeElement({ computed: { color: "rgb(1, 2, 3)", fontSize: "13px", padding: "13px" } as never });
+    const findings = checkTokenCompliance(page, [el], registry);
+    expect(findings.length).toBeGreaterThan(0);
+    for (const f of findings) expect(f.rule.implements?.length ?? 0).toBeGreaterThan(0);
   });
 
   it("does not attribute a browser default color to the page", () => {

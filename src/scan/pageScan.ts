@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Page } from "playwright";
 import { withPage } from "../evidence/browser.js";
 import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
-import { checkTokenCompliance, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
+import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
@@ -182,6 +182,9 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
         rawFindings.push(
           ...checkTokenCompliance({ url: request.url }, evidence.elements, getTokenRegistry(), activeTokenChecks)
         );
+        if (activeTokenChecks.includes("font")) {
+          observations.push(...collectTokenObservations({ url: request.url }, evidence.elements, getTokenRegistry()));
+        }
       }
       if (checks.includes("structure")) {
         for (const component of componentTargets) {

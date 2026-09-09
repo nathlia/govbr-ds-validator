@@ -57,11 +57,16 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
     basis: "'Utilize Rawline como fonte oficial do Governo Federal' (required).",
   },
   "token-font-size": {
-    implements: [TOKENS_EM_GERAL],
+    implements: [],
     basis:
-      "A escala tipográfica é servida como token, então um tamanho fora dela é consumo incorreto " +
-      "de token (required). A regra de fonte-base de 16 px é INFORMATIVA e admite ajuste " +
-      "contextual — citá-la como norma violada seria forte demais para o que ela diz.",
+      "NÃO HÁ NORMA que sustente a afirmação binária. A única regra da KB sobre tamanho de fonte " +
+      "é a de fonte-base de 16 px, e ela é INFORMATIVA e admite ajuste contextual. O que restava " +
+      "era esticar a regra geral de consumo de token até cobrir uma diferença sub-pixel: a escala " +
+      "do DS é modular e não redonda (14 · 16,8 · 20,16 · 24,192 px), de modo que a página que " +
+      "escreve 20px está a 0,16px do passo e a que escreve 16px está a 0,8px — e o veredito passava " +
+      "a depender de onde se corta a tolerância, não da norma. Julgar se um desvio desses é defeito " +
+      "é trabalho da camada semântica, com a página na frente; o determinístico mostra o desvio e " +
+      "não o afirma. Vira observação (D-32).",
   },
   "token-radius": {
     implements: [TOKENS_EM_GERAL],

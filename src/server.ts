@@ -42,7 +42,7 @@ import {
   type KnowledgeRule,
   type RuleForce,
 } from "./data/knowledge.js";
-import { checkTokenCompliance, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
+import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
 import {
@@ -673,6 +673,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           tokenProperties(activeChecks)
         );
         const rawFindings = checkTokenCompliance({ url }, evidence.elements, getTokenRegistry(), activeChecks);
+        const observations = activeChecks.includes("font")
+          ? collectTokenObservations({ url }, evidence.elements, getTokenRegistry())
+          : [];
         const deduplication = deduplicateFindings(rawFindings);
         const findings = deduplication.findings;
         const scanId = findingStore.putBatch("tokens", findings);
@@ -681,6 +684,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           scanId,
           elementsInspected: evidence.count,
           summary: summarize(findings),
+          ...(observations.length ? { observations } : {}),
           deduplication: {
             input: deduplication.inputCount,
             output: deduplication.outputCount,
