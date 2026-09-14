@@ -58,7 +58,9 @@ const AXE_TO_EMAG: Record<string, string> = {
   marquee: "2.6",
   "video-caption": "5.1",
   "audio-caption": "5.2",
-  "no-autoplay-audio": "5.3",
+  // 5.4 (controle de áudio para som em segundo plano), não 5.3 (audiodescrição): o mapeamento
+  // herdou a identidade trocada que `data/emag.json` servia até 2026-09-14.
+  "no-autoplay-audio": "5.4",
   "link-in-text-block": "4.2",
   "focus-order-semantics": "1.4",
 };
