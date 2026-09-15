@@ -90,6 +90,20 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Egress policy (2.4.0)
+
+The browser-backed tools open whatever URL the client passes. In a measured run that client is the
+agent under evaluation, so two variables confine the server's own Chromium:
+
+| Variable | Effect |
+|---|---|
+| `GOVBR_VALIDATOR_ALLOWED_ORIGINS` | comma-separated origins a tool may open; any other URL fails before loading |
+| `GOVBR_VALIDATOR_PROXY_SERVER` | every browser request — subresources, redirects, fetch, frames, workers, loopback included — goes through this proxy |
+
+Unset, behavior is unchanged. The origin check gives a readable error; the proxy is the boundary.
+`test/integration/egress-policy.test.ts` pins both, with a no-policy control that does reach the
+decoy server.
+
 ### Capability profiles (D-28)
 
 `GOVBR_VALIDATOR_TOOL_PROFILE` separates the causal contribution of the server. The profile is
