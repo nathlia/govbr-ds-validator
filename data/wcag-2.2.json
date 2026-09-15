@@ -1,0 +1,937 @@
+{
+  "meta": {
+    "standard": "WCAG 2.2",
+    "source": "https://www.w3.org/WAI/WCAG22/wcag.json",
+    "retrievedAt": "2026-09-15",
+    "sourceSha256": "3a034865a879a7d874b60ff2aec7f430cf37bc1597a1e00985680fd80ef5cf75",
+    "totalListed": 87,
+    "inWcag22": 86,
+    "obsoleteInWcag22": [
+      "4.1.1"
+    ],
+    "note": "Gerado por scripts/build-wcag.ts. Critérios sem '2.2' em versions foram removidos na WCAG 2.2 e ficam marcados como obsoletos."
+  },
+  "criteria": [
+    {
+      "num": "1.1.1",
+      "id": "non-text-content",
+      "handle": "Non-text Content",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.1",
+      "id": "audio-only-and-video-only-prerecorded",
+      "handle": "Audio-only and Video-only (Prerecorded)",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.2",
+      "id": "captions-prerecorded",
+      "handle": "Captions (Prerecorded)",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.3",
+      "id": "audio-description-or-media-alternative-prerecorded",
+      "handle": "Audio Description or Media Alternative (Prerecorded)",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.4",
+      "id": "captions-live",
+      "handle": "Captions (Live)",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.5",
+      "id": "audio-description-prerecorded",
+      "handle": "Audio Description (Prerecorded)",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.6",
+      "id": "sign-language-prerecorded",
+      "handle": "Sign Language (Prerecorded)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.7",
+      "id": "extended-audio-description-prerecorded",
+      "handle": "Extended Audio Description (Prerecorded)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.8",
+      "id": "media-alternative-prerecorded",
+      "handle": "Media Alternative (Prerecorded)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.2.9",
+      "id": "audio-only-live",
+      "handle": "Audio-only (Live)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.1",
+      "id": "info-and-relationships",
+      "handle": "Info and Relationships",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.2",
+      "id": "meaningful-sequence",
+      "handle": "Meaningful Sequence",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.3",
+      "id": "sensory-characteristics",
+      "handle": "Sensory Characteristics",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.4",
+      "id": "orientation",
+      "handle": "Orientation",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.5",
+      "id": "identify-input-purpose",
+      "handle": "Identify Input Purpose",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.3.6",
+      "id": "identify-purpose",
+      "handle": "Identify Purpose",
+      "level": "AAA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.1",
+      "id": "use-of-color",
+      "handle": "Use of Color",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.2",
+      "id": "audio-control",
+      "handle": "Audio Control",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.3",
+      "id": "contrast-minimum",
+      "handle": "Contrast (Minimum)",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.4",
+      "id": "resize-text",
+      "handle": "Resize Text",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.5",
+      "id": "images-of-text",
+      "handle": "Images of Text",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.6",
+      "id": "contrast-enhanced",
+      "handle": "Contrast (Enhanced)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.7",
+      "id": "low-or-no-background-audio",
+      "handle": "Low or No Background Audio",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.8",
+      "id": "visual-presentation",
+      "handle": "Visual Presentation",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.9",
+      "id": "images-of-text-no-exception",
+      "handle": "Images of Text (No Exception)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.10",
+      "id": "reflow",
+      "handle": "Reflow",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.11",
+      "id": "non-text-contrast",
+      "handle": "Non-text Contrast",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.12",
+      "id": "text-spacing",
+      "handle": "Text Spacing",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "1.4.13",
+      "id": "content-on-hover-or-focus",
+      "handle": "Content on Hover or Focus",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.1.1",
+      "id": "keyboard",
+      "handle": "Keyboard",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.1.2",
+      "id": "no-keyboard-trap",
+      "handle": "No Keyboard Trap",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.1.3",
+      "id": "keyboard-no-exception",
+      "handle": "Keyboard (No Exception)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.1.4",
+      "id": "character-key-shortcuts",
+      "handle": "Character Key Shortcuts",
+      "level": "A",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.1",
+      "id": "timing-adjustable",
+      "handle": "Timing Adjustable",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.2",
+      "id": "pause-stop-hide",
+      "handle": "Pause, Stop, Hide",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.3",
+      "id": "no-timing",
+      "handle": "No Timing",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.4",
+      "id": "interruptions",
+      "handle": "Interruptions",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.5",
+      "id": "re-authenticating",
+      "handle": "Re-authenticating",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.2.6",
+      "id": "timeouts",
+      "handle": "Timeouts",
+      "level": "AAA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.3.1",
+      "id": "three-flashes-or-below-threshold",
+      "handle": "Three Flashes or Below Threshold",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.3.2",
+      "id": "three-flashes",
+      "handle": "Three Flashes",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.3.3",
+      "id": "animation-from-interactions",
+      "handle": "Animation from Interactions",
+      "level": "AAA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.1",
+      "id": "bypass-blocks",
+      "handle": "Bypass Blocks",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.2",
+      "id": "page-titled",
+      "handle": "Page Titled",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.3",
+      "id": "focus-order",
+      "handle": "Focus Order",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.4",
+      "id": "link-purpose-in-context",
+      "handle": "Link Purpose (In Context)",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.5",
+      "id": "multiple-ways",
+      "handle": "Multiple Ways",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.6",
+      "id": "headings-and-labels",
+      "handle": "Headings and Labels",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.7",
+      "id": "focus-visible",
+      "handle": "Focus Visible",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.8",
+      "id": "location",
+      "handle": "Location",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.9",
+      "id": "link-purpose-link-only",
+      "handle": "Link Purpose (Link Only)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.10",
+      "id": "section-headings",
+      "handle": "Section Headings",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.11",
+      "id": "focus-not-obscured-minimum",
+      "handle": "Focus Not Obscured (Minimum)",
+      "level": "AA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.12",
+      "id": "focus-not-obscured-enhanced",
+      "handle": "Focus Not Obscured (Enhanced)",
+      "level": "AAA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.4.13",
+      "id": "focus-appearance",
+      "handle": "Focus Appearance",
+      "level": "AAA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.1",
+      "id": "pointer-gestures",
+      "handle": "Pointer Gestures",
+      "level": "A",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.2",
+      "id": "pointer-cancellation",
+      "handle": "Pointer Cancellation",
+      "level": "A",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.3",
+      "id": "label-in-name",
+      "handle": "Label in Name",
+      "level": "A",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.4",
+      "id": "motion-actuation",
+      "handle": "Motion Actuation",
+      "level": "A",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.5",
+      "id": "target-size-enhanced",
+      "handle": "Target Size (Enhanced)",
+      "level": "AAA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.6",
+      "id": "concurrent-input-mechanisms",
+      "handle": "Concurrent Input Mechanisms",
+      "level": "AAA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.7",
+      "id": "dragging-movements",
+      "handle": "Dragging Movements",
+      "level": "AA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "2.5.8",
+      "id": "target-size-minimum",
+      "handle": "Target Size (Minimum)",
+      "level": "AA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.1",
+      "id": "language-of-page",
+      "handle": "Language of Page",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.2",
+      "id": "language-of-parts",
+      "handle": "Language of Parts",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.3",
+      "id": "unusual-words",
+      "handle": "Unusual Words",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.4",
+      "id": "abbreviations",
+      "handle": "Abbreviations",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.5",
+      "id": "reading-level",
+      "handle": "Reading Level",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.1.6",
+      "id": "pronunciation",
+      "handle": "Pronunciation",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.1",
+      "id": "on-focus",
+      "handle": "On Focus",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.2",
+      "id": "on-input",
+      "handle": "On Input",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.3",
+      "id": "consistent-navigation",
+      "handle": "Consistent Navigation",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.4",
+      "id": "consistent-identification",
+      "handle": "Consistent Identification",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.5",
+      "id": "change-on-request",
+      "handle": "Change on Request",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.2.6",
+      "id": "consistent-help",
+      "handle": "Consistent Help",
+      "level": "A",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.1",
+      "id": "error-identification",
+      "handle": "Error Identification",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.2",
+      "id": "labels-or-instructions",
+      "handle": "Labels or Instructions",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.3",
+      "id": "error-suggestion",
+      "handle": "Error Suggestion",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.4",
+      "id": "error-prevention-legal-financial-data",
+      "handle": "Error Prevention (Legal, Financial, Data)",
+      "level": "AA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.5",
+      "id": "help",
+      "handle": "Help",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.6",
+      "id": "error-prevention-all",
+      "handle": "Error Prevention (All)",
+      "level": "AAA",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.7",
+      "id": "redundant-entry",
+      "handle": "Redundant Entry",
+      "level": "A",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.8",
+      "id": "accessible-authentication-minimum",
+      "handle": "Accessible Authentication (Minimum)",
+      "level": "AA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "3.3.9",
+      "id": "accessible-authentication-enhanced",
+      "handle": "Accessible Authentication (Enhanced)",
+      "level": "AAA",
+      "versions": [
+        "2.2"
+      ]
+    },
+    {
+      "num": "4.1.1",
+      "id": "parsing",
+      "handle": "Parsing (Obsolete and removed)",
+      "level": null,
+      "versions": [
+        "2.0",
+        "2.1"
+      ]
+    },
+    {
+      "num": "4.1.2",
+      "id": "name-role-value",
+      "handle": "Name, Role, Value",
+      "level": "A",
+      "versions": [
+        "2.0",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "num": "4.1.3",
+      "id": "status-messages",
+      "handle": "Status Messages",
+      "level": "AA",
+      "versions": [
+        "2.1",
+        "2.2"
+      ]
+    }
+  ]
+}

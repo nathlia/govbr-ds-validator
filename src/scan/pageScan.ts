@@ -83,7 +83,7 @@ function hash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-async function fingerprintPage(page: Page): Promise<string> {
+export async function fingerprintPage(page: Page): Promise<string> {
   const state = await page.evaluate(() => ({
     url: location.href,
     viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
@@ -131,7 +131,7 @@ function normalizedRequest(request: PageScanRequest) {
   };
 }
 
-async function applyActions(page: Page, actions: PageScanAction[]): Promise<void> {
+export async function applyActions(page: Page, actions: PageScanAction[]): Promise<void> {
   for (const action of actions) {
     if (action.action === "click") {
       await page.locator(action.selector).first().click();

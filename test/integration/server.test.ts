@@ -445,7 +445,7 @@ describe("verification gate — KB rule ids (D-11 exact-id matching)", () => {
     pathway: "heuristic",
   };
 
-  it("confirms a finding citing a real normative KB rule id", async () => {
+  it("grounds a finding citing a real normative KB rule id without confirming it (no predicate)", async () => {
     const list = JSON.parse(
       textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "required" } }))
     );
@@ -464,7 +464,8 @@ describe("verification gate — KB rule ids (D-11 exact-id matching)", () => {
         })
       )
     );
-    expect(res.verification.verdict).toBe("confirmed");
+    expect(res.verification.verdict).toBe("unverifiable");
+    expect(res.verification.checks).toMatchObject({ ruleExists: "pass", applicability: "pass", violation: "no-predicate" });
   });
 
   it("rejects a hallucinated KB rule id", async () => {
@@ -511,7 +512,7 @@ describe("verification gate — KB rule ids (D-11 exact-id matching)", () => {
 });
 
 describe("verification gate + report round-trip", () => {
-  it("confirms grounded findings and rejects hallucinated rules via MCP", async () => {
+  it("grounds real rules without confirming them, and rejects hallucinated rules via MCP", async () => {
     const grounded = {
       id: "F-900",
       rule: { id: "emag-4.1", source: "emag", description: "Contraste mínimo" },
@@ -525,7 +526,8 @@ describe("verification gate + report round-trip", () => {
     const ok = JSON.parse(
       textOf(await client.callTool({ name: "verify_finding", arguments: { finding: grounded } }))
     );
-    expect(ok.verification.verdict).toBe("confirmed");
+    expect(ok.verification.verdict).toBe("unverifiable");
+    expect(ok.verification.checks.ruleExists).toBe("pass");
 
     const hallucinated = { ...grounded, id: "F-901", rule: { ...grounded.rule, id: "emag-7.3" } };
     const bad = JSON.parse(
@@ -555,9 +557,10 @@ describe("verification gate + report round-trip", () => {
         })
       )
     );
-    expect(res.accepted).toBe(1);
-    expect(res.rejected).toHaveLength(1);
-    expect(res.rejected[0].errors[0]).toContain("verify_finding");
+    expect(res.accepted).toBe(0);
+    expect(res.rejected).toHaveLength(2);
+    expect(res.rejected[0].errors[0]).toContain("finding_ids");
+    expect(res.rejected[1].errors[0]).toContain("verify_finding");
     expect(res.jsonPath).toMatch(/\.json$/);
     expect(res.markdownPath).toMatch(/\.md$/);
   });

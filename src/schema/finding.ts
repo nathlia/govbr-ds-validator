@@ -98,10 +98,43 @@ export const EvidenceSchema = z.object({
 });
 export type Evidence = z.infer<typeof EvidenceSchema>;
 
+/** Outcome of one separate gate check (v02, slice 4). */
+export const CheckStatusSchema = z.enum(["pass", "fail", "unknown", "not-applicable"]);
+export type CheckStatus = z.infer<typeof CheckStatusSchema>;
+
+/**
+ * Whether the violation itself was verified:
+ *   verified      an implemented predicate recomputed it on every asserted element, in the state checked
+ *   contradicted  the predicate ran and at least one asserted element does not violate
+ *   no-predicate  no predicate exists for this rule/claim — the only honest answer is unverifiable
+ *   not-checked   a predicate exists but live=false
+ *   error         the page could not be reopened
+ */
+export const ViolationStatusSchema = z.enum(["verified", "contradicted", "no-predicate", "not-checked", "error"]);
+export type ViolationStatus = z.infer<typeof ViolationStatusSchema>;
+
 export const VerificationSchema = z.object({
   verdict: VerdictSchema,
   verifiedBy: z.string().describe("Which oracle check produced the verdict, e.g. 'token-registry', 'emag-rule-index'"),
   detail: z.string().optional(),
+  checks: z
+    .object({
+      ruleExists: CheckStatusSchema.describe("The cited id is a member of a versioned registry (KB, e-MAG 3.1, WCAG 2.2, published checker ids)"),
+      applicability: CheckStatusSchema.describe("The rule can support a finding (not implementation evidence, not a check without a norm)"),
+      evidenceConsistent: CheckStatusSchema.describe("Machine-readable values and, when live, the element in the checked state agree with the claim"),
+      violation: ViolationStatusSchema,
+    })
+    .optional(),
+  predicate: z.string().nullable().optional().describe("Implemented predicate used to verify the violation, if any"),
+  binding: z
+    .object({
+      findingSha256: z.string().describe("SHA-256 of the verified payload (everything except verification)"),
+      stateFingerprint: z.string().nullable(),
+      live: z.boolean(),
+      elements: z.number().int().nullable(),
+    })
+    .optional(),
+  registries: z.record(z.string()).optional().describe("Registry versions the ids were checked against"),
 });
 export type Verification = z.infer<typeof VerificationSchema>;
 

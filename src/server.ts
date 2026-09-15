@@ -64,6 +64,8 @@ import {
   type StyleProperty,
 } from "./evidence/inspect.js";
 import { verifyFinding } from "./verify/gate.js";
+import { VerificationStore } from "./verify/store.js";
+import { PageActionsSchema } from "./scan/actions.js";
 import { validateFindings, buildReport, persistReport, summarize } from "./report/report.js";
 import { buildValidatePagePrompt } from "./prompts/validatePage.js";
 import { ToolTelemetry, instrumentTool, type ToolTelemetryOptions } from "./telemetry.js";
@@ -209,6 +211,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const hasCombinedGate = toolProfile === "full" || toolProfile === "evaluation";
   const telemetry = new ToolTelemetry(options.telemetry);
   const findingStore = new FindingStore();
+  const verificationStore = new VerificationStore();
   const pageScanCache = new PageScanCache();
 
   const server = new McpServer({
@@ -582,20 +585,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Subchecks de tokens quando tokens estiver habilitado"),
         components: z.array(z.string()).min(1).max(36).optional().describe("Componentes estruturais a validar"),
-        actions: z
-          .array(
-            z.discriminatedUnion("action", [
-              z.object({ action: z.literal("click"), selector: z.string() }),
-              z.object({ action: z.literal("fill"), selector: z.string(), value: z.string().max(2_000) }),
-              z.object({ action: z.literal("press"), key: z.string(), selector: z.string().optional() }),
-              z.object({
-                action: z.literal("wait"),
-                selector: z.string().optional(),
-                ms: z.number().int().min(0).max(5_000).optional(),
-              }),
-            ])
-          )
-          .max(20)
+        actions: PageActionsSchema
           .optional()
           .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura"),
         compareToScanId: z
@@ -864,16 +854,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Portão de verificação anti-alucinação",
       description:
-        "Confere se a regra e a evidência de um Finding heurístico são sustentáveis. Use live somente quando precisar reabrir a página.",
+        "Confere em separado: existência da regra num registro versionado, aplicabilidade, consistência da evidência e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions. Sem predicado implementado o resultado é unverifiable; confirmed exige a violação verificada. O servidor guarda o resultado para este payload exato.",
       inputSchema: {
         finding: FindingSchema.describe("O achado candidato, no esquema Finding"),
-        live: z.boolean().optional().describe("Re-inspecionar o elemento na página (padrão: false)"),
+        live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
+        actions: PageActionsSchema.optional().describe("Ações reproduzidas antes da verificação, quando o estado alegado depende de interação"),
+        stateFingerprint: z.string().optional().describe("Fingerprint do estado alegado (de scan_page); outro estado rejeita a verificação"),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    instrumentTool(telemetry, "verify_finding", async ({ finding, live }) => {
-      const verification = await verifyFinding({ finding, live: live ?? false });
-      return json({ findingId: finding.id, verification });
+    instrumentTool(telemetry, "verify_finding", async ({ finding, live, actions, stateFingerprint }) => {
+      const verification = await verifyFinding({ finding, live: live ?? false, actions, stateFingerprint });
+      const stored = verificationStore.record(finding, verification);
+      return json({ findingId: finding.id, verificationId: stored.verificationId, verification });
     })
   );
 
@@ -893,7 +886,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         findings: z
           .array(z.record(z.unknown()))
           .optional()
-          .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos)"),
+          .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos). O campo verification enviado é ignorado: vale a verificação guardada pelo servidor para o payload idêntico."),
         notes: z.string().optional().describe("Notas gerais da validação (contexto, limitações desta rodada)"),
       },
     },
@@ -905,12 +898,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
           missingFindingIds: stored.missing,
         });
       }
-      const { accepted, rejected } = validateFindings([...stored.found, ...(findings ?? [])]);
-      const report = buildReport(url, accepted, notes);
+      const { accepted, reviewItems, rejected } = validateFindings(findings ?? [], {
+        serverFindings: stored.found,
+        verificationFor: (finding) => verificationStore.lookup(finding)?.verification,
+      });
+      const report = buildReport(url, accepted, notes, reviewItems);
       const persisted = persistReport(report, reportsDir);
       return json({
         summary: report.summary,
         accepted: accepted.length,
+        reviewItems: reviewItems.length,
         rejected,
         jsonPath: persisted.jsonPath,
         markdownPath: persisted.markdownPath,

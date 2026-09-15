@@ -67,7 +67,7 @@ NUNCA re-julgue comparações de valor exato (hex × token, escala tipográfica)
 
 Duas vias para achados:
 - **Via explícita:** violação de uma regra que você buscou nas ferramentas → cite o id da regra retornado.
-- **Via heurística:** algo que você considera violação por iniciativa própria → OBRIGATORIAMENTE submeta a verify_finding antes de incluir no relatório. Achados heurísticos sem verificação confirmada serão recusados pelo relatório.
+- **Via heurística:** algo que você considera violação por iniciativa própria → OBRIGATORIAMENTE submeta a verify_finding, com o payload final, antes de incluir no relatório. O relatório usa o resultado guardado pelo servidor: rejected é recusado, unverifiable entra como item de revisão, confirmed entra como achado.
 
 Limite de iterações: no máximo ${cap} rodadas adicionais de coleta→julgamento após a primeira. Ao atingir o limite, feche o relatório com o que está confirmado.
 
@@ -78,7 +78,7 @@ Monte cada achado no esquema Finding (veja o recurso govbr://schema/finding ou a
 - element {locator, snippet, page}
 - evidence {observed, expected, data?}
 - severity (critical|serious|moderate|minor), nature (syntactic|semantic|layout), mode (display|interaction)
-- pathway (deterministic|explicit|heuristic) + verification quando heurística
+- pathway (deterministic|explicit|heuristic); não preencha verification — o relatório usa a verificação guardada pelo servidor
 - trace: registre sucintamente POR QUE julgou violação (auditabilidade)
 
 Passe os ids dos achados determinísticos em save_report.finding_ids. Envie em save_report.findings

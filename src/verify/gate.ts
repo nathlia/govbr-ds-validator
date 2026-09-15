@@ -1,258 +1,318 @@
 /**
- * C3 — anti-hallucination verification gate (wang2025sgcr dual-pathway:
- * adoption 22%→42% when heuristic findings are grounded). Any finding the
- * agent raises on its own initiative (pathway "heuristic") must pass through
- * this gate before entering a report.
+ * C3 — portão de verificação (wang2025sgcr dual-pathway), refeito na fatia 4 do v02.
  *
- * Verification is layered:
- *   1. Rule grounding — does the cited rule actually exist in the oracle?
- *   2. Claim consistency — do machine-readable evidence values agree with
- *      the token registry (e.g. "this hex is not a DS token")?
- *   3. Live evidence (optional) — re-inspect the element on the page and
- *      confirm the observed value is really there.
+ * O portão respondia `confirmed` quando a regra citada existia e, com live, quando o localizador
+ * achava um elemento: existência da regra e presença do elemento viravam confirmação de qualquer
+ * alegação semântica. Nas execuções de 14/09 foram 4 chamadas, todas `confirmed` assim (D-38).
+ * Agora cada coisa é conferida e devolvida em separado:
+ *
+ *   ruleExists          o id pertence a um registro versionado — formato nunca prova existência
+ *   applicability       a regra pode sustentar achado (evidência de exemplo e verificação sem norma
+ *                       não podem)
+ *   evidenceConsistent  valores legíveis por máquina concordam com o registro e, com live, com cada
+ *                       elemento no estado reproduzido
+ *   violation           um predicado implementado recalculou a violação em todos os elementos
+ *
+ * `confirmed` só existe com `violation: verified`. Qualquer conferência que falha → `rejected`. O
+ * resto — regra real, evidência não contradita, violação que o oráculo não decide — é
+ * `unverifiable`, e é assim que ele deve chegar a quem revisa.
  */
-import type { Finding, Verification } from "../schema/finding.js";
-import { findEmagRule, getComponentSpecs, getPageRules, getTokenRegistry } from "../data/load.js";
+import type { CheckStatus, Finding, Verdict, Verification, ViolationStatus } from "../schema/finding.js";
+import { findEmagRule, getPageRules, getTokenRegistry } from "../data/load.js";
 import { getRuleById } from "../data/knowledge.js";
 import { normalizeColor } from "../checkers/color.js";
-import { inspectComputedStyles } from "../evidence/inspect.js";
+import { withPage } from "../evidence/browser.js";
+import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
+import { applyActions, fingerprintPage, type PageScanAction } from "../scan/pageScan.js";
+import {
+  emagMembership,
+  kbMembership,
+  registryVersions,
+  structureRuleMembership,
+  tokenRuleMembership,
+  wcagMembership,
+  type Membership,
+} from "./registries.js";
+import { selectPredicate } from "./predicates.js";
+import { findingSha256 } from "./store.js";
 
 export interface GateInput {
   finding: Finding;
-  /** Re-inspect element.locator on element.page to confirm observed values. */
+  /** Reabre element.page, reproduz actions e verifica cada elemento de element.locator. */
   live?: boolean;
+  actions?: PageScanAction[];
+  /** Estado alegado; se o estado reproduzido tiver outro fingerprint, a verificação é rejeitada. */
+  stateFingerprint?: string;
 }
 
-export async function verifyFinding({ finding, live = false }: GateInput): Promise<Verification> {
-  // ── Layer 1: the cited rule must exist in the oracle ──────────────────────
-  const ruleCheck = verifyRuleExists(finding);
-  if (ruleCheck) return ruleCheck;
+interface Checks {
+  ruleExists: CheckStatus;
+  applicability: CheckStatus;
+  evidenceConsistent: CheckStatus;
+  violation: ViolationStatus;
+}
 
-  // ── Layer 2: machine-readable claims must agree with the registry ─────────
-  const claimCheck = verifyTokenClaims(finding);
-  if (claimCheck) return claimCheck;
+const COLOR_PROPERTIES = ["backgroundColor", "color", "borderColor"] as const;
 
-  // ── Layer 3 (optional): live re-inspection of the element ─────────────────
-  if (live) {
-    return verifyLive(finding);
+export function verdictOf(checks: Checks): Verdict {
+  if (
+    checks.ruleExists === "fail" ||
+    checks.applicability === "fail" ||
+    checks.evidenceConsistent === "fail" ||
+    checks.violation === "contradicted"
+  ) {
+    return "rejected";
+  }
+  if (checks.violation === "verified" && checks.ruleExists === "pass") return "confirmed";
+  return "unverifiable";
+}
+
+export async function verifyFinding({ finding, live = false, actions = [], stateFingerprint }: GateInput): Promise<Verification> {
+  const checks: Checks = { ruleExists: "unknown", applicability: "unknown", evidenceConsistent: "unknown", violation: "not-checked" };
+  const notes: string[] = [];
+  const binding = { findingSha256: findingSha256(finding), stateFingerprint: null as string | null, live, elements: null as number | null };
+
+  const rule = checkRule(finding);
+  checks.ruleExists = rule.ruleExists;
+  checks.applicability = rule.applicability;
+  let verifiedBy = rule.verifiedBy;
+  notes.push(...rule.notes);
+
+  const claims = checkRegistryClaims(finding);
+  if (claims) {
+    checks.evidenceConsistent = claims.status;
+    notes.push(claims.detail);
+    if (claims.status === "fail") verifiedBy = "token-registry";
   }
 
+  const selection = selectPredicate(finding);
+  const result = (): Verification => ({
+    verdict: verdictOf(checks),
+    verifiedBy,
+    detail: notes.join(" "),
+    checks: { ...checks },
+    predicate: selection.predicate?.id ?? null,
+    binding,
+    registries: registryVersions(),
+  });
+
+  if (verdictOf(checks) === "rejected") return result();
+  if (!selection.predicate) {
+    checks.violation = "no-predicate";
+    notes.push(selection.reason);
+  }
+  if (!live) {
+    if (selection.predicate) {
+      notes.push(`Predicado ${selection.predicate.id} disponível: repita com live=true, e com actions se a violação depender de interação.`);
+    }
+    return result();
+  }
+
+  verifiedBy = "live-inspection";
+  const claimedHex = finding.evidence.data?.observedHex;
+  const observedHex = typeof claimedHex === "string" ? normalizeColor(claimedHex) : null;
+  try {
+    await withPage(finding.element.page, async (page) => {
+      await applyActions(page, actions);
+      binding.stateFingerprint = await fingerprintPage(page);
+      if (stateFingerprint && stateFingerprint !== binding.stateFingerprint) {
+        checks.evidenceConsistent = "fail";
+        verifiedBy = "state-fingerprint";
+        notes.push(
+          `O estado reproduzido (${binding.stateFingerprint}) não é o estado alegado (${stateFingerprint}). Envie as actions que produzem o estado alegado.`
+        );
+        return;
+      }
+
+      const properties = [...new Set<StyleProperty>([...(selection.predicate?.properties ?? []), ...(observedHex ? COLOR_PROPERTIES : [])])];
+      const evidence = await inspectPageComputedStyles(page, finding.element.page, finding.element.locator, properties);
+      binding.elements = evidence.count;
+      if (evidence.count === 0) {
+        checks.evidenceConsistent = "fail";
+        notes.push(
+          `Nenhum elemento para '${finding.element.locator}' no estado verificado (${actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
+        );
+        return;
+      }
+
+      if (observedHex) {
+        const without = evidence.elements.filter(
+          (element) =>
+            !COLOR_PROPERTIES.map((property) => element.computed[property])
+              .filter((value): value is string => typeof value === "string")
+              .map((value) => normalizeColor(value))
+              .includes(observedHex)
+        );
+        if (without.length > 0) {
+          checks.evidenceConsistent = "fail";
+          notes.push(
+            `O valor alegado ${observedHex} não está nas cores computadas de ${without.length} de ${evidence.count} elemento(s) (${without.slice(0, 3).map((e) => e.locator).join(", ")}).`
+          );
+          return;
+        }
+      }
+
+      checks.evidenceConsistent = "pass";
+      if (selection.predicate) {
+        const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page);
+        checks.violation = outcome.status;
+        verifiedBy = `predicate:${selection.predicate.id}`;
+        notes.push(outcome.detail);
+      } else {
+        notes.push(`O localizador resolveu ${evidence.count} elemento(s); localizar não confirma a alegação.`);
+      }
+    });
+  } catch (error) {
+    if (checks.evidenceConsistent !== "fail") checks.violation = "error";
+    notes.push(`Falha ao reabrir a página: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return result();
+}
+
+interface RuleCheck {
+  ruleExists: CheckStatus;
+  applicability: CheckStatus;
+  verifiedBy: string;
+  notes: string[];
+}
+
+function fromMembership<T>(membership: Membership<T>, verifiedBy: string): RuleCheck {
+  const member = membership.status === "member";
   return {
-    verdict: "confirmed",
-    verifiedBy: "rule-index",
-    detail:
-      "Regra citada existe no oráculo e as alegações verificáveis são consistentes. Evidência do elemento não foi re-inspecionada (live=false).",
+    ruleExists: member ? "pass" : "fail",
+    applicability: member ? "pass" : "unknown",
+    verifiedBy,
+    notes: [membership.detail],
   };
 }
 
-/**
- * D-27 — as fontes dos próprios verificadores conferiam FORMATO, não existência: bastava o id
- * começar com `ds-token-`, ou nomear um componente conhecido, para passar. Um id inventado dentro
- * da família certa era aceito, e foi assim que uma verificação sem norma nenhuma viveu como achado.
- *
- * Agora o id da família continua sendo o rótulo do verificador, mas ele tem de declarar em
- * `implements` a regra normativa que aplica, e essa regra tem de existir no oráculo.
- */
-function verifyImplementedRules(finding: Finding): Verification | null {
-  // A exigência recai sobre o ORÁCULO, não sobre o agente. Um achado heurístico que cita a
-  // família de um verificador continua sendo julgado pela consistência das suas alegações
-  // (camada 2) — o que ele não pode é usar a fonte do verificador para escapar dela.
-  if (finding.pathway !== "deterministic") return null;
-
-  const declarados = finding.rule.implements ?? [];
-
-  if (declarados.length === 0) {
-    return {
-      verdict: "rejected",
-      verifiedBy: "rule-grounding-index",
-      detail:
-        `'${finding.rule.id}' não declara qual regra normativa implementa. Verificação determinística ` +
-        "sem norma nomeada não produz achado — produz observação de revisão (D-27).",
-    };
-  }
-
-  const inexistentes = declarados.filter((ruleId) => {
-    if (ruleId.startsWith("emag-")) return !findEmagRule(ruleId.replace(/^emag-/, ""));
-    return !getRuleById(ruleId);
-  });
-
-  if (inexistentes.length > 0) {
-    return {
-      verdict: "rejected",
-      verifiedBy: "rule-grounding-index",
-      detail:
-        `'${finding.rule.id}' declara implementar ${inexistentes.join(", ")}, que não existe(m) no ` +
-        "oráculo. Use um id do get_ds_rules ou do get_emag_rules.",
-    };
-  }
-
-  return null;
-}
-
-function verifyRuleExists(finding: Finding): Verification | null {
+function checkRule(finding: Finding): RuleCheck {
   const { id, source } = finding.rule;
+  let check: RuleCheck;
 
   switch (source) {
     case "govbr-ds-kb": {
-      const rule = getRuleById(id);
-      if (!rule) {
-        return {
-          verdict: "rejected",
-          verifiedBy: "kb-rule-index",
-          detail: `Regra '${id}' não existe no knowledge base. Use get_ds_rules para obter ids válidos (formato govbr-<versão>-…).`,
-        };
+      const membership = kbMembership(id);
+      check = fromMembership(membership, "kb-rule-index");
+      // D-10: evidência de implementação não é norma e não pode ser citada como regra violada.
+      if (membership.entry?.force === "example") {
+        check.applicability = "fail";
+        check.notes.push(
+          `'${id}' é evidência de implementação (force=example), não uma regra normativa. Cite uma regra required/prohibited/recommended do get_ds_rules.`
+        );
       }
-      // D-10 precedence: evidence records are not norms — a finding cannot
-      // cite a canonical example as the violated rule.
-      if (rule.force === "example") {
-        return {
-          verdict: "rejected",
-          verifiedBy: "kb-rule-index",
-          detail: `'${id}' é evidência de implementação (force=example), não uma regra normativa. Cite uma regra required/prohibited/recommended do get_ds_rules.`,
-        };
-      }
-      return null;
+      break;
     }
-    case "emag": {
-      const ruleId = id.replace(/^emag-/, "");
-      const rule = findEmagRule(ruleId);
-      if (!rule) {
-        return {
-          verdict: "rejected",
-          verifiedBy: "emag-rule-index",
-          detail: `Regra e-MAG '${ruleId}' não existe. Ids válidos: 1.1–1.9, 2.1–2.7, 3.1–3.12, 4.1–4.4, 5.1–5.5, 6.1–6.8.`,
-        };
-      }
-      return null;
+    case "emag":
+      check = fromMembership(emagMembership(id), "emag-rule-index");
+      break;
+    case "wcag": {
+      const cited = wcagMembership(id).status === "malformed" && finding.rule.wcag ? finding.rule.wcag : id;
+      check = fromMembership(wcagMembership(cited), "wcag-2.2-registry");
+      break;
     }
     case "govbr-ds-token": {
-      if (!/^ds-token-/.test(id)) {
-        return {
-          verdict: "rejected",
-          verifiedBy: "token-rule-family",
-          detail: `Id de regra de token desconhecido: '${id}'. Família válida: ds-token-*.`,
-        };
+      const membership = tokenRuleMembership(id);
+      check = fromMembership(membership, "token-check-index");
+      if (membership.entry && membership.entry.implements.length === 0) {
+        check.applicability = "fail";
+        check.notes.push(`'${id}' não tem norma que sustente achado; o desvio é observação (D-27/D-32).`);
       }
-      return verifyImplementedRules(finding);
+      break;
     }
-    case "govbr-ds-structure": {
-      const m = id.match(/^ds-structure-([\w]+)/);
-      const component = m?.[1];
-      if (!component || !getComponentSpecs().components[component]) {
-        return {
-          verdict: "rejected",
-          verifiedBy: "component-spec-index",
-          detail: `Componente desconhecido em '${id}'. Componentes válidos: ${Object.keys(getComponentSpecs().components).join(", ")}.`,
-        };
-      }
-      return verifyImplementedRules(finding);
-    }
+    case "govbr-ds-structure":
+      check = fromMembership(structureRuleMembership(id), "component-spec-index");
+      break;
     case "govbr-ds-page": {
       const categories = Object.keys(getPageRules().categories);
-      const known = categories.some((c) => id.includes(c));
-      if (!known) {
-        return {
-          verdict: "unverifiable",
-          verifiedBy: "page-rule-index",
-          detail: `Não foi possível ancorar '${id}' a uma categoria de diretrizes de página (${categories.join(", ")}).`,
-        };
-      }
-      return null;
-    }
-    case "wcag": {
-      if (!/^\d\.\d{1,2}\.\d{1,2}$/.test(finding.rule.wcag ?? id.replace(/^wcag-/, ""))) {
-        return {
-          verdict: "unverifiable",
-          verifiedBy: "wcag-pattern",
-          detail: "Critério WCAG citado não segue o formato X.Y.Z.",
-        };
-      }
-      return null;
+      const known = categories.find((category) => id.includes(category));
+      check = {
+        ruleExists: "unknown",
+        applicability: "unknown",
+        verifiedBy: "page-rule-index",
+        notes: [
+          known
+            ? `Diretrizes de página (${known}) não têm id citável por regra; a existência não pode ser conferida.`
+            : `Não foi possível ancorar '${id}' a uma categoria de diretrizes de página (${categories.join(", ")}).`,
+        ],
+      };
+      break;
     }
     case "axe-core":
-      // axe findings are deterministic by construction; the gate is for agent findings
-      return null;
+      check = {
+        ruleExists: "not-applicable",
+        applicability: "not-applicable",
+        verifiedBy: "axe-core",
+        notes: ["Regras do axe-core são produzidas pelo verificador embutido, não conferidas por este portão."],
+      };
+      break;
     default:
       return {
-        verdict: "rejected",
+        ruleExists: "fail",
+        applicability: "unknown",
         verifiedBy: "rule-source-index",
-        detail: `Fonte de regra desconhecida: '${String(source)}'. Fontes válidas: govbr-ds-kb, govbr-ds-token, govbr-ds-structure, govbr-ds-page, emag, wcag, axe-core.`,
+        notes: [`Fonte de regra desconhecida: '${String(source)}'.`],
       };
   }
+
+  // Uma referência WCAG cruzada também tem de existir: `emag-2.2` com `wcag: "9.9.9"` não passa.
+  if (source !== "wcag" && finding.rule.wcag) {
+    for (const reference of finding.rule.wcag.split(/[,;]/).map((value) => value.trim()).filter(Boolean)) {
+      const membership = wcagMembership(reference);
+      if (membership.status !== "member") {
+        check.ruleExists = "fail";
+        check.verifiedBy = "wcag-2.2-registry";
+        check.notes.push(`Referência WCAG inválida: ${membership.detail}`);
+      }
+    }
+  }
+
+  // D-27: verificação determinística tem de nomear norma existente em `implements`.
+  if (finding.pathway === "deterministic" && (source === "govbr-ds-token" || source === "govbr-ds-structure")) {
+    const declared = finding.rule.implements ?? [];
+    if (declared.length === 0) {
+      check.applicability = "fail";
+      check.verifiedBy = "rule-grounding-index";
+      check.notes.push(
+        `'${id}' não declara qual regra normativa implementa. Verificação determinística sem norma nomeada não produz achado — produz observação de revisão (D-27).`
+      );
+    }
+    const missing = declared.filter((ruleId) =>
+      ruleId.startsWith("emag-") ? !findEmagRule(ruleId.replace(/^emag-/, "")) : !getRuleById(ruleId)
+    );
+    if (missing.length > 0) {
+      check.ruleExists = "fail";
+      check.verifiedBy = "rule-grounding-index";
+      check.notes.push(`'${id}' declara implementar ${missing.join(", ")}, que não existe(m) no oráculo.`);
+    }
+  }
+
+  return check;
 }
 
-function verifyTokenClaims(finding: Finding): Verification | null {
+/** Alegações legíveis por máquina conferidas contra o registro de tokens, sem abrir a página. */
+function checkRegistryClaims(finding: Finding): { status: CheckStatus; detail: string } | null {
   const data = finding.evidence.data as Record<string, unknown> | undefined;
   if (!data) return null;
   const registry = getTokenRegistry();
+  const passes: string[] = [];
 
-  // Claim: observedHex is not a DS token value
   const observedHex = typeof data.observedHex === "string" ? normalizeColor(data.observedHex) : null;
   if (observedHex && finding.rule.source === "govbr-ds-token") {
-    if (registry.hexLookup[observedHex]) {
-      return {
-        verdict: "rejected",
-        verifiedBy: "token-registry",
-        detail: `Alegação inconsistente: ${observedHex} É um valor de token do DS (${registry.hexLookup[observedHex].join(", ")}).`,
-      };
+    const tokens = registry.hexLookup[observedHex];
+    if (tokens) {
+      return { status: "fail", detail: `Alegação inconsistente: ${observedHex} É um valor de token do DS (${tokens.join(", ")}).` };
     }
+    passes.push(`${observedHex} não é valor de token do DS.`);
   }
 
-  // Claim: a named token has a given value
   const claimedToken = typeof data.expectedToken === "string" ? data.expectedToken : null;
   if (claimedToken) {
-    const actual = registry.all[claimedToken];
-    if (actual === undefined) {
-      return {
-        verdict: "rejected",
-        verifiedBy: "token-registry",
-        detail: `Token citado '${claimedToken}' não existe no registro do DS.`,
-      };
+    if (registry.all[claimedToken] === undefined) {
+      return { status: "fail", detail: `Token citado '${claimedToken}' não existe no registro do DS.` };
     }
+    passes.push(`Token ${claimedToken} existe no registro.`);
   }
 
-  return null;
-}
-
-async function verifyLive(finding: Finding): Promise<Verification> {
-  const { locator, page } = finding.element;
-  try {
-    const evidence = await inspectComputedStyles(page, locator);
-    if (evidence.count === 0) {
-      return {
-        verdict: "rejected",
-        verifiedBy: "live-inspection",
-        detail: `Nenhum elemento encontrado para o localizador '${locator}' em ${page}.`,
-      };
-    }
-
-    const data = finding.evidence.data as Record<string, unknown> | undefined;
-    const observedHex = typeof data?.observedHex === "string" ? normalizeColor(data.observedHex) : null;
-    if (observedHex) {
-      const el = evidence.elements[0];
-      const pageColors = [el.computed.backgroundColor, el.computed.color, el.computed.borderColor]
-        .filter((c): c is string => typeof c === "string")
-        .map((c) => normalizeColor(c))
-        .filter(Boolean);
-      if (!pageColors.includes(observedHex)) {
-        return {
-          verdict: "rejected",
-          verifiedBy: "live-inspection",
-          detail: `Valor alegado ${observedHex} não encontrado nas cores computadas do elemento (${pageColors.join(", ")}).`,
-        };
-      }
-    }
-
-    return {
-      verdict: "confirmed",
-      verifiedBy: "live-inspection",
-      detail: `Elemento localizado em ${page}; evidência consistente com o DOM real.`,
-    };
-  } catch (err) {
-    return {
-      verdict: "unverifiable",
-      verifiedBy: "live-inspection",
-      detail: `Falha ao re-inspecionar: ${err instanceof Error ? err.message : String(err)}`,
-    };
-  }
+  return passes.length > 0 ? { status: "pass", detail: passes.join(" ") } : null;
 }
