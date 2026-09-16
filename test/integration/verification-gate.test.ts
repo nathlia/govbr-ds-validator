@@ -13,6 +13,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
+import { EXPECTED_CONDITIONS } from "../../src/schema/structuredClaims.js";
 
 const FIXTURE_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -21,6 +22,9 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   .br-button { border: 0; border-radius: 100em; padding: 0 24px; height: 40px; font-family: Rawline, sans-serif; font-size: 16.8px; color: #ffffff; }
   #cor-arbitraria { background-color: #ff5733; }
   #cor-token { background-color: #1351b4; }
+  #raio-13 { border-radius: 13px; }
+  #fonte-arial { font-family: Arial, sans-serif; }
+  #padding-13 { padding: 13px; }
   .par { background-color: #ff5733; }
   .par.conforme { background-color: #1351b4; }
   #link-botao { background-color: #1351b4; display: inline-block; line-height: 40px; }
@@ -31,6 +35,9 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   <main>
     <button id="cor-arbitraria" class="br-button primary" type="button">Arbitrária</button>
     <button id="cor-token" class="br-button primary" type="button">Token</button>
+    <button id="raio-13" class="br-button primary" type="button">Raio</button>
+    <button id="fonte-arial" class="br-button primary" type="button">Fonte</button>
+    <button id="padding-13" class="br-button primary" type="button">Espaçamento</button>
     <button class="br-button primary par" type="button">Par 1</button>
     <button class="br-button primary par conforme" type="button">Par 2</button>
     <a id="link-botao" class="br-button primary" href="#">Link</a>
@@ -67,7 +74,7 @@ function claim(overrides: { rule?: Claim; element?: Claim; evidence?: Claim; [ke
     evidence: {
       observed: "background-color #ff5733",
       expected: "token do DS",
-      data: { property: "background-color", observedHex: "#ff5733" },
+      data: { property: "background-color", observedHex: "#ff5733", expectedCondition: EXPECTED_CONDITIONS.tokenColor },
       ...evidence,
     },
     severity: "moderate",
@@ -82,6 +89,47 @@ async function verify(finding: Claim, extra: Claim = {}) {
   return JSON.parse(
     textOf(await client.callTool({ name: "verify_finding", arguments: { finding, live: true, ...extra } }))
   );
+}
+
+function supportedStructuredClaims() {
+  return [
+    {
+      name: "radius",
+      correct: claim({
+        rule: { id: "ds-token-radius", source: "govbr-ds-token", description: "Raio na escala do DS" },
+        element: { locator: "#raio-13" },
+        evidence: { observed: "border-radius 13px", expected: "escala do DS", data: { property: "border-radius", observed: "13px", expectedCondition: EXPECTED_CONDITIONS.tokenRadius } },
+      }),
+      falseClaim: { property: "border-radius", observed: "99px", expectedCondition: EXPECTED_CONDITIONS.tokenRadius },
+    },
+    {
+      name: "font family",
+      correct: claim({
+        rule: { id: "ds-token-font-family", source: "govbr-ds-token", description: "Fonte da família do DS" },
+        element: { locator: "#fonte-arial" },
+        evidence: { observed: "font-family Arial", expected: "Rawline/Raleway", data: { property: "font-family", observed: "Arial, sans-serif", expectedCondition: EXPECTED_CONDITIONS.tokenFontFamily } },
+      }),
+      falseClaim: { property: "font-family", observed: "Comic Sans MS", expectedCondition: EXPECTED_CONDITIONS.tokenFontFamily },
+    },
+    {
+      name: "spacing",
+      correct: claim({
+        rule: { id: "ds-token-spacing", source: "govbr-ds-token", description: "Espaçamento na escala do DS" },
+        element: { locator: "#padding-13" },
+        evidence: { observed: "padding 13px", expected: "escala do DS", data: { property: "padding", observed: "13px", expectedCondition: EXPECTED_CONDITIONS.tokenSpacing } },
+      }),
+      falseClaim: { property: "padding", observed: "17px", expectedCondition: EXPECTED_CONDITIONS.tokenSpacing },
+    },
+    {
+      name: "structure tag",
+      correct: claim({
+        rule: { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "br-button em <button>" },
+        element: { locator: "#link-botao" },
+        evidence: { observed: "br-button aplicado a <a>", expected: "<button>", data: { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag } },
+      }),
+      falseClaim: { component: "button", observedTag: "div", expectedCondition: EXPECTED_CONDITIONS.structureTag },
+    },
+  ];
 }
 
 beforeAll(async () => {
@@ -120,11 +168,20 @@ describe("verify_finding — what can be confirmed", () => {
       claim({
         rule: { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "br-button em <button>" },
         element: { locator: "#link-botao" },
-        evidence: { observed: "br-button aplicado a <a>", expected: "<button>", data: {} },
+        evidence: { observed: "br-button aplicado a <a>", expected: "<button>", data: { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag } },
       })
     );
     expect(res.verification.verdict).toBe("confirmed");
     expect(res.verification.predicate).toBe("structure-tag");
+  });
+
+  it("confirms radius, font, spacing and structure only when structured observations match live values", async () => {
+    for (const entry of supportedStructuredClaims()) {
+      const res = await verify(entry.correct);
+      expect(res.verification.verdict, entry.name).toBe("confirmed");
+      expect(res.verification.checks.evidenceConsistent, entry.name).toBe("pass");
+      expect(res.verification.checks.violation, entry.name).toBe("verified");
+    }
   });
 });
 
@@ -140,10 +197,35 @@ describe("verify_finding — what is rejected", () => {
   });
 
   it("rejects a mismatched property: the colour is real, on another property", async () => {
-    const res = await verify(claim({ evidence: { data: { property: "color", observedHex: "#ff5733" } } }));
+    const res = await verify(claim({ evidence: { data: { property: "color", observedHex: "#ff5733", expectedCondition: EXPECTED_CONDITIONS.tokenColor } } }));
     expect(res.verification.verdict).toBe("rejected");
-    expect(res.verification.checks.evidenceConsistent).toBe("pass");
-    expect(res.verification.checks.violation).toBe("contradicted");
+    expect(res.verification.checks.evidenceConsistent).toBe("fail");
+  });
+
+  it("rejects false structured radius, font, spacing and tag values even when a real violation exists", async () => {
+    for (const entry of supportedStructuredClaims()) {
+      const correctEvidence = entry.correct.evidence as Claim;
+      const res = await verify({
+        ...entry.correct,
+        evidence: { ...correctEvidence, data: entry.falseClaim },
+      });
+      expect(res.verification.verdict, entry.name).toBe("rejected");
+      expect(res.verification.checks.evidenceConsistent, entry.name).toBe("fail");
+      expect(res.verification.detail, entry.name).toMatch(/viv[oa]/);
+    }
+  });
+
+  it("rejects an unsupported expected condition instead of confirming an actual defect", async () => {
+    for (const entry of supportedStructuredClaims()) {
+      const correctEvidence = entry.correct.evidence as Claim;
+      const correctData = correctEvidence.data as Claim;
+      const res = await verify({
+        ...entry.correct,
+        evidence: { ...correctEvidence, data: { ...correctData, expectedCondition: "outra-condicao" } },
+      });
+      expect(res.verification.verdict, entry.name).toBe("rejected");
+      expect(res.verification.checks.evidenceConsistent, entry.name).toBe("fail");
+    }
   });
 
   it("rejects a real criterion with a wrong observation", async () => {
@@ -183,6 +265,17 @@ describe("verify_finding — what is rejected", () => {
 });
 
 describe("verify_finding — no predicate, no confirmation", () => {
+  it("keeps supported claims without their structured observation unverifiable", async () => {
+    for (const entry of supportedStructuredClaims()) {
+      const correctEvidence = entry.correct.evidence as Claim;
+      const res = await verify({ ...entry.correct, evidence: { ...correctEvidence, data: {} } });
+      expect(res.verification.verdict, entry.name).toBe("unverifiable");
+      expect(res.verification.predicate, entry.name).toBeNull();
+      expect(res.verification.checks.violation, entry.name).toBe("no-predicate");
+      expect(res.verification.checks.evidenceConsistent, entry.name).toBe("unknown");
+    }
+  });
+
   it("keeps a real criterion with consistent evidence unverifiable", async () => {
     const res = await verify(
       claim({

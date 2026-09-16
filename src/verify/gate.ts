@@ -97,6 +97,11 @@ export async function verifyFinding({ finding, live = false, actions = [], state
   });
 
   if (verdictOf(checks) === "rejected") return result();
+  if (!selection.predicate && selection.claimStatus === "contradicted") {
+    checks.evidenceConsistent = "fail";
+    notes.push(selection.reason);
+    return result();
+  }
   if (!selection.predicate) {
     checks.violation = "no-predicate";
     notes.push(selection.reason);
@@ -152,7 +157,17 @@ export async function verifyFinding({ finding, live = false, actions = [], state
         }
       }
 
-      checks.evidenceConsistent = "pass";
+      if (selection.predicate) {
+        const claim = selection.predicate.verifyClaim(evidence.elements);
+        notes.push(claim.detail);
+        if (claim.status === "contradicted") {
+          checks.evidenceConsistent = "fail";
+          return;
+        }
+      }
+
+      // Finding an element cannot establish agreement with a structured assertion that is absent.
+      checks.evidenceConsistent = selection.claimStatus === "missing" ? "unknown" : "pass";
       if (selection.predicate) {
         const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page);
         checks.violation = outcome.status;

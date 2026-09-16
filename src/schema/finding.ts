@@ -15,6 +15,7 @@
  * auditability as Oracle Problem mitigation).
  */
 import { z } from "zod";
+import { EXPECTED_CONDITIONS } from "./structuredClaims.js";
 
 /** Where the violated rule comes from. */
 export const RuleSourceSchema = z.enum([
@@ -50,7 +51,8 @@ export type Mode = z.infer<typeof ModeSchema>;
 /**
  * Detection pathway (wang2025sgcr dual-pathway):
  *   deterministic — produced by the syntactic checker layer (B1/B2), no LLM.
- *   explicit      — agent judgment against a predefined rule fed to it.
+ *   explicit      — agent judgment against a predefined rule fed to it; without a server-held
+ *                   verification it remains a review item, outside confirmed findings.
  *   heuristic     — agent-initiated finding; MUST pass the verification gate
  *                   (verify_finding) before entering a report.
  */
@@ -94,7 +96,15 @@ export const EvidenceSchema = z.object({
   data: z
     .record(z.unknown())
     .optional()
-    .describe("Machine-readable supporting values, e.g. { observedHex, expectedToken }"),
+    .describe(
+      "Machine-readable supporting values. Verifiable token claims require property, observed/observedHex and " +
+        "the predicate's exact expectedCondition; verifiable structure-tag claims require component, observedTag " +
+        "and expectedCondition. Exact expectedCondition by predicate: " +
+        `ds-token-color=${EXPECTED_CONDITIONS.tokenColor}; ds-token-font-family=${EXPECTED_CONDITIONS.tokenFontFamily}; ` +
+        `ds-token-radius=${EXPECTED_CONDITIONS.tokenRadius}; ds-token-spacing=${EXPECTED_CONDITIONS.tokenSpacing}; ` +
+        `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}. ` +
+        "Free-text observed/expected remain human explanations, not semantic gate inputs."
+    ),
 });
 export type Evidence = z.infer<typeof EvidenceSchema>;
 

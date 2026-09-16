@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { verifyFinding, verdictOf } from "../../src/verify/gate.js";
 import { findingSha256 } from "../../src/verify/store.js";
 import type { Finding } from "../../src/schema/finding.js";
+import { EXPECTED_CONDITIONS } from "../../src/schema/structuredClaims.js";
 
 function candidate(overrides: Partial<Finding> & { rule?: Partial<Finding["rule"]> } = {}): Finding {
   const { rule: ruleOverride, ...rest } = overrides;
@@ -96,7 +97,12 @@ describe("verifyFinding — no verified violation, no confirmation", () => {
         evidence: {
           observed: "background #ff00ff",
           expected: "token do DS",
-          data: { property: "background-color", observedHex: "#ff00ff", expectedToken: "--color-primary-default" },
+          data: {
+            property: "background-color",
+            observedHex: "#ff00ff",
+            expectedCondition: EXPECTED_CONDITIONS.tokenColor,
+            expectedToken: "--color-primary-default",
+          },
         },
       } as never),
     });

@@ -18,6 +18,7 @@ const valid: Finding = {
 };
 
 const heuristic: Finding = { ...valid, id: "F-003", pathway: "heuristic" };
+const explicit: Finding = { ...valid, id: "F-004", pathway: "explicit" };
 
 function serverVerdict(verdict: Verification["verdict"]): Verification {
   return { verdict, verifiedBy: `servidor-${verdict}`, detail: `resultado ${verdict}` };
@@ -90,6 +91,43 @@ describe("validateFindings", () => {
     store.record(heuristic, serverVerdict("rejected"));
     const { rejected } = validateFindings([heuristic], { verificationFor: (f) => store.lookup(f)?.verification });
     expect(rejected[0].errors[0]).toContain("resultado rejected");
+  });
+
+  it("accepts an explicit finding only when the server verdict is confirmed", () => {
+    const store = new VerificationStore();
+    store.record(explicit, serverVerdict("confirmed"));
+    const { accepted, reviewItems, rejected } = validateFindings([explicit], { verificationFor: (f) => store.lookup(f)?.verification });
+    expect(accepted).toHaveLength(1);
+    expect(accepted[0].verification?.verdict).toBe("confirmed");
+    expect(reviewItems).toEqual([]);
+    expect(rejected).toEqual([]);
+  });
+
+  it("routes an explicit finding with an unverifiable server verdict to review", () => {
+    const store = new VerificationStore();
+    store.record(explicit, serverVerdict("unverifiable"));
+    const { accepted, reviewItems, rejected } = validateFindings([explicit], { verificationFor: (f) => store.lookup(f)?.verification });
+    expect(accepted).toEqual([]);
+    expect(reviewItems[0].verification?.verdict).toBe("unverifiable");
+    expect(rejected).toEqual([]);
+  });
+
+  it("refuses an explicit finding the server rejected", () => {
+    const store = new VerificationStore();
+    store.record(explicit, serverVerdict("rejected"));
+    const { accepted, reviewItems, rejected } = validateFindings([explicit], { verificationFor: (f) => store.lookup(f)?.verification });
+    expect(accepted).toEqual([]);
+    expect(reviewItems).toEqual([]);
+    expect(rejected[0].errors[0]).toContain("resultado rejected");
+  });
+
+  it("keeps an unverified explicit finding in review without inventing a gate verdict", () => {
+    const submitted = { ...explicit, verification: serverVerdict("confirmed") };
+    const { accepted, reviewItems, rejected } = validateFindings([submitted]);
+    expect(accepted).toEqual([]);
+    expect(reviewItems).toEqual([explicit]);
+    expect(reviewItems[0].verification).toBeUndefined();
+    expect(rejected).toEqual([]);
   });
 });
 

@@ -854,7 +854,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Portão de verificação anti-alucinação",
       description:
-        "Confere em separado: existência da regra num registro versionado, aplicabilidade, consistência da evidência e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions. Sem predicado implementado o resultado é unverifiable; confirmed exige a violação verificada. O servidor guarda o resultado para este payload exato.",
+        "Confere em separado: existência da regra num registro versionado, aplicabilidade, consistência dos dados estruturados (property, observed/observedHex ou observedTag e expectedCondition) com cada elemento vivo e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions. Dados estruturados ausentes ou sem predicado deixam o resultado unverifiable; dados contraditórios rejeitam; confirmed exige a violação verificada. observed/expected em texto livre são explicações humanas e não são interpretados. O servidor guarda o resultado para este payload exato.",
       inputSchema: {
         finding: FindingSchema.describe("O achado candidato, no esquema Finding"),
         live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
@@ -886,7 +886,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         findings: z
           .array(z.record(z.unknown()))
           .optional()
-          .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos). O campo verification enviado é ignorado: vale a verificação guardada pelo servidor para o payload idêntico."),
+          .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos). O campo verification enviado é ignorado: vale a verificação guardada pelo servidor para o payload idêntico; explicit sem verificação fica em revisão."),
         notes: z.string().optional().describe("Notas gerais da validação (contexto, limitações desta rodada)"),
       },
     },

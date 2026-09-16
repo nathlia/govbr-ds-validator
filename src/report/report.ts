@@ -4,10 +4,12 @@
  * against the D2 schema on submission. Reasoning traces are persisted per
  * finding (fan2023: auditability as Oracle Problem mitigation).
  *
- * Gate enforcement (C3, v02 slice 4). The `verification` a caller submits is never trusted: a
- * heuristic finding enters with the verification this server recorded for the identical payload.
+ * Gate enforcement (C3, v02 slice 4). The `verification` a caller submits is never trusted: an
+ * agent-created finding enters with the verification this server recorded for the identical payload.
  * `confirmed` enters the findings; `unverifiable` enters a separate, labeled review channel, never
- * promoted and never silently dropped; `rejected` and never-verified payloads are refused.
+ * promoted and never silently dropped; `rejected` is refused. An explicit finding without a stored
+ * verification also enters review, preserving its distinct status instead of calling it confirmed.
+ * A heuristic finding without a stored verification is refused.
  * Deterministic findings enter only by `finding_ids`, as the server produced them.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -82,12 +84,11 @@ export function validateFindings(raw: unknown[], options: ValidationOptions = {}
     }
 
     const verification = options.verificationFor?.(parsed.data);
-    if (finding.pathway === "explicit") {
-      accepted.push(verification ? { ...finding, verification } : finding);
-      return;
-    }
-
     if (!verification) {
+      if (finding.pathway === "explicit") {
+        reviewItems.push(finding);
+        return;
+      }
       rejected.push({
         index,
         errors: [

@@ -13,6 +13,7 @@ import type { TokenRegistry } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { normalizeColor, nearestToken, parsePx } from "./color.js";
 import { CHECK_GROUNDING, groundingFor, podeVirarAchado } from "./grounding.js";
+import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
 export type TokenCheck = "color" | "font" | "radius" | "spacing";
 
@@ -149,6 +150,7 @@ export function checkTokenCompliance(
             data: {
               property: label,
               observedHex: hex,
+              expectedCondition: EXPECTED_CONDITIONS.tokenColor,
               nearestToken: nearest?.token ?? null,
               nearestHex: nearest?.hex ?? null,
               rgbDistance: nearest?.distance ?? null,
@@ -179,7 +181,12 @@ export function checkTokenCompliance(
           evidence: {
             observed: `font-family: ${family}`,
             expected: `Família contendo Rawline/Raleway (token ${registry.semantic["font-family"]?.token}: ${registry.semantic["font-family"]?.value})`,
-            data: { property: "font-family", observed: family, authoredDeclarations: familyDeclarations ?? null },
+            data: {
+              property: "font-family",
+              observed: family,
+              expectedCondition: EXPECTED_CONDITIONS.tokenFontFamily,
+              authoredDeclarations: familyDeclarations ?? null,
+            },
           },
           severity: "moderate",
           nature: "syntactic",
@@ -220,6 +227,7 @@ export function checkTokenCompliance(
                 data: {
                   property: "border-radius",
                   observed: radius,
+                  expectedCondition: EXPECTED_CONDITIONS.tokenRadius,
                   allowedPxScale: [...radiusPxScale].sort((a, b) => a - b),
                   pillEmFactors: [...radiusEmFactors].sort((a, b) => a - b),
                   authoredDeclarations: radiusDeclarations ?? null,
@@ -265,7 +273,14 @@ export function checkTokenCompliance(
             evidence: {
               observed: `${prop}: ${value} (fora da escala: ${offScale.join(", ")})`,
               expected: `Múltiplos de ${spacingBase / 2}px`,
-              data: { property: prop, observed: value, offScale, spacingBase, authoredDeclarations: declarations ?? null },
+              data: {
+                property: prop,
+                observed: value,
+                expectedCondition: EXPECTED_CONDITIONS.tokenSpacing,
+                offScale,
+                spacingBase,
+                authoredDeclarations: declarations ?? null,
+              },
             },
             severity: "minor",
             nature: "syntactic",

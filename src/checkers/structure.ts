@@ -10,6 +10,7 @@ import type { ComponentSpec } from "../data/load.js";
 import { findEmagRule } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
+import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
 const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea"]);
 
@@ -50,7 +51,12 @@ export function checkComponentStructure(
         evidence: {
           observed: `${spec.rootClass} aplicado a <${el.tagName.toLowerCase()}>`,
           expected: `Elemento <${spec.tags.join("> ou <")}>`,
-          data: { component: spec.name, observedTag: el.tagName.toLowerCase(), canonicalTags: spec.tags },
+          data: {
+            component: spec.name,
+            observedTag: el.tagName.toLowerCase(),
+            expectedCondition: EXPECTED_CONDITIONS.structureTag,
+            canonicalTags: spec.tags,
+          },
         },
         severity: "serious",
         nature: "syntactic",
