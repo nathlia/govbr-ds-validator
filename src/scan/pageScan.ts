@@ -23,6 +23,11 @@ export interface PageScanRequest {
   tokenChecks?: TokenCheck[];
   components?: string[];
   actions?: PageScanAction[];
+  /**
+   * Window for the scan. Accepted only from the deterministic baseline CLI (2.5.2): the MCP tool
+   * schema does not expose it, so the agent-facing surface is unchanged.
+   */
+  viewport?: { width: number; height: number };
 }
 
 export interface PageScanResult {
@@ -243,5 +248,5 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
     };
     cache.set(cacheKey, value);
     return { ...value, cacheHit: false, cacheMissReason: "no-exact-fingerprint-and-scope-match" };
-  });
+  }, request.viewport ? { viewport: request.viewport } : {});
 }

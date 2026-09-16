@@ -1,6 +1,6 @@
 {
   "name": "govbr-ds-validator-server",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "description": "MCP server exposing gov.br Design System and e-MAG accessibility knowledge as a queryable validation oracle — TCC 2 artifact",
   "type": "module",
   "main": "dist/index.js",

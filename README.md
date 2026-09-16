@@ -90,6 +90,13 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Baseline viewport (2.5.2)
+
+The deterministic baseline CLI (`dist/cli/scan-page.js`) accepts an optional `viewport` in its
+request, so the unguided whole-page baseline observes the window the reference declares instead of
+Playwright's default 1280×720. The MCP `scan_page` schema does not expose it: the agent-facing
+surface is unchanged, but the compiled artifact differs, so batteries record its hash.
+
 ### Verification gate (2.5.1)
 
 Compared with 2.5.0, confirmation requires a supported structured assertion, including the expected

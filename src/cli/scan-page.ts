@@ -11,6 +11,14 @@ if (!encoded) {
 
 try {
   const request = JSON.parse(Buffer.from(encoded, "base64").toString("utf8")) as PageScanRequest;
+  // 2.5.2: a linha de base declara a janela do gabarito. Janela inválida é recusa, nunca o padrão.
+  if (request.viewport !== undefined) {
+    const { width, height } = request.viewport ?? {};
+    if (![width, height].every((n) => Number.isInteger(n) && (n as number) > 0)) {
+      console.error("viewport inválido: largura e altura inteiras positivas");
+      process.exit(2);
+    }
+  }
   const result = await scanPage(request, new PageScanCache(1));
   process.stdout.write(JSON.stringify(result));
 } finally {

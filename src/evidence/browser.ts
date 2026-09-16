@@ -57,11 +57,19 @@ export async function getBrowser(): Promise<Browser> {
   return browser;
 }
 
-/** Run `fn` with a fresh page; the page is always closed afterwards. */
-export async function withPage<T>(url: string, fn: (page: Page) => Promise<T>): Promise<T> {
+/**
+ * Run `fn` with a fresh page; the page is always closed afterwards. `viewport` is only set by the
+ * deterministic baseline CLI, so that it observes the window the reference declares; without it the
+ * page keeps Playwright's default (the MCP tools never pass one).
+ */
+export async function withPage<T>(
+  url: string,
+  fn: (page: Page) => Promise<T>,
+  options: { viewport?: { width: number; height: number } } = {}
+): Promise<T> {
   assertUrlAllowed(url);
   const b = await getBrowser();
-  const page = await b.newPage();
+  const page = await b.newPage(options.viewport ? { viewport: options.viewport } : {});
   try {
     await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
     return await fn(page);

@@ -12,6 +12,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
+import { PageScanCache, scanPage } from "../../src/scan/pageScan.js";
 
 /**
  * Fixture: a page with known violations —
@@ -229,6 +230,25 @@ describe("run_axe_scan (V4, V5)", () => {
     );
     expect(saved.accepted).toBe(data.findings.length);
     expect(saved.rejected).toEqual([]);
+  });
+});
+
+describe("scan_page baseline viewport (2.5.2)", () => {
+  it("scans in the requested window, which changes the state fingerprint", async () => {
+    const request = { url: baseUrl, selectors: [".br-button"], checks: ["structure" as const], components: ["button"] };
+    const cache = new PageScanCache(4);
+    const wide = await scanPage({ ...request, viewport: { width: 1280, height: 900 } }, cache);
+    const narrow = await scanPage({ ...request, viewport: { width: 320, height: 720 } }, cache);
+    expect(narrow.cacheHit).toBe(false);
+    expect(narrow.stateFingerprint).not.toBe(wide.stateFingerprint);
+    const again = await scanPage({ ...request, viewport: { width: 320, height: 720 } }, cache);
+    expect(again.cacheHit).toBe(true);
+  });
+
+  it("is not part of the agent-facing scan_page schema", async () => {
+    const { tools } = await client.listTools();
+    const scan = tools.find((tool) => tool.name === "scan_page");
+    expect(Object.keys((scan?.inputSchema as { properties?: object }).properties ?? {})).not.toContain("viewport");
   });
 });
 
