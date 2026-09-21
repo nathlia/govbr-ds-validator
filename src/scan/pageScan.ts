@@ -5,11 +5,13 @@ import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from 
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
+import { checkPageStructure } from "../checkers/pageStructure.js";
+import { inspectPageStructure } from "../evidence/pageFacts.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
 
-export type PageScanCheck = "tokens" | "structure" | "axe";
+export type PageScanCheck = "tokens" | "structure" | "axe" | "page";
 export type PageScanAction =
   | { action: "click"; selector: string }
   | { action: "fill"; selector: string; value: string }
@@ -129,7 +131,7 @@ function tokenProperties(checks: TokenCheck[]): StyleProperty[] {
 function normalizedRequest(request: PageScanRequest) {
   return {
     selectors: [...(request.selectors ?? [])].sort(),
-    checks: [...(request.checks ?? ["tokens", "structure", "axe"] as PageScanCheck[])].sort(),
+    checks: [...(request.checks ?? ["tokens", "structure", "axe", "page"] as PageScanCheck[])].sort(),
     tokenChecks: [...(request.tokenChecks ?? ALL_TOKEN_CHECKS)].sort(),
     components: [...(request.components ?? [])].sort(),
     actions: request.actions ?? [],
@@ -199,6 +201,12 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
           observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
       }
+    }
+
+    // 2.7.0: regiões obrigatórias do Template Base e salto para o conteúdo — fatos do documento,
+    // não de um elemento; a ausência de um rodapé não aparece em evidência por elemento.
+    if (checks.includes("page")) {
+      rawFindings.push(...checkPageStructure({ url: request.url }, await inspectPageStructure(page, request.url)));
     }
 
     let axe: PageScanResult["coverage"]["axe"];

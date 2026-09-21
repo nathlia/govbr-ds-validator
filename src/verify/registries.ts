@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { constraintsForComponent, findEmagRule, getComponentSpecs, getEmag, type EmagRule } from "../data/load.js";
 import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "../data/knowledge.js";
 import { CHECK_GROUNDING, type CheckKind } from "../checkers/grounding.js";
+import { pageConstraints, type PageConstraint } from "../checkers/pageStructure.js";
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../data");
 
@@ -129,6 +130,17 @@ export function structureRuleMembership(id: string): Membership<{ component: str
     status: "unknown",
     normalizedId: id,
     detail: `'${id}' não é uma restrição publicada. Ids citáveis vêm de get_component_spec (ex.: ds-structure-button-tag).`,
+  };
+}
+
+/** Restrições de página citáveis — as mesmas que `get_page_rules` publica (2.7.0). */
+export function pageConstraintMembership(id: string): Membership<PageConstraint> {
+  const entry = pageConstraints().find((constraint) => constraint.id === id);
+  if (entry) return { status: "member", normalizedId: id, entry, detail: `Restrição de página ${id} (${entry.region}).` };
+  return {
+    status: "unknown",
+    normalizedId: id,
+    detail: `'${id}' não é uma restrição de página publicada. Ids citáveis vêm de get_page_rules: ${pageConstraints().map((c) => c.id).join(", ")}.`,
   };
 }
 

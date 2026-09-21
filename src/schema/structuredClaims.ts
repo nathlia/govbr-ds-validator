@@ -9,5 +9,8 @@ export const EXPECTED_CONDITIONS = {
   tokenRadius: "govbr-ds-radius-scale",
   tokenSpacing: "govbr-ds-spacing-scale",
   structureTag: "canonical-component-tag",
+  /** 2.7.0: regiões obrigatórias do Template Base e o salto para o conteúdo (e-MAG 1.5). */
+  pageRegion: "template-base-region-present",
+  skipLink: "first-link-skips-to-content",
 } as const;
 

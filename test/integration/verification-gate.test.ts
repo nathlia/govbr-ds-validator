@@ -303,6 +303,79 @@ describe("verify_finding — no predicate, no confirmation", () => {
   });
 });
 
+describe("verify_finding — page constraints (2.7.0)", () => {
+  // The fixture has no .br-header, no .br-footer, and its first link is href="#": all three page claims are true.
+  it("confirms a missing Template Base region by recomputing it on the document, not on an element", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-page-footer", source: "govbr-ds-page", description: "Área de Rodapé obrigatória" },
+        element: { locator: "html" },
+        evidence: { observed: "nenhum .br-footer", expected: "Footer", data: { region: "footer", observedCount: 0, expectedCondition: EXPECTED_CONDITIONS.pageRegion } },
+      })
+    );
+    expect(res.verification.verdict).toBe("confirmed");
+    expect(res.verification.predicate).toBe("page-region");
+    expect(res.verification.checks).toEqual({ ruleExists: "pass", applicability: "pass", evidenceConsistent: "pass", violation: "verified" });
+  });
+
+  it("confirms that the first link is not the skip to content (e-MAG 1.5)", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-page-skip-link", source: "govbr-ds-page", description: "Salto para o conteúdo" },
+        element: { locator: "html" },
+        evidence: { observed: 'primeiro link href="#"', expected: "âncora interna com alvo", data: { region: "skip-link", firstLinkHref: "#", expectedCondition: EXPECTED_CONDITIONS.skipLink } },
+      })
+    );
+    expect(res.verification.verdict).toBe("confirmed");
+    expect(res.verification.predicate).toBe("page-skip-link");
+  });
+
+  it("rejects a page claim whose structured count contradicts the document", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-page-header", source: "govbr-ds-page", description: "Área de Cabeçalho obrigatória" },
+        element: { locator: "html" },
+        evidence: { observed: "um .br-header fora do lugar", expected: "Header", data: { region: "header", observedCount: 1, expectedCondition: EXPECTED_CONDITIONS.pageRegion } },
+      })
+    );
+    expect(res.verification.verdict).toBe("rejected");
+    expect(res.verification.checks.evidenceConsistent).toBe("fail");
+  });
+
+  it("keeps a page claim without structured data unverifiable, and page prose without id unverifiable too", async () => {
+    const semDados = await verify(
+      claim({
+        rule: { id: "ds-page-header", source: "govbr-ds-page", description: "Área de Cabeçalho obrigatória" },
+        element: { locator: "html" },
+        evidence: { observed: "não há cabeçalho", expected: "Header", data: {} },
+      })
+    );
+    expect(semDados.verification.verdict).toBe("unverifiable");
+    expect(semDados.verification.checks.ruleExists).toBe("pass");
+    expect(semDados.verification.checks.violation).toBe("no-predicate");
+
+    const prosa = await verify(
+      claim({
+        rule: { id: "page_structure-breadcrumb-primeiro", source: "govbr-ds-page", description: "Breadcrumb deve ser o primeiro conteúdo" },
+        element: { locator: "main" },
+        evidence: { observed: "sem breadcrumb", expected: "breadcrumb primeiro", data: {} },
+      })
+    );
+    expect(prosa.verification.verdict).toBe("unverifiable");
+    expect(prosa.verification.checks.ruleExists).toBe("unknown");
+    expect(prosa.verification.detail).toContain("ds-page-header");
+  });
+
+  it("scan_page runs the page check by default and reports the three constraints on this fixture", async () => {
+    const text = textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } }));
+    const res = JSON.parse(text);
+    expect(res.coverage.checks).toEqual(["page"]);
+    for (const id of ["ds-page-header", "ds-page-footer", "ds-page-skip-link"]) expect(text, id).toContain(id);
+    const byDefault = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page } })));
+    expect(byDefault.coverage.checks).toContain("page");
+  });
+});
+
 describe("save_report — the server-held verification decides", () => {
   it("accepts the verified payload, keeps the unverifiable one for review and refuses altered or invented ones", async () => {
     const verified = claim({ id: "F-801" });

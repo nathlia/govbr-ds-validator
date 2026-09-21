@@ -39,14 +39,14 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 - `get_ds_rules (id?, ids?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?)` — authoritative KB store; exact ids can be fetched in one batch
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
-- `get_page_rules (category?)` — gov.br DS page-level guidelines
+- `get_page_rules (category?)` — gov.br DS page-level guidelines; without a category, also the citable page constraints `ds-page-header`, `ds-page-footer`, `ds-page-skip-link` (2.7.0)
 - `list_components ()` / `get_component_spec (component, include_examples?)` — canonical structure contracts; HTML examples are opt-in. Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
 
 **Evidence (C5 phase 1)**:
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
 **Deterministic checkers (no LLM)** — bounded pages, compact by default:
-- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path with bounded setup actions, state/finding diffs, exact cache and evidence ledger
+- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, state/finding diffs, exact cache and evidence ledger
 - `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?)` — batched colors/fonts/radii/spacing vs. token registry
 - `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched DOM vs. canonical spec
 - `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched axe-core with e-MAG cross-references
@@ -89,6 +89,40 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
+
+### Page-level constraints: Template Base and skip to content (2.7.0)
+
+Until 2.6.0 the page-level guidelines existed only as prose behind `get_page_rules`. An agent could
+read them, but a finding based on them had no id the gate recognised, so it could never leave
+`unverifiable`; and in the six oracle-arm runs of the 2026-09-18 batteries no agent fetched the
+Template Base or the Padrão Mínimo at all. 2.7.0 turns the mandatory anatomy of the Template Base
+into citable constraints, the way D-29 turned a component's root tag into `ds-structure-<c>-tag`:
+
+| Constraint | Checks | Norm (`implements`) |
+|---|---|---|
+| `ds-page-header` | at least one `.br-header` in the document | `govbr-3.7.0-template-global-19f93475dc5e` |
+| `ds-page-footer` | at least one `.br-footer` in the document | `govbr-3.7.0-template-global-19f93475dc5e` |
+| `ds-page-skip-link` | the first `<a href>` in DOM order is an in-page anchor whose target exists | `govbr-3.7.0-accessibility-global-7d2b85f81c52`, `emag-1.5` |
+
+The source for the two regions is the full text of the official Template Base page held in
+`data/ds-page-rules.json` (`page_structure`), which names each area and marks it "(Obrigatório)"
+or "(Opcional)"; the constraint carries the excerpt, and a test fails if the excerpt disappears from
+the data. D-29 had refused to infer a mandatory footer from the truncated search excerpt "Template
+Base como ponto de partida"; the refusal was about the truncated source. `get_page_rules()` publishes
+the constraints; `scan_page` runs them under the new `page` check (on by default); `verify_finding`
+recognises the ids (`page-constraint-index`) and recomputes them on the document with the
+`page-region` and `page-skip-link` predicates. Structured claims: `region` + `observedCount` +
+`expectedCondition: "template-base-region-present"` for the regions, `region: "skip-link"` +
+`firstLinkHref` + `expectedCondition: "first-link-skips-to-content"` for the skip link; the locator
+is `html`. Page prose without an id (breadcrumb first in the content area, menu placement) stays
+anchored to a category and `unverifiable`, as before.
+
+Limits: a page with no link at all is not charged for the skip link; the Localização and Navegação
+areas are optional and not checked; `title` and `lang` remain axe's (`document-title`,
+`html-has-lang`); regions inside shadow roots are not counted. The check applies to every page it
+scans, including component test pages that were built without a header or footer — on those the
+finding is true to the rule and outside the frozen reference, which is a scope statement of the
+reference, not of the checker. Runs under 2.7.0 do not compare with 2.6.0 or earlier.
 
 ### What the DS itself ships is not the page's defect (2.6.0)
 
@@ -152,7 +186,10 @@ structured claims are: `ds-token-color` (`property` + `observedHex` + `expectedC
 `observed` + `expectedCondition: "govbr-ds-radius-scale"`), `ds-token-spacing` (`property:
 "padding"|"margin"` + `observed` + `expectedCondition: "govbr-ds-spacing-scale"`), and
 `ds-structure-<component>-tag` (`component` + `observedTag` + `expectedCondition:
-"canonical-component-tag"`). The deterministic scanners emit these exact fields. Missing structured data leaves the
+"canonical-component-tag"`), and since 2.7.0 `ds-page-header`/`ds-page-footer` (`region` +
+`observedCount` + `expectedCondition: "template-base-region-present"`) and `ds-page-skip-link`
+(`region: "skip-link"` + `firstLinkHref` + `expectedCondition: "first-link-skips-to-content"`),
+decided on the document rather than on the located element. The deterministic scanners emit these exact fields. Missing structured data leaves the
 claim `unverifiable`; an unsupported field or a value/tag that contradicts any live element is
 `rejected`. Only after this binding do predicates re-run the same checker on each element. Limits:
 no predicate for relations between elements, focus, order, text,

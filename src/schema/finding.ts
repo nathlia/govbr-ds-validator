@@ -102,7 +102,9 @@ export const EvidenceSchema = z.object({
         "and expectedCondition. Exact expectedCondition by predicate: " +
         `ds-token-color=${EXPECTED_CONDITIONS.tokenColor}; ds-token-font-family=${EXPECTED_CONDITIONS.tokenFontFamily}; ` +
         `ds-token-radius=${EXPECTED_CONDITIONS.tokenRadius}; ds-token-spacing=${EXPECTED_CONDITIONS.tokenSpacing}; ` +
-        `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}. ` +
+        `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}; ` +
+        `ds-page-header|ds-page-footer (region + observedCount)=${EXPECTED_CONDITIONS.pageRegion}; ` +
+        `ds-page-skip-link (region + firstLinkHref)=${EXPECTED_CONDITIONS.skipLink}. ` +
         "Free-text observed/expected remain human explanations, not semantic gate inputs."
     ),
 });

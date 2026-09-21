@@ -58,6 +58,7 @@ const VERSAO: string = JSON.parse(
 ).version;
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
+import { pageConstraints } from "./checkers/pageStructure.js";
 import {
   inspectComputedStyles,
   STYLE_PROPERTIES,
@@ -434,7 +435,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Consulta diretrizes de página por categoria. Sem categoria, retorna somente o índice disponível.",
+        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link: regiões obrigatórias do Template Base e salto para o conteúdo), verificáveis pelo scan_page e pelo verify_finding.",
       inputSchema: {
         category: z
           .enum([
@@ -458,13 +459,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     instrumentTool(telemetry, "get_page_rules", async ({ category }) => {
       const pageRules = getPageRules();
+      // 2.7.0: as restrições citáveis de página acompanham o índice e as categorias que as sustentam,
+      // como as restrições estruturais acompanham get_component_spec (D-29).
+      const constraints = pageConstraints();
       if (!category) {
         return json({
           meta: pageRules.meta,
+          constraints,
           available: Object.entries(pageRules.categories).map(([key, { label, url }]) => ({ key, label, url })),
         });
       }
-      return json(pageRules.categories[category] ?? { error: `Categoria '${category}' não encontrada.` });
+      const found = pageRules.categories[category];
+      if (!found) return json({ error: `Categoria '${category}' não encontrada.` });
+      return json(category === "page_structure" || category === "minimum_standard" ? { ...found, constraints } : found);
     })
   );
 
@@ -568,14 +575,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Varredura determinística agregada",
       description:
-        "Carrega a página uma vez e executa tokens, estrutura e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão.",
+        "Carrega a página uma vez e executa tokens, estrutura, página (regiões obrigatórias do Template Base e salto para o conteúdo) e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
         checks: z
-          .array(z.enum(["tokens", "structure", "axe"]))
+          .array(z.enum(["tokens", "structure", "axe", "page"]))
           .min(1)
-          .max(3)
+          .max(4)
           .optional()
           .describe("Checks agregados (padrão: todos)"),
         tokenChecks: z

@@ -20,6 +20,8 @@ import type { ElementEvidence } from "../evidence/types.js";
 import type { StyleProperty } from "../evidence/inspect.js";
 import { checkTokenCompliance, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure } from "../checkers/structure.js";
+import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
+import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -38,9 +40,11 @@ export interface Predicate {
   id: string;
   /** Propriedades que a inspeção precisa coletar para decidir. */
   properties: StyleProperty[];
-  /** Liga os dados estruturados alegados ao valor/tag de CADA elemento vivo. */
-  verifyClaim(elements: ElementEvidence[]): ClaimOutcome;
-  evaluate(elements: ElementEvidence[], url: string): PredicateOutcome;
+  /** 2.7.0: o predicado decide sobre o documento e precisa dos fatos de página no estado reproduzido. */
+  needsPageFacts?: boolean;
+  /** Liga os dados estruturados alegados ao valor/tag de CADA elemento vivo (ou aos fatos de página). */
+  verifyClaim(elements: ElementEvidence[], facts?: PageFacts): ClaimOutcome;
+  evaluate(elements: ElementEvidence[], url: string, facts?: PageFacts): PredicateOutcome;
 }
 
 export type PredicateSelection =
@@ -228,6 +232,69 @@ export function selectPredicate(finding: Finding): PredicateSelection {
               ? null
               : `${element.locator} (<${element.tagName}>) não viola neste estado`
           ),
+      },
+    };
+  }
+
+  if (source === "govbr-ds-page") {
+    const constraint = pageConstraints().find((candidate) => candidate.id === id);
+    if (!constraint) return none(generic);
+    const condition = constraint.claim.expectedCondition;
+    if (constraint.kind === "page-region") {
+      if (data.region === undefined || data.observedCount === undefined || data.expectedCondition === undefined) {
+        return none(`${id} só é verificável com evidence.data.region, observedCount e expectedCondition ('${condition}').`, "missing");
+      }
+      if (data.region !== constraint.region || typeof data.observedCount !== "number" || data.expectedCondition !== condition) {
+        return none(`Dados estruturados contraditórios para ${id}: region deve ser '${constraint.region}', observedCount numérico e expectedCondition '${condition}'.`, "contradicted");
+      }
+      const region = constraint.region as "header" | "footer";
+      const observedCount = data.observedCount;
+      return {
+        predicate: {
+          id: "page-region",
+          properties: [],
+          needsPageFacts: true,
+          verifyClaim: (_elements, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-region." };
+            const live = facts.regions[region];
+            return live === observedCount
+              ? { status: "consistent", detail: `Dados estruturados conferidos no documento: ${live} elemento(s) ${constraint.selector}.` }
+              : { status: "contradicted", detail: `O documento tem ${live} elemento(s) ${constraint.selector}, não ${observedCount}.` };
+          },
+          evaluate: (_elements, url, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-region." };
+            return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+              ? { status: "verified", detail: `Violação recalculada no documento: nenhum ${constraint.selector} (${region} do Template Base).` }
+              : { status: "contradicted", detail: `O documento tem ${facts.regions[region]} elemento(s) ${constraint.selector}; não viola neste estado.` };
+          },
+        },
+      };
+    }
+    if (data.region === undefined || data.firstLinkHref === undefined || data.expectedCondition === undefined) {
+      return none(`${id} só é verificável com evidence.data.region='skip-link', firstLinkHref e expectedCondition ('${condition}').`, "missing");
+    }
+    if (data.region !== "skip-link" || typeof data.firstLinkHref !== "string" || data.expectedCondition !== condition) {
+      return none(`Dados estruturados contraditórios para ${id}: region deve ser 'skip-link', firstLinkHref texto e expectedCondition '${condition}'.`, "contradicted");
+    }
+    const firstLinkHref = data.firstLinkHref;
+    return {
+      predicate: {
+        id: "page-skip-link",
+        properties: [],
+        needsPageFacts: true,
+        verifyClaim: (_elements, facts) => {
+          if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-skip-link." };
+          const live = facts.firstLink?.href ?? null;
+          return live === firstLinkHref
+            ? { status: "consistent", detail: `Dados estruturados conferidos: o primeiro link do documento é href="${live}".` }
+            : { status: "contradicted", detail: `O primeiro link do documento é ${live === null ? "inexistente" : `href="${live}"`}, não href="${firstLinkHref}".` };
+        },
+        evaluate: (_elements, url, facts) => {
+          if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-skip-link." };
+          return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+            ? { status: "verified", detail: "Violação recalculada no documento: o primeiro link não é o salto para o conteúdo (e-MAG 1.5)." }
+            : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente; não viola neste estado." };
+        },
       },
     };
   }

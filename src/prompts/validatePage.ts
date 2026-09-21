@@ -53,7 +53,8 @@ Siga o procedimento à risca. Não invente regras: toda regra citada deve vir da
    - get_emag_rules() para o índice e depois as seções pertinentes ao conteúdo observado
    - get_ds_rules(ids) quando várias regras candidatas já estiverem identificadas
    - get_design_tokens() para os tokens semânticos
-   - get_page_rules(<categoria>) quando a página tiver formulários/navegação/estrutura relevante
+   - get_page_rules() sem categoria para as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link — regiões obrigatórias do Template Base e salto para o conteúdo); o scan_page já as verifica quando checks inclui "page" (padrão)
+   - get_page_rules("page_structure") e get_page_rules("minimum_standard") quando a página for uma página completa (cabeçalho, conteúdo, rodapé), e get_page_rules(<categoria>) quando tiver formulários/navegação/estrutura relevante
 
 ## Fase 2 — Julgamento (apenas questões semânticas/contextuais)
 

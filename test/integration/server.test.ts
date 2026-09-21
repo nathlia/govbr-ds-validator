@@ -122,6 +122,19 @@ describe("surface", () => {
     }
   });
 
+  it("get_page_rules publishes the citable page constraints with their norms and source excerpts (2.7.0)", async () => {
+    const index = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: {} })));
+    expect(index.constraints.map((c: { id: string }) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-skip-link"]);
+    const footer = index.constraints.find((c: { id: string }) => c.id === "ds-page-footer");
+    expect(footer.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+    expect(footer.source.excerpt).toContain("Área de Rodapé (Obrigatório)");
+    expect(footer.claim.expectedCondition).toBe("template-base-region-present");
+    const structure = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "page_structure" } })));
+    expect(structure.constraints).toHaveLength(3);
+    const forms = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "form_patterns" } })));
+    expect(forms.constraints).toBeUndefined();
+  });
+
   it.each([
     ["normative", ["get_component_spec", "get_design_tokens", "get_ds_rules", "get_emag_rules", "get_page_rules"]],
     ["deterministic", ["get_finding_details", "scan_page"]],

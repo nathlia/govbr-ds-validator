@@ -23,10 +23,12 @@ import { getRuleById } from "../data/knowledge.js";
 import { normalizeColor } from "../checkers/color.js";
 import { withPage } from "../evidence/browser.js";
 import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
+import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { applyActions, fingerprintPage, type PageScanAction } from "../scan/pageScan.js";
 import {
   emagMembership,
   kbMembership,
+  pageConstraintMembership,
   registryVersions,
   structureRuleMembership,
   tokenRuleMembership,
@@ -157,8 +159,10 @@ export async function verifyFinding({ finding, live = false, actions = [], state
         }
       }
 
+      // 2.7.0: predicado de página decide sobre o documento, não sobre o elemento localizado.
+      const facts: PageFacts | undefined = selection.predicate?.needsPageFacts ? await inspectPageStructure(page, finding.element.page) : undefined;
       if (selection.predicate) {
-        const claim = selection.predicate.verifyClaim(evidence.elements);
+        const claim = selection.predicate.verifyClaim(evidence.elements, facts);
         notes.push(claim.detail);
         if (claim.status === "contradicted") {
           checks.evidenceConsistent = "fail";
@@ -169,7 +173,7 @@ export async function verifyFinding({ finding, live = false, actions = [], state
       // Finding an element cannot establish agreement with a structured assertion that is absent.
       checks.evidenceConsistent = selection.claimStatus === "missing" ? "unknown" : "pass";
       if (selection.predicate) {
-        const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page);
+        const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page, facts);
         checks.violation = outcome.status;
         verifiedBy = `predicate:${selection.predicate.id}`;
         notes.push(outcome.detail);
@@ -239,6 +243,13 @@ function checkRule(finding: Finding): RuleCheck {
       check = fromMembership(structureRuleMembership(id), "component-spec-index");
       break;
     case "govbr-ds-page": {
+      // 2.7.0: as restrições publicadas por get_page_rules têm id e existência conferível. O resto
+      // das diretrizes de página continua prosa sem id: ancorada a uma categoria fica `unknown`.
+      const membership = pageConstraintMembership(id);
+      if (membership.status === "member") {
+        check = fromMembership(membership, "page-constraint-index");
+        break;
+      }
       const categories = Object.keys(getPageRules().categories);
       const known = categories.find((category) => id.includes(category));
       check = {
@@ -247,8 +258,8 @@ function checkRule(finding: Finding): RuleCheck {
         verifiedBy: "page-rule-index",
         notes: [
           known
-            ? `Diretrizes de página (${known}) não têm id citável por regra; a existência não pode ser conferida.`
-            : `Não foi possível ancorar '${id}' a uma categoria de diretrizes de página (${categories.join(", ")}).`,
+            ? `Diretrizes de página (${known}) não têm id citável por regra; a existência não pode ser conferida. ${membership.detail}`
+            : `Não foi possível ancorar '${id}' a uma categoria de diretrizes de página (${categories.join(", ")}). ${membership.detail}`,
         ],
       };
       break;
@@ -283,7 +294,7 @@ function checkRule(finding: Finding): RuleCheck {
   }
 
   // D-27: verificação determinística tem de nomear norma existente em `implements`.
-  if (finding.pathway === "deterministic" && (source === "govbr-ds-token" || source === "govbr-ds-structure")) {
+  if (finding.pathway === "deterministic" && (source === "govbr-ds-token" || source === "govbr-ds-structure" || source === "govbr-ds-page")) {
     const declared = finding.rule.implements ?? [];
     if (declared.length === 0) {
       check.applicability = "fail";

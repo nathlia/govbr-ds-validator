@@ -33,8 +33,8 @@ export interface EmagData {
 }
 
 export interface PageRulesData {
-  meta: Record<string, unknown>;
-  categories: Record<string, { label: string; url: string; rules?: unknown[] } & Record<string, unknown>>;
+  meta: { source: string; url: string; scrapedAt: string; note?: string } & Record<string, unknown>;
+  categories: Record<string, { label: string; url: string; rules?: unknown[]; sections?: Record<string, unknown> } & Record<string, unknown>>;
 }
 
 export interface ComponentSpec {

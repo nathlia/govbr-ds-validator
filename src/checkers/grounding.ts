@@ -29,7 +29,10 @@ export type CheckKind =
   | "token-spacing"
   | "structure-tag"
   | "structure-accessible-name"
-  | "structure-unknown-classes";
+  | "structure-unknown-classes"
+  | "page-header"
+  | "page-footer"
+  | "page-skip-link";
 
 export interface CheckGrounding {
   /**
@@ -91,6 +94,30 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
     basis:
       "e-MAG 2.2, garantir que os objetos programáveis sejam acessíveis. Já era citada " +
       "corretamente antes do D-27 — é o precedente que o resto passou a seguir.",
+  },
+  "page-header": {
+    implements: ["govbr-3.7.0-template-global-19f93475dc5e"],
+    basis:
+      "'Use o Template Base como ponto de partida para páginas' (required), lido junto com o texto " +
+      "integral da página oficial do Template Base (data/ds-page-rules.json, page_structure): " +
+      "'1. Área de Cabeçalho (Obrigatório) — Esta é uma área essencial e obrigatória no template " +
+      "base. Nesta região deve-se utilizar apenas o componente header'. O D-29 vetava inferir áreas " +
+      "do excerto truncado; a fonte agora é o texto integral, e o trecho é conferido em teste.",
+  },
+  "page-footer": {
+    implements: ["govbr-3.7.0-template-global-19f93475dc5e"],
+    basis:
+      "Mesma regra e mesma fonte integral do Template Base: '5. Área de Rodapé (Obrigatório) — Esta " +
+      "é uma área essencial do template base onde é utilizado o componente Footer'. O Padrão Mínimo " +
+      "lista Cabeçalho e Rodapé entre os pontos de aderência mínima.",
+  },
+  "page-skip-link": {
+    implements: ["govbr-3.7.0-accessibility-global-7d2b85f81c52", "emag-1.5"],
+    basis:
+      "e-MAG 1.5 (required): 'forneça atalhos para blocos relevantes e faça do salto para o conteúdo " +
+      "o primeiro link da página'. A verificação lê exatamente isso: o primeiro <a href> do documento " +
+      "é uma âncora interna cujo alvo existe. A regra do DS sobre Skip Link no Template Base é " +
+      "apenas recomendada e não é citada como norma.",
   },
   "structure-unknown-classes": {
     implements: [],
