@@ -16,6 +16,9 @@
  * dados, e o teste falha se ele sumir de lá. O salto para o conteúdo vem do e-MAG 1.5, que é
  * explícito: o primeiro link da página.
  *
+ * Regiões contam pela classe raiz do core ou pelo web component (`<br-header>`), no DOM claro ou em
+ * shadow roots abertos — ver `evidence/pageFacts.ts`.
+ *
  * O que fica fora, de propósito: Área de Localização e de Navegação são opcionais; "breadcrumb
  * primeiro na área de conteúdo" depende de saber onde a área de conteúdo começa, e o oráculo não
  * decide isso mecanicamente; título e `lang` já são do axe (`document-title`, `html-has-lang`).
@@ -77,7 +80,7 @@ export function pageConstraints(): PageConstraint[] {
     selector: PAGE_REGION_SELECTORS[region],
     description:
       `O Template Base tem uma ${heading.replace(/ \(Obrigatório\)$/, "")} obrigatória, ocupada pelo componente ${component} ` +
-      `(${PAGE_REGION_SELECTORS[region]}). Uma página sem ${PAGE_REGION_SELECTORS[region]} não a preenche.`,
+      `(${PAGE_REGION_SELECTORS[region]} do core ou o web component <br-${region}>). Uma página sem nenhum dos dois não a preenche.`,
     force: "required",
     implements: groundingFor(kind),
     claim: { expectedCondition: EXPECTED_CONDITIONS.pageRegion, fields: ["region", "observedCount", "expectedCondition"] },
@@ -115,8 +118,8 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
         rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },
         element,
         evidence: {
-          observed: `Nenhum elemento ${constraint.selector} no documento.`,
-          expected: `Uma ${region === "header" ? "Área de Cabeçalho com o componente Header" : "Área de Rodapé com o componente Footer"} (${constraint.selector}), como o Template Base exige.`,
+          observed: `Nenhum elemento ${constraint.selector} nem web component <br-${region}> no documento (DOM claro e shadow roots abertos).`,
+          expected: `Uma ${region === "header" ? "Área de Cabeçalho com o componente Header" : "Área de Rodapé com o componente Footer"} (${constraint.selector} ou <br-${region}>), como o Template Base exige.`,
           data: { region, selector: constraint.selector, observedCount: count, expectedCondition: EXPECTED_CONDITIONS.pageRegion },
         },
         severity: "serious",

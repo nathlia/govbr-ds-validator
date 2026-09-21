@@ -100,9 +100,9 @@ into citable constraints, the way D-29 turned a component's root tag into `ds-st
 
 | Constraint | Checks | Norm (`implements`) |
 |---|---|---|
-| `ds-page-header` | at least one `.br-header` in the document | `govbr-3.7.0-template-global-19f93475dc5e` |
-| `ds-page-footer` | at least one `.br-footer` in the document | `govbr-3.7.0-template-global-19f93475dc5e` |
-| `ds-page-skip-link` | the first `<a href>` in DOM order is an in-page anchor whose target exists | `govbr-3.7.0-accessibility-global-7d2b85f81c52`, `emag-1.5` |
+| `ds-page-header` | at least one `.br-header` (core) or `<br-header>` (web component) in the document, open shadow roots included | `govbr-3.7.0-template-global-19f93475dc5e` |
+| `ds-page-footer` | at least one `.br-footer` or `<br-footer>`, likewise | `govbr-3.7.0-template-global-19f93475dc5e` |
+| `ds-page-skip-link` | the first `<a href>` in composed order (shadow roots included) is an in-page anchor whose target exists | `govbr-3.7.0-accessibility-global-7d2b85f81c52`, `emag-1.5` |
 
 The source for the two regions is the full text of the official Template Base page held in
 `data/ds-page-rules.json` (`page_structure`), which names each area and marks it "(Obrigatório)"
@@ -119,7 +119,7 @@ anchored to a category and `unverifiable`, as before.
 
 Limits: a page with no link at all is not charged for the skip link; the Localização and Navegação
 areas are optional and not checked; `title` and `lang` remain axe's (`document-title`,
-`html-has-lang`); regions inside shadow roots are not counted. The check applies to every page it
+`html-has-lang`); closed shadow roots are invisible, as everywhere else in the validator. The check applies to every page it
 scans, including component test pages that were built without a header or footer — on those the
 finding is true to the rule and outside the frozen reference, which is a scope statement of the
 reference, not of the checker. Runs under 2.7.0 do not compare with 2.6.0 or earlier.
