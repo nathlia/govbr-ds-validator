@@ -6,6 +6,8 @@
  * Outputs:
  *   data/tokens.json          token registry + hex→token reverse index (A4)
  *   data/component-specs.json canonical component structure specs (A3)
+ *   data/ds-stylesheet.json   what the official stylesheet itself declares (D-51) — lets the token
+ *                             checkers tell a page's choice from a value the DS ships
  *
  * Static assets (data/emag.json, data/ds-page-rules.json) are maintained by
  * hand / separate scrapers and are NOT touched here.
@@ -15,6 +17,8 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
+import { INDEXED_CSS_NAMES, splitSelectorList, type DsStylesheetIndex } from "../src/evidence/cssProvenance.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -151,8 +155,15 @@ interface ElementUsage {
 interface ComponentSpec {
   name: string;
   rootClass: string;
-  /** Element tags observed carrying the root class in official examples. */
+  /**
+   * Element tags observed carrying the root class in the official examples of ANY component.
+   * Reading only the component's own examples made the checker refuse markup the DS itself
+   * publishes — `<a class="br-button circle">` is how the breadcrumb, footer and menu examples write
+   * a link that looks like a button (D-51).
+   */
   tags: string[];
+  /** Which components' examples show each tag — provenance for `tags`. */
+  tagSources: Record<string, string[]>;
   /** Classes co-occurring with the root class (variants/emphases/densities). */
   variantClasses: string[];
   /** aria-* attributes observed anywhere in the official examples. */
@@ -193,6 +204,20 @@ function buildComponentSpecs(): void {
 
   const specs: Record<string, ComponentSpec> = {};
 
+  /** Every official example of every component: a root class is also used outside its own folder. */
+  const readExamples = (name: string): string => {
+    const dir = join(componentsDir, name);
+    const parts: string[] = [];
+    if (existsSync(join(dir, "examples.html"))) parts.push(readFileSync(join(dir, "examples.html"), "utf8"));
+    if (existsSync(join(dir, "examples"))) {
+      for (const f of readdirSync(join(dir, "examples")).filter((f) => f.endsWith(".html"))) {
+        parts.push(readFileSync(join(dir, "examples", f), "utf8"));
+      }
+    }
+    return parts.join("\n");
+  };
+  const allExamples = new Map(names.map((name) => [name, readExamples(name)]));
+
   for (const name of names) {
     const dir = join(componentsDir, name);
     const rootClass = `br-${name}`;
@@ -216,7 +241,13 @@ function buildComponentSpecs(): void {
     const cssPath = join(dir, `${name}.css`);
     const css = existsSync(cssPath) ? readFileSync(cssPath, "utf8") : "";
 
-    const tags = [...new Set(roots.map((r) => r.tag))].sort();
+    const tagSources: Record<string, string[]> = {};
+    for (const [component, html] of allExamples) {
+      for (const tag of new Set(extractRootElements(html, rootClass).map((r) => r.tag))) {
+        (tagSources[tag] ??= []).push(component);
+      }
+    }
+    const tags = Object.keys(tagSources).sort();
     // Drop spacing/background utility classes — they are demo scaffolding, not component variants
     const utilityClass = /^(?:[mp][trblxy]?-(?:n?\d+|auto)|bg-[\w-]+|text-[\w-]+|d-[\w-]+|col(?:-[\w-]+)?|row|h\d)$/;
     // Variants also live in the component's own stylesheet: status/emphasis
@@ -233,7 +264,7 @@ function buildComponentSpecs(): void {
 
     const tokensUsed = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]))].sort();
 
-    specs[name] = { name, rootClass, tags, variantClasses, ariaAttributes, tokensUsed, examples };
+    specs[name] = { name, rootClass, tags, tagSources, variantClasses, ariaAttributes, tokensUsed, examples };
   }
 
   const output = {
@@ -250,9 +281,76 @@ function buildComponentSpecs(): void {
   console.log(`component-specs.json: ${names.length} components`);
 }
 
+// ── Folha oficial do DS ──────────────────────────────────────────────────────
+
+/**
+ * Lê a folha oficial pelo CSSOM do mesmo navegador que mede as páginas, para que seletor e valor
+ * saiam serializados exatamente como `inspect.ts` os verá numa página (D-51). Regras dentro de
+ * @media/@supports entram sem avaliar a condição: o índice responde "o DS publica isto?", não
+ * "isto se aplica agora?".
+ */
+async function buildDsStylesheet(): Promise<void> {
+  const files = ["core.css", "core.min.css"].filter((f) => existsSync(join(DS_DIST, f)));
+  const browser = await chromium.launch();
+  const declarations: DsStylesheetIndex["declarations"] = {};
+  let total = 0;
+  try {
+    for (const file of files) {
+      const page = await browser.newPage();
+      await page.setContent("<!doctype html><html><head></head><body></body></html>");
+      await page.addStyleTag({ content: readFileSync(join(DS_DIST, file), "utf8") });
+      const rows = await page.evaluate((cssNames) => {
+        // Pilha em vez de função recursiva: o tsx (esbuild, keepNames) embrulha toda função nomeada
+        // em `__name`, que não existe dentro do navegador.
+        const out: [string, string, string][] = [];
+        const stack: CSSRuleList[] = Array.from(document.styleSheets).map((sheet) => sheet.cssRules);
+        while (stack.length > 0) {
+          for (const rule of Array.from(stack.pop()!)) {
+            if (rule instanceof CSSStyleRule) {
+              for (const cssName of cssNames) {
+                const value = rule.style.getPropertyValue(cssName).trim();
+                if (value) out.push([rule.selectorText, cssName, value + (rule.style.getPropertyPriority(cssName) ? " !important" : "")]);
+              }
+              continue;
+            }
+            const nested = (rule as CSSGroupingRule).cssRules;
+            if (nested) stack.push(nested);
+          }
+        }
+        return out;
+      }, INDEXED_CSS_NAMES);
+      await page.close();
+      for (const [selectorText, cssName, value] of rows) {
+        for (const selector of splitSelectorList(selectorText)) {
+          const values = ((declarations[selector] ??= {})[cssName] ??= []);
+          if (!values.includes(value)) { values.push(value); total += 1; }
+        }
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+
+  const sorted = Object.fromEntries(Object.keys(declarations).sort().map((k) => [k, declarations[k]]));
+  const output: DsStylesheetIndex = {
+    meta: {
+      source: "@govbr-ds/core",
+      version: (JSON.parse(readFileSync(join(ROOT, "node_modules/@govbr-ds/core/package.json"), "utf8")) as { version: string }).version,
+      generatedAt: new Date().toISOString(),
+      files,
+      selectors: Object.keys(sorted).length,
+      declarations: total,
+    },
+    declarations: sorted,
+  };
+  writeFileSync(join(DATA_DIR, "ds-stylesheet.json"), JSON.stringify(output));
+  console.log(`ds-stylesheet.json: ${output.meta.selectors} selectors, ${total} declarations`);
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 mkdirSync(DATA_DIR, { recursive: true });
 buildTokens();
 buildComponentSpecs();
+await buildDsStylesheet();
 console.log("done");

@@ -21,6 +21,8 @@
  */
 import type { PageEvidence, ElementEvidence } from "./types.js";
 import { withPage } from "./browser.js";
+import { AUTHORED_CSS_NAMES, partitionDeclarations, type RawDeclaration } from "./cssProvenance.js";
+import { getDsStylesheet } from "../data/load.js";
 import type { Page } from "playwright";
 
 export const DEFAULT_SELECTOR =
@@ -71,7 +73,7 @@ export async function inspectPageComputedStyles(
     (FOCUS_STYLE_PROPERTIES as readonly string[]).includes(p)
   );
 
-  const elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps }) => {
+  const elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -191,32 +193,16 @@ export async function inspectPageComputedStyles(
           computedProps.map((property) => [property, allComputed[property as keyof typeof allComputed]])
         );
 
-        // getComputedStyle mistura três origens que o verificador não pode confundir: CSS da
-        // página, valores resolvidos pelo layout (por exemplo margin:auto) e defaults do browser.
-        // Guardamos separadamente as declarações AUTORAIS que casam diretamente com o elemento.
-        // O checker usa esta prova de autoria; o valor computado continua sendo contexto visual.
-        const cssNames: Record<string, string[]> = {
-          backgroundColor: ["background-color", "background"],
-          color: ["color"],
-          fontFamily: ["font-family", "font"],
-          fontSize: ["font-size", "font"],
-          fontWeight: ["font-weight", "font"],
-          lineHeight: ["line-height", "font"],
-          borderRadius: ["border-radius", "border"],
-          borderColor: ["border-color", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border"],
-          border: ["border", "border-top", "border-right", "border-bottom", "border-left"],
-          padding: ["padding", "padding-top", "padding-right", "padding-bottom", "padding-left"],
-          margin: ["margin", "margin-top", "margin-right", "margin-bottom", "margin-left"],
-          outline: ["outline"],
-          cursor: ["cursor"],
-          opacity: ["opacity"],
-        };
-        const authored: Record<string, string[]> = {};
-        const collect = (style: CSSStyleDeclaration) => {
+        // getComputedStyle mistura origens que o verificador não pode confundir: CSS da página,
+        // CSS do próprio DS, valores resolvidos pelo layout (por exemplo margin:auto) e defaults do
+        // browser. Aqui saem as declarações que casam diretamente com o elemento, cada uma com o
+        // seletor da regra; quem separa página de DS é `partitionDeclarations`, fora do navegador.
+        const authoredRaw: { property: string; cssName: string; value: string; selectorText: string | null }[] = [];
+        const collect = (style: CSSStyleDeclaration, selectorText: string | null) => {
           for (const property of computedProps) {
             for (const cssName of cssNames[property] ?? []) {
               const value = style.getPropertyValue(cssName).trim();
-              if (value) (authored[property] ??= []).push(value + (style.getPropertyPriority(cssName) ? " !important" : ""));
+              if (value) authoredRaw.push({ property, cssName, value: value + (style.getPropertyPriority(cssName) ? " !important" : ""), selectorText });
             }
           }
         };
@@ -224,7 +210,7 @@ export async function inspectPageComputedStyles(
           for (const rule of Array.from(rules)) {
             if (rule instanceof CSSStyleRule) {
               try {
-                if (el.matches(rule.selectorText)) collect(rule.style);
+                if (el.matches(rule.selectorText)) collect(rule.style, rule.selectorText);
               } catch { /* seletor não suportado pelo browser desta medição */ }
               continue;
             }
@@ -238,7 +224,7 @@ export async function inspectPageComputedStyles(
           try { if (sheet.cssRules) visitRules(sheet.cssRules); }
           catch { /* folha cross-origin: não é autoria inspecionável da página */ }
         }
-        collect(htmlEl.style);
+        collect(htmlEl.style, null);
 
         let focused: Record<string, string> = {};
         if (focusProps.length > 0) {
@@ -279,6 +265,7 @@ export async function inspectPageComputedStyles(
             placeholder: el.getAttribute("placeholder"),
             alt: el.getAttribute("alt"),
             tabindex: el.getAttribute("tabindex"),
+            href: el.getAttribute("href"),
           },
           content: {
             textContent: text.slice(0, 100),
@@ -286,7 +273,7 @@ export async function inspectPageComputedStyles(
             hasIconOnly: !text && el.querySelector("i, svg, img") !== null,
           },
           inlineStyle: el.getAttribute("style"),
-          authored,
+          authoredRaw,
           computed: snapshot,
           focused,
           outerHTML: el.outerHTML.slice(0, 500),
@@ -298,14 +285,21 @@ export async function inspectPageComputedStyles(
       shadowStep: SHADOW_STEP,
       computedProps: computedProperties,
       focusProps: focusProperties,
+      cssNames: AUTHORED_CSS_NAMES as Record<string, string[]>,
     });
+
+  const dsStylesheet = getDsStylesheet();
+  const withProvenance = elements.map(({ authoredRaw, ...element }) => ({
+    ...element,
+    ...partitionDeclarations(authoredRaw as RawDeclaration[], dsStylesheet),
+  }));
 
   return {
     url,
     selector: target,
     selectors,
     properties: requested,
-    count: elements.length,
-    elements: elements as ElementEvidence[],
+    count: withProvenance.length,
+    elements: withProvenance as ElementEvidence[],
   };
 }

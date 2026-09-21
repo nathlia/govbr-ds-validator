@@ -59,7 +59,9 @@ function tokenListLabel(tokens: string[]): string {
 /**
  * `undefined` significa fixture/consumidor legado sem prova de autoria: conserva o comportamento
  * anterior. Uma lista vazia significa que a coleta nova provou que a página não declarou a
- * propriedade diretamente — nesse caso o checker não atribui o valor ao autor.
+ * propriedade diretamente — nesse caso o checker não atribui o valor ao autor. Declarações que
+ * coincidem com a folha oficial do DS já chegam separadas em `dsShipped` e não contam como autoria
+ * (D-51, `evidence/cssProvenance.ts`).
  */
 function authored(el: ElementEvidence, prop: keyof ElementEvidence["computed"]): string[] | undefined {
   if (!el.authored) return undefined;
@@ -256,9 +258,15 @@ export function checkTokenCompliance(
         // computado para comparação; fixtures legadas sem `authored` também usam o computado.
         const authoredHasResolvableExpression = rawParts?.some((p) => /^(?:var|calc|min|max|clamp)\(/i.test(p));
         const parts = rawParts && !authoredHasResolvableExpression ? rawParts : value.split(/\s+/);
+        // Uma declaração que perdeu a cascata não é o que a página mostra: o `margin: -1px` de uma
+        // regra sobrescrita por `margin: 0` saía como "fora da escala" com o valor computado em 0px
+        // (D-51). Em px o valor declarado que vence é o valor computado, então a parte só conta se
+        // aparecer nele.
+        const computedPx = value.split(/\s+/).map((p) => parsePx(p)).filter((px): px is number => px !== null);
         const offScale = parts.filter((p) => {
           const px = parsePx(p);
-          return px !== null && px !== 0 && Math.abs(px % (spacingBase / 2)) > 0.01;
+          return px !== null && px !== 0 && Math.abs(px % (spacingBase / 2)) > 0.01 &&
+            computedPx.some((c) => Math.abs(c - px) < 0.01);
         });
         if (offScale.length > 0) {
           findings.push({

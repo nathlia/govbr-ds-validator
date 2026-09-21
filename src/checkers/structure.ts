@@ -7,7 +7,7 @@
 import type { Finding, Observation } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
 import type { ComponentSpec } from "../data/load.js";
-import { findEmagRule } from "../data/load.js";
+import { findEmagRule, ownAndBorrowedTags } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -17,6 +17,26 @@ const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea"])
 /** D-28: <hr> expressa separação temática nativamente; o exemplo <span> não prevalece sobre HTML. */
 function isSemanticDividerException(el: ElementEvidence, spec: ComponentSpec): boolean {
   return spec.name === "divider" && el.tagName.toLowerCase() === "hr";
+}
+
+/** Um `<a>` que leva a algum lugar: href presente e que não seja `#`, vazio nem `javascript:`. */
+function navigates(el: ElementEvidence): boolean {
+  const href = el.attributes.href?.trim();
+  return !!href && href !== "#" && !/^javascript:/i.test(href);
+}
+
+/**
+ * A tag é aceita quando está nos exemplos do próprio componente, ou quando está nos exemplos de
+ * OUTRO componente e o uso é o mesmo de lá. O único caso emprestado hoje é `<a class="br-button">`:
+ * o DS o publica como link com aparência de botão (breadcrumb, footer, menu), então vale quando o
+ * link navega — e continua acusado quando é uma âncora fazendo papel de ação (`href="#"`). Antes
+ * do D-51 o verificador lia só a pasta do botão e recusava a marcação oficial do breadcrumb.
+ */
+function tagAccepted(el: ElementEvidence, spec: ComponentSpec): boolean {
+  const tag = el.tagName.toLowerCase();
+  const { own, borrowed } = ownAndBorrowedTags(spec);
+  if (own.includes(tag)) return true;
+  return borrowed.includes(tag) && (tag !== "a" || navigates(el));
 }
 
 export function checkComponentStructure(
@@ -38,24 +58,26 @@ export function checkComponentStructure(
     };
 
     // 1. Root element tag must match the canonical examples
-    if (spec.tags.length > 0 && !spec.tags.includes(el.tagName.toLowerCase()) && !isSemanticDividerException(el, spec)) {
+    const { own, borrowed } = ownAndBorrowedTags(spec);
+    const expectedTags = own.length > 0 ? own : spec.tags;
+    if (spec.tags.length > 0 && !tagAccepted(el, spec) && !isSemanticDividerException(el, spec)) {
       findings.push({
         id: nextFindingId(),
         rule: {
           id: `ds-structure-${spec.name}-tag`,
           source: "govbr-ds-structure",
-          description: `Nos exemplos oficiais do gov.br DS, ${spec.rootClass} é aplicado a <${spec.tags.join(">/<")}>.`,
+          description: `Nos exemplos oficiais do gov.br DS, ${spec.rootClass} é aplicado a <${expectedTags.join(">/<")}>${borrowed.includes("a") ? "; <a> só aparece como link que navega" : ""}.`,
           implements: groundingFor("structure-tag"),
         },
         ...base,
         evidence: {
           observed: `${spec.rootClass} aplicado a <${el.tagName.toLowerCase()}>`,
-          expected: `Elemento <${spec.tags.join("> ou <")}>`,
+          expected: `Elemento <${expectedTags.join("> ou <")}>`,
           data: {
             component: spec.name,
             observedTag: el.tagName.toLowerCase(),
             expectedCondition: EXPECTED_CONDITIONS.structureTag,
-            canonicalTags: spec.tags,
+            canonicalTags: expectedTags,
           },
         },
         severity: "serious",

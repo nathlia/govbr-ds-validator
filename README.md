@@ -90,6 +90,30 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### What the DS itself ships is not the page's defect (2.6.0)
+
+Measured on a held-out screen built only from official markup (decision log D-51), the unguided
+validator had 22% precision: 7 of 11 claims were false, and all 7 came from three causes fixed here.
+
+- **Token checkers charged the page for the DS's own stylesheet.** `core.css` arrives bundled in the
+  same file as the page's CSS, so the stylesheet's origin cannot tell the two apart — the content
+  can. `npm run build:data` now writes `data/ds-stylesheet.json`: every declaration of the official
+  stylesheet for the inspected properties, read through the CSSOM of the same browser that measures
+  pages. A declaration whose selector, property and value all match it lands in the element's
+  `dsShipped` evidence instead of `authored`, and the checkers only judge `authored`
+  (`src/evidence/cssProvenance.ts`). A page value on an official selector, a page rule riding on an
+  official selector, and inline style all stay the page's.
+- **`ds-token-spacing` judged declarations that lost the cascade.** An authored off-scale px part now
+  counts only if it appears in the computed value.
+- **`ds-structure-button-tag` refused `<a class="br-button">`**, which the breadcrumb, footer and
+  menu examples publish. Component tags are now read from the examples of every component, with
+  `tagSources` recording where each comes from. A tag borrowed from another component is accepted
+  only in the same use: `<a>` when the link navigates. An anchor doing a button's job
+  (`href="#"`, `javascript:`, no href) is still flagged. Element evidence gains `attributes.href`.
+
+The index is tied to the installed `@govbr-ds/core` version (3.7.0): a page on another DS version
+is filtered only where its declarations coincide.
+
 ### Baseline viewport (2.5.2)
 
 The deterministic baseline CLI (`dist/cli/scan-page.js`) accepts an optional `viewport` in its

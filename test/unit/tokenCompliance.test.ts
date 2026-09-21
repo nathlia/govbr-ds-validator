@@ -91,6 +91,35 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     expect(findings[0].evidence.data?.authoredDeclarations).toEqual(["13px"]);
   });
 
+  it("ignores an authored off-scale value that lost the cascade (D-51)", () => {
+    // flatpickr declara margin -1px no select de mês e outra regra o sobrescreve com 0.
+    const el = makeElement({
+      authored: { margin: ["-1px 0px 0px", "0px"] },
+      computed: { margin: "0px" } as never,
+    });
+    expect(checkTokenCompliance(page, [el], registry, ["spacing"])).toEqual([]);
+  });
+
+  it("still flags an authored off-scale part that survives in a multi-part computed value", () => {
+    // O filtro de cascata compara parte a parte: `padding: 0 13px` computado como "0px 13px" continua fora da escala.
+    const el = makeElement({
+      authored: { padding: ["0 13px"] },
+      computed: { padding: "0px 13px" } as never,
+    });
+    const findings = checkTokenCompliance(page, [el], registry, ["spacing"]);
+    expect(findings.map((f) => f.rule.id)).toEqual(["ds-token-spacing"]);
+  });
+
+  it("does not charge the page for a value only the DS stylesheet declares (D-51)", () => {
+    const el = makeElement({
+      tagName: "textarea",
+      authored: {},
+      dsShipped: { borderRadius: ["6px"], padding: ["var(--textarea-padding)"] },
+      computed: { borderRadius: "6px", padding: "0px 29px 0px 40px" } as never,
+    });
+    expect(checkTokenCompliance(page, [el], registry, ["radius", "spacing"])).toEqual([]);
+  });
+
   it("flags an off-scale border radius but accepts the DS scale", () => {
     const bad = makeElement({ computed: { borderRadius: "7px" } as never });
     const good = makeElement({ computed: { borderRadius: "4px" } as never });

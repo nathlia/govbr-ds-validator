@@ -24,6 +24,29 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(tagFinding?.evidence.observed).toContain("<a>");
   });
 
+  it("accepts br-button on a link that navigates — the DS's own breadcrumb, footer and menu do it (D-51)", () => {
+    const el = makeElement({
+      tagName: "a",
+      classes: ["br-button", "circle"],
+      attributes: { ...makeElement().attributes, href: "/solicitacao" },
+      outerHTML: '<a class="br-button circle" href="/solicitacao"></a>',
+    });
+    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+  });
+
+  it("still flags an anchor doing a button's job (href='#' or javascript:)", () => {
+    for (const href of ["#", "javascript: void(0)", ""]) {
+      const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href }, outerHTML: `<a class="br-button primary" href="${href}">Excluir</a>` });
+      const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "ds-structure-button-tag");
+      expect(finding?.evidence.expected).toBe("Elemento <button>");
+    }
+  });
+
+  it("flags br-button on a <div role=button>", () => {
+    const el = makeElement({ tagName: "div", attributes: { ...makeElement().attributes, role: "button" }, outerHTML: '<div class="br-button circle" role="button"></div>' });
+    expect(checkComponentStructure(page, [el], buttonSpec).some((f) => f.rule.id === "ds-structure-button-tag")).toBe(true);
+  });
+
   it("keeps semantic <hr class=br-divider> as an observation, not a finding (D-28)", () => {
     const el = makeElement({
       tagName: "hr",

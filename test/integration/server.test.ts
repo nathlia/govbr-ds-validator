@@ -235,13 +235,15 @@ describe("oracle knowledge tools", () => {
     });
     const data = JSON.parse(textOf(res));
     expect(data.rootClass).toBe("br-button");
-    expect(data.tags).toEqual(["button"]);
+    // 2.6.0 (D-51): os exemplos oficiais de breadcrumb, footer e menu escrevem <a class="br-button">.
+    expect(data.tags).toEqual(["a", "button"]);
+    expect(data.tagSources.a).toEqual(["breadcrumb", "footer", "menu"]);
     expect(data.constraints).toContainEqual({
       id: "ds-structure-button-tag",
       kind: "root-tag",
-      description: "br-button deve ser aplicado a <button>.",
+      description: "br-button deve ser aplicado a <button>. <a> vale quando o link navega (href real), como nos exemplos oficiais de outros componentes.",
       rootClass: "br-button",
-      allowedTags: ["button"],
+      allowedTags: ["a", "button"],
     });
     expect(data.variantClasses).toContain("circle");
     expect(data.examples.length).toBeGreaterThan(0);

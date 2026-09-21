@@ -2,7 +2,7 @@
   "meta": {
     "source": "@govbr-ds/core",
     "version": "3.7.0",
-    "generatedAt": "2026-07-11T02:43:07.402Z",
+    "generatedAt": "2026-09-19T04:48:13.234Z",
     "totalComponents": 36
   },
   "components": {
@@ -12,6 +12,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "accordion"
+        ]
+      },
       "variantClasses": [],
       "ariaAttributes": [
         "aria-controls",
@@ -70,6 +75,12 @@
       "tags": [
         "span"
       ],
+      "tagSources": {
+        "span": [
+          "avatar",
+          "card"
+        ]
+      },
       "variantClasses": [
         "is-large",
         "is-medium",
@@ -137,6 +148,11 @@
       "tags": [
         "nav"
       ],
+      "tagSources": {
+        "nav": [
+          "breadcrumb"
+        ]
+      },
       "variantClasses": [],
       "ariaAttributes": [
         "aria-current",
@@ -176,8 +192,37 @@
       "name": "button",
       "rootClass": "br-button",
       "tags": [
+        "a",
         "button"
       ],
+      "tagSources": {
+        "a": [
+          "breadcrumb",
+          "footer",
+          "menu"
+        ],
+        "button": [
+          "button",
+          "card",
+          "carousel",
+          "datetimepicker",
+          "header",
+          "input",
+          "item",
+          "magicbutton",
+          "menu",
+          "message",
+          "modal",
+          "notification",
+          "pagination",
+          "scrim",
+          "select",
+          "table",
+          "tag",
+          "tooltip",
+          "wizard"
+        ]
+      },
       "variantClasses": [
         "active",
         "auto-lg",
@@ -304,6 +349,12 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "card",
+          "scrim"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "disabled",
@@ -368,6 +419,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "carousel"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted"
@@ -450,6 +506,15 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "checkbox",
+          "item",
+          "list",
+          "select",
+          "table"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "disabled",
@@ -517,6 +582,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "cookiebar"
+        ]
+      },
       "variantClasses": [
         "default"
       ],
@@ -570,6 +640,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "datetimepicker"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted"
@@ -653,6 +728,19 @@
       "tags": [
         "span"
       ],
+      "tagSources": {
+        "span": [
+          "card",
+          "divider",
+          "footer",
+          "header",
+          "item",
+          "list",
+          "modal",
+          "pagination",
+          "table"
+        ]
+      },
       "variantClasses": [
         "content",
         "dark-mode",
@@ -720,6 +808,11 @@
       "tags": [
         "footer"
       ],
+      "tagSources": {
+        "footer": [
+          "footer"
+        ]
+      },
       "variantClasses": [
         "inverted",
         "no-divider"
@@ -781,6 +874,12 @@
       "tags": [
         "header"
       ],
+      "tagSources": {
+        "header": [
+          "header",
+          "table"
+        ]
+      },
       "variantClasses": [
         "compact",
         "large",
@@ -846,6 +945,18 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "datetimepicker",
+          "header",
+          "input",
+          "modal",
+          "pagination",
+          "select",
+          "table",
+          "tooltip"
+        ]
+      },
       "variantClasses": [
         "danger",
         "dark-mode",
@@ -959,6 +1070,34 @@
         "button",
         "div"
       ],
+      "tagSources": {
+        "a": [
+          "avatar",
+          "footer",
+          "header",
+          "item",
+          "modal",
+          "pagination",
+          "skiplink",
+          "table"
+        ],
+        "div": [
+          "card",
+          "header",
+          "item",
+          "list",
+          "modal",
+          "pagination",
+          "select",
+          "table",
+          "tooltip"
+        ],
+        "button": [
+          "item",
+          "notification",
+          "table"
+        ]
+      },
       "variantClasses": [
         "active",
         "dark-mode",
@@ -1052,6 +1191,21 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "avatar",
+          "card",
+          "footer",
+          "header",
+          "list",
+          "modal",
+          "notification",
+          "pagination",
+          "select",
+          "table",
+          "tooltip"
+        ]
+      },
       "variantClasses": [
         "horizontal",
         "toggle"
@@ -1122,6 +1276,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "loading"
+        ]
+      },
       "variantClasses": [
         "medium"
       ],
@@ -1165,6 +1324,7 @@
       "name": "magicbutton",
       "rootClass": "br-magicbutton",
       "tags": [],
+      "tagSources": {},
       "variantClasses": [],
       "ariaAttributes": [
         "aria-hidden",
@@ -1226,6 +1386,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "menu"
+        ]
+      },
       "variantClasses": [
         "active",
         "contextual",
@@ -1298,6 +1463,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "message"
+        ]
+      },
       "variantClasses": [
         "danger",
         "info",
@@ -1373,6 +1543,12 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "modal",
+          "scrim"
+        ]
+      },
       "variantClasses": [
         "auto",
         "div",
@@ -1443,6 +1619,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "notification"
+        ]
+      },
       "variantClasses": [
         "close"
       ],
@@ -1482,6 +1663,12 @@
       "tags": [
         "nav"
       ],
+      "tagSources": {
+        "nav": [
+          "pagination",
+          "table"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted",
@@ -1556,6 +1743,16 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "item",
+          "modal",
+          "pagination",
+          "radio",
+          "select",
+          "table"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "disabled",
@@ -1609,6 +1806,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "scrim"
+        ]
+      },
       "variantClasses": [
         "active",
         "foco",
@@ -1639,6 +1841,14 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "modal",
+          "pagination",
+          "select",
+          "table"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted"
@@ -1709,6 +1919,7 @@
       "name": "signin",
       "rootClass": "br-signin",
       "tags": [],
+      "tagSources": {},
       "variantClasses": [],
       "ariaAttributes": [
         "aria-hidden",
@@ -1820,6 +2031,11 @@
       "tags": [
         "nav"
       ],
+      "tagSources": {
+        "nav": [
+          "skiplink"
+        ]
+      },
       "variantClasses": [
         "full"
       ],
@@ -1856,6 +2072,12 @@
       "tags": [
         "nav"
       ],
+      "tagSources": {
+        "nav": [
+          "carousel",
+          "step"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted",
@@ -1958,6 +2180,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "switch"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "disabled",
@@ -2040,6 +2267,12 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "notification",
+          "tab"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted",
@@ -2120,6 +2353,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "table"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted",
@@ -2189,6 +2427,13 @@
       "tags": [
         "span"
       ],
+      "tagSources": {
+        "span": [
+          "notification",
+          "skiplink",
+          "tag"
+        ]
+      },
       "variantClasses": [
         "count",
         "danger",
@@ -2375,6 +2620,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "textarea"
+        ]
+      },
       "variantClasses": [
         "danger",
         "dark-mode",
@@ -2454,6 +2704,13 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "breadcrumb",
+          "tag",
+          "tooltip"
+        ]
+      },
       "variantClasses": [],
       "ariaAttributes": [
         "aria-checked",
@@ -2520,6 +2777,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "upload"
+        ]
+      },
       "variantClasses": [
         "danger",
         "dragging",
@@ -2587,6 +2849,11 @@
       "tags": [
         "div"
       ],
+      "tagSources": {
+        "div": [
+          "wizard"
+        ]
+      },
       "variantClasses": [
         "dark-mode",
         "inverted"

@@ -4,6 +4,7 @@
  * scripts/build-data.ts or maintained by hand (emag.json, ds-page-rules.json).
  */
 import { readFileSync } from "node:fs";
+import type { DsStylesheetIndex } from "../evidence/cssProvenance.js";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -39,7 +40,10 @@ export interface PageRulesData {
 export interface ComponentSpec {
   name: string;
   rootClass: string;
+  /** Tags que carregam a classe raiz nos exemplos oficiais de QUALQUER componente (D-51). */
   tags: string[];
+  /** De quais componentes vêm os exemplos de cada tag. */
+  tagSources?: Record<string, string[]>;
   variantClasses: string[];
   ariaAttributes: string[];
   tokensUsed: string[];
@@ -62,11 +66,23 @@ export interface ComponentConstraint {
  * surface prevents agents from borrowing an unrelated broad KB rule merely because a structural
  * constraint did not have a citable identity (D-29).
  */
+/**
+ * Tags dos exemplos do PRÓPRIO componente × tags que só aparecem nos exemplos de outros (D-51).
+ * `br-button` é `<button>` na pasta do botão e `<a>` no breadcrumb, no footer e no menu — lá ele é
+ * um link com aparência de botão. Sem `tagSources` (dados antigos) tudo conta como próprio.
+ */
+export function ownAndBorrowedTags(spec: ComponentSpec): { own: string[]; borrowed: string[] } {
+  const own = spec.tags.filter((tag) => !spec.tagSources || spec.tagSources[tag]?.includes(spec.name));
+  return { own, borrowed: spec.tags.filter((tag) => !own.includes(tag)) };
+}
+
 export function constraintsForComponent(spec: ComponentSpec): ComponentConstraint[] {
+  const { own, borrowed } = ownAndBorrowedTags(spec);
+  const ressalva = borrowed.includes("a") ? " <a> vale quando o link navega (href real), como nos exemplos oficiais de outros componentes." : "";
   return spec.tags.length === 0 ? [] : [{
     id: `ds-structure-${spec.name}-tag`,
     kind: "root-tag",
-    description: `${spec.rootClass} deve ser aplicado a <${spec.tags.join("> ou <")}>.`,
+    description: `${spec.rootClass} deve ser aplicado a <${(own.length ? own : spec.tags).join("> ou <")}>.${ressalva}`,
     rootClass: spec.rootClass,
     allowedTags: [...spec.tags],
   }];
@@ -85,6 +101,7 @@ let tokens: TokenRegistry | undefined;
 let emag: EmagData | undefined;
 let pageRules: PageRulesData | undefined;
 let componentSpecs: ComponentSpecsData | undefined;
+let dsStylesheet: DsStylesheetIndex | undefined;
 
 export function getTokenRegistry(): TokenRegistry {
   return (tokens ??= load<TokenRegistry>("tokens.json"));
@@ -96,6 +113,11 @@ export function getEmag(): EmagData {
 
 export function getPageRules(): PageRulesData {
   return (pageRules ??= load<PageRulesData>("ds-page-rules.json"));
+}
+
+/** Índice das declarações que a folha oficial do DS publica — ver `evidence/cssProvenance.ts`. */
+export function getDsStylesheet(): DsStylesheetIndex {
+  return (dsStylesheet ??= load<DsStylesheetIndex>("ds-stylesheet.json"));
 }
 
 export function getComponentSpecs(): ComponentSpecsData {

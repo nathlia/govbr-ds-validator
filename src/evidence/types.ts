@@ -51,6 +51,8 @@ export interface ElementEvidence {
     placeholder: string | null;
     alt: string | null;
     tabindex: string | null;
+    /** Ausente em evidência colhida antes da 2.6.0. */
+    href?: string | null;
   };
   content: {
     textContent: string;
@@ -59,12 +61,18 @@ export interface ElementEvidence {
   };
   inlineStyle: string | null;
   /**
-   * Declarações CSS de autoria da página que alcançam diretamente o elemento, por propriedade
+   * Declarações CSS de autoria DA PÁGINA que alcançam diretamente o elemento, por propriedade
    * computada inspecionada. A lista preserva a ordem das folhas de estilo e termina com o estilo
    * inline, quando houver. Um mapa presente sem a propriedade significa que o valor observado
    * veio de herança, resolução de layout ou estilo do agente de usuário — não da página.
    */
   authored?: Partial<Record<keyof ComputedStyleEvidence, string[]>>;
+  /**
+   * Declarações que alcançam o elemento e coincidem — seletor, propriedade e valor — com a folha
+   * oficial do gov.br DS (`data/ds-stylesheet.json`). Ficam fora de `authored`: um valor que o
+   * próprio DS publica não é escolha da página, e os verificadores de token não o cobram dela.
+   */
+  dsShipped?: Partial<Record<keyof ComputedStyleEvidence, string[]>>;
   /** Only properties requested by the caller are present. */
   computed: Partial<ComputedStyleEvidence>;
   /** Empty when no focus-state property was requested. */
