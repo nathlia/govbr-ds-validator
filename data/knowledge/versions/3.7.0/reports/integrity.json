@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-07-11T07:06:33+00:00",
+  "profile": "tcc-validator-core",
+  "status": "passed",
+  "checks": {
+    "uniqueRuleIds": true,
+    "jsonlValid": true,
+    "requiredFieldsPresent": true
+  },
+  "errors": [],
+  "note": "No network broken-link audit or full-site completeness audit was performed, by explicit scope decision."
+}

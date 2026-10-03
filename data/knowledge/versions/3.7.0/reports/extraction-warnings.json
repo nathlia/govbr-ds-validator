@@ -1,0 +1,19 @@
+{
+  "warnings": [
+    "This batch preserves source excerpts rather than complete raw HTML.",
+    "Generated tab URLs are crawl targets and may redirect or be unsupported for some components.",
+    "No claim of full-site completeness is made.",
+    "Batch 002 excerpts were obtained from official search-index representations, not full rendered-page DOM.",
+    "eMAG operative requirements are normalized paraphrases; only official headings are stored verbatim.",
+    "The eMAG remaining-ID list requires final reconciliation against all 45 official recommendations.",
+    "Component pages touched in Batch 003 remain partial until rendered tabs and code panels are captured.",
+    "Package-derived structures are classified as examples and must not be promoted to required rules without textual confirmation.",
+    "Full dynamic documentation tabs remain incomplete.",
+    "Token categories are heuristic groupings; original token names and values are preserved unchanged.",
+    "Published browser minimum versions appear historically old and are preserved as documentation facts, not automatically endorsed policy.",
+    "Static package accessibility findings require runtime and human confirmation.",
+    "Several pattern excerpts are truncated in the search index and are labeled accordingly."
+  ],
+  "integrityErrors": [],
+  "lastUpdatedAt": "2026-07-11T06:59:57+00:00"
+}
