@@ -23,6 +23,7 @@ import type { PageEvidence, ElementEvidence } from "./types.js";
 import { withPage } from "./browser.js";
 import { AUTHORED_CSS_NAMES, partitionDeclarations, type RawDeclaration } from "./cssProvenance.js";
 import { getDsStylesheet } from "../data/load.js";
+import { INTERACTIVE_TAGS, NAME_PROBE_KEY, approximateAccessibleName, chromiumAccessibleNames, removeProbe } from "./accessibleName.js";
 import type { Page } from "playwright";
 
 export const DEFAULT_SELECTOR =
@@ -73,7 +74,12 @@ export async function inspectPageComputedStyles(
     (FOCUS_STYLE_PROPERTIES as readonly string[]).includes(p)
   );
 
-  const elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames }) => {
+  // A lista temporária de nomes fica no window entre a passagem e a leitura via CDP; qualquer
+  // falha nesse intervalo não pode deixá-la na página.
+  let elements;
+  let chromiumNames: (string | null)[] | null;
+  try {
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -169,6 +175,11 @@ export async function inspectPageComputedStyles(
         }
       }
 
+      // 2.8.0: elementos interativos apenas com ícone ficam numa lista temporária no window, para
+      // que o nome acessível seja lido do próprio Chromium depois desta passagem (ver accessibleName.ts).
+      const nameProbe: Element[] = [];
+      (window as unknown as Record<string, unknown>)[probeKey] = nameProbe;
+
       return matched.map((el) => {
         const htmlEl = el as HTMLElement;
         const computed = window.getComputedStyle(el);
@@ -246,7 +257,37 @@ export async function inspectPageComputedStyles(
         }
 
         const text = el.textContent?.trim() ?? "";
+        const hasIconOnly = !text && el.querySelector("i, svg, img") !== null;
+        const interactive = interactiveTags.includes(el.tagName.toLowerCase()) || el.getAttribute("role") === "button";
+        const nameProbeIndex = interactive && hasIconOnly ? nameProbe.push(el) - 1 : null;
+
+        // aria-labelledby resolve ids na árvore do próprio elemento (documento ou shadow root).
+        const labelledby = el.getAttribute("aria-labelledby");
+        let labelledbyText: string | null = null;
+        if (labelledby !== null) {
+          const root = el.getRootNode() as Document | ShadowRoot;
+          labelledbyText = labelledby
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((id) => root.getElementById(id)?.textContent?.trim() ?? "")
+            .filter(Boolean)
+            .join(" ");
+        }
+
+        const descendantAlt = Array.from(el.querySelectorAll("img[alt]"))
+          .map((img) => img.getAttribute("alt")?.trim() ?? "")
+          .filter(Boolean)
+          .join(" ");
+        let labelText: string | null = null;
+        if (el.id) {
+          const root = el.getRootNode() as Document | ShadowRoot;
+          const forLabel = Array.from(root.querySelectorAll("label[for]")).find((l) => l.getAttribute("for") === el.id);
+          labelText = forLabel?.textContent?.trim() || null;
+        }
+        if (!labelText) labelText = el.closest("label")?.textContent?.trim() || null;
+
         return {
+          nameProbeIndex,
           locator: locatorFor(el),
           tagName: el.tagName.toLowerCase(),
           id: el.id || null,
@@ -266,11 +307,16 @@ export async function inspectPageComputedStyles(
             alt: el.getAttribute("alt"),
             tabindex: el.getAttribute("tabindex"),
             href: el.getAttribute("href"),
+            title: el.getAttribute("title"),
+            ariaLabelledby: labelledby,
           },
           content: {
             textContent: text.slice(0, 100),
             hasVisibleText: text.length > 0,
-            hasIconOnly: !text && el.querySelector("i, svg, img") !== null,
+            hasIconOnly,
+            labelledbyText,
+            descendantAlt: descendantAlt || null,
+            labelText,
           },
           inlineStyle: el.getAttribute("style"),
           authoredRaw,
@@ -286,13 +332,32 @@ export async function inspectPageComputedStyles(
       computedProps: computedProperties,
       focusProps: focusProperties,
       cssNames: AUTHORED_CSS_NAMES as Record<string, string[]>,
+      interactiveTags: [...INTERACTIVE_TAGS] as string[],
+      probeKey: NAME_PROBE_KEY,
     });
 
+  const probed = elements.filter((element) => element.nameProbeIndex !== null).length;
+  chromiumNames = await chromiumAccessibleNames(page, probed);
+  } catch (error) {
+    await removeProbe(page);
+    throw error;
+  }
+
   const dsStylesheet = getDsStylesheet();
-  const withProvenance = elements.map(({ authoredRaw, ...element }) => ({
-    ...element,
-    ...partitionDeclarations(authoredRaw as RawDeclaration[], dsStylesheet),
-  }));
+  const withProvenance = elements.map(({ authoredRaw, nameProbeIndex, ...element }) => {
+    const evidence = {
+      ...element,
+      ...partitionDeclarations(authoredRaw as RawDeclaration[], dsStylesheet),
+    } as ElementEvidence;
+    if (nameProbeIndex !== null) {
+      const fromChromium = chromiumNames?.[nameProbeIndex];
+      evidence.accessibleName =
+        typeof fromChromium === "string"
+          ? { name: fromChromium, source: "chromium" }
+          : { name: approximateAccessibleName(evidence), source: "atributos" };
+    }
+    return evidence;
+  });
 
   return {
     url,

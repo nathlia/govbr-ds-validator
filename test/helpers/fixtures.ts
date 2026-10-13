@@ -21,6 +21,8 @@ export function makeElement(overrides: Partial<ElementEvidence> = {}): ElementEv
       placeholder: null,
       alt: null,
       tabindex: null,
+      title: null,
+      ariaLabelledby: null,
     },
     content: { textContent: "Enviar", hasVisibleText: true, hasIconOnly: false },
     inlineStyle: null,

@@ -3,6 +3,7 @@ import { checkComponentStructure, collectStructureObservations } from "../../src
 import { getComponentSpecs } from "../../src/data/load.js";
 import { resetFindingIds } from "../../src/schema/finding.js";
 import { makeElement } from "../helpers/fixtures.js";
+import { approximateAccessibleName } from "../../src/evidence/accessibleName.js";
 
 const page = { url: "http://localhost:3000/test" };
 const buttonSpec = getComponentSpecs().components.button;
@@ -69,6 +70,63 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(a11y).toBeDefined();
     expect(a11y?.rule.wcag).toBe("4.1.2");
     expect(a11y?.rule.description.length).toBeGreaterThan(10);
+  });
+
+  // 2.8.0 (NAT-33): a decisão é sobre ter nome acessível, não sobre ter aria-label. Sem o nome do
+  // Chromium (evidência sem CDP ou anterior à 2.8.0), vale a aproximação pela ordem do cálculo de nome.
+  describe("nome acessível (aproximação por atributos)", () => {
+    const iconOnly = (attributes: Record<string, string | null>, content: Record<string, unknown> = {}) =>
+      makeElement({
+        classes: ["br-button", "circle"],
+        attributes: { ...makeElement().attributes, ...attributes },
+        content: { textContent: "", hasVisibleText: false, hasIconOnly: true, ...content },
+      });
+    const fires = (el: ReturnType<typeof makeElement>) =>
+      checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-2.2").length;
+
+    it("aria-label vazio ou só com espaços não é nome", () => {
+      expect(fires(iconOnly({ ariaLabel: "" }))).toBe(1);
+      expect(fires(iconOnly({ ariaLabel: "   " }))).toBe(1);
+    });
+
+    it("title sozinho é nome", () => {
+      expect(fires(iconOnly({ title: "Visualizar registro" }))).toBe(0);
+      expect(fires(iconOnly({ title: "  " }))).toBe(1);
+    });
+
+    it("aria-labelledby vale quando a referência resolve texto; quebrada ou vazia, não", () => {
+      expect(fires(iconOnly({ ariaLabelledby: "r" }, { labelledbyText: "Visualizar registro" }))).toBe(0);
+      expect(fires(iconOnly({ ariaLabelledby: "nao-existe" }, { labelledbyText: "" }))).toBe(1);
+    });
+
+    it("alt e conteúdo de texto são nome", () => {
+      expect(fires(iconOnly({ alt: "Buscar" }))).toBe(0);
+    });
+
+    it("alt de <img> dentro do botão é nome pelo conteúdo; <label> associado também", () => {
+      expect(fires(iconOnly({}, { descendantAlt: "Buscar" }))).toBe(0);
+      expect(fires(iconOnly({}, { descendantAlt: null }))).toBe(1);
+      expect(fires(iconOnly({}, { labelText: "Pesquisar" }))).toBe(0);
+    });
+
+    it("precedência: labelledby > aria-label > alt/conteúdo > title", () => {
+      expect(approximateAccessibleName(iconOnly({ ariaLabelledby: "r", ariaLabel: "B", title: "C" }, { labelledbyText: "A" }))).toBe("A");
+      expect(approximateAccessibleName(iconOnly({ ariaLabelledby: "x", ariaLabel: "B", title: "C" }, { labelledbyText: "" }))).toBe("B");
+      expect(approximateAccessibleName(iconOnly({ ariaLabel: " ", title: "C" }))).toBe("C");
+    });
+
+    it("o nome calculado pelo Chromium, quando colhido, prevalece sobre a aproximação", () => {
+      // aria-label presente mas o navegador não expõe nome (ex.: elemento ignorado): acusa.
+      expect(fires({ ...iconOnly({ ariaLabel: "X" }), accessibleName: { name: "", source: "chromium" } })).toBe(1);
+      // nenhum atributo conhecido mas o navegador expõe nome (ex.: img com alt dentro): não acusa.
+      expect(fires({ ...iconOnly({}), accessibleName: { name: "Buscar", source: "chromium" } })).toBe(0);
+    });
+
+    it("com nome presente não emite nada — nem a convenção de aria-label dos exemplos do DS", () => {
+      const findings = checkComponentStructure(page, [iconOnly({ title: "Excluir" })], buttonSpec);
+      expect(findings).toEqual([]);
+      expect(collectStructureObservations(page, [iconOnly({ title: "Excluir" })], buttonSpec)).toEqual([]);
+    });
   });
 
   it("accepts an icon-only button WITH aria-label", () => {

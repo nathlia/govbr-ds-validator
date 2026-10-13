@@ -90,6 +90,37 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Accessible name is what the browser computes, not `aria-label` (2.8.0)
+
+Up to 2.7.0 the structure checker reported `emag-2.2` / WCAG 4.1.2 for every interactive icon-only
+element without `aria-label` or `alt`. That is a different question from the rule's: an external
+review (NAT-33) showed Chromium exposing `button "Visualizar registro"` for a button named by
+`title` or by `aria-labelledby` while the checker still fired. On screen B (Vistorias) the
+`br-button` web components pass the host's `title` to the inner `<button>` with `aria-label=""`,
+which produced about 30 false alarms per baseline run.
+
+- **Evidence.** For interactive icon-only elements only, `inspect_computed_styles`/`scan_page` now
+  read the accessible name Chromium computes (accessibility tree via CDP, `Accessibility.getPartialAXTree`)
+  and attach it as `accessibleName: { name, source: "chromium" }`. This is the name a screen reader
+  receives, inside open shadow roots too: a `title` on a web component's host does **not** name the
+  inner `<button>` unless the component passes it on, and the checker follows the browser on that.
+  Without CDP, and per element when Chromium ignores the node (display:none, visibility:hidden,
+  inside `aria-hidden`) and so computes no name, the name is approximated in accname order —
+  `aria-labelledby` (ids resolved in the element's own tree; broken or empty references do not
+  count) > `aria-label` (trimmed, non-empty) > `<label>` > `alt`, descendant `<img alt>`, text
+  content > `title` — with `source: "atributos"`. The evidence also carries `title`,
+  `ariaLabelledby`, `content.labelledbyText`, `content.descendantAlt` and `content.labelText`.
+- **Finding.** `emag-2.2` fires only when that name is empty. The old `expected` text mixed the WCAG
+  claim with a DS convention ("official circular-button examples always carry aria-label"); the
+  convention is not the 4.1.2 rule and is no longer emitted, neither as a finding nor as an
+  observation (D-27: no finding without a rule that forbids it). `evidence.data` now carries
+  `accessibleName: ""` and `accessibleNameSource`.
+- **Out of scope.** The DS CSS findings inside shadow roots also listed in NAT-33 wait for a scope
+  policy; nothing in the scorer or the evaluation changed.
+
+Frozen campaigns ran on 2.7.0 (`validator_sha` `b0713083f1823691c516825220b529e420b91cb3`) and are not
+changed by this release; a run on 2.8.0 does not compare with 2.7.0 on `emag-2.2`.
+
 ### Page-level constraints: Template Base and skip to content (2.7.0)
 
 Until 2.6.0 the page-level guidelines existed only as prose behind `get_page_rules`. An agent could

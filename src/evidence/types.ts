@@ -53,12 +53,34 @@ export interface ElementEvidence {
     tabindex: string | null;
     /** Ausente em evidência colhida antes da 2.6.0. */
     href?: string | null;
+    /** Ausentes em evidência colhida antes da 2.8.0. */
+    title?: string | null;
+    ariaLabelledby?: string | null;
   };
   content: {
     textContent: string;
     hasVisibleText: boolean;
     hasIconOnly: boolean;
+    /**
+     * Texto que `aria-labelledby` resolve: os ids procurados na MESMA árvore do elemento (documento
+     * ou shadow root), concatenados e aparados. `null` sem o atributo; `""` quando nenhum id existe
+     * ou todos apontam para elementos vazios. Ausente antes da 2.8.0.
+     */
+    labelledbyText?: string | null;
+    /** `alt` não vazio das `<img>` descendentes, concatenado (nome pelo conteúdo). Ausente antes da 2.8.0. */
+    descendantAlt?: string | null;
+    /** Texto do `<label for>` (mesma árvore) ou do `<label>` ancestral. Ausente antes da 2.8.0. */
+    labelText?: string | null;
   };
+  /**
+   * Nome acessível do elemento (2.8.0), colhido só para elemento interativo apenas com ícone — o
+   * único caso em que um verificador decide sobre ele.
+   *   source "chromium"   nome que o próprio Chromium calcula (árvore de acessibilidade via CDP),
+   *                       o mesmo que um leitor de tela recebe
+   *   source "atributos"  aproximação pela ordem do cálculo de nome (aria-labelledby > aria-label >
+   *                       conteúdo/alt > title), usada quando o navegador não oferece CDP
+   */
+  accessibleName?: { name: string; source: "chromium" | "atributos" };
   inlineStyle: string | null;
   /**
    * Declarações CSS de autoria DA PÁGINA que alcançam diretamente o elemento, por propriedade

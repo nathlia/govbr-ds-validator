@@ -11,8 +11,7 @@ import { findEmagRule, ownAndBorrowedTags } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
-
-const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea"]);
+import { isInteractiveEvidence, resolvedAccessibleName } from "../evidence/accessibleName.js";
 
 /** D-28: <hr> expressa separação temática nativamente; o exemplo <span> não prevalece sobre HTML. */
 function isSemanticDividerException(el: ElementEvidence, spec: ComponentSpec): boolean {
@@ -87,32 +86,43 @@ export function checkComponentStructure(
       });
     }
 
-    // 2. Icon-only interactive element needs an accessible name
-    const isInteractive = INTERACTIVE_TAGS.has(el.tagName.toLowerCase()) || el.attributes.role === "button";
-    if (isInteractive && el.content.hasIconOnly && !el.attributes.ariaLabel && !el.attributes.alt) {
-      const emag = findEmagRule("2.2");
-      findings.push({
-        id: nextFindingId(),
-        rule: {
-          id: "emag-2.2",
-          source: "emag",
-          description:
-            emag?.description ??
-            "Garantir que os objetos programáveis sejam acessíveis — elementos interativos precisam de nome acessível.",
-          wcag: "4.1.2",
-          implements: groundingFor("structure-accessible-name"),
-        },
-        ...base,
-        evidence: {
-          observed: `Elemento interativo apenas com ícone, sem aria-label (${spec.rootClass})`,
-          expected: "aria-label descritivo (os exemplos oficiais de botão circular sempre trazem aria-label)",
-          data: { component: spec.name, hasIconOnly: true, ariaLabel: null },
-        },
-        severity: "serious",
-        nature: "syntactic",
-        mode: "interaction",
-        pathway: "deterministic",
-      });
+    // 2. Icon-only interactive element needs an accessible name.
+    //    2.8.0 (NAT-33): decide pelo nome acessível — o calculado pelo Chromium quando colhido —, não
+    //    pela presença de aria-label. Nome por title, aria-labelledby ou conteúdo é nome. A convenção
+    //    dos exemplos do DS (botão circular com aria-label) não é a regra 4.1.2 e não sai aqui (D-27).
+    if (isInteractiveEvidence(el) && el.content.hasIconOnly) {
+      const accessibleName = resolvedAccessibleName(el);
+      if (accessibleName.name === "") {
+        const emag = findEmagRule("2.2");
+        findings.push({
+          id: nextFindingId(),
+          rule: {
+            id: "emag-2.2",
+            source: "emag",
+            description:
+              emag?.description ??
+              "Garantir que os objetos programáveis sejam acessíveis — elementos interativos precisam de nome acessível.",
+            wcag: "4.1.2",
+            implements: groundingFor("structure-accessible-name"),
+          },
+          ...base,
+          evidence: {
+            observed: `Elemento interativo apenas com ícone, sem nome acessível (${spec.rootClass})`,
+            expected: "Nome acessível não vazio — por conteúdo, aria-labelledby, aria-label ou title",
+            data: {
+              component: spec.name,
+              hasIconOnly: true,
+              accessibleName: "",
+              accessibleNameSource: accessibleName.source,
+              ariaLabel: el.attributes.ariaLabel ?? null,
+            },
+          },
+          severity: "serious",
+          nature: "syntactic",
+          mode: "interaction",
+          pathway: "deterministic",
+        });
+      }
     }
 
     // 3. Classes fora do vocabulário canônico — ver `collectStructureObservations`. NÃO é achado:
