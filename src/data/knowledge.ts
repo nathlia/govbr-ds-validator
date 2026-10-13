@@ -157,10 +157,20 @@ export interface RuleFilter {
   query?: string;
 }
 
+/** Caixa, acentos e espaços normalizados — usada só pelo caminho `context` (termos e nomes). */
+export function normalizeText(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 /**
  * Filter the KB. Evidence records (`force:"example"`) are excluded unless
  * explicitly requested via `force:"example"` — they are returned by
  * `getEvidence`, keeping the normative/evidence channels separate (D-10).
+ *
+ * Semântica legada preservada byte a byte (2.9.0): `query` é substring com caixa ignorada sobre
+ * título/regra/texto original/rationale/notes; `component` é o id exato. A busca ampliada (sem
+ * acento, em condições/exceções/evidência esperada, com variantes nominais) existe só no caminho
+ * `context` (`applicability.ts`), para não mudar o resultado de chamadas antigas.
  */
 export function filterRules(filter: RuleFilter = {}): KnowledgeRule[] {
   const { rules } = getKnowledgeBase();

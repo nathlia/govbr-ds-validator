@@ -1,0 +1,417 @@
+{
+  "generatedFrom": "HEAD 564fc8e (2.8.0)",
+  "tool": "get_ds_rules",
+  "profile": "evaluation",
+  "shapes": [
+    {
+      "args": {},
+      "sha256": "2728d1c8b1994c2b72284d75f0f490f6f10f0585fe7007894987720297f7fa95",
+      "total": 152,
+      "ids": []
+    },
+    {
+      "args": {
+        "ids": [
+          "govbr-3.7.0-template-global-19f93475dc5e",
+          "govbr-3.7.0-component-tag-7d70c8be6a0c",
+          "nope"
+        ]
+      },
+      "sha256": "45504a793a4c7fee5c8f049262df1f517f7d892548b987e537d9b069e2845f21",
+      "total": 2,
+      "ids": [
+        "govbr-3.7.0-template-global-19f93475dc5e",
+        "govbr-3.7.0-component-tag-7d70c8be6a0c"
+      ]
+    },
+    {
+      "args": {
+        "id": "govbr-3.7.0-component-tag-7d70c8be6a0c"
+      },
+      "sha256": "babf5a343a6fafefae232eafc13a2df251a0ef5452691d7038214b1dff6e3dc8",
+      "total": null,
+      "ids": []
+    },
+    {
+      "args": {
+        "component": "button"
+      },
+      "sha256": "bd2ed393326f0b50bd5e695ab942a861af4d482746b56aed210a230d83d1f78a",
+      "total": 3,
+      "ids": [
+        "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+        "govbr-3.7.0-accessibility-button-41d9f439e103",
+        "govbr-3.7.0-component-button-4d7b5f978df1"
+      ]
+    },
+    {
+      "args": {
+        "component": "modal",
+        "detail": "full"
+      },
+      "sha256": "f8ffff770c552f5fac7e82732f137334e76251d0790bafb11cfd541da8131045",
+      "total": 4,
+      "ids": [
+        "govbr-3.7.0-accessibility-modal-64b84991229c",
+        "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+        "govbr-3.7.0-accessibility-modal-65446caf1efc",
+        "govbr-3.7.0-component-modal-091e0e012f86"
+      ]
+    },
+    {
+      "args": {
+        "component": "Button"
+      },
+      "sha256": "30b2a27925f246fcea78681d08f0bb0ddc36bb1b14e83cebb513bf6884e12ce7",
+      "total": 0,
+      "ids": []
+    },
+    {
+      "args": {
+        "component": "br-button"
+      },
+      "sha256": "30b2a27925f246fcea78681d08f0bb0ddc36bb1b14e83cebb513bf6884e12ce7",
+      "total": 0,
+      "ids": []
+    },
+    {
+      "args": {
+        "category": "pattern"
+      },
+      "sha256": "6003287405f26b2545bf2d070fef5d060b2f18afad75837255250c622bff545a",
+      "total": 8,
+      "ids": [
+        "govbr-3.7.0-pattern-global-eb8c1606a52e",
+        "govbr-3.7.0-pattern-global-03695a4aede0",
+        "govbr-3.7.0-pattern-global-46a1ae2f366b",
+        "govbr-3.7.0-pattern-global-9d9f1c9bf1ed",
+        "govbr-3.7.0-pattern-global-abaec84ff915",
+        "govbr-3.7.0-pattern-global-a633e540aa5c",
+        "govbr-3.7.0-pattern-global-5717506ac2e6",
+        "govbr-3.7.0-pattern-global-eebb093156e7"
+      ]
+    },
+    {
+      "args": {
+        "category": "accessibility",
+        "limit": 200
+      },
+      "sha256": "ace8008e4d9a163548dfcbc5e7231110614ce8d6e0f6de5d2a2b2511622a7dd9",
+      "total": 66,
+      "ids": [
+        "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+        "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+        "govbr-3.7.0-accessibility-button-41d9f439e103",
+        "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+        "govbr-3.7.0-accessibility-input-6fe41e804955",
+        "govbr-3.7.0-accessibility-list-03813ffeeb42",
+        "govbr-3.7.0-accessibility-modal-64b84991229c",
+        "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+        "govbr-3.7.0-accessibility-modal-65446caf1efc",
+        "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+        "govbr-3.7.0-accessibility-signin-a68a86f45877",
+        "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+        "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+        "govbr-3.7.0-accessibility-global-7e6420514860",
+        "govbr-3.7.0-accessibility-global-1cb2c878824b",
+        "govbr-3.7.0-accessibility-global-3ac0aaa53900",
+        "govbr-3.7.0-accessibility-global-79db88c7f55d",
+        "govbr-3.7.0-accessibility-global-7d2b85f81c52",
+        "govbr-3.7.0-accessibility-global-206c9fa6ae11",
+        "govbr-3.7.0-accessibility-global-cf61b3eb3c71",
+        "govbr-3.7.0-accessibility-global-bfba9c1f5026",
+        "govbr-3.7.0-accessibility-global-5be1f553cc03",
+        "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+        "govbr-3.7.0-accessibility-global-f639993e9416",
+        "govbr-3.7.0-accessibility-global-cd5de9a6f164",
+        "govbr-3.7.0-accessibility-global-d6e816588306",
+        "govbr-3.7.0-accessibility-global-5d366ef29b04",
+        "govbr-3.7.0-accessibility-global-8faca42c2c9a",
+        "govbr-3.7.0-accessibility-global-33b13d9fa271",
+        "govbr-3.7.0-accessibility-global-698e0a4783a9",
+        "govbr-3.7.0-accessibility-global-1ccbc61dddbc",
+        "govbr-3.7.0-accessibility-global-fb83eab75d8d",
+        "govbr-3.7.0-accessibility-global-20c08f26d8e8",
+        "govbr-3.7.0-accessibility-global-1db13803cbf8",
+        "govbr-3.7.0-accessibility-global-5d5a5f21d94b",
+        "govbr-3.7.0-accessibility-global-75c11ccac582",
+        "govbr-3.7.0-accessibility-global-cdfbb56eebc5",
+        "govbr-3.7.0-accessibility-global-3a3e47354c53",
+        "govbr-3.7.0-accessibility-global-609e3494150c",
+        "govbr-3.7.0-accessibility-global-3a57435c3b32",
+        "govbr-3.7.0-accessibility-global-cd705eb5da2a",
+        "govbr-3.7.0-accessibility-global-cb09bc0c77c0",
+        "govbr-3.7.0-accessibility-global-c2f94bdc17ce",
+        "govbr-3.7.0-accessibility-global-d9c42f188e2c",
+        "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+        "govbr-3.7.0-accessibility-global-6c86b93df639",
+        "govbr-3.7.0-accessibility-global-dc45b57b8349",
+        "govbr-3.7.0-accessibility-global-8f439a3c078c",
+        "govbr-3.7.0-accessibility-global-56cbcba602ce",
+        "govbr-3.7.0-accessibility-global-6ea7ecc60c01",
+        "govbr-3.7.0-accessibility-global-dafac812b10b",
+        "govbr-3.7.0-accessibility-global-b95c42b61ed3",
+        "govbr-3.7.0-accessibility-global-e101928665cc",
+        "govbr-3.7.0-accessibility-global-de1efebaf255",
+        "govbr-3.7.0-accessibility-global-01b1806c30e9",
+        "govbr-3.7.0-accessibility-global-cc837bbaf713",
+        "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+        "govbr-3.7.0-accessibility-global-a8f7ce66b1c4",
+        "govbr-3.7.0-accessibility-global-e038367bd7d6",
+        "govbr-3.7.0-accessibility-global-695e4379e23f",
+        "govbr-3.7.0-accessibility-global-1c3bd2a1c1a7",
+        "govbr-3.7.0-accessibility-global-41850b4791b8",
+        "govbr-3.7.0-accessibility-global-b5fad7ce076d",
+        "govbr-3.7.0-accessibility-global-cb56ad444da2",
+        "govbr-3.7.0-accessibility-global-2f22b7245ef9",
+        "govbr-3.7.0-accessibility-divider-30bbcbf3a17c"
+      ]
+    },
+    {
+      "args": {
+        "query": "foco"
+      },
+      "sha256": "655e846d9f2b4c194fb0bb1e33a4c2669c70d2fbfae81bc643a3d5b81809b193",
+      "total": 9,
+      "ids": [
+        "govbr-3.7.0-accessibility-button-41d9f439e103",
+        "govbr-3.7.0-accessibility-input-6fe41e804955",
+        "govbr-3.7.0-accessibility-signin-a68a86f45877",
+        "govbr-3.7.0-accessibility-global-79db88c7f55d",
+        "govbr-3.7.0-accessibility-global-5be1f553cc03",
+        "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+        "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+        "govbr-3.7.0-accessibility-global-de1efebaf255",
+        "govbr-3.7.0-accessibility-divider-30bbcbf3a17c"
+      ]
+    },
+    {
+      "args": {
+        "query": "erro"
+      },
+      "sha256": "12161dd09dbd76ce20ae18ffac393964189039657c0b7a274646178fa92b3783",
+      "total": 5,
+      "ids": [
+        "govbr-3.7.0-accessibility-global-cc837bbaf713",
+        "govbr-3.7.0-accessibility-global-695e4379e23f",
+        "govbr-3.7.0-pattern-global-9d9f1c9bf1ed",
+        "govbr-3.7.0-template-global-3d795df32a0e",
+        "govbr-3.7.0-template-global-9cbfa5906031"
+      ]
+    },
+    {
+      "args": {
+        "query": "formulario"
+      },
+      "sha256": "30b2a27925f246fcea78681d08f0bb0ddc36bb1b14e83cebb513bf6884e12ce7",
+      "total": 0,
+      "ids": []
+    },
+    {
+      "args": {
+        "query": "Formulário"
+      },
+      "sha256": "dcfe6e1d5bd3188d025d415f9680f6c9838fedc565b7826cd7ce1fba45f18fa7",
+      "total": 5,
+      "ids": [
+        "govbr-3.7.0-accessibility-global-dafac812b10b",
+        "govbr-3.7.0-accessibility-global-e101928665cc",
+        "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+        "govbr-3.7.0-accessibility-global-a8f7ce66b1c4",
+        "govbr-3.7.0-accessibility-global-b5fad7ce076d"
+      ]
+    },
+    {
+      "args": {
+        "query": "  "
+      },
+      "sha256": "ee1df76cbf8db44078cb845549b98d4c1ab95b75337d62a7dc732e50987a11fc",
+      "total": 152,
+      "ids": [
+        "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+        "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+        "govbr-3.7.0-accessibility-button-41d9f439e103",
+        "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+        "govbr-3.7.0-accessibility-input-6fe41e804955",
+        "govbr-3.7.0-accessibility-list-03813ffeeb42",
+        "govbr-3.7.0-accessibility-modal-64b84991229c",
+        "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+        "govbr-3.7.0-accessibility-modal-65446caf1efc",
+        "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+        "govbr-3.7.0-accessibility-signin-a68a86f45877",
+        "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+        "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+        "govbr-3.7.0-component-avatar-81c7524692f0",
+        "govbr-3.7.0-component-button-4d7b5f978df1",
+        "govbr-3.7.0-component-card-a102d36a696a",
+        "govbr-3.7.0-component-carousel-7b664374a2b3",
+        "govbr-3.7.0-component-carousel-4c92b788906b",
+        "govbr-3.7.0-component-checkbox-6923ae0af84f",
+        "govbr-3.7.0-component-input-3788829b08fe",
+        "govbr-3.7.0-component-list-8f67e7cc7677",
+        "govbr-3.7.0-component-magicbutton-d421fb28a955",
+        "govbr-3.7.0-component-message-088613b94e1c",
+        "govbr-3.7.0-component-message-188aad85588b",
+        "govbr-3.7.0-component-message-66b01a712e67",
+        "govbr-3.7.0-component-modal-091e0e012f86",
+        "govbr-3.7.0-component-notification-a77199b18a54",
+        "govbr-3.7.0-component-scrim-d5ba51dda2b0",
+        "govbr-3.7.0-component-signin-837c5ed4fe6a",
+        "govbr-3.7.0-component-signin-2752fd23bbe8",
+        "govbr-3.7.0-component-table-7c605ca2f85e",
+        "govbr-3.7.0-component-table-88941e76c77b",
+        "govbr-3.7.0-component-table-8b8d4b403cb9",
+        "govbr-3.7.0-component-tag-7d70c8be6a0c",
+        "govbr-3.7.0-component-tooltip-c028ba432407",
+        "govbr-3.7.0-component-tooltip-6cc61d2b3460",
+        "govbr-3.7.0-development-global-0b73051d7063",
+        "govbr-3.7.0-development-global-406774b1cb87",
+        "govbr-3.7.0-development-global-c6889731433a",
+        "govbr-3.7.0-foundation-global-0578aa6c2828"
+      ]
+    },
+    {
+      "args": {
+        "query": "aria-label",
+        "detail": "full"
+      },
+      "sha256": "eb41eccc309d7899b49a41700411ca4ffd5674e77f3944e92bbe5d08b328d3ef",
+      "total": 1,
+      "ids": [
+        "govbr-3.7.0-accessibility-modal-31c45e5f6081"
+      ]
+    },
+    {
+      "args": {
+        "force": "required",
+        "automatable": true,
+        "limit": 200
+      },
+      "sha256": "a183cd511835c6d3f9c7abaea1328faca49e61b20c12ce509494cd9054788bc0",
+      "total": 88,
+      "ids": [
+        "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+        "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+        "govbr-3.7.0-accessibility-input-6fe41e804955",
+        "govbr-3.7.0-accessibility-list-03813ffeeb42",
+        "govbr-3.7.0-accessibility-modal-64b84991229c",
+        "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+        "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+        "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+        "govbr-3.7.0-component-avatar-81c7524692f0",
+        "govbr-3.7.0-component-button-4d7b5f978df1",
+        "govbr-3.7.0-component-input-3788829b08fe",
+        "govbr-3.7.0-component-message-66b01a712e67",
+        "govbr-3.7.0-component-notification-a77199b18a54",
+        "govbr-3.7.0-component-table-7c605ca2f85e",
+        "govbr-3.7.0-development-global-406774b1cb87",
+        "govbr-3.7.0-foundation-global-0578aa6c2828",
+        "govbr-3.7.0-foundation-global-21b1a2733f7b",
+        "govbr-3.7.0-foundation-global-1c0146e93d2e",
+        "govbr-3.7.0-accessibility-global-7e6420514860",
+        "govbr-3.7.0-accessibility-global-1cb2c878824b",
+        "govbr-3.7.0-accessibility-global-3ac0aaa53900",
+        "govbr-3.7.0-accessibility-global-79db88c7f55d",
+        "govbr-3.7.0-accessibility-global-7d2b85f81c52",
+        "govbr-3.7.0-accessibility-global-206c9fa6ae11",
+        "govbr-3.7.0-accessibility-global-cf61b3eb3c71",
+        "govbr-3.7.0-accessibility-global-bfba9c1f5026",
+        "govbr-3.7.0-accessibility-global-5be1f553cc03",
+        "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+        "govbr-3.7.0-accessibility-global-f639993e9416",
+        "govbr-3.7.0-accessibility-global-cd5de9a6f164",
+        "govbr-3.7.0-accessibility-global-d6e816588306",
+        "govbr-3.7.0-accessibility-global-5d366ef29b04",
+        "govbr-3.7.0-accessibility-global-8faca42c2c9a",
+        "govbr-3.7.0-accessibility-global-33b13d9fa271",
+        "govbr-3.7.0-accessibility-global-698e0a4783a9",
+        "govbr-3.7.0-accessibility-global-1ccbc61dddbc",
+        "govbr-3.7.0-accessibility-global-20c08f26d8e8",
+        "govbr-3.7.0-accessibility-global-1db13803cbf8",
+        "govbr-3.7.0-accessibility-global-5d5a5f21d94b",
+        "govbr-3.7.0-accessibility-global-75c11ccac582",
+        "govbr-3.7.0-accessibility-global-3a3e47354c53",
+        "govbr-3.7.0-accessibility-global-609e3494150c",
+        "govbr-3.7.0-accessibility-global-3a57435c3b32",
+        "govbr-3.7.0-accessibility-global-cd705eb5da2a",
+        "govbr-3.7.0-accessibility-global-cb09bc0c77c0",
+        "govbr-3.7.0-accessibility-global-c2f94bdc17ce",
+        "govbr-3.7.0-accessibility-global-d9c42f188e2c",
+        "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+        "govbr-3.7.0-accessibility-global-6c86b93df639",
+        "govbr-3.7.0-accessibility-global-dc45b57b8349",
+        "govbr-3.7.0-accessibility-global-56cbcba602ce",
+        "govbr-3.7.0-accessibility-global-6ea7ecc60c01",
+        "govbr-3.7.0-accessibility-global-dafac812b10b",
+        "govbr-3.7.0-accessibility-global-b95c42b61ed3",
+        "govbr-3.7.0-accessibility-global-e101928665cc",
+        "govbr-3.7.0-accessibility-global-de1efebaf255",
+        "govbr-3.7.0-accessibility-global-01b1806c30e9",
+        "govbr-3.7.0-accessibility-global-cc837bbaf713",
+        "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+        "govbr-3.7.0-accessibility-global-e038367bd7d6",
+        "govbr-3.7.0-accessibility-global-1c3bd2a1c1a7",
+        "govbr-3.7.0-accessibility-global-41850b4791b8",
+        "govbr-3.7.0-accessibility-global-b5fad7ce076d",
+        "govbr-3.7.0-accessibility-global-cb56ad444da2",
+        "govbr-3.7.0-accessibility-global-2f22b7245ef9",
+        "govbr-3.7.0-accessibility-divider-30bbcbf3a17c",
+        "govbr-3.7.0-component-global-e30aab6e9a68",
+        "govbr-3.7.0-component-item-a10751502b98",
+        "govbr-3.7.0-component-item-cb34ed616246",
+        "govbr-3.7.0-component-item-a6d29ea54434",
+        "govbr-3.7.0-component-loading-05f6aae1d1ad",
+        "govbr-3.7.0-component-switch-d53688105360",
+        "govbr-3.7.0-component-upload-985fd2775586",
+        "govbr-3.7.0-component-wizard-356c3bf376a5",
+        "govbr-3.7.0-development-global-a43ad8231ad0",
+        "govbr-3.7.0-development-global-137c50bea6ca",
+        "govbr-3.7.0-development-global-659242ecda1d",
+        "govbr-3.7.0-development-global-5765f1b8d2bc",
+        "govbr-3.7.0-development-global-9c1d24af4f37",
+        "govbr-3.7.0-development-global-d0dff372c137",
+        "govbr-3.7.0-development-global-0052d80d4f92",
+        "govbr-3.7.0-development-global-9826b6862644",
+        "govbr-3.7.0-development-global-dfebe85e65d8",
+        "govbr-3.7.0-development-global-067a1786b481",
+        "govbr-3.7.0-development-global-b491c2e2c1a0",
+        "govbr-3.7.0-pattern-global-03695a4aede0",
+        "govbr-3.7.0-pattern-global-eebb093156e7",
+        "govbr-3.7.0-template-global-9cbfa5906031"
+      ]
+    },
+    {
+      "args": {
+        "component": "accordion",
+        "include_evidence": true
+      },
+      "sha256": "54138f0329bb83495f4b76214305518023df7e7c4430177667324d38d601ee2c",
+      "total": 0,
+      "ids": []
+    },
+    {
+      "tool": "get_component_spec",
+      "args": {
+        "component": "button"
+      },
+      "note": "2.8.0 shape; 2.9.0 adds rules",
+      "error": null
+    },
+    {
+      "tool": "get_component_spec",
+      "args": {
+        "component": "Button"
+      },
+      "note": "2.8.0 shape; 2.9.0 adds rules",
+      "error": "Componente 'Button' não encontrado."
+    },
+    {
+      "tool": "get_component_spec",
+      "args": {
+        "component": "br-tag"
+      },
+      "note": "2.8.0 shape; 2.9.0 adds rules",
+      "error": "Componente 'br-tag' não encontrado."
+    }
+  ]
+}

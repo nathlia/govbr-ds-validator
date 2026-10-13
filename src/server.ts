@@ -40,8 +40,19 @@ import {
   warnOnVersionMismatch,
   NORMATIVE_FORCES,
   type KnowledgeRule,
+  type RuleFilter,
   type RuleForce,
 } from "./data/knowledge.js";
+import {
+  normalizeContext,
+  retrieveContextCandidates,
+  exampleDefectWarnings,
+  pageCategoryPointers,
+  sourcePageNotes,
+  PAGE_REGIONS,
+  type ContextCandidate,
+} from "./data/applicability.js";
+import type { PageRegion } from "./evidence/pageFacts.js";
 import { readFileSync } from "node:fs";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
 
@@ -199,6 +210,218 @@ function projectRule(r: KnowledgeRule) {
   };
 }
 
+/** Orçamento aproximado da resposta inteira com context — o mesmo dos scanners (README). */
+const CONTEXT_MAX_CHARS = 12_000;
+const CONTEXT_DEFAULT_LIMIT = 20;
+
+const CONTEXT_NOTE =
+  "Candidatas a investigar, não defeitos. Pertinência não é verificação: o oráculo não avalia " +
+  "condições nem exceções textuais (ficam em applicability.unknowns); obligation separa requisito de " +
+  "recomendação. Colete a evidência pedida (expectedEvidence, neededState) antes de julgar; sem " +
+  "predicado, um achado citando a regra fica em revisão.";
+
+/**
+ * Resumo de candidata (padrão com context): o que decide se vale investigar e como — id, motivo,
+ * força/obrigação, aplicabilidade e passos de evidência. Texto da regra, condições, exceções, fonte e
+ * versão vêm em detail='brief'/'full' ou por get_ds_rules(ids).
+ */
+function summarizeCandidate(candidate: ContextCandidate) {
+  const r = candidate.rule;
+  const { unevaluated, unknowns } = candidate.applicability;
+  return {
+    ruleId: r.id,
+    title: r.title,
+    force: r.force,
+    obligation: candidate.obligation,
+    reasons: candidate.reasons,
+    applicability: {
+      status: candidate.applicability.status,
+      ...(unevaluated.length ? { unevaluated } : {}),
+      ...(unknowns.length ? { unknowns } : {}),
+    },
+    expectedEvidence: r.expectedEvidence,
+    neededState: candidate.neededState,
+    ...(candidate.conflicts.length ? { conflicts: candidate.conflicts } : {}),
+  };
+}
+
+/** Projeção de uma candidata: a projeção brief/full existente + o contrato de contexto (2.9.0). */
+type CandidateDetail = "summary" | "brief" | "full";
+
+function projectCandidate(candidate: ContextCandidate, detail: CandidateDetail) {
+  if (detail === "summary") return summarizeCandidate(candidate);
+  const { id, caveats, ...projection } = detail === "full" ? projectRule(candidate.rule) : briefRule(candidate.rule);
+  const r = candidate.rule;
+  const { unevaluated, unknowns } = candidate.applicability;
+  return {
+    ruleId: id,
+    ...projection,
+    obligation: candidate.obligation,
+    source: { ...(r.standard ? { standard: r.standard } : {}), url: r.source.url, version: r.standardVersion ?? r.dsVersion },
+    reasons: candidate.reasons,
+    applicability: {
+      status: candidate.applicability.status,
+      ...(unevaluated.length ? { unevaluated } : {}),
+      ...(unknowns.length ? { unknowns } : {}),
+    },
+    // Na projeção breve, só o que existe: condição/exceção ausente = nenhuma declarada na base.
+    ...(detail === "full"
+      ? {}
+      : {
+          ...(r.conditions.length ? { conditions: r.conditions } : {}),
+          ...(r.exceptions.length ? { exceptions: r.exceptions } : {}),
+          expectedEvidence: r.expectedEvidence,
+        }),
+    neededState: candidate.neededState,
+    ...(caveats.length ? { caveats } : {}),
+    ...(candidate.conflicts.length ? { conflicts: candidate.conflicts } : {}),
+  };
+}
+
+/** Página de candidatas: limite explícito + orçamento de caracteres, continuação por nextOffset. */
+function contextPage(
+  candidates: ContextCandidate[],
+  { detail, limit, offset }: { detail: CandidateDetail; limit?: number; offset?: number },
+  budget: number,
+) {
+  const take = limit ?? CONTEXT_DEFAULT_LIMIT;
+  const skip = offset ?? 0;
+  const items: ReturnType<typeof projectCandidate>[] = [];
+  let chars = 0;
+  let budgetHit = false;
+  for (const candidate of candidates.slice(skip, skip + take)) {
+    const item = projectCandidate(candidate, detail);
+    // Tamanho como sai na resposta: aninhado em `candidates`, cada linha ganha 4 espaços + vírgula.
+    const text = JSON.stringify(item, null, 2);
+    const size = text.length + 4 * text.split("\n").length + 2;
+    if (items.length > 0 && chars + size > budget) {
+      budgetHit = true;
+      break;
+    }
+    items.push(item);
+    chars += size;
+  }
+  const nextOffset = skip + items.length;
+  return {
+    offset: skip,
+    count: items.length,
+    candidates: items,
+    truncated: budgetHit,
+    ...(nextOffset < candidates.length
+      ? {
+          more: {
+            remaining: candidates.length - nextOffset,
+            nextOffset,
+            reason: budgetHit ? `orçamento de ~${CONTEXT_MAX_CHARS} caracteres` : `limit=${take}`,
+            note: "Peça a próxima página com o mesmo context/filtros e offset=nextOffset.",
+          },
+        }
+      : {}),
+  };
+}
+
+type ContextInput = { components?: string[]; regions?: PageRegion[]; terms?: string[] };
+
+/** Candidatas para um contexto, sobre a base já estreitada pelos filtros publicados. */
+function contextCandidates(context: ContextInput, filter: RuleFilter) {
+  const normalized = normalizeContext(context);
+  return { normalized, candidates: retrieveContextCandidates(filterRules(filter), normalized) };
+}
+
+function contextResponse(
+  context: ContextInput,
+  filter: RuleFilter,
+  paging: { detail: CandidateDetail; limit?: number; offset?: number },
+) {
+  const kb = getKnowledgeBase();
+  const { normalized, candidates } = contextCandidates(context, filter);
+  const firstPage = (paging.offset ?? 0) === 0;
+  const warnings = exampleDefectWarnings(normalized.components);
+  const pointers = pageCategoryPointers(normalized.terms);
+  const pageNotes = sourcePageNotes(candidates);
+  const head = {
+    meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+    retrieval: "direct" as const,
+    note: CONTEXT_NOTE,
+    context: normalized,
+    total: candidates.length,
+    detail: paging.detail,
+  };
+  // Contexto fixo, só na primeira página para não repetir a cada continuação.
+  const tail = firstPage
+    ? {
+        pageConstraints: {
+          note:
+            "Restrições citáveis de página (get_page_rules): valem para página completa baseada no " +
+            "Template Base, independentemente dos componentes observados; se a página avaliada é " +
+            "completa ou um fragmento não é informado ao oráculo.",
+          ids: pageConstraints().map((c) => c.id),
+        },
+        ...(pointers.length
+          ? {
+              pageRuleCategories: {
+                note: "Categorias de get_page_rules cujo texto contém os termos — prosa de orientação, sem id normativo por frase.",
+                items: pointers,
+              },
+            }
+          : {}),
+        ...(pageNotes.length
+          ? {
+              sourcePageNotes: {
+                note: "Conflitos documentados sobre a página-fonte de alguma candidata, sem regra nomeada — não associados a nenhuma regra (govbr://knowledge/conflicts).",
+                items: pageNotes,
+              },
+            }
+          : {}),
+        ...(warnings.length
+          ? {
+              exampleWarnings: {
+                note: "Exemplos canônicos oficiais destes componentes têm defeitos conhecidos — não os trate como norma (get_component_spec, govbr://knowledge/conflicts).",
+                items: warnings,
+              },
+            }
+          : {}),
+        notRetrieved:
+          "Regras de componentes não observados não são devolvidas. Regras globais só entram por " +
+          "relação documentada (relatedComponents) ou por termo em context.terms; a base não publica " +
+          "outra ligação componente → regra global.",
+      }
+    : {};
+  // O orçamento vale para a resposta inteira: as candidatas ficam com o que sobra do fixo (~400 de folga
+  // para os campos de paginação), e sempre ao menos uma para a continuação andar.
+  const fixed = JSON.stringify({ ...head, ...tail }, null, 2).length + 400;
+  const page = contextPage(candidates, paging, Math.max(CONTEXT_MAX_CHARS - fixed, 0));
+  return { ...head, ...page, ...tail };
+}
+
+/**
+ * Projeção automática no scan_page (perfis com normas): só contagem e a chamada exata que devolve as
+ * candidatas para os componentes encontrados. Marcada `retrieval:"automatic"` para separar, na
+ * análise, conhecimento empurrado pelo scanner de consulta direta (`retrieval:"direct"`). Não exige
+ * nenhuma chamada: é ponteiro, não tarefa. Perfis sem normas (deterministic/evidence) não a recebem.
+ */
+function normativeContextFor(componentsFound: string[]) {
+  const components = [...componentsFound].sort();
+  if (!components.length) return {};
+  const { normalized, candidates } = contextCandidates({ components }, {});
+  const byReason: Record<string, number> = {};
+  for (const c of candidates) {
+    const kind = c.reasons[0].kind;
+    byReason[kind] = (byReason[kind] ?? 0) + 1;
+  }
+  return {
+    normativeContext: {
+      retrieval: "automatic" as const,
+      basis: "coverage.componentsFound",
+      components: normalized.components,
+      candidates: candidates.length,
+      byReason,
+      next: { tool: "get_ds_rules", arguments: { context: { components: normalized.components } } },
+      note: "Regras candidatas a investigar para os componentes encontrados — pertinência, não defeito nem verificação.",
+    },
+  };
+}
+
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
   const requestedProfile = options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE ?? "full";
@@ -233,8 +456,28 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
       description:
-        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Use a projeção breve para triagem e detalhe completo somente para regras candidatas.",
+        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Use a projeção breve para triagem e detalhe completo somente para regras candidatas. Com context (componentes/regiões observados, termos de estado), devolve candidatas a investigar com motivo, aplicabilidade desconhecida rotulada e evidência esperada — candidata não é defeito.",
       inputSchema: {
+        context: z
+          .object({
+            components: z
+              .array(z.string().min(1).max(60))
+              .max(36)
+              .optional()
+              .describe("Componentes observados (id, classe br-<id> ou nome da página oficial), ex.: coverage.componentsFound do scan_page"),
+            regions: z
+              .array(z.enum(PAGE_REGIONS as [PageRegion, ...PageRegion[]]))
+              .max(PAGE_REGIONS.length)
+              .optional()
+              .describe("Regiões do Template Base observadas"),
+            terms: z
+              .array(z.string().min(3).max(60))
+              .max(10)
+              .optional()
+              .describe("Termos do estado/contexto observado, buscados em condições, exceções, evidência esperada, título e regra"),
+          })
+          .optional()
+          .describe("Contexto observado → regras candidatas (componente/região próprios, relatedComponents, termos). Combina com force/category/validationStrategy/standard/query; não com component/id/ids"),
         id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
         ids: z
           .array(z.string())
@@ -276,9 +519,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Anexar fragmentos canônicos (force=example) no campo separado 'evidence'"),
         detail: z
-          .enum(["brief", "full"])
+          .enum(["summary", "brief", "full"])
           .optional()
-          .describe("Detalhe da listagem: 'brief' (padrão) traz id/título/regra/força/estratégia; 'full' traz o registro projetado inteiro"),
+          .describe("Detalhe: 'brief' (padrão das listagens) traz id/título/regra/força/estratégia; 'full' traz o registro projetado inteiro; 'summary' (padrão com context) traz id, motivo, aplicabilidade e passos de evidência — fora de context equivale a brief"),
         limit: z
           .number()
           .int()
@@ -290,9 +533,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, include_evidence, detail, limit, offset, ...filter }) => {
+    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, context, include_evidence, detail, limit, offset, ...rawFilter }) => {
       const kb = getKnowledgeBase();
       if (id && ids) return json({ error: "Informe id ou ids, não ambos." });
+      if (context && (id || ids)) return json({ error: "context não se combina com id/ids: peça os ids depois, em lote." });
+      if (context && rawFilter.component !== undefined) {
+        return json({ error: "context não se combina com component: informe os componentes em context.components." });
+      }
+      // Filtros legados exatamente como na 2.8.0; variantes nominais só em context.components.
+      const filter: RuleFilter = rawFilter;
+      if (context) {
+        const hasContext = Boolean(context.components?.length || context.regions?.length || context.terms?.length);
+        if (!hasContext) return json({ error: "context vazio: informe components, regions ou terms." });
+        return json(contextResponse(context, filter, { detail: detail ?? "summary", limit, offset }));
+      }
       if (id) {
         const rule = getRuleById(id);
         if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.` });
@@ -308,7 +562,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return json({
           requested: ids.length,
           count: found.length,
-          detail: detail ?? "brief",
+          detail: detail === "full" ? "full" : "brief",
           missing: ids.filter((ruleId) => !foundIds.has(ruleId)),
           rules: found.map((rule) => ({
             kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
@@ -317,7 +571,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         });
       }
 
-      const semFiltro = Object.values(filter).every(v => v === undefined);
+      // 2.9.0: limit/offset explícitos são pedido de listagem. Até a 2.8.0 eles eram retirados do
+      // filtro antes deste teste e a chamada só com paginação caía no índice, contrariando a nota.
+      const semFiltro =
+        Object.values(filter).every(v => v === undefined) && limit === undefined && offset === undefined;
       const rules = filterRules(filter);
 
       // Sem nenhum filtro, devolver a KB inteira custava ~35 mil tokens por chamada. Devolve-se o
@@ -345,7 +602,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         total: rules.length,
         offset: skip,
         count: page.length,
-        detail: detail ?? "brief",
+        detail: detail === "full" ? "full" : "brief",
         rules: page.map(project),
       };
       if (skip + page.length < rules.length) {
@@ -521,10 +778,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const includeExamples = include_examples ?? false;
       // Defect awareness (D-10/Phase 2.4): the canonical examples of some
       // components are themselves non-conformant — warn at spec-serving time.
-      const defects = getComponentDefects(component);
+      const defects = getComponentDefects(spec.name);
+      // 2.9.0 (NAT-83): a especificação aponta para as regras da base sobre o componente, para que
+      // a ligação componente → regra não dependa de o agente lembrar de consultar get_ds_rules.
+      const { candidates } = contextCandidates({ components: [spec.name] }, {});
       return json({
         ...spec,
         constraints: constraintsForComponent(spec),
+        rules: {
+          retrieval: "automatic",
+          note: "Regras da base pertinentes a este componente (próprias ou por relatedComponents) — candidatas, não defeitos. Detalhe e evidência esperada: get_ds_rules com context ou ids.",
+          ids: candidates.map((c) => c.rule.id),
+          next: { tool: "get_ds_rules", arguments: { context: { components: [spec.name] } } },
+        },
         warnings: defects.map((d) => ({
           type: d.type,
           severity: d.severity,
@@ -648,6 +914,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           summary: summarize(result.findings),
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),
+          // Só na primeira página (cursor ausente ou 0): a continuação não repete o ponteiro.
+          ...(hasNorms && !cursor ? normativeContextFor(result.coverage.componentsFound) : {}),
           ...buildFindingPage(result.findings, { detail, cursor, limit, maxChars }),
         });
       }

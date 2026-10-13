@@ -36,7 +36,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 ## Tools
 
 **Oracle knowledge** (read-only):
-- `get_ds_rules (id?, ids?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?)` — authoritative KB store; exact ids can be fetched in one batch
+- `get_ds_rules (id?, ids?, context?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?, detail?, limit?, offset?)` — authoritative KB store; exact ids can be fetched in one batch; `context` returns candidate rules for observed components/regions/terms (2.9.0)
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines; without a category, also the citable page constraints `ds-page-header`, `ds-page-footer`, `ds-page-skip-link` (2.7.0)
@@ -89,6 +89,59 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
+
+### Normative context for what was observed (2.9.0)
+
+In the Sonnet campaign 7 of the 10 runs with the oracle never queried the knowledge base directly:
+the knowledge was there, but going from "this page has a `br-tag` and a `br-modal`" to "these are
+the rules to investigate" was left entirely to the agent (NAT-83). 2.9.0 makes that link a
+retrieval the oracle does itself, on the existing endpoints — no new tool, so the evaluation
+profile's tool list is unchanged.
+
+- **`get_ds_rules({ context: { components?, regions?, terms? } })`.** Returns **candidates**, each
+  with `ruleId`, `force` and `obligation` (`mandatory` / `advisory` / `permissive` / `informative` —
+  a recommendation stays a recommendation), `reasons` (`component-observed`, `region-observed`,
+  `related-component-observed` via the KB's `relatedComponents`, or `term` with the fields it matched),
+  `applicability`, `expectedEvidence` and `neededState` (derived from the rule's `validationStrategy`).
+  `detail:"summary"` is the default; `brief`/`full` reuse the existing projections and add rule text,
+  conditions, exceptions, `source` (url, standard) and `version`.
+- **What is selected.** Rules of the observed components; global rules only through a documented
+  relation (`relatedComponents`) or a caller term found in `conditions`, `exceptions`,
+  `expectedEvidence`, title or normalized rule (word-start match, case/accent-insensitive). Rules of
+  components not observed are never returned, and `force:"example"` records never are — examples are
+  evidence, not norms. The KB publishes no other component → global-rule link, so none is invented.
+- **What is not decided.** `applicability.status` is `in-scope` (own component observed, no declared
+  condition or exception) or `unknown`; never `applicable`/`verified`. Conditions and exceptions are listed in
+  `applicability.unevaluated`, missing relations and global-by-relation/term in `unknowns`. Pertinence
+  is not verification: a finding citing a candidate without a predicate stays in review at the gate.
+- **Labels kept.** Documentation conflicts (`conflicts.json`) attach to a rule only when the conflict
+  names it by exact title; a conflict that only shares a candidate's source page is listed in
+  `sourcePageNotes` with no rule association (a page carries several rules); components whose official examples carry known defects come back in `exampleWarnings`;
+  truncated-source caveats travel with the rule. Terms also point to the `get_page_rules` categories
+  whose text contains them; the page constraints (`ds-page-*`) are listed once, on the first page.
+- **Determinism and budget.** Names resolve through documented variants only (id, `br-<id>`, the
+  official page name: `"Cookie Bar"` → `cookiebar`); anything else is returned in
+  `context.unresolved`. Order depends only on the normalized context and the KB order, so the same
+  context returns byte-identical text to any client, arm or model. Pages respect `limit` (default 20)
+  and a ~12,000-character budget for the whole response; `more.nextOffset` continues without loss or
+  repetition. Typical sizes (pretty JSON, ÷3.5 ≈ tokens): context with button+input+modal, summary
+  7.2k chars (9 candidates); 15 components, first page 11.4k.
+- **Elsewhere.** `get_component_spec` gains `rules: { retrieval:"automatic", ids, next }` (+~0.5–0.6k
+  chars); its `component` stays the exact id. `scan_page`, in profiles that carry norms
+  (`full`/`evaluation`), adds `normativeContext: { retrieval:"automatic", components, candidates,
+  byReason, next }` built from `coverage.componentsFound`, on the first page only (no `cursor` or
+  `cursor: 0`); `deterministic`/`evidence` profiles get nothing new. `retrieval:"automatic"` vs `"direct"` separates pushed from requested knowledge in the
+  analysis; no number of calls is a success criterion.
+- **Fixes.** `get_ds_rules({ limit, offset })` with no other filter returned the facet index although
+  the note promised pagination — `limit`/`offset` were stripped from the filter before the
+  "no filter" test. Explicit `limit` or `offset` now lists; a call with nothing still returns the
+  facets. Every other legacy call shape (`id`, `ids`, `component`, `category`, `query`, …) returns
+  byte-identical text to 2.8.0 — checked against a 2.8.0 snapshot in
+  `test/fixtures/legacy-get-ds-rules-2.8.0.json`. Accent-insensitive matching, the extra fields and
+  name variants exist only inside `context`.
+
+Frozen campaigns ran on 2.7.0 (`validator_sha` `b0713083f1823691c516825220b529e420b91cb3`) and are not
+changed by this release.
 
 ### Accessible name is what the browser computes, not `aria-label` (2.8.0)
 

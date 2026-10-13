@@ -356,6 +356,32 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     expect(data.note).toContain("Índice, não listagem");
   });
 
+  it("explicit limit/offset with no other filter pages the whole normative base (2.9.0 fix)", async () => {
+    // Até a 2.8.0, server.ts retirava limit/offset do filtro e o ramo semFiltro devolvia o índice,
+    // embora a própria nota prometesse paginação com limit/offset explícitos.
+    const first = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 40, offset: 0 } })));
+    expect(first.facets).toBeUndefined();
+    expect(first.total).toBe(152);
+    expect(first.offset).toBe(0);
+    expect(first.count).toBe(40);
+    const ids: string[] = first.rules.map((r: { id: string }) => r.id);
+    let next = first.more?.nextOffset;
+    while (next !== undefined) {
+      const page = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 40, offset: next } })));
+      ids.push(...page.rules.map((r: { id: string }) => r.id));
+      next = page.more?.nextOffset;
+    }
+    expect(ids).toHaveLength(152);
+    expect(new Set(ids).size).toBe(152);
+    // Mesma ordem da listagem única: paginar não reordena.
+    const all = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 200 } })));
+    expect(all.rules.map((r: { id: string }) => r.id)).toEqual(ids);
+    // Só offset também é pedido de listagem.
+    const tail = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { offset: 150 } })));
+    expect(tail.rules.map((r: { id: string }) => r.id)).toEqual(ids.slice(150));
+    expect(tail.more).toBeUndefined();
+  });
+
   it("serves evidence only through the separate 'evidence' channel", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",
