@@ -3,9 +3,11 @@
  * observado. Os casos usam só a base publicada (component, relatedComponents, conditions,
  * exceptions, expectedEvidence) — nenhum id de gabarito, nenhuma tela do corpus.
  */
-import { describe, it, expect } from "vitest";
-import { filterRules, getKnowledgeBase, normalizeText } from "../../src/data/knowledge.js";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { filterRules, getKnowledgeBase, normalizeText, useKnowledgeVersion } from "../../src/data/knowledge.js";
 import {
+  resetApplicabilityCache,
+  forceTier,
   containsTerm,
   normalizeContext,
   obligationOf,
@@ -14,6 +16,18 @@ import {
   retrieveContextCandidates,
   sourcePageNotes,
 } from "../../src/data/applicability.js";
+
+// 2.12.0: estes casos exercitam o MECANISMO sobre dados conhecidos da versão 3.7.0 (relatedComponents,
+// expectedEvidence, títulos citados por conflicts.json), que a versão literal não publica. Ficam
+// presos à 3.7.0; a versão servida por padrão é coberta em knowledgeLiteral.test.ts.
+beforeAll(() => {
+  useKnowledgeVersion("3.7.0");
+  resetApplicabilityCache();
+});
+afterAll(() => {
+  useKnowledgeVersion(undefined);
+  resetApplicabilityCache();
+});
 
 const retrieve = (context: Parameters<typeof normalizeContext>[0]) =>
   retrieveContextCandidates(filterRules({}), normalizeContext(context));
@@ -169,9 +183,15 @@ describe("retrieveContextCandidates", () => {
     const a = retrieve({ components: ["modal", "button", "input"], terms: ["Erro"] }).map((c) => c.rule.id);
     const b = retrieve({ components: ["br-input", "Button", "<br-modal>", "button"], terms: ["erro", "ERRO"] }).map((c) => c.rule.id);
     expect(a).toEqual(b);
-    // Motivo mais forte primeiro: componentes observados antes de termos.
-    const ranks = retrieve({ components: ["input"], terms: ["erro"] }).map((c) => c.rank);
-    expect(ranks).toEqual([...ranks].sort((x, y) => x - y));
+    // 2.12.0: grupos alternados (global primeiro, depois componentes A→Z); dentro do grupo, obrigação
+    // antes de orientação e motivo mais forte antes de termo.
+    const mixed = retrieve({ components: ["input"], terms: ["erro"] });
+    const groupsSeen = mixed.slice(0, 2).map((c) => c.rule.component ?? "(global)");
+    expect(groupsSeen).toEqual(["(global)", "input"]);
+    for (const g of ["(global)", "input"]) {
+      const tiers = mixed.filter((c) => (c.rule.component ?? "(global)") === g).map((c) => forceTier(c.rule.force));
+      expect(tiers).toEqual([...tiers].sort((x, y) => x - y));
+    }
   });
 
   it("page rule categories are pointers matched by terms, with the sections that contain them", () => {

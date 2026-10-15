@@ -99,7 +99,7 @@ export function pageConstraints(): PageConstraint[] {
       force: "required",
       implements: groundingFor("page-skip-link"),
       claim: { expectedCondition: EXPECTED_CONDITIONS.skipLink, fields: ["region", "firstLinkHref", "expectedCondition"] },
-      source: { url: "https://emag.governoeletronico.gov.br/", scrapedAt: source.scrapedAt, excerpt: "Recomendação 1.5 — Fornecer âncoras para ir direto a um bloco de conteúdo: o primeiro link da página deve ser o salto para o conteúdo." },
+      source: { url: "https://emag.governoeletronico.gov.br/", scrapedAt: source.scrapedAt, excerpt: "Recomendação 1.5 – Fornecer âncoras para ir direto a um bloco de conteúdo: É importante ressaltar que o primeiro link da página deve ser o de ir para o conteúdo." },
     },
   ];
 }

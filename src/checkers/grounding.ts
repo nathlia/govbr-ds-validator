@@ -112,10 +112,12 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
       "lista Cabeçalho e Rodapé entre os pontos de aderência mínima.",
   },
   "page-skip-link": {
-    implements: ["govbr-3.7.0-accessibility-global-7d2b85f81c52", "emag-1.5"],
+    // 2.12.0: até a 2.11.0 o id era o do TÍTULO da recomendação (…7d2b85f81c52, heading-only, que na
+    // base literal tem força recommended e virou id legado). Agora é a frase obrigatória do corpo dela.
+    implements: ["govbr-3.7.0-accessibility-global-538e57855252", "emag-1.5"],
     basis:
-      "e-MAG 1.5 (required): 'forneça atalhos para blocos relevantes e faça do salto para o conteúdo " +
-      "o primeiro link da página'. A verificação lê exatamente isso: o primeiro <a href> do documento " +
+      "e-MAG 1.5, frase literal (required): 'É importante ressaltar que o primeiro link da página deve ser " +
+      "o de ir para o conteúdo'. A verificação lê exatamente isso: o primeiro <a href> do documento " +
       "é uma âncora interna cujo alvo existe. A regra do DS sobre Skip Link no Template Base é " +
       "apenas recomendada e não é citada como norma.",
   },

@@ -53,8 +53,15 @@ function componentAliases(): Map<string, string> {
   }
   for (const rule of getKnowledgeBase().rules) {
     const title = rule.source.pageTitle;
-    if (!rule.component || typeof title !== "string" || !title.startsWith("Padrão Digital de Governo")) continue;
-    const display = title.split(" - ").at(-1);
+    if (!rule.component || typeof title !== "string") continue;
+    // 3.7.0: "Padrão Digital de Governo - Componentes - Input". Corpus literal (2.12.0): o título da
+    // própria página, "Input (Campo de Entrada de Texto)" — vale o nome antes do parêntese; a glosa
+    // em português entre parênteses não vira variante (mesma regra de não traduzir de antes).
+    const display = title.startsWith("Padrão Digital de Governo")
+      ? title.split(" - ").at(-1)
+      : rule.source.captureType === "literal-corpus-markdown"
+        ? title.replace(/\s*\(.*\)\s*$/, "").trim()
+        : undefined;
     if (display) map.set(nameKey(display), rule.component);
   }
   aliases = map;
@@ -314,11 +321,73 @@ export function retrieveContextCandidates(base: KnowledgeRule[], context: Normal
     });
   }
 
-  return out.sort(
-    (a, b) =>
-      a.rank - b.rank ||
-      codeUnitCompare(a.rule.component ?? "￿", b.rule.component ?? "￿") ||
-      (order.get(a.rule.id) ?? 0) - (order.get(b.rule.id) ?? 0),
+  return interleaveByGroup(out, order);
+}
+
+/** Grupo de uma candidata: o componente dono da regra, ou GLOBAL_GROUP (relação documentada/termo). */
+export const GLOBAL_GROUP = "(global)";
+export function candidateGroup(candidate: ContextCandidate): string {
+  return candidate.rule.component ?? GLOBAL_GROUP;
+}
+
+/** Faixa de força: obrigação (required/prohibited) → orientação (recommended/discouraged) → o resto. */
+export function forceTier(force: RuleForce): number {
+  const o = obligationOf(force);
+  return o === "mandatory" ? 0 : o === "advisory" ? 1 : 2;
+}
+
+/**
+ * Ordem das candidatas (2.12.0, revisão da base literal). Até a 2.11.0 a ordem era motivo →
+ * componente A→Z → ordem da base: com a base literal (dezenas de regras por componente), um
+ * formulário {button, datetimepicker, input, upload} ocupava as 4 primeiras páginas só com button e
+ * as regras globais do e-MAG casadas por termo ficavam na página 11. Agora: um grupo por componente
+ * observado e um grupo global; dentro do grupo, faixa de força, depois motivo, depois a ordem da
+ * base; e os grupos se alternam (global primeiro, componentes em ordem alfabética), de modo que a
+ * primeira página traz as obrigações de todos. Continua função só do contexto normalizado.
+ */
+function interleaveByGroup(candidates: ContextCandidate[], order: Map<string, number>): ContextCandidate[] {
+  const groups = new Map<string, ContextCandidate[]>();
+  for (const c of candidates) {
+    const g = candidateGroup(c);
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(c);
+  }
+  const keys = [...groups.keys()].sort((a, b) =>
+    a === GLOBAL_GROUP ? -1 : b === GLOBAL_GROUP ? 1 : codeUnitCompare(a, b),
+  );
+  const queues = keys.map((k) =>
+    groups.get(k)!.sort(
+      (a, b) =>
+        forceTier(a.rule.force) - forceTier(b.rule.force) ||
+        a.rank - b.rank ||
+        (order.get(a.rule.id) ?? 0) - (order.get(b.rule.id) ?? 0),
+    ),
+  );
+  const out: ContextCandidate[] = [];
+  for (let i = 0; out.length < candidates.length; i++) {
+    for (const q of queues) if (i < q.length) out.push(q[i]);
+  }
+  return out;
+}
+
+export interface CandidateGroupSummary {
+  group: string;
+  total: number;
+  byObligation: Partial<Record<Obligation, number>>;
+}
+
+/** Contagem por grupo (componente observado ou global), na ordem em que os grupos se alternam. */
+export function summarizeGroups(candidates: ContextCandidate[]): CandidateGroupSummary[] {
+  const map = new Map<string, CandidateGroupSummary>();
+  for (const c of candidates) {
+    const g = candidateGroup(c);
+    const entry = map.get(g) ?? { group: g, total: 0, byObligation: {} };
+    entry.total += 1;
+    entry.byObligation[c.obligation] = (entry.byObligation[c.obligation] ?? 0) + 1;
+    map.set(g, entry);
+  }
+  return [...map.values()].sort((a, b) =>
+    a.group === GLOBAL_GROUP ? -1 : b.group === GLOBAL_GROUP ? 1 : codeUnitCompare(a.group, b.group),
   );
 }
 

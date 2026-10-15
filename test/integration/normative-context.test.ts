@@ -15,6 +15,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer, type ServerOptions } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
+import { useKnowledgeVersion } from "../../src/data/knowledge.js";
+import { resetApplicabilityCache } from "../../src/data/applicability.js";
 
 const LIBRARY_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -64,6 +66,12 @@ async function call(client: Client, name: string, args: Record<string, unknown>)
 let evaluation: Client;
 
 beforeAll(async () => {
+  // 2.12.0: o contrato do contexto normativo e o snapshot da 2.8.0 são conferidos sobre a versão
+  // 3.7.0, cujos dados (relatedComponents, condições da tag, títulos citados por conflicts.json)
+  // os casos usam. A versão literal, servida por padrão, tem seus testes em server.test.ts e
+  // knowledgeLiteral.test.ts.
+  useKnowledgeVersion("3.7.0");
+  resetApplicabilityCache();
   httpServer = createHttpServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(LIBRARY_HTML);
@@ -75,6 +83,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  useKnowledgeVersion(undefined);
+  resetApplicabilityCache();
   await evaluation.close();
   await closeBrowser();
   await new Promise<void>((resolve, reject) => httpServer.close((e) => (e ? reject(e) : resolve())));
@@ -210,6 +220,8 @@ describe("scan_page normativeContext on a neutral-domain fixture", () => {
     expect(ctx.basis).toBe("coverage.componentsFound");
     expect(ctx.components).toEqual([...scan.coverage.componentsFound].sort());
     expect(ctx.components).toEqual(expect.arrayContaining(["button", "input", "modal", "tag", "header"]));
+    // 2.12.0: tamanho de cada componente antes de pedir.
+    expect(Object.values(ctx.byComponent as Record<string, number>).reduce((x, y) => x + y, 0)).toBe(ctx.candidates);
 
     const followUp = await call(evaluation, ctx.next.tool === "get_ds_rules" ? "get_ds_rules" : "", { ...ctx.next.arguments, limit: 200 });
     expect(followUp.total).toBe(ctx.candidates);
@@ -260,7 +272,14 @@ describe("legacy get_ds_rules call shapes are byte-identical to 2.8.0", () => {
     const shapes = snapshot.shapes.filter((s: { tool?: string }) => !s.tool);
     expect(shapes.length).toBeGreaterThanOrEqual(15);
     for (const shape of shapes) {
-      const text = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: shape.args }));
+      const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: shape.args }));
+      // 2.12.0 acrescenta só meta.knowledgeVersion; sem ele, o texto tem de ser o da 2.8.0 byte a byte.
+      const parsed = JSON.parse(raw);
+      if (parsed.meta) {
+        expect(parsed.meta.knowledgeVersion).toBe("3.7.0");
+        delete parsed.meta.knowledgeVersion;
+      }
+      const text = parsed.meta ? JSON.stringify(parsed, null, 2) : raw;
       expect(createHash("sha256").update(text).digest("hex"), JSON.stringify(shape.args)).toBe(shape.sha256);
     }
     for (const shape of snapshot.shapes.filter((s: { tool?: string }) => s.tool === "get_component_spec")) {

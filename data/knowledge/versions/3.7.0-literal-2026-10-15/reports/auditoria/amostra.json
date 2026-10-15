@@ -1,0 +1,575 @@
+{
+ "seed": "auditoria-base-ds-2026-10-15",
+ "criterio": "estratos sem unclear, ceil(10%) min 5; mais todas as unclear; mais 40 frases excluidas",
+ "estratos": {
+  "componente×acessibilidade": {
+   "populacao": 370,
+   "n": 37,
+   "ids": [
+    "govbr-3.7.0-accessibility-avatar-3eca90a16ba6",
+    "govbr-3.7.0-accessibility-avatar-925d3f6fb6c9",
+    "govbr-3.7.0-accessibility-breadcrumb-7e348f84b5b6",
+    "govbr-3.7.0-accessibility-card-b1ccd4e9f787",
+    "govbr-3.7.0-accessibility-carousel-578a08364a95",
+    "govbr-3.7.0-accessibility-carousel-8e2195d1a430",
+    "govbr-3.7.0-accessibility-carousel-9d025948ee4d",
+    "govbr-3.7.0-accessibility-cookiebar-0a587f4943b6",
+    "govbr-3.7.0-accessibility-cookiebar-6acbf43d05d4",
+    "govbr-3.7.0-accessibility-footer-aaaeb5d9f348",
+    "govbr-3.7.0-accessibility-header-c6e9d6acd201",
+    "govbr-3.7.0-accessibility-item-47f854b1cff5",
+    "govbr-3.7.0-accessibility-loading-e9424aef2ac1",
+    "govbr-3.7.0-accessibility-magicbutton-d01f31071a65",
+    "govbr-3.7.0-accessibility-menu-dbbcdd4e4224",
+    "govbr-3.7.0-accessibility-menu-dd90ffdc79e3",
+    "govbr-3.7.0-accessibility-message-0e756cff22bc",
+    "govbr-3.7.0-accessibility-modal-02a87482934d",
+    "govbr-3.7.0-accessibility-modal-3598db76ed48",
+    "govbr-3.7.0-accessibility-modal-9be44ed1a8e0",
+    "govbr-3.7.0-accessibility-radio-0efef71b9cee",
+    "govbr-3.7.0-accessibility-select-18d4f7883bbc",
+    "govbr-3.7.0-accessibility-skiplink-2fb3fb974ad7",
+    "govbr-3.7.0-accessibility-skiplink-b0641993618f",
+    "govbr-3.7.0-accessibility-step-487fd8ea1fa2",
+    "govbr-3.7.0-accessibility-step-e35d7a329aab",
+    "govbr-3.7.0-accessibility-switch-f51eb28cdaa5",
+    "govbr-3.7.0-accessibility-tab-95c68f223ee0",
+    "govbr-3.7.0-accessibility-tab-e282c450c32d",
+    "govbr-3.7.0-accessibility-tag-838e510dafb5",
+    "govbr-3.7.0-accessibility-tag-e250b7404fae",
+    "govbr-3.7.0-accessibility-textarea-299c1830917b",
+    "govbr-3.7.0-accessibility-textarea-b07172fe69a5",
+    "govbr-3.7.0-accessibility-textarea-db2f6d39df2a",
+    "govbr-3.7.0-accessibility-textarea-e16f5f19354a",
+    "govbr-3.7.0-accessibility-tooltip-34af66de07ed",
+    "govbr-3.7.0-accessibility-tooltip-b1660f43982e"
+   ]
+  },
+  "componente×desenvolvedor": {
+   "populacao": 204,
+   "n": 21,
+   "ids": [
+    "govbr-3.7.0-development-accordion-08b7edf4291a",
+    "govbr-3.7.0-development-avatar-23d40d3d6ea4",
+    "govbr-3.7.0-development-button-b77ff20ad216",
+    "govbr-3.7.0-development-card-f913a1ba1944",
+    "govbr-3.7.0-development-carousel-0aca507639ed",
+    "govbr-3.7.0-development-checkbox-20cf87708f54",
+    "govbr-3.7.0-development-checkbox-8044feffaa99",
+    "govbr-3.7.0-development-cookiebar-93860e42d312",
+    "govbr-3.7.0-development-cookiebar-bd9e364b634c",
+    "govbr-3.7.0-development-datetimepicker-205535874b16",
+    "govbr-3.7.0-development-datetimepicker-bbeed4cd0071",
+    "govbr-3.7.0-development-footer-14f4122847cf",
+    "govbr-3.7.0-development-footer-38dcb550ba72",
+    "govbr-3.7.0-development-input-cfa9708df3b8",
+    "govbr-3.7.0-development-list-c75b1858204d",
+    "govbr-3.7.0-development-menu-7d3756e89270",
+    "govbr-3.7.0-development-menu-9e50a5aa5135",
+    "govbr-3.7.0-development-pagination-73332e3ddb15",
+    "govbr-3.7.0-development-signin-154c8d8f439c",
+    "govbr-3.7.0-development-skiplink-b7fd536dad96",
+    "govbr-3.7.0-development-table-c627316ae9e9"
+   ]
+  },
+  "componente×designer": {
+   "populacao": 1330,
+   "n": 133,
+   "ids": [
+    "govbr-3.7.0-component-accordion-4358e08405a4",
+    "govbr-3.7.0-component-avatar-23742f8aab60",
+    "govbr-3.7.0-component-breadcrumb-551b299fd96d",
+    "govbr-3.7.0-component-button-a968663df02d",
+    "govbr-3.7.0-component-button-b1c0168342fb",
+    "govbr-3.7.0-component-button-c039abbbd4e0",
+    "govbr-3.7.0-component-card-9b4da88cf137",
+    "govbr-3.7.0-component-carousel-2422e6e836c4",
+    "govbr-3.7.0-component-carousel-2fceb2e040ac",
+    "govbr-3.7.0-component-carousel-3ba4bada2634",
+    "govbr-3.7.0-component-carousel-4028bc7a0a78",
+    "govbr-3.7.0-component-carousel-7b664374a2b3",
+    "govbr-3.7.0-component-carousel-ad93e0ea4e36",
+    "govbr-3.7.0-component-carousel-bcf66794ff09",
+    "govbr-3.7.0-component-carousel-c36ccbb147e5",
+    "govbr-3.7.0-component-carousel-c85eda096697",
+    "govbr-3.7.0-component-carousel-fff8e3fb426f",
+    "govbr-3.7.0-component-checkbox-020d9fe34a42",
+    "govbr-3.7.0-component-checkbox-1832d0cb084d",
+    "govbr-3.7.0-component-checkbox-298dabadba22",
+    "govbr-3.7.0-component-checkbox-52a2a389c47a",
+    "govbr-3.7.0-component-cookiebar-171508406412",
+    "govbr-3.7.0-component-cookiebar-3e13ca3969ad",
+    "govbr-3.7.0-component-cookiebar-5adfe36afa2a",
+    "govbr-3.7.0-component-cookiebar-a162b60f5bcb",
+    "govbr-3.7.0-component-cookiebar-ca27f4a87839",
+    "govbr-3.7.0-component-cookiebar-d61fc40891cb",
+    "govbr-3.7.0-component-datetimepicker-2fd055d84d5a",
+    "govbr-3.7.0-component-divider-9c01dcf83f50",
+    "govbr-3.7.0-component-footer-e32b3de863ee",
+    "govbr-3.7.0-component-header-3460290b686f",
+    "govbr-3.7.0-component-header-5ff447923c99",
+    "govbr-3.7.0-component-header-65f985fb0d3d",
+    "govbr-3.7.0-component-header-86cb7c93b37e",
+    "govbr-3.7.0-component-header-e9ce3342aa2c",
+    "govbr-3.7.0-component-header-f08a4e6e570d",
+    "govbr-3.7.0-component-input-07414cf859ed",
+    "govbr-3.7.0-component-input-5aad64163c2e",
+    "govbr-3.7.0-component-input-dab245775aff",
+    "govbr-3.7.0-component-input-ef907a0014ff",
+    "govbr-3.7.0-component-item-8a27ddc76060",
+    "govbr-3.7.0-component-item-9e8a19bb13d4",
+    "govbr-3.7.0-component-list-56420748318f",
+    "govbr-3.7.0-component-list-9d7d5dbb67c7",
+    "govbr-3.7.0-component-list-e5b1ad94c674",
+    "govbr-3.7.0-component-loading-0d007ecc102e",
+    "govbr-3.7.0-component-loading-509e29e3c729",
+    "govbr-3.7.0-component-loading-8f8cf198ee65",
+    "govbr-3.7.0-component-magicbutton-1545cb53b3c6",
+    "govbr-3.7.0-component-magicbutton-1e355e3c88c6",
+    "govbr-3.7.0-component-magicbutton-378960e6e753",
+    "govbr-3.7.0-component-magicbutton-3dd1f609bbe3",
+    "govbr-3.7.0-component-magicbutton-874896a1066a",
+    "govbr-3.7.0-component-menu-1efaf42daca3",
+    "govbr-3.7.0-component-menu-582023db2090",
+    "govbr-3.7.0-component-menu-8f11ecbc1bbe",
+    "govbr-3.7.0-component-menu-b286df621afb",
+    "govbr-3.7.0-component-menu-dc0aa3ba1b4f",
+    "govbr-3.7.0-component-menu-df0078a41c77",
+    "govbr-3.7.0-component-menu-fcf5b41f87dd",
+    "govbr-3.7.0-component-message-928a670d43dd",
+    "govbr-3.7.0-component-message-e5d95fde0cea",
+    "govbr-3.7.0-component-message-ffec793b765d",
+    "govbr-3.7.0-component-modal-57f443cda459",
+    "govbr-3.7.0-component-modal-79f22b8d7db9",
+    "govbr-3.7.0-component-modal-7c77d581cb08",
+    "govbr-3.7.0-component-modal-8638ed81ca32",
+    "govbr-3.7.0-component-modal-8bbec31da075",
+    "govbr-3.7.0-component-modal-b736de6a80c9",
+    "govbr-3.7.0-component-modal-d7f751d56e27",
+    "govbr-3.7.0-component-modal-fb2ac1314921",
+    "govbr-3.7.0-component-notification-08dbff1ab29f",
+    "govbr-3.7.0-component-notification-13442c2c7f46",
+    "govbr-3.7.0-component-notification-1552a227c85e",
+    "govbr-3.7.0-component-notification-187d5954545c",
+    "govbr-3.7.0-component-notification-ac835fa195a6",
+    "govbr-3.7.0-component-notification-e646788e20a1",
+    "govbr-3.7.0-component-pagination-6ed71ca28cb8",
+    "govbr-3.7.0-component-pagination-a1f8c3810cfd",
+    "govbr-3.7.0-component-radio-056424eefde0",
+    "govbr-3.7.0-component-radio-1ffd9dfd23da",
+    "govbr-3.7.0-component-radio-97993a4c7e96",
+    "govbr-3.7.0-component-radio-f290ff178142",
+    "govbr-3.7.0-component-radio-f5fb3d0c4e2e",
+    "govbr-3.7.0-component-scrim-2aa997e6c400",
+    "govbr-3.7.0-component-scrim-5d75b30dd41d",
+    "govbr-3.7.0-component-select-46a08e6a74fd",
+    "govbr-3.7.0-component-select-98a0287c6fdd",
+    "govbr-3.7.0-component-select-a0222f08c249",
+    "govbr-3.7.0-component-select-ba2187bb7906",
+    "govbr-3.7.0-component-signin-5593ba402fba",
+    "govbr-3.7.0-component-signin-8dc5461d744f",
+    "govbr-3.7.0-component-signin-a17c4d8a1df7",
+    "govbr-3.7.0-component-skiplink-a7978874ef13",
+    "govbr-3.7.0-component-skiplink-cb53759c476c",
+    "govbr-3.7.0-component-step-9638f807bde5",
+    "govbr-3.7.0-component-step-a7433aee0dde",
+    "govbr-3.7.0-component-step-fd1162b673b3",
+    "govbr-3.7.0-component-switch-2acff890915f",
+    "govbr-3.7.0-component-switch-32d3de3e41bd",
+    "govbr-3.7.0-component-switch-58bafaddd0a7",
+    "govbr-3.7.0-component-switch-5ba18d5cfb3b",
+    "govbr-3.7.0-component-switch-76a01f06b97d",
+    "govbr-3.7.0-component-switch-b89ef612e3d8",
+    "govbr-3.7.0-component-switch-dc2360649ee8",
+    "govbr-3.7.0-component-switch-fb51321a7233",
+    "govbr-3.7.0-component-tab-19dbdc545089",
+    "govbr-3.7.0-component-tab-481000b199a8",
+    "govbr-3.7.0-component-table-4f61b99081d2",
+    "govbr-3.7.0-component-table-561c13acd830",
+    "govbr-3.7.0-component-table-98034d8758a2",
+    "govbr-3.7.0-component-table-d18f87befa88",
+    "govbr-3.7.0-component-table-f01c42eed45b",
+    "govbr-3.7.0-component-tag-05981542d609",
+    "govbr-3.7.0-component-tag-1c42b0603260",
+    "govbr-3.7.0-component-tag-2f33d9ad9a79",
+    "govbr-3.7.0-component-tag-65966473383c",
+    "govbr-3.7.0-component-tag-d9f039b5861e",
+    "govbr-3.7.0-component-tag-f2523506d9dc",
+    "govbr-3.7.0-component-tag-f524df7adaf2",
+    "govbr-3.7.0-component-textarea-1b7af2fe1ec8",
+    "govbr-3.7.0-component-textarea-f66eafd18059",
+    "govbr-3.7.0-component-textarea-fccab2744a7e",
+    "govbr-3.7.0-component-tooltip-4132406916f9",
+    "govbr-3.7.0-component-tooltip-5dc700b6b691",
+    "govbr-3.7.0-component-tooltip-6a0f0ee7ceea",
+    "govbr-3.7.0-component-tooltip-6c0ff733e696",
+    "govbr-3.7.0-component-tooltip-cb78a935f122",
+    "govbr-3.7.0-component-tooltip-d0e9a9707161",
+    "govbr-3.7.0-component-tooltip-f9dc5d35b7ed",
+    "govbr-3.7.0-component-tooltip-ffbac5193e02",
+    "govbr-3.7.0-component-upload-10b79d5d8a0a",
+    "govbr-3.7.0-component-wizard-ac9dc4be9d7a"
+   ]
+  },
+  "e-MAG": {
+   "populacao": 218,
+   "n": 22,
+   "ids": [
+    "govbr-3.7.0-accessibility-global-08ba03251d26",
+    "govbr-3.7.0-accessibility-global-0a487b46e706",
+    "govbr-3.7.0-accessibility-global-1131c20a8b5d",
+    "govbr-3.7.0-accessibility-global-29bd6bf04fc5",
+    "govbr-3.7.0-accessibility-global-316e1f31a4ac",
+    "govbr-3.7.0-accessibility-global-53f4aeeb8e48",
+    "govbr-3.7.0-accessibility-global-5538932e545e",
+    "govbr-3.7.0-accessibility-global-614b06d2c357",
+    "govbr-3.7.0-accessibility-global-6f1e9a4942b6",
+    "govbr-3.7.0-accessibility-global-76b4b213047e",
+    "govbr-3.7.0-accessibility-global-7ec16b12e078",
+    "govbr-3.7.0-accessibility-global-8170ddf527be",
+    "govbr-3.7.0-accessibility-global-87639c7875d6",
+    "govbr-3.7.0-accessibility-global-a18cb9582691",
+    "govbr-3.7.0-accessibility-global-a54fe3e9b8d7",
+    "govbr-3.7.0-accessibility-global-bb4c4848ebed",
+    "govbr-3.7.0-accessibility-global-d3badaa7e5ca",
+    "govbr-3.7.0-accessibility-global-d6e816588306",
+    "govbr-3.7.0-accessibility-global-e3291b7b1487",
+    "govbr-3.7.0-accessibility-global-e47b4f4c0b26",
+    "govbr-3.7.0-accessibility-global-fb9dfcacbb34",
+    "govbr-3.7.0-accessibility-global-fbf3730eb056"
+   ]
+  },
+  "fundamentos": {
+   "populacao": 217,
+   "n": 22,
+   "ids": [
+    "govbr-3.7.0-foundation-global-06471e2827fa",
+    "govbr-3.7.0-foundation-global-193c1d2dc53d",
+    "govbr-3.7.0-foundation-global-31602a6262f1",
+    "govbr-3.7.0-foundation-global-33348e749f4f",
+    "govbr-3.7.0-foundation-global-49d08615852f",
+    "govbr-3.7.0-foundation-global-4cb21a363b26",
+    "govbr-3.7.0-foundation-global-52aed1469cd6",
+    "govbr-3.7.0-foundation-global-5d62ae29d8de",
+    "govbr-3.7.0-foundation-global-5f2d322eb511",
+    "govbr-3.7.0-foundation-global-6ffd649ef106",
+    "govbr-3.7.0-foundation-global-7dc943e89a3d",
+    "govbr-3.7.0-foundation-global-952a300e1949",
+    "govbr-3.7.0-foundation-global-9b5b8a55a449",
+    "govbr-3.7.0-foundation-global-9e3d16e2439d",
+    "govbr-3.7.0-foundation-global-c66a0712914e",
+    "govbr-3.7.0-foundation-global-cf65243adb52",
+    "govbr-3.7.0-foundation-global-d2bd7f553f31",
+    "govbr-3.7.0-foundation-global-deb689cc4c47",
+    "govbr-3.7.0-foundation-global-e117dd8b620f",
+    "govbr-3.7.0-foundation-global-f0c904c29401",
+    "govbr-3.7.0-foundation-global-f635e63c4951",
+    "govbr-3.7.0-foundation-global-fad6e6eb64c0"
+   ]
+  },
+  "guias": {
+   "populacao": 41,
+   "n": 5,
+   "ids": [
+    "govbr-3.7.0-accessibility-global-19cbc02f51c6",
+    "govbr-3.7.0-accessibility-global-df3f7a25d858",
+    "govbr-3.7.0-development-global-77c9157432bb",
+    "govbr-3.7.0-development-global-cfa18188de2c",
+    "govbr-3.7.0-development-global-fdf42bd0107b"
+   ]
+  },
+  "outras (introdução, acessibilidade)": {
+   "populacao": 15,
+   "n": 5,
+   "ids": [
+    "govbr-3.7.0-accessibility-global-0ea649a25d34",
+    "govbr-3.7.0-accessibility-global-7bf4fd5a5cb8",
+    "govbr-3.7.0-accessibility-global-e9275b5b8b5e",
+    "govbr-3.7.0-accessibility-global-f941a29c942e",
+    "govbr-3.7.0-page-global-d5caee9e788d"
+   ]
+  },
+  "padrões": {
+   "populacao": 462,
+   "n": 47,
+   "ids": [
+    "govbr-3.7.0-pattern-global-0418dbc75af6",
+    "govbr-3.7.0-pattern-global-04347aba1c13",
+    "govbr-3.7.0-pattern-global-13329c70d1bc",
+    "govbr-3.7.0-pattern-global-175ea9d6f240",
+    "govbr-3.7.0-pattern-global-1806a99b61fe",
+    "govbr-3.7.0-pattern-global-1ae65dce4e84",
+    "govbr-3.7.0-pattern-global-21622a83eb7f",
+    "govbr-3.7.0-pattern-global-32373d14f052",
+    "govbr-3.7.0-pattern-global-35721a49577b",
+    "govbr-3.7.0-pattern-global-382dda82bac1",
+    "govbr-3.7.0-pattern-global-3eed9eee31cb",
+    "govbr-3.7.0-pattern-global-40538fc0c2e2",
+    "govbr-3.7.0-pattern-global-475507f19bd1",
+    "govbr-3.7.0-pattern-global-48ec90f1f39b",
+    "govbr-3.7.0-pattern-global-4a7786b5b48f",
+    "govbr-3.7.0-pattern-global-4e6077addff1",
+    "govbr-3.7.0-pattern-global-5848f652674e",
+    "govbr-3.7.0-pattern-global-59e2def93185",
+    "govbr-3.7.0-pattern-global-5dfbb109d8d4",
+    "govbr-3.7.0-pattern-global-6b219d780dc7",
+    "govbr-3.7.0-pattern-global-72f4217f6a64",
+    "govbr-3.7.0-pattern-global-7342c631f4a0",
+    "govbr-3.7.0-pattern-global-73f48c80cefc",
+    "govbr-3.7.0-pattern-global-79612d5d7b8e",
+    "govbr-3.7.0-pattern-global-7a680da2ed18",
+    "govbr-3.7.0-pattern-global-85408b577377",
+    "govbr-3.7.0-pattern-global-883d140a3520",
+    "govbr-3.7.0-pattern-global-929a5c7152ee",
+    "govbr-3.7.0-pattern-global-946537b312f2",
+    "govbr-3.7.0-pattern-global-98502b6e413a",
+    "govbr-3.7.0-pattern-global-99d1c869b368",
+    "govbr-3.7.0-pattern-global-9f7a4d80dca6",
+    "govbr-3.7.0-pattern-global-ab496170eab8",
+    "govbr-3.7.0-pattern-global-ae0fae38f2d7",
+    "govbr-3.7.0-pattern-global-bb13fb1b335a",
+    "govbr-3.7.0-pattern-global-c996eb14fd9b",
+    "govbr-3.7.0-pattern-global-ca40f5421fce",
+    "govbr-3.7.0-pattern-global-d874bcdfa8e6",
+    "govbr-3.7.0-pattern-global-dba508fab069",
+    "govbr-3.7.0-pattern-global-e301dcdc4d5a",
+    "govbr-3.7.0-pattern-global-e5a791a60e5b",
+    "govbr-3.7.0-pattern-global-e62121fb86f3",
+    "govbr-3.7.0-pattern-global-eb055aed3bcb",
+    "govbr-3.7.0-pattern-global-f0771eb86c49",
+    "govbr-3.7.0-pattern-global-f4a0aa1ba9c3",
+    "govbr-3.7.0-pattern-global-f70a1327ef18",
+    "govbr-3.7.0-pattern-global-fd2f2ff644f9"
+   ]
+  }
+ },
+ "unclear": [
+  "govbr-3.7.0-accessibility-global-2bc46345aabd",
+  "govbr-3.7.0-accessibility-global-79483401f11b",
+  "govbr-3.7.0-accessibility-global-be1b9be336fd",
+  "govbr-3.7.0-accessibility-global-ff3f12b16304",
+  "govbr-3.7.0-accessibility-menu-88471864d3e4",
+  "govbr-3.7.0-accessibility-table-e532d3d3b288",
+  "govbr-3.7.0-component-button-aa356f51a161",
+  "govbr-3.7.0-component-card-27d2c467f699",
+  "govbr-3.7.0-component-card-2dda2b2f5c57",
+  "govbr-3.7.0-component-card-4d7c0c35a536",
+  "govbr-3.7.0-component-carousel-cce9173f583b",
+  "govbr-3.7.0-component-checkbox-ff168417d00a",
+  "govbr-3.7.0-component-cookiebar-2daf1a91b3a5",
+  "govbr-3.7.0-component-cookiebar-546e1628883d",
+  "govbr-3.7.0-component-input-add7bc9ee7e4",
+  "govbr-3.7.0-component-item-02793133181a",
+  "govbr-3.7.0-component-loading-0d22888f3365",
+  "govbr-3.7.0-component-loading-d7c13ea9d1ec",
+  "govbr-3.7.0-component-menu-116cf74b78b5",
+  "govbr-3.7.0-component-message-a7205c93ff4b",
+  "govbr-3.7.0-component-modal-1d99845bd201",
+  "govbr-3.7.0-component-modal-5a7457827b60",
+  "govbr-3.7.0-component-modal-768e96955933",
+  "govbr-3.7.0-component-modal-8e8689628c0c",
+  "govbr-3.7.0-component-radio-5713395aefd5",
+  "govbr-3.7.0-component-select-e8cdd5447f59",
+  "govbr-3.7.0-component-signin-3a461f3e4a24",
+  "govbr-3.7.0-component-signin-426df2d5406c",
+  "govbr-3.7.0-component-table-ec24917f4c30",
+  "govbr-3.7.0-component-tag-487333e2989b",
+  "govbr-3.7.0-component-tag-78ee2401dfe8",
+  "govbr-3.7.0-component-wizard-01eaf6534be1",
+  "govbr-3.7.0-development-carousel-3457441864d5",
+  "govbr-3.7.0-development-select-198a9bd0c110",
+  "govbr-3.7.0-development-select-4234e1a3a6bf",
+  "govbr-3.7.0-development-select-45cc74e31a78",
+  "govbr-3.7.0-development-select-ac7fa8ef8e80",
+  "govbr-3.7.0-development-signin-34d0d7afc7e9",
+  "govbr-3.7.0-development-signin-355c93bac291",
+  "govbr-3.7.0-foundation-global-164e315b158a",
+  "govbr-3.7.0-foundation-global-1e4631f5ca35",
+  "govbr-3.7.0-foundation-global-2354063569c4",
+  "govbr-3.7.0-foundation-global-2729057a6884",
+  "govbr-3.7.0-foundation-global-3f8a0a689c4f",
+  "govbr-3.7.0-foundation-global-62d6d742115c",
+  "govbr-3.7.0-foundation-global-6528d31819e8",
+  "govbr-3.7.0-foundation-global-6cf9c58cc6b6",
+  "govbr-3.7.0-foundation-global-75d58ccc650c",
+  "govbr-3.7.0-foundation-global-97dad3f0c05a",
+  "govbr-3.7.0-foundation-global-99877a6b3dd4",
+  "govbr-3.7.0-foundation-global-9ed834a493e9",
+  "govbr-3.7.0-foundation-global-d8ffde41804b",
+  "govbr-3.7.0-foundation-global-df2ced45525c",
+  "govbr-3.7.0-foundation-global-e2c92935c052",
+  "govbr-3.7.0-foundation-global-f44385cee299",
+  "govbr-3.7.0-foundation-global-f51444b3820b",
+  "govbr-3.7.0-pattern-global-33e08a3db372",
+  "govbr-3.7.0-pattern-global-3a6215b98fcb",
+  "govbr-3.7.0-pattern-global-5b704e13d02c",
+  "govbr-3.7.0-pattern-global-5e77b95f9c2d",
+  "govbr-3.7.0-pattern-global-ca75967f1ed4",
+  "govbr-3.7.0-pattern-global-d035b0a7d3ea",
+  "govbr-3.7.0-pattern-global-ddc87836a7a1",
+  "govbr-3.7.0-pattern-global-f47e30351255"
+ ],
+ "excluidas_populacao": 823,
+ "excluidas": [
+  {
+   "arquivo": "componentes/step__designer.md",
+   "k": 90
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 90
+  },
+  {
+   "arquivo": "componentes/switch__designer.md",
+   "k": 68
+  },
+  {
+   "arquivo": "componentes/message__designer.md",
+   "k": 88
+  },
+  {
+   "arquivo": "componentes/datetimepicker__designer.md",
+   "k": 40
+  },
+  {
+   "arquivo": "componentes/card__designer.md",
+   "k": 20
+  },
+  {
+   "arquivo": "componentes/radio__designer.md",
+   "k": 63
+  },
+  {
+   "arquivo": "componentes/textarea__designer.md",
+   "k": 23
+  },
+  {
+   "arquivo": "padroes/design/emptystates.md",
+   "k": 83
+  },
+  {
+   "arquivo": "emag/emag-3.1-recomendacoes-1.1-a-6.8.md",
+   "k": 53
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 275
+  },
+  {
+   "arquivo": "fundamentos-visuais/estados.md",
+   "k": 193
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 137
+  },
+  {
+   "arquivo": "padroes/writing/microcopy.md",
+   "k": 137
+  },
+  {
+   "arquivo": "padroes/design/navegacao.md",
+   "k": 201
+  },
+  {
+   "arquivo": "componentes/notification__designer.md",
+   "k": 56
+  },
+  {
+   "arquivo": "emag/emag-3.1-recomendacoes-1.1-a-6.8.md",
+   "k": 692
+  },
+  {
+   "arquivo": "componentes/step__designer.md",
+   "k": 218
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 256
+  },
+  {
+   "arquivo": "fundamentos-visuais/estados.md",
+   "k": 448
+  },
+  {
+   "arquivo": "fundamentos-visuais/grid.md",
+   "k": 169
+  },
+  {
+   "arquivo": "padroes/writing/microcopy.md",
+   "k": 210
+  },
+  {
+   "arquivo": "fundamentos-visuais/cores.md",
+   "k": 63
+  },
+  {
+   "arquivo": "componentes/button__designer.md",
+   "k": 111
+  },
+  {
+   "arquivo": "padroes/writing/microcopy.md",
+   "k": 130
+  },
+  {
+   "arquivo": "acessibilidade.md",
+   "k": 89
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 170
+  },
+  {
+   "arquivo": "componentes/button__designer.md",
+   "k": 72
+  },
+  {
+   "arquivo": "padroes/design/emptystates.md",
+   "k": 117
+  },
+  {
+   "arquivo": "componentes/radio__designer.md",
+   "k": 71
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 114
+  },
+  {
+   "arquivo": "guias/acessibilidade-html.md",
+   "k": 23
+  },
+  {
+   "arquivo": "componentes/list__designer.md",
+   "k": 41
+  },
+  {
+   "arquivo": "padroes/writing/principios-writing.md",
+   "k": 39
+  },
+  {
+   "arquivo": "componentes/tab__designer.md",
+   "k": 28
+  },
+  {
+   "arquivo": "padroes/writing/microcopy.md",
+   "k": 126
+  },
+  {
+   "arquivo": "componentes/tooltip__desenvolvedor.md",
+   "k": 19
+  },
+  {
+   "arquivo": "componentes/textarea__designer.md",
+   "k": 39
+  },
+  {
+   "arquivo": "componentes/signin__designer.md",
+   "k": 13
+  },
+  {
+   "arquivo": "componentes/pagination__designer.md",
+   "k": 76
+  }
+ ]
+}

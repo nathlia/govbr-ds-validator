@@ -323,6 +323,22 @@ function checkRule(finding: Finding): RuleCheck {
           `'${id}' é evidência de implementação (force=example), não uma regra normativa. Cite uma regra required/prohibited/recommended do get_ds_rules.`
         );
       }
+      // 2.12.0: id legado da versão anterior. Existe (a âncora não some), mas não sustenta achado
+      // sozinho: descartado → aplicabilidade desconhecida; substituído → vale o que a sucessora vale.
+      const legacy = membership.entry?.legacy;
+      if (legacy?.class === "dropped") {
+        check.applicability = "unknown";
+        check.notes.push(
+          `'${id}' é id legado da versão ${legacy.fromVersion}: regra sem texto na fonte oficial coletada. Cite uma regra listada pelo get_ds_rules.`
+        );
+      } else if (legacy?.class === "superseded") {
+        const successors = legacy.supersededBy.map((s) => getRuleById(s)).filter((r): r is NonNullable<typeof r> => Boolean(r));
+        check.applicability = successors.length === 0 ? "unknown" : successors.some((r) => r.force !== "example") ? "pass" : "fail";
+        check.notes.push(
+          `'${id}' é id legado da versão ${legacy.fromVersion}, substituído por ${legacy.supersededBy.join(", ")}; ` +
+            `aplicabilidade conferida pela(s) sucessora(s) (${successors.map((r) => r.force).join(", ") || "nenhuma encontrada"}). Prefira citar o id novo.`
+        );
+      }
       break;
     }
     case "emag":

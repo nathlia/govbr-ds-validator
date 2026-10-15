@@ -1,4 +1,6 @@
 {
+  "activeVersion": "3.7.0-literal-2026-10-15",
+  "activeVersionNote": "Since validator 2.12.0 the oracle serves versions/3.7.0-literal-2026-10-15/ (see its own manifest.json, which is the honest account of that version). Everything below this line is the unchanged record of version 3.7.0 (batch 6, 2026-07-11). Read its \"complete\": true as \"batch 6 finished\", not as coverage: it verified 8 component pages, most component tabs stayed queued, and many of its gov.br DS rule texts were search-index excerpts rather than literal page text (knownLimitations; versions/3.7.0-literal-2026-10-15/reports/regras-antigas.md). GOVBR_KB_VERSION=3.7.0 serves that version again.",
   "designSystemVersion": "3.7.0",
   "documentationStatus": "stable",
   "extractionTimestamp": "2026-07-11T07:06:33+00:00",

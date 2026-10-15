@@ -49,6 +49,8 @@ import {
   exampleDefectWarnings,
   pageCategoryPointers,
   sourcePageNotes,
+  summarizeGroups,
+  GLOBAL_GROUP,
   PAGE_REGIONS,
   type ContextCandidate,
 } from "./data/applicability.js";
@@ -166,6 +168,7 @@ function briefRule(r: KnowledgeRule) {
     component: r.component ?? null,
     validationStrategy: r.validationStrategy,
     caveats: inferenceCaveats(r),
+    ...(r.legacy ? { legacy: r.legacy } : {}),
   };
 }
 
@@ -211,6 +214,7 @@ function projectRule(r: KnowledgeRule) {
     sourceUrl: r.source.url,
     notes: r.notes ?? null,
     caveats: inferenceCaveats(r),
+    ...(r.legacy ? { legacy: r.legacy } : {}),
   };
 }
 
@@ -344,13 +348,34 @@ function contextResponse(
   const pointers = pageCategoryPointers(normalized.terms);
   const pageNotes = sourcePageNotes(candidates);
   const head = {
-    meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+    meta: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules },
     retrieval: "direct" as const,
     note: CONTEXT_NOTE,
     context: normalized,
     total: candidates.length,
     detail: paging.detail,
   };
+  // 2.12.0: na primeira página, quantas candidatas cada grupo tem e a chamada que pagina um grupo só
+  // (as candidatas se alternam entre grupos; quem quer um componente inteiro pede só ele).
+  const filterArgs = Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined));
+  const groups = firstPage
+    ? {
+        groups: {
+          note:
+            "Candidatas por grupo (componente observado ou global). A lista alterna os grupos, obrigações " +
+            "primeiro; para paginar um grupo só, use a chamada em next.",
+          items: summarizeGroups(candidates).map((g) => ({
+            ...g,
+            next:
+              g.group !== GLOBAL_GROUP
+                ? { tool: "get_ds_rules", arguments: { ...filterArgs, context: { components: [g.group] } } }
+                : normalized.terms.length
+                  ? { tool: "get_ds_rules", arguments: { ...filterArgs, context: { terms: normalized.terms } } }
+                  : null,
+          })),
+        },
+      }
+    : {};
   // Contexto fixo, só na primeira página para não repetir a cada continuação.
   const tail = firstPage
     ? {
@@ -393,9 +418,9 @@ function contextResponse(
     : {};
   // O orçamento vale para a resposta inteira: as candidatas ficam com o que sobra do fixo (~400 de folga
   // para os campos de paginação), e sempre ao menos uma para a continuação andar.
-  const fixed = JSON.stringify({ ...head, ...tail }, null, 2).length + 400;
+  const fixed = JSON.stringify({ ...head, ...groups, ...tail }, null, 2).length + 400;
   const page = contextPage(candidates, paging, Math.max(CONTEXT_MAX_CHARS - fixed, 0));
-  return { ...head, ...page, ...tail };
+  return { ...head, ...groups, ...page, ...tail };
 }
 
 /**
@@ -413,6 +438,8 @@ function normativeContextFor(componentsFound: string[]) {
     const kind = c.reasons[0].kind;
     byReason[kind] = (byReason[kind] ?? 0) + 1;
   }
+  // 2.12.0: contagem por componente, para o agente ver o tamanho de cada um antes de pedir.
+  const byComponent = Object.fromEntries(summarizeGroups(candidates).map((g) => [g.group, g.total]));
   return {
     normativeContext: {
       retrieval: "automatic" as const,
@@ -420,8 +447,12 @@ function normativeContextFor(componentsFound: string[]) {
       components: normalized.components,
       candidates: candidates.length,
       byReason,
+      byComponent,
       next: { tool: "get_ds_rules", arguments: { context: { components: normalized.components } } },
-      note: "Regras candidatas a investigar para os componentes encontrados — pertinência, não defeito nem verificação.",
+      note:
+        "Regras candidatas a investigar para os componentes encontrados — pertinência, não defeito nem verificação. " +
+        "A resposta alterna os componentes (obrigações primeiro); byComponent dá o tamanho de cada um, e " +
+        "context.components com um componente só pagina apenas ele.",
     },
   };
 }
@@ -618,7 +649,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // get_page_rules e get_design_tokens já usavam — o get_ds_rules é que destoava (D-26).
       if (semFiltro) {
         return json({
-          meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+          meta: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules },
           note:
             "Índice, não listagem: chamar sem filtro devolveria a base normativa inteira. Estreite por " +
             "component, category, force, validationStrategy ou query — ou peça uma regra por id. " +
@@ -634,7 +665,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const project = detail === "full" ? projectRule : briefRule;
 
       const response: Record<string, unknown> = {
-        meta: { dsVersion: kb.meta.dsVersion, totalNormative: kb.meta.normativeRules },
+        meta: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules },
         total: rules.length,
         offset: skip,
         count: page.length,

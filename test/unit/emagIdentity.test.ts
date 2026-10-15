@@ -34,6 +34,9 @@ describe("identidade das recomendações e-MAG servidas (D-14)", () => {
   const kb = filterRules({ standard: "eMAG" });
   const porRecomendacao = new Map<string, string>();
   for (const regra of kb) {
+    // 2.12.0: a versão literal tem, além do título de cada recomendação, as frases do corpo dela
+    // (mesma emagReference). A identidade mora no título.
+    if (!/^Recomendação \d/u.test(regra.title)) continue;
     for (const ref of regra.emagReferences ?? []) {
       porRecomendacao.set(String(ref), semPrefixo(regra.title));
     }

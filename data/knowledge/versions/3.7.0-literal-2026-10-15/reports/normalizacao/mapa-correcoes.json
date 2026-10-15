@@ -1,0 +1,417 @@
+{
+ "gerado": "2026-10-15",
+ "mapa": [
+  {
+   "antigo": "govbr-3.7.0-development-accordion-08b7edf4291a",
+   "novos": [
+    "govbr-3.7.0-development-accordion-54d50ff04589",
+    "govbr-3.7.0-development-accordion-10bc63ecbc3e"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #37: partido (duas obrigações)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-button-a968663df02d",
+   "novos": [
+    "govbr-3.7.0-component-button-5d9dcfcfcd42",
+    "govbr-3.7.0-component-button-3d487fe851e3",
+    "govbr-3.7.0-component-button-311717f4d578",
+    "govbr-3.7.0-component-button-0b476a335dfb",
+    "govbr-3.7.0-component-button-8cbb4165301f",
+    "govbr-3.7.0-component-button-349a317767ec"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-card-9b4da88cf137",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "definicao: auditoria F5 #64: 'pode ficar sozinho' descreve o princípio 'Independente' (capacidade), não permissão"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-carousel-dd1a1e679139",
+   "novos": [
+    "govbr-3.7.0-component-carousel-cc08a3cbce6c",
+    "govbr-3.7.0-component-carousel-d6e365937554"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 72; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-carousel-7e45f6ffc0b2",
+   "novos": [
+    "govbr-3.7.0-component-carousel-4ef00f5005cb",
+    "govbr-3.7.0-component-carousel-d80379f74115"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 118; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-cookiebar-10ec0a781fc2",
+   "novos": [
+    "govbr-3.7.0-development-cookiebar-820df8c06b92",
+    "govbr-3.7.0-development-cookiebar-c1e32e499f71",
+    "govbr-3.7.0-development-cookiebar-83000915a32b"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-cookiebar-546e1628883d",
+   "novos": [
+    "govbr-3.7.0-component-cookiebar-ee172c41f28c",
+    "govbr-3.7.0-component-cookiebar-afa2d544485e"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #305: partido; 'só é apresentado no primeiro acesso'"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-input-7064270ac354",
+   "novos": [
+    "govbr-3.7.0-component-input-75c817568411",
+    "govbr-3.7.0-component-input-6779b8895d53",
+    "govbr-3.7.0-component-input-43f21d3dd06e"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-input-d6a461caf234",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "definicao: auditoria F5 #179: enumera os tipos de mensagem"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-list-56420748318f",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "introducao: auditoria F5 #100: introdução cujos itens já são regras próprias"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-menu-dd90ffdc79e3",
+   "novos": [
+    "govbr-3.7.0-accessibility-menu-07a8bff0247e"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #15: frase inteira; a alternativa (setas) faz parte da obrigação de navegação"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-menu-0f05424ac076",
+   "novos": [
+    "govbr-3.7.0-accessibility-menu-07a8bff0247e"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #15: frase inteira; a alternativa (setas) faz parte da obrigação de navegação"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-message-05a977682cce",
+   "novos": [
+    "govbr-3.7.0-component-message-2b7f72a995d3",
+    "govbr-3.7.0-component-message-10f5ff0620e6"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 40; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-477e4e05e825",
+   "novos": [
+    "govbr-3.7.0-component-pagination-d0371cc63b91",
+    "govbr-3.7.0-component-pagination-faab85f049c4"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-58d0c552c0f9",
+   "novos": [
+    "govbr-3.7.0-component-pagination-ca0483f063f2"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #136: frase inteira (o fragmento começava em 'que'); o limite de 4 itens é padrão ajustável (exceção)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-a1f8c3810cfd",
+   "novos": [
+    "govbr-3.7.0-component-pagination-ca0483f063f2"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #136: frase inteira (o fragmento começava em 'que'); o limite de 4 itens é padrão ajustável (exceção)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-28a00cfa8664",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "repetida: auditoria F5 #136: incorporada como exceção (exceptions) da regra da frase 33"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-28a00cfa8664-2",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "repetida: auditoria F5: incorporada como exceção (exceptions) da regra da frase 50"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-scrim-1dc3f912aaca",
+   "novos": [
+    "govbr-3.7.0-development-scrim-dbd72cb87c21"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): tipos disjuntivos — trecho estendido ao fim da lista; sujeito: a classe br-scrim; auditoria F2 (fragmento): contexto literal da mesma frase"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-signin-355c93bac291",
+   "novos": [
+    "govbr-3.7.0-development-signin-2f78e239e71d"
+   ],
+   "tipo": "F4",
+   "motivo": "auditoria F4 (linha de tabela sob título 'obrigatórias'): obrigação disjuntiva — uma das ênfases primary ou secondary; as duas linhas numa só regra"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-signin-34d0d7afc7e9",
+   "novos": [
+    "govbr-3.7.0-development-signin-2f78e239e71d"
+   ],
+   "tipo": "F4",
+   "motivo": "auditoria F4 (linha de tabela sob título 'obrigatórias'): obrigação disjuntiva — uma das ênfases primary ou secondary; as duas linhas numa só regra"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-step-f0cd60f2b76e",
+   "novos": [
+    "govbr-3.7.0-component-step-4e57a8c642d1",
+    "govbr-3.7.0-component-step-e76ec4d72620",
+    "govbr-3.7.0-component-step-fe42f403b832"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 5; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-step-ba217260a936",
+   "novos": [
+    "govbr-3.7.0-component-step-22ddef1501cc",
+    "govbr-3.7.0-component-step-6eae53e95696"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 9; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-switch-258c85f4f6f6",
+   "novos": [
+    "govbr-3.7.0-development-switch-cddce4dcdc4c",
+    "govbr-3.7.0-development-switch-4d14eb6aa333"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 19; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tab-027d58d95589",
+   "novos": [
+    "govbr-3.7.0-component-tab-96624429e0be",
+    "govbr-3.7.0-component-tab-3bdaf70a6db0"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-table-e532d3d3b288",
+   "novos": [
+    "govbr-3.7.0-accessibility-table-10a5b65d738a",
+    "govbr-3.7.0-accessibility-table-54301649dd23",
+    "govbr-3.7.0-accessibility-table-d39cefd3acd0"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #297: partido em três; força do enunciado 'É importante que'"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-textarea-ee0d3cec50f1",
+   "novos": [
+    "govbr-3.7.0-component-textarea-6dab1ce2486d",
+    "govbr-3.7.0-component-textarea-79acea449763"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-textarea-f66eafd18059",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "definicao: auditoria F5: mesmo texto do #179 (enumera os tipos de mensagem)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tooltip-b23d24678ed4",
+   "novos": [
+    "govbr-3.7.0-component-tooltip-bc6cc401dc9a",
+    "govbr-3.7.0-component-tooltip-9524d883e717"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 4; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tooltip-d0e9a9707161",
+   "novos": [
+    "govbr-3.7.0-component-tooltip-85757a53fd4e",
+    "govbr-3.7.0-component-tooltip-7fa075c064c2",
+    "govbr-3.7.0-component-tooltip-e96c4eb1bbed"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #186: partido em três qualidades verificáveis à parte"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-6f1e9a4942b6",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-5f3ebabe87e6"
+   ],
+   "tipo": "F5",
+   "motivo": "auditoria F5 #199: frase inteira (o fragmento 'mas não deverá ser removida.' não dizia o quê)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-eb68dbaf5e38",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-0e9cecc8b4d7"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): itens disjuntivos/condições da mesma regra — trecho estendido do enunciado ao fim da lista"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-179a46c3ce36",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-5d095dba39de",
+    "govbr-3.7.0-accessibility-global-2c7e66263fa7",
+    "govbr-3.7.0-accessibility-global-157e9d4975d8",
+    "govbr-3.7.0-accessibility-global-117f5a178986"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 762; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-0229280d71a2",
+   "novos": [
+    "govbr-3.7.0-foundation-global-3e8a4fa12d6c",
+    "govbr-3.7.0-foundation-global-97df922ceb7d"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 60; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-6c6d4ad36964",
+   "novos": [
+    "govbr-3.7.0-foundation-global-c9bfee355c4d",
+    "govbr-3.7.0-foundation-global-984a949f9b7d",
+    "govbr-3.7.0-foundation-global-4736725185ed"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 3; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-ced3fae9a116",
+   "novos": [
+    "govbr-3.7.0-foundation-global-bff0284d4c01",
+    "govbr-3.7.0-foundation-global-c0c941615d14",
+    "govbr-3.7.0-foundation-global-5215b606cbdb",
+    "govbr-3.7.0-foundation-global-a70a5abd4484",
+    "govbr-3.7.0-foundation-global-397cd99e6851",
+    "govbr-3.7.0-foundation-global-3bf4583327ab"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 33; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-807f11b05522",
+   "novos": [
+    "govbr-3.7.0-foundation-global-b47e5122b071",
+    "govbr-3.7.0-foundation-global-3ce5c64ba74f"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 222; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-118987f419a3",
+   "novos": [
+    "govbr-3.7.0-foundation-global-19fe027ffdd8",
+    "govbr-3.7.0-foundation-global-f9ae0a0a96bb",
+    "govbr-3.7.0-foundation-global-796412737a0d",
+    "govbr-3.7.0-foundation-global-18fdaca382b7",
+    "govbr-3.7.0-foundation-global-ced823e7339b",
+    "govbr-3.7.0-foundation-global-837c59d3da82"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 288; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-2b0d66865c3b",
+   "novos": [
+    "govbr-3.7.0-foundation-global-e3cab0e59add",
+    "govbr-3.7.0-foundation-global-e9da06d89083"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 34; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-84ea16a5de50",
+   "novos": [
+    "govbr-3.7.0-foundation-global-54f844c4f1b2"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): itens disjuntivos/condições da mesma regra — trecho estendido do enunciado ao fim da lista"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-69cf492ce51c",
+   "novos": [
+    "govbr-3.7.0-pattern-global-975c121603a9",
+    "govbr-3.7.0-pattern-global-cee5336292df",
+    "govbr-3.7.0-pattern-global-af0da17e3ccf"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 6; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-b6da643f492e",
+   "novos": [
+    "govbr-3.7.0-pattern-global-5ab995cef48b",
+    "govbr-3.7.0-pattern-global-5bf4fbccc65c",
+    "govbr-3.7.0-pattern-global-da3e94ac011b",
+    "govbr-3.7.0-pattern-global-485df06fb112"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 80; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-ca40f5421fce",
+   "novos": [
+    "govbr-3.7.0-pattern-global-fd245a917516",
+    "govbr-3.7.0-pattern-global-c61109c9f6d7",
+    "govbr-3.7.0-pattern-global-0eeab9a55577",
+    "govbr-3.7.0-pattern-global-bd6be7b604f5",
+    "govbr-3.7.0-pattern-global-818454634cc9"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 101; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-1806a99b61fe",
+   "novos": [],
+   "tipo": "F5",
+   "motivo": "info: auditoria F5 #249: introduz as subseções seguintes; não verificável"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-ab496170eab8",
+   "novos": [
+    "govbr-3.7.0-pattern-global-4f452d7cfe0f",
+    "govbr-3.7.0-pattern-global-701773fe8dcb",
+    "govbr-3.7.0-pattern-global-ef1de98652d3",
+    "govbr-3.7.0-pattern-global-2dfbcf0b9d35"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 151; força do enunciado"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-314ae62dfbad",
+   "novos": [
+    "govbr-3.7.0-pattern-global-9eee923eb418",
+    "govbr-3.7.0-pattern-global-caefb17a218b",
+    "govbr-3.7.0-pattern-global-ce2d87cebb39"
+   ],
+   "tipo": "F1",
+   "motivo": "auditoria F1 (introdução de lista): item da lista introduzida pela frase 192; força do enunciado"
+  }
+ ]
+}

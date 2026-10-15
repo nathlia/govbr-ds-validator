@@ -1,0 +1,14 @@
+{
+  "govbr_ds_version": "3.7.0",
+  "data_acesso": "2026-10-15",
+  "componentes": 36,
+  "abas_por_componente": 3,
+  "paginas_adicionais_govbr_ds": 17,
+  "paginas_emag": 1,
+  "total_markdown": 126,
+  "refs": {
+    "design": "107c64a4ca016b0e37e4d9d8d74de3377d3b8293",
+    "core": "20173bf222dbdc54de2b1c1df278c7b6f1935384",
+    "site_content": "953ea2f3bc1c7c849915317e523cd2fc499e3db1"
+  }
+}

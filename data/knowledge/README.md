@@ -1,5 +1,11 @@
 # DS Knowledge Base (`data/knowledge/`)
 
+> **Since validator 2.12.0 the served version is `versions/3.7.0-literal-2026-10-15/`** (literal
+> corpus, D-119) — see its `manifest.json` and `reports/regras-antigas.md`, and the "Knowledge
+> versions" section of the repository README. `manifest.json`'s `activeVersion` selects it;
+> everything below describes version **3.7.0**, which stays intact and can be served again with
+> `GOVBR_KB_VERSION=3.7.0`.
+
 The finalized knowledge base of the **gov.br Design System 3.7.0** and **e-MAG 3.1**, promoted
 into this repo per decision **D-11** (`thesis-workspace/tcc2-decisions-log.md`). It is the
 oracle's authoritative rule store: `versions/3.7.0/normalized/rules.jsonl` holds **186 atomic

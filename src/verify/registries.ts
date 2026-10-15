@@ -101,6 +101,15 @@ export function kbMembership(id: string): Membership<KnowledgeRule> {
       detail: `Regra '${id}' não existe no knowledge base ${getKnowledgeBase().meta.dsVersion}. Use get_ds_rules para obter ids válidos.`,
     };
   }
+  if (entry.legacy) {
+    const novos = entry.legacy.supersededBy.length ? ` Substituída por ${entry.legacy.supersededBy.join(", ")}.` : "";
+    return {
+      status: "member",
+      normalizedId: id,
+      entry,
+      detail: `KB ${entry.dsVersion} ${id} — id legado da versão ${entry.legacy.fromVersion} (${entry.legacy.class}), fora das listagens da versão servida.${novos}`,
+    };
+  }
   return { status: "member", normalizedId: id, entry, detail: `KB ${entry.dsVersion} ${id}.` };
 }
 
@@ -152,7 +161,7 @@ export function registryVersions(): Record<string, string> {
   return {
     wcag: `${wcagMeta.standard} · ${wcagMeta.inWcag22} critérios · ${wcagMeta.source} (${wcagMeta.retrievedAt})`,
     emag: `e-MAG 3.1 · ${emagCount()} recomendações`,
-    kb: `gov.br DS KB ${kb.dsVersion} · ${kb.totalRules} registros (${kb.extractionTimestamp})`,
+    kb: `gov.br DS KB ${kb.dsVersion} [${kb.knowledgeVersion}] · ${kb.totalRules} registros (${kb.extractionTimestamp})`,
     components: `@govbr-ds/core ${specs.version} · ${specs.totalComponents} componentes`,
   };
 }

@@ -1,0 +1,1481 @@
+{
+ "totais": {
+  "sem correspondente literal": 123,
+  "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente": 9,
+  "mesmo id (texto idêntico)": 52,
+  "texto antigo presente no corpus, mas não virou regra nova": 2
+ },
+ "mapa": [
+  {
+   "antigo": "govbr-3.7.0-accessibility-breadcrumb-992f162ca821",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os elementos interativos do breadcrumb devem ser acessados via navegação por teclado. Utilize a tecla Tab para avançar na navegação.",
+   "componente": "breadcrumb",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-button-efd2d9e7c3c6",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab.",
+   "componente": "button",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-button-41d9f439e103",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "É recomendado que os botões possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+   "componente": "button",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-card-e7fa6a659cdf",
+   "novos": [
+    "govbr-3.7.0-accessibility-card-43bf40a0a40d"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Ofereça aos usuários a opção de navegação por meio do teclado. Os usuários devem poder navegar usando a tecla Tab.",
+   "componente": "card",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-input-6fe41e804955",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os inputs ou input Text devem ser acessíveis por meio de navegação via teclado, por meio da tecla Tab, onde cada input deve ser um ponto de foco na ordem da navegação.",
+   "componente": "input",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-list-03813ffeeb42",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os usuários devem poder navegar pelo list através do teclado, usando as teclas Tab e Shift + Tab.",
+   "componente": "list",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-modal-64b84991229c",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os usuários devem ser capazes de navegar facilmente pela janela modal, por meio da tecla Tab ou Shift + Tab para retroceder na navegação.",
+   "componente": "modal",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-modal-31c45e5f6081",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A janela modal pode ser rotulada pelo atributo aria-label, usando a mesma string do título.",
+   "componente": "modal",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-modal-65446caf1efc",
+   "novos": [
+    "govbr-3.7.0-accessibility-modal-7a2bf1545b80"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Ao utilizar o recurso de arial-modal como true, pode impedir que os usuários de tecnologias assistivas sejam impedidos de acessar o conteúdo de fora da modal, quando esta estiver aberta. Portanto, faç",
+   "componente": "modal",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-notification-2bae7736ddda",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os usuários devem conseguir acessar o painel de notificações usando a tecla Tab e Shift + Tab para avançar e retroceder na navegação.",
+   "componente": "notification",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-signin-a68a86f45877",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "É recomendado que os botões sign-in possam ser acessados via navegação por teclado através da tecla Tab e possam ser acionados por meio da tecla Space ou Enter.",
+   "componente": "signin",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-skiplink-5aae226482e5",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Este componente deve estar logo após a tag body (deve ser a primeira coisa que um usuário de teclado acessaria em sua página).",
+   "componente": "skiplink",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-tab-f1807d71dc5f",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Certifique-se de que as tabs possam ser acessadas e navegadas pelo teclado, sem a ajuda do mouse.",
+   "componente": "tab",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-avatar-81c7524692f0",
+   "novos": [
+    "govbr-3.7.0-component-avatar-723660559374"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Superfície circular (Obrigatório). A representação do usuário deve estar contida em uma superfície circular.",
+   "componente": "avatar",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-button-4d7b5f978df1",
+   "novos": [
+    "govbr-3.7.0-component-button-7ef75d42ac65"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "O rótulo é um elemento obrigatório. A exceção ocorre na versão tipo circular uma vez que não existe rótulo.",
+   "componente": "button",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-card-a102d36a696a",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Cards são cartões (ou superfícies) que contêm conteúdo e ações diversas sobre um único assunto (ou tópico).",
+   "componente": "card",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-carousel-7b664374a2b3",
+   "novos": [
+    "govbr-3.7.0-component-carousel-7b664374a2b3"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-carousel-4c92b788906b",
+   "novos": [
+    "govbr-3.7.0-component-carousel-4c92b788906b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-checkbox-6923ae0af84f",
+   "novos": [
+    "govbr-3.7.0-component-checkbox-6923ae0af84f"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-input-3788829b08fe",
+   "novos": [
+    "govbr-3.7.0-component-input-1aec5265dab8"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Por padrão é utilizado um Button de enfase terciária do tipo circular sempre com densidade alta, e o ícone deve representar a ação a ser realizada na interação.",
+   "componente": "input",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-list-8f67e7cc7677",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Não é permitido variar o espaçamento dos itens dentro de uma mesma list.",
+   "componente": "list",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-magicbutton-d421fb28a955",
+   "novos": [
+    "govbr-3.7.0-component-magicbutton-d2f5d39b5ae0"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Atenção: tenha em mente que o button pode substituir o magic button em todos os contextos porém, o contrário não é permitido.",
+   "componente": "magicbutton",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-message-088613b94e1c",
+   "novos": [
+    "govbr-3.7.0-component-message-088613b94e1c"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-message-188aad85588b",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Deve-se evitar o uso de múltiplas Mensagens do Tipo Padrão.",
+   "componente": "message",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-message-66b01a712e67",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os ícones de função semântica devem ser posicionados à esquerda na Superfície do Message, enquanto o Botão Fechar, deve ser posicionado no topo e à direita.",
+   "componente": "message",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-modal-091e0e012f86",
+   "novos": [
+    "govbr-3.7.0-component-modal-5451869dfa4d"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "É recomendado que em uma modal contenha no máximo dois botões.",
+   "componente": "modal",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-notification-a77199b18a54",
+   "novos": [
+    "govbr-3.7.0-component-notification-02aabe3741d7"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "O agrupamento deve ser classificado de forma cronológica para que o usuário tenha uma melhor organização temporal do conteúdo.",
+   "componente": "notification",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-scrim-d5ba51dda2b0",
+   "novos": [
+    "govbr-3.7.0-component-scrim-d5ba51dda2b0",
+    "govbr-3.7.0-component-scrim-4976b943b512"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-signin-837c5ed4fe6a",
+   "novos": [
+    "govbr-3.7.0-component-signin-3a461f3e4a24"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "Deve-se evitar o uso excessivo de palavras no rotulo.",
+   "componente": "signin",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-signin-2752fd23bbe8",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Nunca utilizar quebra de linhas nos rótulos do sign-in.",
+   "componente": "signin",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-table-7c605ca2f85e",
+   "novos": [
+    "govbr-3.7.0-component-table-7c605ca2f85e"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-table-88941e76c77b",
+   "novos": [
+    "govbr-3.7.0-component-table-88941e76c77b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-table-8b8d4b403cb9",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Recomendamos a utilização de até 4 ícones dispostos lado a lado na barra de título. Caso seja necessário utilizar uma quantidade maior, deve-se optar pelo uso do menu flutuante, que será acessado pelo",
+   "componente": "table",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tag-7d70c8be6a0c",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Atenção: em caso de números com mais de três dígitos é recomendado o uso de tooltip para especificar a quantidade exata do valor.",
+   "componente": "tag",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tooltip-c028ba432407",
+   "novos": [
+    "govbr-3.7.0-component-tooltip-7fa075c064c2"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O texto do tooltip deve ser curto e ir direto ao ponto, deve ser informativo e não enrolado e deve ser orientado à ação.",
+   "componente": "tooltip",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tooltip-6cc61d2b3460",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Use tooltips somente quando necessário pois o uso excessivo deste recurso pode ser irritante para a experiência do usuário.",
+   "componente": "tooltip",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-0b73051d7063",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Nas versões mais recentes, recomendamos evitar o uso desse CDN e priorizar a instalação via npm ou fazer o download dos arquivos localmente para o seu projeto.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-406774b1cb87",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A fonte oficial utilizada pelo Governo Federal é a Rawline.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-c6889731433a",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Use quando a Rawline não estiver disponível.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-0578aa6c2828",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O espaçamento das colunas é de 40 pixels.",
+   "componente": null,
+   "categoria": "foundation"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-bb0c6795e3f9",
+   "novos": [],
+   "situacao": "texto antigo presente no corpus, mas não virou regra nova",
+   "originalTextAntigo": "O padrão é que em uma janela com visualização de 96 dpi tenha a fonte base padrão de 16px, mas dificilmente essa regra se aplique em todos os casos.",
+   "componente": null,
+   "categoria": "foundation"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-9ef740ba1f28",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Recomenda-se o uso da grid fixa.",
+   "componente": null,
+   "categoria": "foundation"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-a239799cdffd",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O tamanho base para os ícones possui o valor de corpo 16px.",
+   "componente": null,
+   "categoria": "foundation"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-21b1a2733f7b",
+   "novos": [
+    "govbr-3.7.0-foundation-global-21b1a2733f7b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-foundation-global-1c0146e93d2e",
+   "novos": [
+    "govbr-3.7.0-foundation-global-1c0146e93d2e"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-page-global-f6e03bce515b",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O Padrão Digital de Governo apresenta os padrões de interface que devem ser seguidos por designers e desenvolvedores para garantir a experiência única na interação com os sistemas interativos.",
+   "componente": null,
+   "categoria": "page"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-7e6420514860",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-7e6420514860"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-1cb2c878824b",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-1cb2c878824b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-3ac0aaa53900",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-3ac0aaa53900"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-79db88c7f55d",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-79db88c7f55d"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-7d2b85f81c52",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-7d2b85f81c52"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-206c9fa6ae11",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-206c9fa6ae11"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cf61b3eb3c71",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-cf61b3eb3c71"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-bfba9c1f5026",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-bfba9c1f5026"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-5be1f553cc03",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-5be1f553cc03"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-e6fd5e1247de",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Recomendação 2.1 – Disponibilizar todas as funções da página via teclado",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-f639993e9416",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-f639993e9416"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cd5de9a6f164",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Recomendação 2.3 – Não criar páginas com atualização automática periódica",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-d6e816588306",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-d6e816588306"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-5d366ef29b04",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-5d366ef29b04"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-8faca42c2c9a",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-8faca42c2c9a"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-33b13d9fa271",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-33b13d9fa271"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-698e0a4783a9",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-698e0a4783a9"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-1ccbc61dddbc",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-1ccbc61dddbc"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-fb83eab75d8d",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-fb83eab75d8d"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-20c08f26d8e8",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-20c08f26d8e8"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-1db13803cbf8",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-1db13803cbf8"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-5d5a5f21d94b",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-5d5a5f21d94b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-75c11ccac582",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-75c11ccac582"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cdfbb56eebc5",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-cdfbb56eebc5"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-3a3e47354c53",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-3a3e47354c53"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-609e3494150c",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-609e3494150c"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-3a57435c3b32",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-3a57435c3b32"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cd705eb5da2a",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-cd705eb5da2a"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cb09bc0c77c0",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Recomendação 4.1 – Oferecer contraste mínimo entre plano de fundo e primeiro plano",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-c2f94bdc17ce",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-c2f94bdc17ce"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-d9c42f188e2c",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-d9c42f188e2c"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-21fbcc2fe37b",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-21fbcc2fe37b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-6c86b93df639",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-6c86b93df639"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-dc45b57b8349",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-dc45b57b8349"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-8f439a3c078c",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-8f439a3c078c"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-56cbcba602ce",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-56cbcba602ce"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-6ea7ecc60c01",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-6ea7ecc60c01"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-dafac812b10b",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-dafac812b10b"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-b95c42b61ed3",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-b95c42b61ed3"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-e101928665cc",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-e101928665cc"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-de1efebaf255",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-de1efebaf255"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-01b1806c30e9",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-01b1806c30e9"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cc837bbaf713",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-cc837bbaf713"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-11ffc5c577f6",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-11ffc5c577f6"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-a8f7ce66b1c4",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-a8f7ce66b1c4"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-e038367bd7d6",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os autores precisam associar elementos no documento a um role WAI-ARIA e aos states e properties apropriados.",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-695e4379e23f",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os softwares avaliadores, mesmo quando não encontram erros, não podem garantir a qualidade e a compreensão do conteúdo.",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-1c3bd2a1c1a7",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "É possível utilizar o componente em dispositivos móveis?",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-41850b4791b8",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Foi possível utilizar o componente apenas com o teclado?",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-b5fad7ce076d",
+   "novos": [],
+   "situacao": "texto antigo presente no corpus, mas não virou regra nova",
+   "originalTextAntigo": "Os leitores de tela usam os labels para informar ao usuário sobre o campo do formulário.",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-cb56ad444da2",
+   "novos": [
+    "govbr-3.7.0-accessibility-global-67a136404372"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "Os elementos devem ser apresentados usando uma ordem compreensível.",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-global-2f22b7245ef9",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Cada elemento deve ser utilizado de acordo com seu significado.",
+   "componente": null,
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-accessibility-divider-30bbcbf3a17c",
+   "novos": [
+    "govbr-3.7.0-accessibility-divider-4fe076bfdc93"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Por se tratar de um elemento decorativo, o divider deve ser ignorado pelos leitores de tela e o foco não deve passar por ele.",
+   "componente": "divider",
+   "categoria": "accessibility"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-global-e30aab6e9a68",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A anatomia do componente segue exatamente o que está previsto na diretriz de Design?",
+   "componente": null,
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-accordion-bf7c66e06aa4",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de accordion no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-accordion.",
+   "componente": "accordion",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-avatar-20abe86bec8c",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de avatar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-avatar.",
+   "componente": "avatar",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-breadcrumb-0dd1577ef844",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de breadcrumb no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-breadcrumb.",
+   "componente": "breadcrumb",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-button-b0ad831c0cdd",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de button no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-button.",
+   "componente": "button",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-card-d68fc3f602d1",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de card no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-card.",
+   "componente": "card",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-carousel-a5852928b851",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de carousel no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-carousel.",
+   "componente": "carousel",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-checkbox-4b6f893a4a30",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de checkbox no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-checkbox.",
+   "componente": "checkbox",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-cookiebar-7f95941b1616",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de cookiebar no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-cookiebar.",
+   "componente": "cookiebar",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-cookiebar-e564d18c805e",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O cookieBar é o componente responsável por fazer a gestão de cookies de um determinado produto, ele deve ser utilizado quando houver a necessidade de fazer...",
+   "componente": "cookiebar",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-datetimepicker-59f978a67b46",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de datetimepicker no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-datetimepicker.",
+   "componente": "datetimepicker",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-divider-abb2a883ef61",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de divider no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-divider.",
+   "componente": "divider",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-footer-22176120b991",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de footer no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-footer.",
+   "componente": "footer",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-header-b6a44cb3d346",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Por padrão o header se encontra na camada 1 por ser um elemento com relevância e desta forma apresenta sombra suave.",
+   "componente": "header",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-header-523d98904576",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de header no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-header.",
+   "componente": "header",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-header-12492dba566e",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O componente Header é o principal elemento de uma página, onde podem ser agrupados componentes predefinidos que tem como finalidade auxiliar o usuário no acesso.",
+   "componente": "header",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-input-4c07cef5a791",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de input no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-input.",
+   "componente": "input",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-0e293b295c3d",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Ativo, Selecionado e Desativado.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-460df90778c1",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de item no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-item.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-cb5d8f6d30b9",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Evite o uso de itens agrupados com espaçamentos variados dentro do mesmo agrupamento.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-c806c8feda5a",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Devem ser utilizados quando se pretende apresentar conteúdos de forma repetida e ordenada.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-e08476d083e4",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Todos os itens de um mesmo agrupamento devam possuir a mesma largura.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-739294d90299",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Qualquer componente é aceitável, exceto botões primários e componentes relacionados à navegação.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-a10751502b98",
+   "novos": [
+    "govbr-3.7.0-component-item-ac625d05a747"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "Os componentes dentro dos itens devem respeitar as margens internas.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-cb34ed616246",
+   "novos": [
+    "govbr-3.7.0-component-item-8a27ddc76060"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "Para construir um item é necessário uma superfície, uma área com no mínimo um conteúdo contido.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-item-a6d29ea54434",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Neste caso, toda a superfície do item é interativa e assume o estado hover.",
+   "componente": "item",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-list-a0a88e11b600",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de list no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-list.",
+   "componente": "list",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-loading-55f44d018251",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de loading no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-loading.",
+   "componente": "loading",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-loading-05f6aae1d1ad",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Exemplo de loading no corpo da página. Bloqueando a tela ou parte dela. Aqui, também, deve-se utilizar o Loading Indeterminado ou Determinado em seus formatos...",
+   "componente": "loading",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-menu-d15988e5d19b",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de menu no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-menu.",
+   "componente": "menu",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-menu-9e90f448c581",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Superfície scrim (Condicional). Este elemento serve para adicionar contraste entre o componente menu e o conteúdo da tela ao fundo, direcionando a atenção do...",
+   "componente": "menu",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-message-770d2a04a8b1",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de message no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-message.",
+   "componente": "message",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-modal-c9493346e1ad",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de modal no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-modal.",
+   "componente": "modal",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-notification-47dfbe60f602",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de notification no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-notification.",
+   "componente": "notification",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-524ef55890db",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de pagination no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-pagination.",
+   "componente": "pagination",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-pagination-7b0ffe97e848",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O Componente Pagination do Tipo Contextual também permite a configuração da visualização de cada módulo, independentemente. Cada módulo poderá ser usado ou não.",
+   "componente": "pagination",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-radio-9cf59fa5bf60",
+   "novos": [
+    "govbr-3.7.0-component-radio-9cf59fa5bf60"
+   ],
+   "situacao": "mesmo id (texto idêntico)"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-radio-ec08304a645c",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de radio no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-radio.",
+   "componente": "radio",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-scrim-78bf4890482e",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de scrim no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-scrim.",
+   "componente": "scrim",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-select-3587924c3600",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de select no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-select.",
+   "componente": "select",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-select-3d506ce4d7d3",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "De modo geral, deve-se prezar pelo uso de textos curtos e objetivos no select e no multiselect.",
+   "componente": "select",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-skiplink-3e4560a2ead2",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de skiplink no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-skiplink.",
+   "componente": "skiplink",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-step-05a4b8044384",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de step no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-step.",
+   "componente": "step",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-switch-3dbccb666b4f",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de switch no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-switch.",
+   "componente": "switch",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-switch-d53688105360",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O Switch deve ser posicionado na interface de forma firme e consistente durante o movimento da chave de alternância ou alternância de labels e surgimento de...",
+   "componente": "switch",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tab-bc811e53068f",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de tab no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tab.",
+   "componente": "tab",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-table-41e9a89fb4e1",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de table no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-table.",
+   "componente": "table",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tag-fa30aea78fa4",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de tag no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tag.",
+   "componente": "tag",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-textarea-b00a40afe0f8",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A Barra de Rolagem será o elemento nativo renderizado pelo Navegador.",
+   "componente": "textarea",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-textarea-cf60e234f8de",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de textarea no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-textarea.",
+   "componente": "textarea",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-tooltip-1657eb316f64",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de tooltip no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-tooltip.",
+   "componente": "tooltip",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-upload-f4726f3ce44a",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de upload no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-upload.",
+   "componente": "upload",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-upload-985fd2775586",
+   "novos": [
+    "govbr-3.7.0-component-upload-a54eed419af5"
+   ],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O componente upload deve disponibilizar o recurso de arrastar arquivos. Esta funcionalidade deve ser informada ao usuário na mensagem abaixo do campo.",
+   "componente": "upload",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-wizard-356c3bf376a5",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Uma vez atingida a última etapa, o botão apresentado deve ser o de Concluir para sinalizar o fim das etapas.",
+   "componente": "wizard",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-component-wizard-170b92a67c4b",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os exemplos oficiais de wizard no pacote @govbr-ds/core 3.7.0 utilizam a classe canônica observada .br-wizard.",
+   "componente": "wizard",
+   "categoria": "component"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-4a614a5c88e2",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O uso da nossa biblioteca de Web Components é a abordagem recomendada para projetos modernos.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-a43ad8231ad0",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Certifique-se de carregar todas as bibliotecas externas antes dos arquivos do Design System GOV.BR.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-1b31bf3ccece",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Chrome, 49 ou mais recente.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-137c50bea6ca",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Os tokens forma consumidos de forma correta e otimizada?",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-659242ecda1d",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "@example, Código de exemplo de uso.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-5765f1b8d2bc",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Deve ser informado o tipo e descrição do parâmentro.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-8c92e4e83038",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A documentação dev está atualizada e de acordo com o exemplo implementado?",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-f3c19eb70e19",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Edge, 14 ou mais recente.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-58a3f67d8445",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Firefox, 67 ou mais recente.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-9c1d24af4f37",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Realize essa inicialização somente após o carregamento do arquivo core.min.js.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-d0dff372c137",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Sempre inicialize as dependências antes do componente principal.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-d0e2bd4850ee",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Não recomendamos o uso do Internet Explorer (qualquer versão) e Edge Legacy.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-0052d80d4f92",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Sempre limpe as instâncias nos hooks de desmontagem.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-9826b6862644",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Omitir atributos de tipo e linguagem nas tags script.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-ea51f70c65fe",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Safari, 11 ou mais recente.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-63b44801da86",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O componente foi construído de forma otimizada, separação de responsabilidades?",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-dfebe85e65d8",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O componente Possui teste funcional? O componente possui testes de regressão visual?",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-067a1786b481",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "A primeira usa indentação para separar blocos de códigos e cada regra deve ser escrita numa linha única.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-development-global-b491c2e2c1a0",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Escrever os valores dos atributos entre aspas duplas.",
+   "componente": null,
+   "categoria": "development"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-eb8c1606a52e",
+   "novos": [
+    "govbr-3.7.0-pattern-global-b2760f582bb5"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "Deve informa ao usuário que tipo de dado estará disponível na tela ou elemento quando os dados ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-03695a4aede0",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Use Empty States substituindo os elementos que deveriam aparecer.",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-46a1ae2f366b",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Use sete ou menos categorias, pois fica cada vez mais fácil perceber o tamanho relativo de cada segmento, ao trabalhar com mais de sete categorias fica mais ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-9d9f1c9bf1ed",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O truncamento não deve ser utilizado em cabeçalhos de página, títulos, menus, rótulos de botões, mensagens de erro, mensagens de validação ou ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-abaec84ff915",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Incentive o Usuário: Sua interface deve incentivar a interação do usuário. Quando apresentar um tour através de Onboarding, sempre que possível, ofereça opções ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-a633e540aa5c",
+   "novos": [
+    "govbr-3.7.0-pattern-global-ab2128500048"
+   ],
+   "situacao": "texto antigo presente no corpus; regra(s) nova(s) com recorte diferente",
+   "originalTextAntigo": "É a entrada principal de seu site, sistema ou aplicativo e deve exibir o conteúdo de apresentação deste, assim como um componente principal de navegação que ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-5717506ac2e6",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Disponibilize uma seção de ajuda: O conteúdo deve ser estruturado em uma tela ou seção do sistema. Deve ficar claro para o usuário onde encontrar o conteúdo de ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-pattern-global-eebb093156e7",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Por padrão, o Acionador deve ser toda área de conteúdo de destaque, como demonstrado na figura, e esta deve conter o ícone identificador de expansão/retração (1) ...",
+   "componente": null,
+   "categoria": "pattern"
+  },
+  {
+   "antigo": "govbr-3.7.0-template-global-8e553b2c8bc7",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O uso é recomendado para Grid de 12 colunas ou para grid de 8 colunas com breakpoint Tablet Landscape.",
+   "componente": null,
+   "categoria": "template"
+  },
+  {
+   "antigo": "govbr-3.7.0-template-global-3d795df32a0e",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Tanto ilustrações como fotos podem ser utilizadas como imagem a fim de apoiarem visualmente a mensagem de erro.",
+   "componente": null,
+   "categoria": "template"
+  },
+  {
+   "antigo": "govbr-3.7.0-template-global-2387114907b1",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "Oferecer um menu oculto (skip link) com âncoras para as principais áreas da página fornece benefícios para usuários que usam apenas teclado sem prejudicar aqueles que usam o mouse para navegar.",
+   "componente": null,
+   "categoria": "template"
+  },
+  {
+   "antigo": "govbr-3.7.0-template-global-19f93475dc5e",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O template base deve ser utilizado como ponto de partida para construção de uma página em projetos de layout ou como referência visual na fase de ...",
+   "componente": null,
+   "categoria": "template"
+  },
+  {
+   "antigo": "govbr-3.7.0-template-global-9cbfa5906031",
+   "novos": [],
+   "situacao": "sem correspondente literal",
+   "originalTextAntigo": "O conteúdo da tela de erro deve se ajustar na grid da resolução correspondente.",
+   "componente": null,
+   "categoria": "template"
+  }
+ ]
+}

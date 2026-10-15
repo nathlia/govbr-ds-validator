@@ -67,7 +67,7 @@ describe("checkPageStructure", () => {
   it("acusa quando o primeiro link não é âncora interna, ou aponta para alvo inexistente", () => {
     const externo = checkPageStructure(page, facts({ firstLink: { href: "/inicio", text: "Início", targetId: null, targetExists: false, skipsToContent: false } }));
     expect(externo.map((f) => f.rule.id)).toEqual(["ds-page-skip-link"]);
-    expect(externo[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-global-7d2b85f81c52", "emag-1.5"]);
+    expect(externo[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-global-538e57855252", "emag-1.5"]);
     expect(externo[0].evidence.data).toMatchObject({ region: "skip-link", firstLinkHref: "/inicio", expectedCondition: EXPECTED_CONDITIONS.skipLink });
 
     const quebrado = checkPageStructure(page, facts({ firstLink: { href: "#conteudo", text: "Pular", targetId: "conteudo", targetExists: false, skipsToContent: false } }));

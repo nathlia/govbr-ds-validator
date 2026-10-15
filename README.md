@@ -19,7 +19,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 
 | Req | What | Where |
 |-----|------|-------|
-| A1 | Rules as queryable tools/resources, never prompt text | `get_ds_rules` over the KB (`data/knowledge/`, 186 rules — D-11) + all tools + `govbr://` resources |
+| A1 | Rules as queryable tools/resources, never prompt text | `get_ds_rules` over the KB (`data/knowledge/`; since 2.12.0 the literal version, 2,971 literal rules + 67 carried-over records — D-11, D-119) + all tools + `govbr://` resources |
 | A2 | e-MAG 3.1 alongside WCAG checks | `get_emag_rules`, axe→e-MAG cross-refs |
 | A3 | Canonical component examples/specs | `get_component_spec`, `data/component-specs.json` |
 | A4 | Token registry + hex→token reverse index | `get_design_tokens`, `data/tokens.json` |
@@ -90,6 +90,59 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
+
+### Knowledge versions: the literal base is served, 3.7.0 stays readable (2.12.0)
+
+Until 2.11.0 the oracle served `data/knowledge/versions/3.7.0/` — 186 rules (152 normative + 34
+canonical examples) whose gov.br DS texts were mostly search-index excerpts, with a manifest that
+said `complete: true` after verifying 8 component pages. 2.12.0 serves
+**`versions/3.7.0-literal-2026-10-15/`** (D-119), built by `scripts/build-kb-literal.mjs` from the
+literal corpus in `../ds-rules/govbr-ds-3.7.0-corpus/` (126 Markdown files of the text published at
+gov.br/ds and the e-MAG page, accessed 2026-10-15):
+
+| file | what it is |
+|---|---|
+| `normalized/rules.jsonl` | **2,971** literal rules from the normalization output (audited, corrections applied), with one change: an old 3.7.0 id is kept only when `originalText` **and** `force` are identical (9 rules); the 43 with the same text but a different force get a new id and `supersedes: [oldId]`. Every `originalText` is a substring of `corpus/<source.corpusFile>` — checked in tests. Force from the text: 1,082 required · 154 prohibited · 1,112 recommended · 112 discouraged · 496 permitted · 15 unclear |
+| `normalized/carried-over.jsonl` | **67** unchanged 3.7.0 records whose source is official but outside the literal corpus: 34 canonical examples from the `@govbr-ds/core` package, 33 rules from pages the corpus did not collect (templates, "como começar", some guides/patterns, the DS wiki) |
+| `normalized/legacy-ids.json` | **110** 3.7.0 ids no longer listed: 63 superseded (20 by a differently cut literal rule or a dash-only text difference, 43 same text with a changed force), 47 with no verifiable source |
+| `corpus/` | the literal `.md` corpus + `MANIFEST.json` (sha256 `f211b83f…`), `COLETA.json`, `PROVENIENCIA.md` |
+| `reports/` | `regras-antigas.md` (what happened to each of the 186), normalization summary/coverage/id maps, the independent audit and its corrections; `conflicts.json`/`official-package-audit.json` inherited from 3.7.0 |
+| `manifest.json` | the honest account: `complete: false`; component tabs 106/108 (accordion and scrim have no accessibility tab at the source); sources are core = tag v3.7.0 + 11 doc commits, design = tag v3.6.1 + 10 link-fix commits — cite as "text published at gov.br/ds (DS 3.7.0)", not "the 3.7.0 tag" |
+
+- **Which version is served** is explicit: `activeVersion` in `data/knowledge/manifest.json`
+  (`GOVBR_KB_VERSION=3.7.0` serves the old one again, e.g. to reproduce a past campaign). The
+  old lexicographic pick is gone — adding a folder no longer changes the oracle.
+- **No id is lost.** All 186 ids of 3.7.0 resolve through `get_ds_rules` (`id`/`ids`) and the
+  `verify_finding` gate: 9 kept the same id (same text and force), 67 are carried over, and the 110
+  in `legacy-ids.json` come back with a `legacy` field (`superseded` + replacements, or `dropped`;
+  `fromVersion: "3.7.0 (base parcial de 2026-07)"`) but never appear in listings, facets, counts or
+  the normative context. In the gate a `dropped` id exists but leaves applicability `unknown`
+  ("regra sem texto na fonte oficial coletada"); a `superseded` id is judged through its successor.
+- **Scanners.** The six KB ids the deterministic checkers implement (`CHECK_GROUNDING`) are listed
+  rules. One changed: the skip-link check cited the e-MAG 1.5 *heading* (`…7d2b85f81c52`, which is
+  `recommended` in the literal base and is now a legacy id); it now cites the literal required
+  sentence `…538e57855252` ("o primeiro link da página deve ser o de ir para o conteúdo"). The
+  checks themselves are unchanged: the CLI on screens A and B gives 6 and 58 findings, identical to
+  2.11.0 except that cited id/excerpt (after normalizing `_ngcontent` ids).
+- **API shape unchanged.** The loaded copy is canonicalized (`notes` list → string, `standard`
+  `"e-MAG"` → `"eMAG"`); the files stay as produced. Component name variants also accept the
+  literal page title before its parenthesis ("Magic Button", "Menu de Navegação"), never the
+  Portuguese gloss.
+- **What the agent sees changes**: `get_ds_rules` for a component now returns its three tabs
+  (e.g. input 2 → 64 rules, footer 0 → 51, datetimepicker 0 → 36), and the 2.9.0 normative context
+  grows accordingly. So the context **order** changed: candidates are grouped by observed component
+  plus one global group, ordered inside each group by force (required/prohibited → recommended/
+  discouraged → the rest), and the groups alternate (global first, components A→Z). Page 1 of a
+  form {button, datetimepicker, input, upload} now holds required rules of all four (until 2.11.0
+  pages 1–4 were all button); page 1 also lists `groups` (count per group + the call that pages
+  one group alone), and `scan_page`'s `normativeContext` carries `byComponent`. `meta` of
+  `get_ds_rules` names `knowledgeVersion`. The literal rules carry no `relatedComponents`/`expectedEvidence`, so context
+  retrieval is by the observed component and by terms in title/rule text; `validationStrategy` and
+  `automatable` are keyword heuristics (`automationConfidence: "low"`).
+- The 2.9.0 context contract tests and the 2.8.0 byte-identity snapshot run pinned to 3.7.0 (their
+  cases use that version's data; the snapshot ignores only the added `meta.knowledgeVersion`); the
+  literal version has its own tests. Pinned to 3.7.0, the skip-link grounding id does not exist —
+  the gate reports it as missing there.
 
 ### Finding families: grouped presentation, every member recoverable (2.11.0)
 
@@ -309,7 +362,7 @@ into citable constraints, the way D-29 turned a component's root tag into `ds-st
 |---|---|---|
 | `ds-page-header` | at least one `.br-header` (core) or `<br-header>` (web component) in the document, open shadow roots included | `govbr-3.7.0-template-global-19f93475dc5e` |
 | `ds-page-footer` | at least one `.br-footer` or `<br-footer>`, likewise | `govbr-3.7.0-template-global-19f93475dc5e` |
-| `ds-page-skip-link` | the first `<a href>` in composed order (shadow roots included) is an in-page anchor whose target exists | `govbr-3.7.0-accessibility-global-7d2b85f81c52`, `emag-1.5` |
+| `ds-page-skip-link` | the first `<a href>` in composed order (shadow roots included) is an in-page anchor whose target exists | `govbr-3.7.0-accessibility-global-538e57855252`, `emag-1.5` |
 
 The source for the two regions is the full text of the official Template Base page held in
 `data/ds-page-rules.json` (`page_structure`), which names each area and marks it "(Obrigatório)"

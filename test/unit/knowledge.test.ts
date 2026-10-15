@@ -12,16 +12,18 @@ import {
 } from "../../src/data/knowledge.js";
 
 describe("knowledge base loader (D-11)", () => {
-  it("loads all 186 rules with zero schema errors", () => {
+  // 2.12.0: a versão servida por padrão é a literal (2.971 regras do corpus + 67 registros herdados).
+  it("loads all 3038 records of the served version with zero schema errors", () => {
     const kb = getKnowledgeBase();
     expect(kb.meta.schemaErrors).toEqual([]);
-    expect(kb.meta.totalRules).toBe(186);
+    expect(kb.meta.totalRules).toBe(3038);
     expect(kb.meta.dsVersion).toBe("3.7.0");
+    expect(kb.meta.knowledgeVersion).toBe("3.7.0-literal-2026-10-15");
   });
 
-  it("partitions rules into 152 normative + 34 evidence records", () => {
+  it("partitions rules into 3004 normative + 34 evidence records", () => {
     const kb = getKnowledgeBase();
-    expect(kb.meta.normativeRules).toBe(152);
+    expect(kb.meta.normativeRules).toBe(3004);
     expect(kb.meta.evidenceRules).toBe(34);
     expect(kb.meta.normativeRules + kb.meta.evidenceRules).toBe(kb.meta.totalRules);
   });
@@ -36,14 +38,14 @@ describe("knowledge base loader (D-11)", () => {
 });
 
 describe("filterRules — the get_ds_rules backend", () => {
-  it("force=required returns the 107 required rules", () => {
+  it("force=required returns the 1102 required rules", () => {
     const rules = filterRules({ force: "required" });
-    expect(rules).toHaveLength(107);
+    expect(rules).toHaveLength(1102);
     expect(rules.every((r) => r.force === "required")).toBe(true);
   });
 
-  it("force=prohibited returns the 5 prohibited rules", () => {
-    expect(filterRules({ force: "prohibited" })).toHaveLength(5);
+  it("force=prohibited returns the 155 prohibited rules", () => {
+    expect(filterRules({ force: "prohibited" })).toHaveLength(155);
   });
 
   it("component=button returns only button rules", () => {

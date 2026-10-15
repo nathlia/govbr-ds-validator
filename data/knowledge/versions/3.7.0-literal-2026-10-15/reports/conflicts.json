@@ -1,0 +1,66 @@
+{
+  "conflicts": [
+    {
+      "type": "documentation-typo-suspected",
+      "sourceUrl": "https://www.gov.br/ds/components/modal",
+      "detail": "The indexed excerpt uses 'arial-modal'; the intended ARIA attribute is likely 'aria-modal'. Preserve the source wording and verify against the live page/code before correction.",
+      "status": "requires-verification"
+    },
+    {
+      "type": "component-count-mismatch",
+      "detail": "The local govbr-ds-validator specification says 37 components, but its enumerated component list contains 36 unique names.",
+      "observedCount": 36,
+      "claimedCount": 37,
+      "status": "resolved",
+      "resolution": "O pacote oficial @govbr-ds/core 3.7.0 contém 36 diretórios de componentes e 172 exemplos. O valor 37 no documento local do validator é considerado incorreto ou desatualizado.",
+      "authoritativeCount": 36,
+      "evidence": {
+        "package": "@govbr-ds/core",
+        "version": "3.7.0",
+        "tarballSha256": "2b8f13b0a1427f101f9f7aa81751b1bafe829e17305b1727fc2a0e3326781247"
+      }
+    },
+    {
+      "type": "template-versus-current-installation-guidance",
+      "title": "Template Base references legacy CDN while current guide recommends avoiding it",
+      "severity": "moderate",
+      "sources": [
+        {
+          "url": "https://www.gov.br/ds/templates/base?tab=codigos",
+          "evidence": "Template code references cdngovbr-ds.estaleiro.serpro.gov.br.",
+          "retrievalEvidence": "turn462956search11"
+        },
+        {
+          "url": "https://www.gov.br/ds/como-comecar/fluxo-dev",
+          "evidence": "Current guidance recommends npm or local files instead of the legacy CDN.",
+          "ruleTitle": "Evitar CDN legado"
+        },
+        {
+          "package": "@govbr-ds/core",
+          "version": "3.7.0",
+          "evidence": "63 packaged HTML files reference the legacy CDN."
+        }
+      ],
+      "status": "unresolved-current-documentation-conflict",
+      "recommendedResolution": "Treat npm/local installation guidance as current for new projects, while preserving template/package CDN references as legacy examples until official correction."
+    },
+    {
+      "type": "official-package-accessibility-anomalies",
+      "title": "Canonical package examples contain static accessibility anomalies",
+      "severity": "serious",
+      "sources": [
+        {
+          "package": "@govbr-ds/core",
+          "version": "3.7.0",
+          "report": "reports/official-package-audit.json",
+          "findingCounts": {
+            "image-missing-alt": 4,
+            "broken-aria-labelledby": 2
+          }
+        }
+      ],
+      "status": "requires-official-review",
+      "recommendedResolution": "Do not teach these exact fragments as compliant examples. The validator should flag missing alt and unresolved ARIA references."
+    }
+  ]
+}

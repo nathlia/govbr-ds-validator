@@ -1,0 +1,408 @@
+{
+  "package": "@govbr-ds/core",
+  "version": "3.7.0",
+  "generatedAt": "2026-07-11T06:59:57+00:00",
+  "htmlFilesAudited": 241,
+  "accessibilityFindings": [
+    {
+      "id": "package-card-card-collapse-image-missing-alt-1",
+      "type": "image-missing-alt",
+      "severity": "serious",
+      "component": "card",
+      "file": "dist/components/card/examples/card-collapse.html",
+      "element": "<img src=\"https://picsum.photos/id/823/400\"/>",
+      "evidence": "The official package example contains img without alt.",
+      "sourceSha256": "f5b4f43583cb5b72a0a6a37d72d0fbb13cc1771890c9674edcd901d59e3bbdf2",
+      "status": "requires-documentation-team-review"
+    },
+    {
+      "id": "package-card-card-disabled-image-missing-alt-2",
+      "type": "image-missing-alt",
+      "severity": "serious",
+      "component": "card",
+      "file": "dist/components/card/examples/card-disabled.html",
+      "element": "<img src=\"https://picsum.photos/id/823/400\"/>",
+      "evidence": "The official package example contains img without alt.",
+      "sourceSha256": "97a74c1fcb4a534e47c8d9cc8ae83825bc1926c8d54ad1d6738c844d14f55d29",
+      "status": "requires-documentation-team-review"
+    },
+    {
+      "id": "package-card-card-examples-image-missing-alt-3",
+      "type": "image-missing-alt",
+      "severity": "serious",
+      "component": "card",
+      "file": "dist/components/card/examples/card-examples.html",
+      "element": "<img src=\"https://picsum.photos/id/823/400\"/>",
+      "evidence": "The official package example contains img without alt.",
+      "sourceSha256": "eddc7d3e0c633421e099923c08042c1ba47105a841ac423e832a910d50dea9f2",
+      "status": "requires-documentation-team-review"
+    },
+    {
+      "id": "package-card-card-scroll-image-missing-alt-4",
+      "type": "image-missing-alt",
+      "severity": "serious",
+      "component": "card",
+      "file": "dist/components/card/examples/card-scroll.html",
+      "element": "<img src=\"https://picsum.photos/id/823/400\"/>",
+      "evidence": "The official package example contains img without alt.",
+      "sourceSha256": "b6a1aa6d96c2439a53ce370054e8ccecd231303301f224bc2c75c2d9a1be92e0",
+      "status": "requires-documentation-team-review"
+    },
+    {
+      "id": "package-wizard-wizard-horizontal-broken-aria-labelledby-1",
+      "type": "broken-aria-labelledby",
+      "severity": "serious",
+      "component": "wizard",
+      "file": "dist/components/wizard/examples/wizard-horizontal.html",
+      "missingReferences": [
+        "info5"
+      ],
+      "element": "<button aria-controls=\"tab5\" aria-labelledby=\"info5\" class=\"wizard-progress-btn\" disabled=\"disabled\" role=\"tab\" title=\"Finalizar Cadastro\" type=\"button\"><span class=\"info\">Finalizar</span></button>",
+      "sourceSha256": "33a732fa4225872a0d2c38d2530df0d2c93d4a35a321ca1d530f9ccbdcf18c8f",
+      "status": "requires-documentation-team-review"
+    },
+    {
+      "id": "package-wizard-wizard-vertical-broken-aria-labelledby-2",
+      "type": "broken-aria-labelledby",
+      "severity": "serious",
+      "component": "wizard",
+      "file": "dist/components/wizard/examples/wizard-vertical.html",
+      "missingReferences": [
+        "info5"
+      ],
+      "element": "<button aria-controls=\"tab5\" aria-labelledby=\"info5\" class=\"wizard-progress-btn\" disabled=\"disabled\" role=\"tab\" title=\"Finalizar Cadastro\" type=\"button\"><span class=\"info\">Finalizar</span></button>",
+      "sourceSha256": "27eebd51d32a4c33b709b1be5d9cdad2dd60e1e7163b745ada0465bfb6238981",
+      "status": "requires-documentation-team-review"
+    }
+  ],
+  "accessibilityFindingCounts": {
+    "image-missing-alt": 4,
+    "broken-aria-labelledby": 2
+  },
+  "legacyCdn": {
+    "hostname": "cdngovbr-ds.estaleiro.serpro.gov.br",
+    "filesAffected": 63,
+    "files": [
+      {
+        "file": "dist/components/accordion/examples.html",
+        "occurrences": 1,
+        "sha256": "0b6113adc2762f85619b30ec617298a31c76bdc6570d0cd58b49a11826275660"
+      },
+      {
+        "file": "dist/components/avatar/examples.html",
+        "occurrences": 1,
+        "sha256": "c8a286d6939d1b7e65a7eb500cee586ab7d68464a09b1d274d6c0d3f5b41fe38"
+      },
+      {
+        "file": "dist/components/breadcrumb/examples.html",
+        "occurrences": 1,
+        "sha256": "2a12bd48ddd89e5cb32ddf59aa16a28c4e79d2b84a53e9db0472bafd16ece368"
+      },
+      {
+        "file": "dist/components/button/examples.html",
+        "occurrences": 1,
+        "sha256": "3ce3895acded904619331ec30e0580cfaa9e5adbf108c98c0f5b95795f24d7e7"
+      },
+      {
+        "file": "dist/components/card/examples.html",
+        "occurrences": 1,
+        "sha256": "c06c485aab712100aa0eb8aa22e73f85ea2fd07403b5aeacfee38e36b79582c4"
+      },
+      {
+        "file": "dist/components/carousel/examples.html",
+        "occurrences": 1,
+        "sha256": "d9bf449138d4e4fc9c1d933a37d4ee14fc7ec513bc10284857a7afcdd78e3ec6"
+      },
+      {
+        "file": "dist/components/checkbox/examples.html",
+        "occurrences": 1,
+        "sha256": "05b6efbca2496a8027489ef27170d18f746c2a6d708435aba50b0f9eab0aeb24"
+      },
+      {
+        "file": "dist/components/cookiebar/examples.html",
+        "occurrences": 1,
+        "sha256": "5ad6723aaa8e42f277c6cd15dc088b9a182c3f7fb248fc0687cecd60b2a3390c"
+      },
+      {
+        "file": "dist/components/datetimepicker/examples.html",
+        "occurrences": 1,
+        "sha256": "35ffaf952b3816d092df794d452afe6451107a24fa49b2fc97e14f3cf1ac7940"
+      },
+      {
+        "file": "dist/components/divider/examples.html",
+        "occurrences": 1,
+        "sha256": "e75e7c407d9f2f9cb36060462672f38a5a395b28848b8704a1f303f8aed10d06"
+      },
+      {
+        "file": "dist/components/footer/examples/footer-default.html",
+        "occurrences": 3,
+        "sha256": "24e9cdd5d40892f4631016d41cb34b16f94f360ef1434ab8c3c48c6b108de2a4"
+      },
+      {
+        "file": "dist/components/footer/examples/footer-inverted.html",
+        "occurrences": 3,
+        "sha256": "d0b0810f595879b8b35528d8f32bc018d2a88954c82f780589ba1c02bba8f72a"
+      },
+      {
+        "file": "dist/components/footer/examples.html",
+        "occurrences": 7,
+        "sha256": "40bddc102ad453a95dccf1ab34851748f904a3483c5819d17179e68e5eecc3ee"
+      },
+      {
+        "file": "dist/components/header/examples.html",
+        "occurrences": 1,
+        "sha256": "e13e0ce33ce90645492b15b54611bd7956a465e849adbd18ac838155572de600"
+      },
+      {
+        "file": "dist/components/input/examples.html",
+        "occurrences": 1,
+        "sha256": "b749fe0748ef24296ff214d8c825e9f06b8bdf6fbab6b30d5fd720197496c564"
+      },
+      {
+        "file": "dist/components/item/examples.html",
+        "occurrences": 1,
+        "sha256": "3fa37c368418cfa28a43603ffb59ba1e23cb8f38df3b32b2cc219350835d3f0a"
+      },
+      {
+        "file": "dist/components/list/examples.html",
+        "occurrences": 1,
+        "sha256": "ec896a1ebcb0fdf07152f74503fc66f374db623c86f58bfcd341d96e64c9a904"
+      },
+      {
+        "file": "dist/components/loading/examples.html",
+        "occurrences": 1,
+        "sha256": "c3be870a701b969dd770515bf120b6d90c7b012b9c4ea8ce5bf5c3a906f4bca3"
+      },
+      {
+        "file": "dist/components/magicbutton/examples.html",
+        "occurrences": 1,
+        "sha256": "ed99095ab27a3b2d6238f958bb1b35dd9c2c00faf548d9c411e709581b2d0f2c"
+      },
+      {
+        "file": "dist/components/menu/examples.html",
+        "occurrences": 1,
+        "sha256": "560ad59f6177e06cf7a5aaa3233b88c0aba8bafef578f718133883eb82b694f8"
+      },
+      {
+        "file": "dist/components/message/examples.html",
+        "occurrences": 1,
+        "sha256": "6ab94a657ca95c90edf0e3934e0f7fdc9f53098172452468b85586a03a4663e4"
+      },
+      {
+        "file": "dist/components/modal/examples.html",
+        "occurrences": 1,
+        "sha256": "3c7124e1722de96c315645da4e469cdfb8d282cbfb7687aac20ca0880927f0d2"
+      },
+      {
+        "file": "dist/components/notification/examples.html",
+        "occurrences": 1,
+        "sha256": "1027bf6abe4bc91654cb1fb153c61ebd8a77e351adc890e2df60a57d5da0df3a"
+      },
+      {
+        "file": "dist/components/pagination/examples.html",
+        "occurrences": 1,
+        "sha256": "7a9b505568fb5b4a53e18c42e0690262d4b39f3f48489263d4e0326086097168"
+      },
+      {
+        "file": "dist/components/radio/examples.html",
+        "occurrences": 1,
+        "sha256": "d337d8d86c4c4a0ab00f574ed640e2ffd1d85e6dc570a19ead0b6c497f866f65"
+      },
+      {
+        "file": "dist/components/scrim/examples.html",
+        "occurrences": 1,
+        "sha256": "dd8cadf72360ebd6416402ce677cd67d8be8389567e0d5977183d23a01c1082c"
+      },
+      {
+        "file": "dist/components/select/examples.html",
+        "occurrences": 1,
+        "sha256": "a342d54cc47e70decace8fb16480e337346ee73fac354be058a76f10137f5870"
+      },
+      {
+        "file": "dist/components/signin/examples.html",
+        "occurrences": 1,
+        "sha256": "e36c05048458c49bdb7be7da44a9255596f3435e6d1e6035529cefdee7bcd611"
+      },
+      {
+        "file": "dist/components/skiplink/examples.html",
+        "occurrences": 1,
+        "sha256": "09e77b2589363fb89c826f52ba1f630a40c1ce3143254600bfe70dc5943ed7da"
+      },
+      {
+        "file": "dist/components/step/examples.html",
+        "occurrences": 1,
+        "sha256": "08f8f65b4ebe51d06443fea3e970c607d326a32992e8b94bc33d752c4a58fb5f"
+      },
+      {
+        "file": "dist/components/switch/examples.html",
+        "occurrences": 1,
+        "sha256": "0f0c227eaa6210da12d7f38bae58397fa0fddaf68195907b31cca5b2b1a8196a"
+      },
+      {
+        "file": "dist/components/tab/examples.html",
+        "occurrences": 1,
+        "sha256": "6421055d32d6101f97559bb16592aad6c05ef75e97247400a5edcefaa4338d69"
+      },
+      {
+        "file": "dist/components/table/examples.html",
+        "occurrences": 1,
+        "sha256": "b8ef1379c691872f084552b7a4c0878589d9c01336a4fad500e8c794ef2cfff5"
+      },
+      {
+        "file": "dist/components/tag/examples.html",
+        "occurrences": 1,
+        "sha256": "71a5f90c3b9862fd559b17b65a34f87bb59c819b7ae97f2db673dda4b6ab8694"
+      },
+      {
+        "file": "dist/components/textarea/examples.html",
+        "occurrences": 1,
+        "sha256": "de5d1db6defbbe4401fbe31944553873122a7c8fd04569e0b55dc469021928e4"
+      },
+      {
+        "file": "dist/components/tooltip/examples.html",
+        "occurrences": 1,
+        "sha256": "a0cdbeeb9daaea5211e8d8491ceee75f06e2b02c045ae1ff95eb7f0c65eb40f3"
+      },
+      {
+        "file": "dist/components/upload/examples.html",
+        "occurrences": 1,
+        "sha256": "dd622e02e49845280be36bda161e5b5f90107ff71cb705962a4ffd80a4c37362"
+      },
+      {
+        "file": "dist/components/wizard/examples.html",
+        "occurrences": 1,
+        "sha256": "cfcdc259e1a23dd1981399b2d89f5acf17e7a1648ee33ccbf9a2024bc9f28c34"
+      },
+      {
+        "file": "dist/index.html",
+        "occurrences": 1,
+        "sha256": "17131b23f3a8dea6d7c666f638872dc2ab7ac28493327c59907d58a572682263"
+      },
+      {
+        "file": "dist/templates/base/base.html",
+        "occurrences": 1,
+        "sha256": "d7eb8a34fded17eeef22db5729c2a0db09e9ddbfc8ebb4ac01549b5d4566f24f"
+      },
+      {
+        "file": "dist/templates/base/examples/base-offcanvas.html",
+        "occurrences": 1,
+        "sha256": "e3c5587805553095eabf0aef4a492c220f05d00361efea76ec00a2c1e70dac72"
+      },
+      {
+        "file": "dist/templates/base/examples/base-push.html",
+        "occurrences": 1,
+        "sha256": "3987fad8c6daa0162f609f72a124c5e157a42609314e86a96f133c5ff5cec341"
+      },
+      {
+        "file": "dist/templates/base/examples/fluid-offcanvas.html",
+        "occurrences": 1,
+        "sha256": "9ed8478a39a945cfa48de2e6b3879078ef02f93e517e2675d9695a3db6b7b443"
+      },
+      {
+        "file": "dist/templates/base/examples/fluid-push.html",
+        "occurrences": 1,
+        "sha256": "e7ab5b2f53ef9f84c348ba847558d538fb68941caafd206e5d8b5d52265e5ed9"
+      },
+      {
+        "file": "dist/templates/erro/erro.html",
+        "occurrences": 2,
+        "sha256": "019c2db35becb7ebe3508e549f9ce701e701f0c2fbf5d03b567338bbe7fd356b"
+      },
+      {
+        "file": "dist/util/accordion/examples.html",
+        "occurrences": 1,
+        "sha256": "5a636b322d06185a8860490b7fe6714b6a80f62db6450dc832d69ea12f684a3e"
+      },
+      {
+        "file": "dist/util/arredondamento/examples.html",
+        "occurrences": 1,
+        "sha256": "d9fcac29f52832edcf2f9cd47cc2f4dd9a57df87afc7ac9ff3c11860be6eb822"
+      },
+      {
+        "file": "dist/util/bordas/examples.html",
+        "occurrences": 1,
+        "sha256": "54a4bbacb9b17e0642f9b806ad94989c86d29617b44f7c85994fb938f5e29981"
+      },
+      {
+        "file": "dist/util/checkgroup/examples.html",
+        "occurrences": 1,
+        "sha256": "16eee1a7e88a1b306cfb9bdde6a8747580eaf4e6f27685de44c2bf74b0abc92b"
+      },
+      {
+        "file": "dist/util/collapse/examples.html",
+        "occurrences": 1,
+        "sha256": "f999aa132f8695ad6efdab8aa12d28ebe697919c093e6bedb8e01bc4268d3eb0"
+      },
+      {
+        "file": "dist/util/cores/examples.html",
+        "occurrences": 1,
+        "sha256": "f1e29ec74af562fb6191a9fb41e4ab7713e59760c1c77d49df7d294379e5207f"
+      },
+      {
+        "file": "dist/util/display/examples.html",
+        "occurrences": 1,
+        "sha256": "7569ad5ff4229a446015e51853dedd1298399a7b621e7f2477685812f7537c8b"
+      },
+      {
+        "file": "dist/util/dropdown/examples.html",
+        "occurrences": 1,
+        "sha256": "bc2f9d3b9eda06c3f2b8e433cf0be5b498d2d66d0ed247430142b3be6a58b5ce"
+      },
+      {
+        "file": "dist/util/elevacao/examples.html",
+        "occurrences": 1,
+        "sha256": "000a961c44d27cbf8158c77c12c35a45d3de84e2732ead5a2a292c7aa35f2730"
+      },
+      {
+        "file": "dist/util/espacamento/examples.html",
+        "occurrences": 1,
+        "sha256": "f705dfbf11b36f691e9173fc4a488c49cba28bd959cd0ef5b7c962cb69c767bd"
+      },
+      {
+        "file": "dist/util/flexbox/examples.html",
+        "occurrences": 1,
+        "sha256": "e8c7b3c71acab257292a6ae4aab0a714ab59e68f854ee50f10b71066c9d62cad"
+      },
+      {
+        "file": "dist/util/grid/examples.html",
+        "occurrences": 1,
+        "sha256": "8ab4c1da28996f274f358c9369c2acbb00a3af5ef14abacab68867ca3a5d7876"
+      },
+      {
+        "file": "dist/util/movimento/examples.html",
+        "occurrences": 1,
+        "sha256": "6350c94387b387a0a94f01086092fe70aedc87014b72bdd93c28c90cbce5143b"
+      },
+      {
+        "file": "dist/util/overflow/examples.html",
+        "occurrences": 1,
+        "sha256": "7f1971138be8a81026c082bb79ec19cb0ea95c8ea317a0701c32ab4192bf6d98"
+      },
+      {
+        "file": "dist/util/scrim/examples.html",
+        "occurrences": 1,
+        "sha256": "821a58906e16730ae1a798758cff82c4374c6a8631bf488d7e6060952d100c60"
+      },
+      {
+        "file": "dist/util/textos/examples.html",
+        "occurrences": 1,
+        "sha256": "f095ddef7dc1cd82847c73de52d731c256b7f38a7548da7121f1d5daa0710c22"
+      },
+      {
+        "file": "dist/util/tipografia/examples.html",
+        "occurrences": 1,
+        "sha256": "f97740d8100a5588bfd70c33d486859ade3d8436d71d75d6b28b0fdc3a91cd32"
+      },
+      {
+        "file": "dist/util/tooltip/examples.html",
+        "occurrences": 1,
+        "sha256": "c8f07bbb5b503b4c0d4b2b403a0880a903b8d1041cfe9106d53224107930fe76"
+      }
+    ],
+    "conflictsWithRuleTitle": "Evitar CDN legado"
+  },
+  "limitations": [
+    "The audit uses static HTML heuristics and may not capture runtime-generated accessible names.",
+    "Findings are evidence candidates, not final accessibility verdicts."
+  ]
+}
