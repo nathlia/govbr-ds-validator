@@ -144,6 +144,10 @@ export const VerificationSchema = z.object({
       stateFingerprint: z.string().nullable(),
       live: z.boolean(),
       elements: z.number().int().nullable(),
+      state: z
+        .unknown()
+        .optional()
+        .describe("2.10.0: what replaying the claimed state proved — policy, scanId, replay status/failure, arrival conditions, observed url/viewport, mismatches"),
     })
     .optional(),
   registries: z.record(z.string()).optional().describe("Registry versions the ids were checked against"),

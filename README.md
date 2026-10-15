@@ -46,7 +46,7 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
 **Deterministic checkers (no LLM)** — bounded pages, compact by default:
-- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, state/finding diffs, exact cache and evidence ledger
+- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, arrival?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, measured state arrival (2.10.0), state/finding diffs, exact cache and evidence ledger
 - `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?)` — batched colors/fonts/radii/spacing vs. token registry
 - `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched DOM vs. canonical spec
 - `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched axe-core with e-MAG cross-references
@@ -61,10 +61,11 @@ state SHA-256 plus normalized scope. A changed DOM, route, viewport, focus, cont
 or check set cannot reuse an earlier scan. The MCP process is fresh per battery run, so evidence
 does not cross experimental executions.
 Interactive states must be reproduced through `scan_page.actions`; the validator cannot inherit the
-state of another MCP server's browser. Supported actions are bounded click, fill, key press and wait.
+state of another MCP server's browser. Supported actions are bounded click, fill, key press and wait;
+since 2.10.0 a targeted step needs exactly one element (see *Replayable states* below).
 
 **Gate + report**:
-- `verify_finding (finding, live?, actions?, stateFingerprint?)` — separate checks (rule exists · applicable · evidence consistent · violation verified); `confirmed` only when a predicate verified the violation on every asserted element in the reproduced state (see *Verification gate* below)
+- `verify_finding (finding, live?, actions?, stateFingerprint?, arrival?, scanId?)` — separate checks (rule exists · applicable · evidence consistent · violation verified); `confirmed` only when a predicate verified the violation on every asserted element in the reproduced state (see *Verification gate* below)
 - `save_report (url, finding_ids?, findings?, notes?)` — stored deterministic ids + agent-created Findings; the server-held verdict of the identical payload always wins, and inconclusive or unverified explicit findings remain in a separate review channel
 
 **Prompt**: `validate_page (url, scope?, max_iterations?)` — the standardized two-phase procedure with dual pathway and iteration cap.
@@ -89,6 +90,87 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
+
+### Replayable states: one target, measured arrival, versioned identity (2.10.0)
+
+Two browsers share no state: the agent's and this server's meet only through a recipe replayed from
+a clean load, and repeating actions does not prove the intended scene was reached (NAT-82). Up to
+2.9.0 every step acted on `locator(...).first()`, so a selector with two targets silently acted on
+the first and the result looked like the requested state.
+
+- **One target per step.** `click`, `fill` and `press` with a selector count the matches (after up to
+  5 s for asynchronous rendering) and act only when there is exactly one. Otherwise the recipe stops
+  with `state.replay = { status: "failed", steps, failure: { index, action, selector, reason, matched,
+  detail } }`, `reason` ∈ `not-found` · `ambiguous` · `invalid-selector` · `page-changed` ·
+  `action-failed`. `invalid-selector` is only a real selector syntax error; a count that fails because
+  the document went away (execution context destroyed by navigation, frame detached, page closed) is
+  `page-changed`; anything else is `action-failed`. If the single target stops being single between
+  counting and acting (Playwright strict mode), the step is `ambiguous` with the new count. A `wait`
+  with a selector is a condition, not a target: one visible match is enough and the count is recorded.
+  Nothing picks an index; there is no `nth` option (see the compatibility note below).
+- **Settle before the fingerprint.** An action can trigger deferred changes — a dialog whose `.show`
+  class arrives by `setTimeout`, a CSS transition. After the last step, scanner and gate run the
+  **same** wait (`settlePage`, `SETTLE_POLICY` in `src/scan/state.ts`): network idle (at most 2 s),
+  then DOM samples (document `outerHTML` + every open shadow root) every 100 ms until 4 consecutive
+  samples are identical **and** no finite animation/transition is running (`document.getAnimations()`;
+  infinite ones such as spinners are ignored), capped at 3 s. The outcome is `state.settle =
+  { settled }`, outside the hash. Changes deferred by more than the 300 ms quiet window are not waited
+  for; a recipe that needs them declares a `wait` with a selector. Arrival is measured after the settle.
+- **Arrival is measured, not assumed.** `arrival: { path?, dialogOpen?, errorVisible?, expanded?,
+  focused?, visible? }` (strict; all neutral — pathname, open `dialog`/`role=dialog|alertdialog`/
+  `aria-modal`, visible `role=alert` or `aria-invalid=true`, `aria-expanded=true` on exactly one
+  control, focus on exactly one element across open shadow roots, at least one visible match). Every
+  scan returns `state: { policy, normalizations, recipe: { url, viewport, viewportSource, actions
+  (fill values kept), arrival? }, replay, settle, observed: { url, path, viewport (measured, with dpr),
+  dialogs, expanded, errors, focus, unobservableRoots }, arrival: { status, conditions[] }, reached }`,
+  stored with the `scanId` (also returned by `get_finding_details({ scanId }).ledger.state`).
+- **Unreached is a limitation, not a result.** A failed step or an unmet condition returns
+  `{ status: "state-not-reached", scanId: null, stateFingerprint: null, limitation: { kind:
+  "action-error" | "arrival-not-met", detail }, state }` — no findings, no coverage, not a tool error.
+  Zero findings there would read as "no defect" in a state nobody saw. The baseline CLI prints the
+  same JSON and exits with code 3.
+- **`verify_finding` against a recorded state.** `scanId` replays the scan's own recipe (and refuses
+  `actions`/`arrival`/`stateFingerprint` alongside it). The finding's `element.page` must be the scan's
+  page, compared by origin + path + query — a trailing slash and the `#fragment` do not count; another
+  page is caller misuse and gets the same typed refusal (`{ error }`, no verdict) as the other scanId
+  misuses. URL, measured viewport and fingerprint must all match the scan; if they do not, the state
+  was **not reproduced**, which is a limitation, not evidence against the finding: `unverifiable`
+  with `verifiedBy: "state-fingerprint"`, `binding.state.mismatches` ⊆ `url` · `viewport` ·
+  `fingerprint`, `binding.state.limitation.kind = "state-not-reproduced"` and `binding.state.settled`.
+  The same holds for a `stateFingerprint` sent without `scanId`. A recipe or arrival failure also
+  leaves the claim `unverifiable` (`verifiedBy: "state-replay"`, `violation: "not-checked"`,
+  `binding.state.limitation`). None of these is ever `rejected` as if there were no defect.
+- **State identity `state-identity-1`.** SHA-256 of policy, URL, viewport, document `outerHTML`, the
+  `innerHTML` of every open shadow root (with its host path), form/ARIA state controls in every open
+  tree (value, checked, open, aria-expanded, aria-selected, aria-checked, aria-pressed), the deep focus path and the
+  closed-root hosts. Scanner, cache and gate compare it **exactly**. The only normalizations are two
+  consistent renamings (by first appearance, so distinct values stay distinct and references stay
+  linked) of values a framework draws on every load: `ds-core-random-list-id` (`list-<0..9999>`
+  with no leading zero, drawn by `@govbr-ds/core` 3.x `br-select` for its autocomplete list — only an
+  id on an element that carries the DS context, `class` containing `br-list` and `role="listbox"`,
+  and references to that id, in id/reference attribute values and `#list-N` locators; a `list-N` the
+  page author wrote elsewhere is left as is) and `angular-emulated-app-id` (the per-bootstrap app id in
+  `_ngcontent-<app>-c<N>`/`_nghost-…`; the component index is kept). They were measured, not
+  assumed: on both frozen screens identical loads gave different 2.9.0 fingerprints because of exactly
+  these two sources, so the cache never hit there and a `stateFingerprint` sent to `verify_finding`
+  was always rejected. Fingerprints are not comparable with 2.9.0's.
+- **Shadow roots.** Open roots are part of identity and observation; locators cross them with ` >>> `
+  as in `inspect_computed_styles`. Closed roots are detected through CDP and listed in
+  `unobservableRoots`; focus inside one is reported as the host with `interior: "unknown"`, never as
+  focus on the host. The CDP read is retried (3 attempts); if it still fails, `observed.unobservableRoots`
+  is `null` (unknown) while the hashed identity carries `[]`, so a one-off read failure on a page
+  without closed roots does not change the fingerprint silently.
+- **Window.** MCP tools run in the frozen desktop window, now explicit (`1280×720`, Playwright's
+  default until now — an upgrade cannot change it silently). The viewport remains CLI-only;
+  `arrival` cannot carry one.
+
+**Compatibility.** No existing test or fixture relied on `.first()` (all their action selectors are
+unique). On the frozen screens the harness probes (`.acao-enviar`, `#AGENDAR`, ids, `text=` with a
+unique label) replay as before; class/tag-level selectors (`.br-button`, `button`, `.tab-item`,
+`[aria-expanded]`) are ambiguous there and now fail with `ambiguous` instead of acting on the first.
+No recorded baseline request carried actions.
+
+Frozen campaigns ran on 2.7.0 and are not changed by this release.
 
 ### Normative context for what was observed (2.9.0)
 
@@ -254,7 +336,7 @@ claims, and the WCAG branch accepted any `X.Y.Z` (`wcag-9.9.9` passed). Each che
 |---|---|
 | `ruleExists` | the id is a member of a versioned registry: KB (`data/knowledge`), e-MAG 3.1 (`data/emag.json`), WCAG 2.2 (`data/wcag-2.2.json`, generated by `npm run build:wcag` from `https://www.w3.org/WAI/WCAG22/wcag.json` with retrieval date and source SHA-256; 86 criteria, 4.1.1 marked obsolete), published checker ids |
 | `applicability` | the rule can support a finding — not implementation evidence (D-10), not a check without a norm (D-27/D-32) |
-| `evidenceConsistent` | machine-readable claims agree with the token registry; with `live`, the locator resolves in the reproduced state (`actions`, optional `stateFingerprint`) and the claimed property plus observed value/tag match every element |
+| `evidenceConsistent` | machine-readable claims agree with the token registry; with `live`, the locator resolves in the reproduced state (`actions`, optional `stateFingerprint`, or `scanId`) and the claimed property plus observed value/tag match every element; a claimed state that is not reproduced leaves it `unknown` (limitation, 2.10.0) |
 | `violation` | `verified` / `contradicted` by an implemented predicate on **every** asserted element; otherwise `no-predicate`, `not-checked` (`live=false`) or `error` |
 
 | Verdict | Condition |

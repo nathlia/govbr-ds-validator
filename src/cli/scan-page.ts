@@ -21,6 +21,12 @@ try {
   }
   const result = await scanPage(request, new PageScanCache(1));
   process.stdout.write(JSON.stringify(result));
+  // 2.10.0: até a 2.9.0 um passo que falhava lançava e o processo saía com erro. A linha de base
+  // continua sem aceitar estado não alcançado como resultado: o JSON sai (com o motivo) e o código é 3.
+  if (result.status === "state-not-reached") {
+    console.error(`estado não alcançado: ${result.limitation.detail}`);
+    process.exitCode = 3;
+  }
 } finally {
   await closeBrowser().catch(() => {});
 }

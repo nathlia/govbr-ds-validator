@@ -77,7 +77,9 @@ import {
 } from "./evidence/inspect.js";
 import { verifyFinding } from "./verify/gate.js";
 import { VerificationStore } from "./verify/store.js";
-import { PageActionsSchema } from "./scan/actions.js";
+import { ArrivalSchema, PageActionsSchema } from "./scan/actions.js";
+import type { StateAttestation } from "./scan/pageScan.js";
+import { sameScanPage } from "./scan/state.js";
 import { validateFindings, buildReport, persistReport, summarize } from "./report/report.js";
 import { buildValidatePagePrompt } from "./prompts/validatePage.js";
 import { ToolTelemetry, instrumentTool, type ToolTelemetryOptions } from "./telemetry.js";
@@ -860,7 +862,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         components: z.array(z.string()).min(1).max(36).optional().describe("Componentes estruturais a validar"),
         actions: PageActionsSchema
           .optional()
-          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura"),
+          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
+        arrival: ArrivalSchema
+          .optional()
+          .describe("Condições que mostram que o estado pedido foi alcançado (caminho, diálogo aberto, erro visível, controle expandido, foco, elemento visível); não satisfeitas, nada é varrido"),
         compareToScanId: z
           .string()
           .optional()
@@ -872,21 +877,34 @@ export function createServer(options: ServerOptions = {}): McpServer {
     instrumentTool(
       telemetry,
       "scan_page",
-      async ({ url, selectors, checks, tokenChecks, components, actions, compareToScanId, detail, cursor, limit, maxChars }) => {
+      async ({ url, selectors, checks, tokenChecks, components, actions, arrival, compareToScanId, detail, cursor, limit, maxChars }) => {
         const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
         const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
         if (compareToScanId && !previousFindings) {
           return json({ error: `compareToScanId '${compareToScanId}' não existe nesta sessão MCP.` });
         }
         const result = await scanPage(
-          { url, selectors, checks, tokenChecks, components, actions },
+          { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
           pageScanCache
         );
+        if (result.status === "state-not-reached") {
+          // 2.10.0: estado não alcançado não vira lote — sem scanId, sem findings, sem cobertura; zero
+          // achados aqui seria lido como "sem defeito" num estado que ninguém viu.
+          return json({
+            url,
+            status: result.status,
+            scanId: null,
+            stateFingerprint: null,
+            limitation: result.limitation,
+            state: result.state,
+          });
+        }
         const scanId = findingStore.putBatch("page", result.findings, {
           stateFingerprint: result.stateFingerprint,
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
+          state: result.state,
         });
         const stateDiff = compareToScanId && previousFindings
           ? {
@@ -904,8 +922,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           : undefined;
         return json({
           url,
+          status: result.status,
           scanId,
           stateFingerprint: result.stateFingerprint,
+          state: result.state,
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
@@ -1134,12 +1154,41 @@ export function createServer(options: ServerOptions = {}): McpServer {
         finding: FindingSchema.describe("O achado candidato, no esquema Finding"),
         live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
         actions: PageActionsSchema.optional().describe("Ações reproduzidas antes da verificação, quando o estado alegado depende de interação"),
-        stateFingerprint: z.string().optional().describe("Fingerprint do estado alegado (de scan_page); outro estado rejeita a verificação"),
+        stateFingerprint: z.string().optional().describe("Fingerprint do estado alegado (de scan_page); se o estado reproduzido for outro, a alegação fica sem verificação (limitação)"),
+        arrival: ArrivalSchema.optional().describe("Condições de chegada do estado alegado; não satisfeitas, a alegação fica sem verificação"),
+        scanId: z
+          .string()
+          .optional()
+          .describe("scan_page desta sessão cujo estado é o alegado: reaplica a receita gravada e exige a mesma URL, janela e fingerprint. Não envie actions/arrival/stateFingerprint junto"),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    instrumentTool(telemetry, "verify_finding", async ({ finding, live, actions, stateFingerprint }) => {
-      const verification = await verifyFinding({ finding, live: live ?? false, actions, stateFingerprint });
+    instrumentTool(telemetry, "verify_finding", async ({ finding, live, actions, stateFingerprint, arrival, scanId }) => {
+      let scanState: Parameters<typeof verifyFinding>[0]["scanState"];
+      if (scanId) {
+        if (actions !== undefined || arrival !== undefined || stateFingerprint !== undefined) {
+          return json({ error: "scanId já carrega a receita, as condições de chegada e o fingerprint do estado; não envie actions, arrival ou stateFingerprint junto." });
+        }
+        const ledger = findingStore.getBatchMetadata(scanId);
+        const state = ledger?.state as StateAttestation | undefined;
+        if (!ledger) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
+        if (!state || typeof ledger.stateFingerprint !== "string") {
+          return json({ error: `scanId '${scanId}' não é de scan_page: não tem receita de estado.` });
+        }
+        if (!sameScanPage(finding.element.page, state.recipe.url)) {
+          return json({
+            error: `scanId '${scanId}' é de ${state.recipe.url}, mas o achado aponta para ${finding.element.page}: cite o scan da página do achado (barra final e fragmento não contam).`,
+          });
+        }
+        scanState = {
+          scanId,
+          recipe: state.recipe,
+          url: state.observed.url,
+          viewport: { width: state.observed.viewport.width, height: state.observed.viewport.height },
+          fingerprint: ledger.stateFingerprint,
+        };
+      }
+      const verification = await verifyFinding({ finding, live: live ?? false, actions, stateFingerprint, arrival, scanState });
       const stored = verificationStore.record(finding, verification);
       return json({ findingId: finding.id, verificationId: stored.verificationId, verification });
     })

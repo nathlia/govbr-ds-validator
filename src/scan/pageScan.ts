@@ -10,13 +10,22 @@ import { inspectPageStructure } from "../evidence/pageFacts.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
+import { applyActions, type Arrival, type PageAction, type ReplayResult } from "./actions.js";
+import {
+  FROZEN_DESKTOP_VIEWPORT,
+  STATE_IDENTITY_NORMALIZATIONS,
+  STATE_IDENTITY_POLICY,
+  evaluateArrival,
+  fingerprintPage,
+  settlePage,
+  snapshotPageState,
+  type ArrivalAttestation,
+  type SettleReport,
+  type ObservedState,
+} from "./state.js";
 
 export type PageScanCheck = "tokens" | "structure" | "axe" | "page";
-export type PageScanAction =
-  | { action: "click"; selector: string }
-  | { action: "fill"; selector: string; value: string }
-  | { action: "press"; key: string; selector?: string }
-  | { action: "wait"; selector?: string; ms?: number };
+export type PageScanAction = PageAction;
 
 export interface PageScanRequest {
   url: string;
@@ -25,6 +34,8 @@ export interface PageScanRequest {
   tokenChecks?: TokenCheck[];
   components?: string[];
   actions?: PageScanAction[];
+  /** Condições de chegada (2.10.0): declaradas, são medidas depois da receita; não satisfeitas, nada é varrido. */
+  arrival?: Arrival;
   /**
    * Window for the scan. Accepted only from the deterministic baseline CLI (2.5.2): the MCP tool
    * schema does not expose it, so the agent-facing surface is unchanged.
@@ -32,9 +43,36 @@ export interface PageScanRequest {
   viewport?: { width: number; height: number };
 }
 
+/**
+ * A receita tipada de um estado e o que a reprodução dela provou (2.10.0, NAT-82). Vai junto com o
+ * scanId: quem cita o scan cita esta receita, e `verify_finding({ scanId })` a reaplica.
+ */
+export interface StateAttestation {
+  policy: typeof STATE_IDENTITY_POLICY;
+  /** Renomeações consistentes que a política aplica antes do hash (state.ts). */
+  normalizations: typeof STATE_IDENTITY_NORMALIZATIONS;
+  recipe: {
+    url: string;
+    viewport: { width: number; height: number };
+    /** `frozen-desktop`: a janela congelada das ferramentas MCP; `cli`: declarada pela linha de base. */
+    viewportSource: "frozen-desktop" | "cli";
+    actions: PageScanAction[];
+    arrival?: Arrival;
+  };
+  replay: ReplayResult;
+  /** Espera de assentamento antes do fingerprint (state.ts, SETTLE_POLICY); fora do hash. */
+  settle: SettleReport;
+  observed: ObservedState;
+  arrival: ArrivalAttestation;
+  /** Receita aplicada por inteiro e nenhuma condição de chegada declarada falhou. */
+  reached: boolean;
+}
+
 export interface PageScanResult {
+  status: "scanned";
   url: string;
   stateFingerprint: string;
+  state: StateAttestation;
   cacheHit: boolean;
   cacheMissReason?: "no-exact-fingerprint-and-scope-match";
   findings: Finding[];
@@ -60,7 +98,22 @@ export interface PageScanResult {
   };
 }
 
-interface CachedScan extends Omit<PageScanResult, "cacheHit" | "cacheMissReason"> {}
+/**
+ * O estado pedido não foi alcançado: um passo da receita falhou ou uma condição de chegada não se
+ * cumpriu. Nada foi varrido — sem findings, sem cobertura — porque zero achados aqui diria "sem
+ * defeito" sobre um estado que ninguém viu. É limitação de quem escreveu a receita, não falha técnica.
+ */
+export interface PageScanUnreached {
+  status: "state-not-reached";
+  url: string;
+  stateFingerprint: null;
+  state: StateAttestation;
+  limitation: { kind: "action-error" | "arrival-not-met"; detail: string };
+}
+
+export type PageScanOutcome = PageScanResult | PageScanUnreached;
+
+interface CachedScan extends Omit<PageScanResult, "cacheHit" | "cacheMissReason" | "state"> {}
 
 /** Process-local LRU. A battery run starts a fresh MCP process, so entries never cross runs. */
 export class PageScanCache {
@@ -90,33 +143,52 @@ function hash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-export async function fingerprintPage(page: Page): Promise<string> {
-  const state = await page.evaluate(() => ({
-    url: location.href,
-    viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
-    html: document.documentElement.outerHTML,
-    activeElement: document.activeElement
-      ? {
-          tag: document.activeElement.tagName.toLowerCase(),
-          id: document.activeElement.id || null,
-          testId: document.activeElement.getAttribute("data-testid"),
-        }
-      : null,
-    controls: Array.from(document.querySelectorAll("input, select, textarea, [aria-expanded], [aria-selected], [aria-checked]"))
-      .map((element) => {
-        const control = element as HTMLInputElement;
-        return {
-          id: element.id || null,
-          name: element.getAttribute("name"),
-          value: "value" in control ? control.value : null,
-          checked: "checked" in control ? control.checked : null,
-          expanded: element.getAttribute("aria-expanded"),
-          selected: element.getAttribute("aria-selected"),
-          ariaChecked: element.getAttribute("aria-checked"),
-        };
-      }),
-  }));
-  return `sha256:${hash(state)}`;
+export { applyActions, fingerprintPage };
+
+/**
+ * Reproduz a receita numa página recém-carregada e mede o que ela provou. Usado igualmente pelo
+ * scanner e pelo portão: o mesmo código decide "estado alcançado" para qualquer chamador.
+ */
+export async function reproduceState(
+  page: Page,
+  recipe: StateAttestation["recipe"]
+): Promise<{ attestation: StateAttestation; fingerprint: string }> {
+  const replay = await applyActions(page, recipe.actions);
+  // Mesma espera no scan e na reprodução: o fingerprint é tirado do estado assentado, não do meio
+  // de uma transição disparada pela última ação.
+  const settle = await settlePage(page);
+  const snapshot = await snapshotPageState(page);
+  const arrival: ArrivalAttestation =
+    replay.status === "applied"
+      ? await evaluateArrival(page, snapshot.observed, recipe.arrival)
+      : { status: "not-reached", conditions: [] };
+  return {
+    fingerprint: snapshot.fingerprint,
+    attestation: {
+      policy: snapshot.policy,
+      normalizations: STATE_IDENTITY_NORMALIZATIONS,
+      recipe,
+      replay,
+      settle,
+      observed: snapshot.observed,
+      arrival,
+      reached: replay.status === "applied" && arrival.status !== "not-reached",
+    },
+  };
+}
+
+export function unreachedLimitation(state: StateAttestation): PageScanUnreached["limitation"] {
+  if (state.replay.status === "failed") {
+    const f = state.replay.failure;
+    return { kind: "action-error", detail: `Passo ${f.index} (${f.action}) da receita falhou: ${f.reason}. ${f.detail}` };
+  }
+  const failed = state.arrival.conditions.filter((c) => !c.satisfied);
+  return {
+    kind: "arrival-not-met",
+    detail: `Condição(ões) de chegada não satisfeita(s): ${failed
+      .map((c) => `${c.condition} (esperado ${JSON.stringify(c.expected)}, observado ${JSON.stringify(c.observed)}${c.detail ? `: ${c.detail}` : ""})`)
+      .join("; ")}.`,
+  };
 }
 
 function tokenProperties(checks: TokenCheck[]): StyleProperty[] {
@@ -138,31 +210,24 @@ function normalizedRequest(request: PageScanRequest) {
   };
 }
 
-export async function applyActions(page: Page, actions: PageScanAction[]): Promise<void> {
-  for (const action of actions) {
-    if (action.action === "click") {
-      await page.locator(action.selector).first().click();
-    } else if (action.action === "fill") {
-      await page.locator(action.selector).first().fill(action.value);
-    } else if (action.action === "press") {
-      if (action.selector) await page.locator(action.selector).first().press(action.key);
-      else await page.keyboard.press(action.key);
-    } else if (action.selector) {
-      await page.locator(action.selector).first().waitFor({ state: "visible", timeout: 10_000 });
-    } else {
-      await page.waitForTimeout(Math.min(action.ms ?? 0, 5_000));
+export async function scanPage(request: PageScanRequest, cache: PageScanCache): Promise<PageScanOutcome> {
+  const viewport = request.viewport ?? { ...FROZEN_DESKTOP_VIEWPORT };
+  return withPage(request.url, async (page): Promise<PageScanOutcome> => {
+    const { attestation: state, fingerprint: stateFingerprint } = await reproduceState(page, {
+      url: request.url,
+      viewport,
+      viewportSource: request.viewport ? "cli" : "frozen-desktop",
+      actions: request.actions ?? [],
+      ...(request.arrival ? { arrival: request.arrival } : {}),
+    });
+    if (!state.reached) {
+      return { status: "state-not-reached", url: request.url, stateFingerprint: null, state, limitation: unreachedLimitation(state) };
     }
-  }
-}
-
-export async function scanPage(request: PageScanRequest, cache: PageScanCache): Promise<PageScanResult> {
-  return withPage(request.url, async (page) => {
-    await applyActions(page, request.actions ?? []);
-    const stateFingerprint = await fingerprintPage(page);
     const normalized = normalizedRequest(request);
+    // A chegada é medida de novo a cada chamada (acima); o cache guarda só o que o estado exato determina.
     const cacheKey = hash({ stateFingerprint, ...normalized });
     const cached = cache.get(cacheKey);
-    if (cached) return { ...cached, cacheHit: true };
+    if (cached) return { ...cached, state, cacheHit: true };
 
     const checks = normalized.checks as PageScanCheck[];
     const activeTokenChecks = normalized.tokenChecks as TokenCheck[];
@@ -226,6 +291,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
 
     const deduplicated = deduplicateFindings(rawFindings);
     const value: CachedScan = {
+      status: "scanned",
       url: request.url,
       stateFingerprint,
       findings: deduplicated.findings,
@@ -255,6 +321,6 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
       },
     };
     cache.set(cacheKey, value);
-    return { ...value, cacheHit: false, cacheMissReason: "no-exact-fingerprint-and-scope-match" };
-  }, request.viewport ? { viewport: request.viewport } : {});
+    return { ...value, state, cacheHit: false, cacheMissReason: "no-exact-fingerprint-and-scope-match" };
+  }, { viewport });
 }

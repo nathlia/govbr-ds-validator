@@ -248,7 +248,7 @@ describe("verify_finding — what is rejected", () => {
     expect(res.verification.binding.elements).toBe(0);
   });
 
-  it("rejects the wrong state and confirms the claimed one", async () => {
+  it("rejects absent evidence in the wrong state, confirms the claimed one, and leaves an unreproduced claimed state unverifiable", async () => {
     const stateful = claim({ element: { locator: "#aviso" } });
     const withoutState = await verify(stateful);
     expect(withoutState.verification.verdict).toBe("rejected");
@@ -258,9 +258,11 @@ describe("verify_finding — what is rejected", () => {
     const inState = await verify(stateful, { actions });
     expect(inState.verification.verdict).toBe("confirmed");
 
+    // 2.10.0: a claimed state that the replay does not reproduce is a limitation, not evidence against the finding.
     const otherState = await verify(stateful, { actions, stateFingerprint: "sha256:outro-estado" });
-    expect(otherState.verification.verdict).toBe("rejected");
+    expect(otherState.verification.verdict).toBe("unverifiable");
     expect(otherState.verification.verifiedBy).toBe("state-fingerprint");
+    expect(otherState.verification.binding.state.limitation.kind).toBe("state-not-reproduced");
   });
 });
 

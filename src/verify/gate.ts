@@ -24,7 +24,9 @@ import { normalizeColor } from "../checkers/color.js";
 import { withPage } from "../evidence/browser.js";
 import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
-import { applyActions, fingerprintPage, type PageScanAction } from "../scan/pageScan.js";
+import { reproduceState, unreachedLimitation, type PageScanAction, type StateAttestation } from "../scan/pageScan.js";
+import type { Arrival } from "../scan/actions.js";
+import { FROZEN_DESKTOP_VIEWPORT, STATE_IDENTITY_POLICY, compareStates, sameScanPage, type StateMismatch } from "../scan/state.js";
 import {
   emagMembership,
   kbMembership,
@@ -43,8 +45,54 @@ export interface GateInput {
   /** Reabre element.page, reproduz actions e verifica cada elemento de element.locator. */
   live?: boolean;
   actions?: PageScanAction[];
-  /** Estado alegado; se o estado reproduzido tiver outro fingerprint, a verificação é rejeitada. */
+  /** Estado alegado; se o estado reproduzido tiver outro fingerprint, a alegação fica sem verificação (limitação). */
   stateFingerprint?: string;
+  /** Condições de chegada do estado alegado (2.10.0); não satisfeitas, nada é verificado nele. */
+  arrival?: Arrival;
+  /**
+   * Estado registrado por um scan_page desta sessão (2.10.0): a receita é reaplicada como foi
+   * gravada, e URL, janela e fingerprint reproduzidos têm de ser os do scan.
+   */
+  scanState?: ScanStateClaim;
+}
+
+export interface ScanStateClaim {
+  scanId: string;
+  recipe: StateAttestation["recipe"];
+  url: string;
+  viewport: { width: number; height: number };
+  fingerprint: string;
+}
+
+/** O que a reprodução do estado provou, guardado junto do veredito (2.10.0). */
+export interface StateBinding {
+  policy: typeof STATE_IDENTITY_POLICY;
+  scanId: string | null;
+  reached: boolean;
+  replay: StateAttestation["replay"]["status"];
+  failure?: Extract<StateAttestation["replay"], { status: "failed" }>["failure"];
+  arrival: StateAttestation["arrival"];
+  observed: { url: string; path: string; viewport: StateAttestation["observed"]["viewport"] };
+  mismatches: StateMismatch[];
+  /** A espera de assentamento terminou com o DOM estável (state.ts, SETTLE_POLICY). */
+  settled: boolean;
+  /**
+   * `state-not-reproduced`: a receita rodou e a chegada se cumpriu, mas URL, janela ou fingerprint
+   * diferem do estado alegado. Estado não reproduzido é limitação, não evidência contra o achado.
+   */
+  limitation?: { kind: "action-error" | "arrival-not-met" | "state-not-reproduced"; detail: string };
+}
+
+/**
+ * Uso indevido de `scanState` por quem chama o portão diretamente (o servidor recusa antes, com o
+ * mesmo erro tipado das outras misturas de scanId): o achado aponta para outra página que a do scan.
+ */
+export class ScanStateMisuseError extends Error {
+  readonly code = "scan-page-mismatch" as const;
+  constructor(readonly findingPage: string, readonly scanUrl: string, readonly scanId: string) {
+    super(`O achado aponta para ${findingPage}, mas o scan ${scanId} foi feito em ${scanUrl}: cite o scan da página do achado.`);
+    this.name = "ScanStateMisuseError";
+  }
 }
 
 interface Checks {
@@ -69,10 +117,16 @@ export function verdictOf(checks: Checks): Verdict {
   return "unverifiable";
 }
 
-export async function verifyFinding({ finding, live = false, actions = [], stateFingerprint }: GateInput): Promise<Verification> {
+export async function verifyFinding({ finding, live = false, actions = [], stateFingerprint, arrival, scanState }: GateInput): Promise<Verification> {
   const checks: Checks = { ruleExists: "unknown", applicability: "unknown", evidenceConsistent: "unknown", violation: "not-checked" };
   const notes: string[] = [];
-  const binding = { findingSha256: findingSha256(finding), stateFingerprint: null as string | null, live, elements: null as number | null };
+  const binding: {
+    findingSha256: string;
+    stateFingerprint: string | null;
+    live: boolean;
+    elements: number | null;
+    state?: StateBinding;
+  } = { findingSha256: findingSha256(finding), stateFingerprint: null, live, elements: null };
 
   const rule = checkRule(finding);
   checks.ruleExists = rule.ruleExists;
@@ -118,16 +172,65 @@ export async function verifyFinding({ finding, live = false, actions = [], state
   verifiedBy = "live-inspection";
   const claimedHex = finding.evidence.data?.observedHex;
   const observedHex = typeof claimedHex === "string" ? normalizeColor(claimedHex) : null;
+  // 2.10.0: a receita vem do scan citado, ou das actions/arrival enviadas; a janela é a do scan ou a
+  // desktop congelada — o agente não escolhe janela.
+  const recipe: StateAttestation["recipe"] = scanState?.recipe ?? {
+    url: finding.element.page,
+    viewport: { ...FROZEN_DESKTOP_VIEWPORT },
+    viewportSource: "frozen-desktop",
+    actions,
+    ...(arrival ? { arrival } : {}),
+  };
+  // Origem + caminho + query; barra final e fragmento não distinguem páginas (state.ts, scanPageKey).
+  if (scanState && !sameScanPage(finding.element.page, scanState.recipe.url)) {
+    throw new ScanStateMisuseError(finding.element.page, scanState.recipe.url, scanState.scanId);
+  }
   try {
-    await withPage(finding.element.page, async (page) => {
-      await applyActions(page, actions);
-      binding.stateFingerprint = await fingerprintPage(page);
-      if (stateFingerprint && stateFingerprint !== binding.stateFingerprint) {
-        checks.evidenceConsistent = "fail";
-        verifiedBy = "state-fingerprint";
+    await withPage(recipe.url, async (page) => {
+      const { attestation, fingerprint } = await reproduceState(page, recipe);
+      binding.stateFingerprint = fingerprint;
+      const state: StateBinding = {
+        policy: attestation.policy,
+        scanId: scanState?.scanId ?? null,
+        reached: attestation.reached,
+        replay: attestation.replay.status,
+        ...(attestation.replay.status === "failed" ? { failure: attestation.replay.failure } : {}),
+        arrival: attestation.arrival,
+        observed: { url: attestation.observed.url, path: attestation.observed.path, viewport: attestation.observed.viewport },
+        mismatches: [],
+        settled: attestation.settle.settled,
+      };
+      binding.state = state;
+      if (!attestation.reached) {
+        // Erro de receita/chegada é limitação de quem pediu: nada é verificado num estado que não foi
+        // reproduzido — nem confirmado, nem rejeitado como se o defeito não existisse.
+        state.limitation = unreachedLimitation(attestation);
+        verifiedBy = "state-replay";
         notes.push(
-          `O estado reproduzido (${binding.stateFingerprint}) não é o estado alegado (${stateFingerprint}). Envie as actions que produzem o estado alegado.`
+          `Limitação: o estado alegado não foi reproduzido. ${state.limitation.detail} A alegação fica sem verificação; isto não indica ausência de defeito.`
         );
+        return;
+      }
+
+      const claimed = scanState
+        ? { url: scanState.url, viewport: scanState.viewport, fingerprint: scanState.fingerprint }
+        : stateFingerprint
+          ? { url: attestation.observed.url, viewport: attestation.observed.viewport, fingerprint: stateFingerprint }
+          : null;
+      if (claimed) {
+        state.mismatches = compareStates(claimed, { url: attestation.observed.url, viewport: attestation.observed.viewport, fingerprint });
+      }
+      if (claimed && state.mismatches.length > 0) {
+        // Estado não reproduzido é limitação, não evidência contra o achado: nada é verificado num
+        // estado diferente do alegado, e o veredito fica `unverifiable` (nunca `rejected`).
+        verifiedBy = "state-fingerprint";
+        state.limitation = {
+          kind: "state-not-reproduced",
+          detail: `O estado reproduzido (${fingerprint}) não é o estado alegado (${claimed.fingerprint}); diverge em: ${state.mismatches.join(", ")}.${
+            attestation.settle.settled ? "" : " A página não assentou dentro do teto de espera."
+          } ${scanState ? `A receita do scan ${scanState.scanId} não reproduziu o mesmo estado.` : "Envie as actions que produzem o estado alegado."}`,
+        };
+        notes.push(`Limitação: ${state.limitation.detail} A alegação fica sem verificação; isto não indica ausência de defeito.`);
         return;
       }
 
@@ -137,7 +240,7 @@ export async function verifyFinding({ finding, live = false, actions = [], state
       if (evidence.count === 0) {
         checks.evidenceConsistent = "fail";
         notes.push(
-          `Nenhum elemento para '${finding.element.locator}' no estado verificado (${actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
+          `Nenhum elemento para '${finding.element.locator}' no estado verificado (${recipe.actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
         );
         return;
       }
@@ -180,7 +283,7 @@ export async function verifyFinding({ finding, live = false, actions = [], state
       } else {
         notes.push(`O localizador resolveu ${evidence.count} elemento(s); localizar não confirma a alegação.`);
       }
-    });
+    }, { viewport: recipe.viewport });
   } catch (error) {
     if (checks.evidenceConsistent !== "fail") checks.violation = "error";
     notes.push(`Falha ao reabrir a página: ${error instanceof Error ? error.message : String(error)}`);
