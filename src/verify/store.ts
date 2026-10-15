@@ -9,7 +9,7 @@
 import { createHash } from "node:crypto";
 import type { Finding, Verification } from "../schema/finding.js";
 
-function canonical(value: unknown): unknown {
+export function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === "object") {
     return Object.fromEntries(

@@ -41,7 +41,9 @@ Siga o procedimento à risca. Não invente regras: toda regra citada deve vir da
 1. Execute scan_page(url) para rodar tokens, estrutura e axe na mesma carga e no mesmo estado.
    Use check_token_compliance, run_axe_scan ou check_component_structure isoladamente apenas para
    uma investigação direcionada que a varredura agregada não resolveu. Guarde scanId, fingerprint
-   e ids; continue nextCursor com get_finding_details(scanId, cursor) sem repetir o scanner. Busque
+   e ids; continue nextCursor com get_finding_details(scanId, cursor) sem repetir o scanner.
+   O resultado vem agrupado em famílias: instâncias idênticas aparecem uma vez, com contagem, um exemplo e ids.
+   Os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor=nextMemberCursor). Busque
    evidência por ids somente para candidatos relevantes; não peça todos os objetos completos.
    Para um estado interativo, reproduza as ações em scan_page.actions e passe compareToScanId para
    receber o diff contra o estado anterior; outro servidor MCP não compartilha esta página.

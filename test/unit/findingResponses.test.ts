@@ -29,7 +29,7 @@ describe("bounded finding responses", () => {
     expect(first.truncated).toBe(true);
     expect(first.nextCursor).toBe(2);
     expect(first.findings[0]).not.toHaveProperty("evidence");
-    expect(first.findings[0]).toHaveProperty("confidence", 1);
+    expect(first.findings[0]).not.toHaveProperty("confidence");
 
     const second = buildFindingPage(findings, { cursor: first.nextCursor });
     expect(second.count).toBe(1);
@@ -97,6 +97,7 @@ describe("bounded finding responses", () => {
       added: ["F-002"],
       removed: [],
       unchanged: 1,
+      evidenceChanged: [],
     });
   });
 });

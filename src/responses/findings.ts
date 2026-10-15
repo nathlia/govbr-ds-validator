@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Finding } from "../schema/finding.js";
+import { canonical } from "../verify/store.js";
 
 export const FindingDetailSchema = z.enum(["summary", "evidence", "full"]);
 export type FindingDetail = z.infer<typeof FindingDetailSchema>;
@@ -62,9 +63,15 @@ export function deduplicateFindings(input: Finding[]): {
   };
 }
 
+/**
+ * Diferença entre lotes pela identidade estável. `unchanged` conta identidades presentes nos dois
+ * lotes (como antes); 2.11.0: `evidenceChanged` lista as que reapareceram com outra evidência —
+ * mesma identidade, outra assinatura —, que antes contavam como inalteradas sem aviso.
+ */
 export function diffFindings(previous: Finding[], current: Finding[]) {
   const previousByKey = new Map(previous.map((finding) => [findingIdentity(finding), finding]));
   const currentByKey = new Map(current.map((finding) => [findingIdentity(finding), finding]));
+  const evidenceOf = (finding: Finding) => JSON.stringify(canonical(finding.evidence));
   return {
     added: [...currentByKey.entries()]
       .filter(([key]) => !previousByKey.has(key))
@@ -73,6 +80,12 @@ export function diffFindings(previous: Finding[], current: Finding[]) {
       .filter(([key]) => !currentByKey.has(key))
       .map(([, finding]) => finding.id),
     unchanged: [...currentByKey.keys()].filter((key) => previousByKey.has(key)).length,
+    evidenceChanged: [...currentByKey.entries()]
+      .filter(([key, finding]) => {
+        const before = previousByKey.get(key);
+        return before !== undefined && evidenceOf(before) !== evidenceOf(finding);
+      })
+      .map(([key, finding]) => ({ previousId: previousByKey.get(key)!.id, currentId: finding.id })),
   };
 }
 
@@ -119,7 +132,7 @@ function truncate(value: string, max = 240): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
-function projectFinding(finding: Finding, detail: FindingDetail): unknown {
+export function projectFinding(finding: Finding, detail: FindingDetail): unknown {
   if (detail === "full") return finding;
 
   const common = {
@@ -136,7 +149,8 @@ function projectFinding(finding: Finding, detail: FindingDetail): unknown {
       page: finding.element.page,
     },
     severity: finding.severity,
-    confidence: finding.pathway === "deterministic" ? 1 : undefined,
+    // 2.11.0: saiu `confidence: 1`. Um checker determinístico reproduz o mesmo resultado para o mesmo
+    // DOM e estado; isso não é probabilidade de o achado estar correto. `pathway` já diz a origem.
     nature: finding.nature,
     mode: finding.mode,
     pathway: finding.pathway,
@@ -169,11 +183,15 @@ export function buildFindingPage(findings: Finding[], options: FindingPageOption
   let usedChars = 0;
   let index = cursor;
   let budgetExceeded = false;
+  let budgetHit = false;
 
   while (index < findings.length && projected.length < limit) {
     const item = projectFinding(findings[index], detail);
     const itemChars = JSON.stringify(item).length + (projected.length ? 1 : 0);
-    if (projected.length > 0 && usedChars + itemChars > maxChars) break;
+    if (projected.length > 0 && usedChars + itemChars > maxChars) {
+      budgetHit = true;
+      break;
+    }
     if (projected.length === 0 && itemChars > maxChars) budgetExceeded = true;
     projected.push(item);
     usedChars += itemChars;
@@ -189,6 +207,10 @@ export function buildFindingPage(findings: Finding[], options: FindingPageOption
     findings: projected,
     truncated,
     ...(truncated ? { nextCursor: index } : {}),
+    // 2.11.0: resposta parcial diz por quê e quantos findings conhecidos ficaram fora desta página.
+    ...(truncated
+      ? { partial: { reasons: [budgetHit ? "char-budget" : "limit"], notReturned: findings.length - index } }
+      : {}),
     responseCharsEstimate: usedChars,
     ...(budgetExceeded ? { budgetExceeded: true } : {}),
     ...(detail !== "full"

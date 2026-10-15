@@ -20,7 +20,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FindingSchema } from "./schema/finding.js";
+import { FindingSchema, type Finding } from "./schema/finding.js";
 import {
   getTokenRegistry,
   getEmag,
@@ -90,7 +90,9 @@ import {
   buildFindingPage,
   deduplicateFindings,
   diffFindings,
+  type FindingDetail,
 } from "./responses/findings.js";
+import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
 import { PageScanCache, scanPage } from "./scan/pageScan.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -439,6 +441,38 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const findingStore = new FindingStore();
   const verificationStore = new VerificationStore();
   const pageScanCache = new PageScanCache();
+  const verificationFor = (finding: Finding) => verificationStore.lookup(finding)?.verification;
+
+  /**
+   * 2.11.0 (NAT-84): visão de um lote — a página de findings de sempre ou a página de famílias.
+   * Só apresentação: `summary`, `deduplication` e o lote guardado não mudam. Nada depende do perfil.
+   */
+  function batchView(
+    findings: Finding[],
+    stateFingerprint: string | null,
+    args: {
+      view?: "findings" | "families";
+      detail?: FindingDetail;
+      cursor?: number;
+      limit?: number;
+      maxChars?: number;
+      memberLimit?: number;
+    },
+  ) {
+    const { view, detail, cursor, limit, maxChars, memberLimit } = args;
+    // Padrão: famílias (decisão do coordenador na revisão do NAT-84). A lista plana segue em view="findings".
+    if ((view ?? "families") === "families") {
+      return buildFamilyPage(findings, { cursor, limit, maxChars, memberLimit, stateFingerprint, verificationFor });
+    }
+    const page = buildFindingPage(findings, { detail, cursor, limit, maxChars });
+    if (cursor) return page;
+    const index = familyIndex(findings, stateFingerprint);
+    return {
+      ...page,
+      familyIndex: index,
+      responseCharsEstimate: page.responseCharsEstimate + JSON.stringify(index).length,
+    };
+  }
 
   const server = new McpServer({
     name: "govbr-ds-validator",
@@ -843,7 +877,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Varredura determinística agregada",
       description:
-        "Carrega a página uma vez e executa tokens, estrutura, página (regiões obrigatórias do Template Base e salto para o conteúdo) e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão.",
+        "Carrega a página uma vez e executa tokens, estrutura, página (regiões obrigatórias do Template Base e salto para o conteúdo) e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
@@ -871,13 +905,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
         ...FindingPageInputShape,
+        ...FamilyViewInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
       telemetry,
       "scan_page",
-      async ({ url, selectors, checks, tokenChecks, components, actions, arrival, compareToScanId, detail, cursor, limit, maxChars }) => {
+      async ({ url, selectors, checks, tokenChecks, components, actions, arrival, compareToScanId, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
         const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
         if (compareToScanId && !previousFindings) {
@@ -936,7 +971,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(stateDiff ? { stateDiff } : {}),
           // Só na primeira página (cursor ausente ou 0): a continuação não repete o ponteiro.
           ...(hasNorms && !cursor ? normativeContextFor(result.coverage.componentsFound) : {}),
-          ...buildFindingPage(result.findings, { detail, cursor, limit, maxChars }),
+          ...batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars, memberLimit }),
         });
       }
     )
@@ -947,7 +982,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Verificação determinística de tokens",
       description:
-        "Compara cores, tipografia, raios e espaçamento computados com o registro de tokens. Retorna referências compactas por padrão; use get_finding_details para evidência ou objetos Finding completos.",
+        "Compara cores, tipografia, raios e espaçamento computados com o registro de tokens. Retorna referências compactas por padrão; use get_finding_details para evidência ou objetos Finding completos. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
@@ -957,13 +992,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Subconjunto de verificações (padrão: todas)"),
         ...FindingPageInputShape,
+        ...FamilyViewInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
       telemetry,
       "check_token_compliance",
-      async ({ url, selector, selectors, checks, detail, cursor, limit, maxChars }) => {
+      async ({ url, selector, selectors, checks, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const activeChecks = checks ?? ALL_TOKEN_CHECKS;
         const evidence = await inspectComputedStyles(
           url,
@@ -989,7 +1025,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             merged: deduplication.merged,
             key: deduplication.key,
           },
-          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
         });
       }
     )
@@ -1000,7 +1036,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Verificação determinística de estrutura",
       description:
-        "Compara elementos br-* com tags, variantes e requisitos de nome acessível da especificação canônica. Retorna referências compactas por padrão; detalhe completo é recuperado por id.",
+        "Compara elementos br-* com tags, variantes e requisitos de nome acessível da especificação canônica. Retorna referências compactas por padrão; detalhe completo é recuperado por id. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         component: z
@@ -1009,13 +1045,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe("Componente específico (ex.: 'button'). Omitir para validar todos os br-* presentes."),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS verificados no mesmo carregamento"),
         ...FindingPageInputShape,
+        ...FamilyViewInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
       telemetry,
       "check_component_structure",
-      async ({ url, component, selectors, detail, cursor, limit, maxChars }) => {
+      async ({ url, component, selectors, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const specs = getComponentSpecs().components;
         const targets = component ? [component] : Object.keys(specs);
         const selector = selectors ?? (component ? `.br-${component}` : "[class*='br-']");
@@ -1055,7 +1092,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             merged: deduplication.merged,
             key: deduplication.key,
           },
-          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
         });
       }
     )
@@ -1066,19 +1103,20 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Varredura axe-core",
       description:
-        "Executa axe-core e cruza regras compatíveis com o e-MAG 3.1. Retorna referências compactas por padrão e preserva Findings completos para recuperação por id.",
+        "Executa axe-core e cruza regras compatíveis com o e-MAG 3.1. Retorna referências compactas por padrão e preserva Findings completos para recuperação por id. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
       inputSchema: {
         url: z.string().describe("URL da página"),
         selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Subtrees avaliadas na mesma varredura"),
         ...FindingPageInputShape,
+        ...FamilyViewInputShape,
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
       telemetry,
       "run_axe_scan",
-      async ({ url, selector, selectors, detail, cursor, limit, maxChars }) => {
+      async ({ url, selector, selectors, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const result = await runAxeScan(url, selectorBatch(selector, selectors)?.toString());
         const deduplication = deduplicateFindings(result.findings);
         const findings = deduplication.findings;
@@ -1096,7 +1134,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             merged: deduplication.merged,
             key: deduplication.key,
           },
-          ...buildFindingPage(findings, { detail, cursor, limit, maxChars }),
+          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
         });
       }
     )
@@ -1115,26 +1153,45 @@ export function createServer(options: ServerOptions = {}): McpServer {
         cursor: FindingPageInputShape.cursor,
         limit: FindingPageInputShape.limit,
         maxChars: FindingPageInputShape.maxChars,
+        view: FamilyViewInputShape.view,
+        memberLimit: FamilyViewInputShape.memberLimit,
+        familyId: z
+          .string()
+          .optional()
+          .describe("Com scanId: pagina os membros de uma família (id, localizador, valor, assinatura, status individual); cursor=nextCursor percorre todos os ids"),
       },
       annotations: { readOnlyHint: true },
     },
     instrumentTool(
       telemetry,
       "get_finding_details",
-      async ({ ids, scanId, detail, cursor, limit, maxChars }) => {
+      async ({ ids, scanId, detail, cursor, limit, maxChars, view, memberLimit, familyId }) => {
         if ((!ids && !scanId) || (ids && scanId)) {
           return json({ error: "Informe exatamente um de ids ou scanId." });
+        }
+        if ((familyId || view !== undefined) && !scanId) {
+          return json({ error: "familyId e view exigem scanId: a família é uma projeção de um lote." });
         }
         const batch = scanId ? findingStore.getBatch(scanId) : undefined;
         const ledger = scanId ? findingStore.getBatchMetadata(scanId) : undefined;
         if (scanId && !batch) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
+        const stateFingerprint = typeof ledger?.stateFingerprint === "string" ? ledger.stateFingerprint : null;
+        if (scanId && familyId) {
+          const members = buildFamilyMemberPage(batch ?? [], familyId, {
+            detail, cursor, limit, maxChars, stateFingerprint, verificationFor,
+          });
+          if (!members) return json({ error: `familyId '${familyId}' não existe no lote '${scanId}'.` });
+          return json({ scanId, ...members });
+        }
         const { found, missing } = ids ? findingStore.get(ids) : { found: batch ?? [], missing: [] };
         return json({
           requested: ids?.length ?? found.length,
           ...(scanId ? { scanId } : {}),
           ...(ledger ? { ledger } : {}),
           missing,
-          ...buildFindingPage(found, { detail: detail ?? (scanId ? "summary" : "evidence"), cursor, limit, maxChars }),
+          ...(scanId
+            ? batchView(found, stateFingerprint, { view, detail: detail ?? "summary", cursor, limit, maxChars, memberLimit })
+            : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars })),
         });
       }
     )

@@ -140,7 +140,7 @@ describe("check_token_compliance (V1, V2, V6)", () => {
     // to be a systematic false positive here.
     const res = await client.callTool({
       name: "check_token_compliance",
-      arguments: { url: baseUrl, selectors: [".br-button", "button.br-button"], limit: 1 },
+      arguments: { url: baseUrl, selectors: [".br-button", "button.br-button"], limit: 1, view: "findings" },
     });
     const compact = JSON.parse(textOf(res));
     expect(compact.detail).toBe("summary");
@@ -153,7 +153,7 @@ describe("check_token_compliance (V1, V2, V6)", () => {
 
     const detailRes = await client.callTool({
       name: "get_finding_details",
-      arguments: { scanId: compact.scanId, detail: "full", limit: 200 },
+      arguments: { scanId: compact.scanId, detail: "full", limit: 200, view: "findings" },
     });
     const data = JSON.parse(textOf(detailRes));
     expect(data.missing).toEqual([]);
@@ -190,7 +190,7 @@ describe("check_component_structure (V3, V4)", () => {
   it("flags the <a class=br-button> and the unlabeled icon-only button", async () => {
     const res = await client.callTool({
       name: "check_component_structure",
-      arguments: { url: baseUrl, component: "button", detail: "full" },
+      arguments: { url: baseUrl, component: "button", detail: "full", view: "findings" },
     });
     const data = JSON.parse(textOf(res));
     expect(data.componentsFound).toContain("button");
@@ -207,7 +207,7 @@ describe("check_component_structure (V3, V4)", () => {
 
 describe("run_axe_scan (V4, V5)", () => {
   it("detects button-name and html-has-lang with e-MAG cross-references", async () => {
-    const res = await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl, detail: "full" } });
+    const res = await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl, detail: "full", view: "findings" } });
     const data = JSON.parse(textOf(res));
     expect(data.engine.name).toBe("axe-core");
 
@@ -255,6 +255,7 @@ describe("scan_page baseline viewport (2.5.2)", () => {
 describe("scan_page aggregate fast path", () => {
   it("runs selected checks on one state and reuses only an exact fingerprint+scope match", async () => {
     const args = {
+      view: "findings",
       url: baseUrl,
       selectors: [".br-button"],
       checks: ["tokens", "structure", "axe"],
@@ -307,6 +308,7 @@ describe("scan_page aggregate fast path", () => {
 
   it("reproduces interactions before fingerprinting instead of assuming browser state is shared", async () => {
     const baseArgs = {
+      view: "findings",
       url: baseUrl,
       selectors: ["#state-toggle"],
       checks: ["structure"],

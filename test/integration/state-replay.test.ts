@@ -493,7 +493,7 @@ describe("caller independence", () => {
     const evaluation = await connect("cliente-avaliacao", "evaluation");
     const other = await connect("outro-cliente", "full");
     try {
-      const args = { url: page, ...STRUCTURE, actions: [{ action: "click", selector: "#expandir" }], arrival: { expanded: "#expandir" } };
+      const args = { url: page, ...STRUCTURE, actions: [{ action: "click", selector: "#expandir" }], arrival: { expanded: "#expandir" }, view: "findings" };
       const a = (await call(evaluation, "scan_page", args)).data;
       const b = (await call(other, "scan_page", args)).data;
       expect(a.cacheHit).toBe(false);

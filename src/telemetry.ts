@@ -47,7 +47,7 @@ function textPayload(result: unknown): string {
 function recordCount(value: unknown): number | undefined {
   if (!value || typeof value !== "object") return undefined;
   const obj = value as Record<string, unknown>;
-  for (const key of ["findings", "rules", "components", "items", "elements"]) {
+  for (const key of ["findings", "families", "members", "rules", "components", "items", "elements"]) {
     if (Array.isArray(obj[key])) return obj[key].length;
   }
   for (const key of ["count", "elementsInspected", "total"]) {

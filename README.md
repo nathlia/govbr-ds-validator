@@ -46,11 +46,11 @@ Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
 **Deterministic checkers (no LLM)** — bounded pages, compact by default:
-- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, arrival?, compareToScanId?, detail?, cursor?, limit?, maxChars?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, measured state arrival (2.10.0), state/finding diffs, exact cache and evidence ledger
-- `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?)` — batched colors/fonts/radii/spacing vs. token registry
-- `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched DOM vs. canonical spec
-- `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?)` — batched axe-core with e-MAG cross-references
-- `get_finding_details (ids? | scanId?, detail?, cursor?, limit?, maxChars?)` — retrieves selected evidence or continues a stored scan without rerunning it
+- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, arrival?, compareToScanId?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, measured state arrival (2.10.0), state/finding diffs, exact cache and evidence ledger
+- `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched colors/fonts/radii/spacing vs. token registry
+- `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched DOM vs. canonical spec
+- `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched axe-core with e-MAG cross-references
+- `get_finding_details (ids? | scanId?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?, familyId?)` — retrieves selected evidence or continues a stored scan without rerunning it; with `scanId` + `familyId` pages every member of a finding family (2.11.0)
 
 All three scanners default to `detail="summary"`, return explicit `truncated`/`nextCursor`, and
 respect an approximate 12,000-character budget. Use `detail="evidence"` for adjudication and
@@ -90,6 +90,47 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
+
+### Finding families: grouped presentation, every member recoverable (2.11.0)
+
+On real screens dozens of identical instances (calendar days, one icon-only button per table row,
+fifty `.br-button`s) flooded the responses (NAT-84). The scanners and `get_finding_details(scanId)`
+now answer with **families by default** (`view="families"`); the flat page stays available with
+`view="findings"`, and its first page carries a small `familyIndex` (`totalFamilies`, `largestFamily`,
+counted in `responseCharsEstimate`). Grouping is **presentation only**: the stored batch, `summary`,
+`deduplication`, `total` and the JSON printed by `node dist/cli/scan-page.js` (which calls `scanPage`
+directly) are unchanged, and nothing depends on the tool profile. Families are grouped by the full
+key; a 12-hex `familyId` collision between two keys throws instead of mixing families.
+
+- **Family key** — `rule.source + rule.id + rule.implements + rule.wcag + nature + mode + pathway +
+  severity + element.page + the batch's stateFingerprint + evidence.data.property + evidenceSignature`,
+  where `evidenceSignature = sha256(canonical{observed, expected, data})`. Locator, snippet, id and
+  trace are not in the key; different states, norms, causes or values never share a family.
+  `familyId = FAM-` + 12 hex of the key, stable for the same batch.
+- **Summary per family** — `count`, one `example`, `value`, `gate` (tally of individual verdicts),
+  up to `memberLimit` ids (default 25) with `membersNotReturned`, `nextMemberCursor` and a ready
+  `nextMemberCall` — the rest comes from `get_finding_details`, never from rerunning the scanner.
+- **Members** — `get_finding_details(scanId, familyId, cursor?, limit?, detail?)` returns each
+  member's `id`, `locator`, `value`, `evidenceSignature`, `identity` and its own `status`;
+  `nextCursor` walks all ids. `detail="evidence"|"full"` adds the evidence or the complete Finding.
+- **No inherited verdict** — `status` keeps three separate fields: `acceptedByAgent` (always `null`
+  here: the validator never sees the agent's final decision; the evaluation ledger in govbr-eval
+  fills it), `ruleApplicable` (the gate's applicability check, `not-checked` without a stored
+  verification) and `confirmedByGate` (`true` only with a stored `confirmed`; plus `gateVerdict`).
+  A family has no verdict of its own.
+- **Changed evidence** — an identity (rule + page + locator + property) that reappears with other
+  evidence becomes another signature/family and is listed in `identityVersions`;
+  `stateDiff.findings.evidenceChanged` reports the same between two scans (`unchanged` keeps its old meaning).
+- **Known limit** — a token finding does not carry the stylesheet/selector that declared the value,
+  so two CSS rules with the same off-scale value share a family; adding the cause to the key would
+  require writing it into `evidence.data`, which would change the baseline CLI JSON.
+- **Partial results** — a family or member page that stops early says so: `truncated: true` (read by
+  telemetry), `complete: false` and
+  `partial: { reasons: ["limit" | "char-budget" | "member-limit" | "time-limit"], familiesNotReturned?,
+  membersNotReturned, nextCursor? }`. The flat findings page also gains `partial: { reasons, notReturned }`.
+- **No unsupported certainty** — the compact finding projection no longer emits `confidence: 1`.
+  A deterministic checker reproduces the same result for the same DOM and state; that is not a
+  probability that the finding is correct. `pathway` already names the origin.
 
 ### Replayable states: one target, measured arrival, versioned identity (2.10.0)
 

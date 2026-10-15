@@ -140,7 +140,7 @@ describe("deterministic checkers inside shadow roots", () => {
     const result = jsonOf(
       await client.callTool({
         name: "check_token_compliance",
-        arguments: { url: baseUrl, selector: ".br-input", checks: ["radius"], detail: "evidence" },
+        arguments: { url: baseUrl, selector: ".br-input", checks: ["radius"], detail: "evidence", view: "findings" },
       }),
     );
 
@@ -151,7 +151,7 @@ describe("deterministic checkers inside shadow roots", () => {
 
   it("run_axe_scan reports the unnamed button inside the shadow root with a crossing locator", async () => {
     const result = jsonOf(
-      await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl, detail: "evidence" } }),
+      await client.callTool({ name: "run_axe_scan", arguments: { url: baseUrl, detail: "evidence", view: "findings" } }),
     );
 
     const semNome = result.findings.find((f: any) => f.rule.id === "button-name");
