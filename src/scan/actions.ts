@@ -149,8 +149,25 @@ async function countTargets(page: Page, selector: string): Promise<{ count: numb
  * falhou, com motivo. Erro de receita é limitação de quem a escreveu, não ausência de defeito nem
  * falha técnica do servidor.
  */
-export async function applyActions(page: Page, actions: PageAction[]): Promise<ReplayResult> {
+/**
+ * 2.13.0 (NAT-85): observador opcional da reprodução. É chamado antes da primeira ação (`afterStep`
+ * = -1) e depois de cada ação aplicada, com a ação seguinte (ou `undefined`). Só os predicados de
+ * transição o pedem; sem ele, a reprodução é idêntica à da 2.12.0. Um erro do observador nunca
+ * interrompe a receita: quem observa registra a falha na própria observação.
+ */
+export type ReplayObserver = (page: Page, afterStep: number, next: PageAction | undefined) => Promise<void>;
+
+export async function applyActions(page: Page, actions: PageAction[], observe?: ReplayObserver): Promise<ReplayResult> {
   const steps: ReplayStep[] = [];
+  const observed = async (afterStep: number) => {
+    if (!observe) return;
+    try {
+      await observe(page, afterStep, actions[afterStep + 1]);
+    } catch {
+      // o observador guarda a própria falha; a receita segue
+    }
+  };
+  await observed(-1);
   for (const [index, action] of actions.entries()) {
     const fail = (reason: ReplayFailureReason, matched: number | null, detail: string): ReplayResult => ({
       status: "failed",
@@ -168,6 +185,7 @@ export async function applyActions(page: Page, actions: PageAction[]): Promise<R
     if (action.action === "wait" && !action.selector) {
       await page.waitForTimeout(Math.min(action.ms ?? 0, 5_000));
       steps.push(stepOf(index, action, null));
+      await observed(index);
       continue;
     }
     if (action.action === "press" && !action.selector) {
@@ -177,6 +195,7 @@ export async function applyActions(page: Page, actions: PageAction[]): Promise<R
         return fail("action-failed", null, `press '${action.key}' falhou: ${message(error)}`);
       }
       steps.push(stepOf(index, action, null));
+      await observed(index);
       continue;
     }
 
@@ -197,6 +216,7 @@ export async function applyActions(page: Page, actions: PageAction[]): Promise<R
         );
       }
       steps.push(stepOf(index, action, await page.locator(selector).count()));
+      await observed(index);
       continue;
     }
 
@@ -239,6 +259,7 @@ export async function applyActions(page: Page, actions: PageAction[]): Promise<R
       return fail("action-failed", 1, `${action.action} em '${selector}' falhou: ${message(error)}`);
     }
     steps.push(stepOf(index, action, 1));
+    await observed(index);
   }
   return { status: "applied", steps };
 }

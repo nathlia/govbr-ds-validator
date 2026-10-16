@@ -53,7 +53,8 @@ describe("other registries", () => {
 
   it("reports every registry version", () => {
     const versions = registryVersions();
-    expect(Object.keys(versions).sort()).toEqual(["components", "emag", "kb", "wcag"]);
+    expect(Object.keys(versions).sort()).toEqual(["components", "contextual", "emag", "kb", "wcag"]);
     expect(versions.emag).toContain("45 recomendações");
+    expect(versions.contextual).toContain("9 condições");
   });
 });

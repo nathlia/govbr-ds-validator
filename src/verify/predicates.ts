@@ -25,9 +25,20 @@ import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
+import {
+  ANATOMY_PARTS,
+  anatomyPartFor,
+  conditionByName,
+  conditionsForRule,
+  contextRuleOf,
+  evaluateContext,
+  type ContextCondition,
+  type ContextEvidence,
+} from "./contextual.js";
 
 export interface PredicateOutcome {
-  status: "verified" | "contradicted";
+  /** 2.13.0: `undetermined` — o predicado rodou no estado reproduzido e os dados não decidem. */
+  status: "verified" | "contradicted" | "undetermined";
   detail: string;
 }
 
@@ -42,9 +53,16 @@ export interface Predicate {
   properties: StyleProperty[];
   /** 2.7.0: o predicado decide sobre o documento e precisa dos fatos de página no estado reproduzido. */
   needsPageFacts?: boolean;
+  /**
+   * 2.13.0 (NAT-85): fatos de contexto que o portão coleta no estado reproduzido — traço de foco e
+   * visibilidade por passo, árvore de acessibilidade, anatomia. Predicados com contexto tratam alvo
+   * ausente como `undetermined` (alvo desconhecido nunca vira rejeição) e, com traço, decidem pelos
+   * sujeitos observados durante a receita, mesmo que o sujeito tenha saído do documento no fim.
+   */
+  context?: ContextCondition["needs"];
   /** Liga os dados estruturados alegados ao valor/tag de CADA elemento vivo (ou aos fatos de página). */
   verifyClaim(elements: ElementEvidence[], facts?: PageFacts): ClaimOutcome;
-  evaluate(elements: ElementEvidence[], url: string, facts?: PageFacts): PredicateOutcome;
+  evaluate(elements: ElementEvidence[], url: string, facts?: PageFacts, context?: ContextEvidence): PredicateOutcome;
 }
 
 export type PredicateSelection =
@@ -120,6 +138,11 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   const generic =
     `Nenhum predicado implementado para ${source} '${id}': a regra existe, mas o oráculo não decide ` +
     "mecanicamente a violação alegada. Localizar o elemento não confirma a alegação.";
+
+  // 2.13.0 (NAT-85): condições contextuais. Só a regra listada na condição e a condição exata
+  // selecionam o predicado; regra genérica ou condição de outra regra ficam sem predicado.
+  const contextual = selectContextPredicate(finding, data);
+  if (contextual) return contextual;
 
   if (source === "govbr-ds-token") {
     const property = typeof data.property === "string" ? data.property : null;
@@ -300,4 +323,58 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   }
 
   return none(generic);
+}
+
+/** Seleção das condições contextuais (P1–P3). `null`: a alegação não é contextual. */
+function selectContextPredicate(finding: Finding, data: Record<string, unknown>): PredicateSelection | null {
+  const rule = contextRuleOf(finding);
+  const forRule = rule ? conditionsForRule(rule) : [];
+  const requested = conditionByName(data.expectedCondition);
+  if (!requested && forRule.length === 0) return null;
+  const cited = `${finding.rule.source} '${finding.rule.id}'`;
+  if (!requested) {
+    return {
+      predicate: null,
+      claimStatus: "missing",
+      reason: `${cited} só é verificável com evidence.data.expectedCondition = ${forRule.map((c) => `'${c.condition}'`).join(" ou ")}.`,
+    };
+  }
+  if (!rule || !requested.rules.some((r) => r.source === rule.source && r.id === rule.id)) {
+    return {
+      predicate: null,
+      reason:
+        `A condição '${requested.condition}' só é decidida para ${requested.rules.map((r) => `${r.source} ${r.id}`).join(", ")}; ` +
+        `${cited} não seleciona predicado (norma genérica ou de outro defeito).`,
+    };
+  }
+  const missing = requested.fields.filter((field) => data[field] === undefined);
+  if (missing.length > 0) {
+    return { predicate: null, claimStatus: "missing", reason: `'${requested.condition}' exige evidence.data.${missing.join(", evidence.data.")}.` };
+  }
+  if (requested.check === "error-item-identified" && (typeof data.errorMessage !== "string" || !data.errorMessage.trim())) {
+    return { predicate: null, claimStatus: "contradicted", reason: "evidence.data.errorMessage deve ser o seletor do texto de erro." };
+  }
+  if (requested.check === "anatomy-part" && !anatomyPartFor(finding.rule.id, data.component, data.part)) {
+    return {
+      predicate: null,
+      claimStatus: "contradicted",
+      reason: `component/part não correspondem a '${finding.rule.id}' (esperado: ${ANATOMY_PARTS.filter((p) => p.rules.includes(finding.rule.id))
+        .map((p) => `component='${p.component}', part='${p.part}'`)
+        .join(" ou ")}).`,
+    };
+  }
+  const condition = requested;
+  return {
+    predicate: {
+      id: `context-${condition.check}`,
+      properties: [],
+      context: condition.needs,
+      verifyClaim: (elements) => ({
+        status: "consistent",
+        detail: `Condição estruturada '${condition.condition}' (${condition.family}) aceita para ${cited}; ${elements.length} sujeito(s) no estado final.`,
+      }),
+      evaluate: (_elements, _url, _facts, context) =>
+        evaluateContext(condition, finding, context ?? { actions: [] }),
+    },
+  };
 }

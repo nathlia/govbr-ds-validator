@@ -105,6 +105,14 @@ export const EvidenceSchema = z.object({
         `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}; ` +
         `ds-page-header|ds-page-footer (region + observedCount)=${EXPECTED_CONDITIONS.pageRegion}; ` +
         `ds-page-skip-link (region + firstLinkHref)=${EXPECTED_CONDITIONS.skipLink}. ` +
+        "2.13.0 contextual conditions (verified live, in the state the actions reproduce; element.locator names the subject): " +
+        `wcag 3.3.1 | emag 6.6 (+ errorMessage = selector of the error text the last action made appear)=${EXPECTED_CONDITIONS.errorItemIdentified}; ` +
+        `wcag 3.3.1 | emag 6.6 (no error text at all)=${EXPECTED_CONDITIONS.errorDescribedInText}; ` +
+        `wcag 4.1.3 (subject = the status container)=${EXPECTED_CONDITIONS.statusMessage}; ` +
+        `DS anatomy rule (+ component, part)=${EXPECTED_CONDITIONS.anatomyPart}; ` +
+        `breadcrumb last item is a link=${EXPECTED_CONDITIONS.currentCrumbNotLink}; ` +
+        `modal focus restore=${EXPECTED_CONDITIONS.focusRestored}; modal initial focus=${EXPECTED_CONDITIONS.initialFocus}; ` +
+        `modal Tab containment=${EXPECTED_CONDITIONS.focusContained}; message/menu focus on close when shown=${EXPECTED_CONDITIONS.focusOnClose}. ` +
         "Free-text observed/expected remain human explanations, not semantic gate inputs."
     ),
 });
@@ -120,9 +128,11 @@ export type CheckStatus = z.infer<typeof CheckStatusSchema>;
  *   contradicted  the predicate ran and at least one asserted element does not violate
  *   no-predicate  no predicate exists for this rule/claim — the only honest answer is unverifiable
  *   not-checked   a predicate exists but live=false
+ *   undetermined  2.13.0: a predicate ran in the reproduced state, but the data do not decide (transition not
+ *                 observed, exception without a normative source, closed shadow root, target absent) — unverifiable
  *   error         the page could not be reopened
  */
-export const ViolationStatusSchema = z.enum(["verified", "contradicted", "no-predicate", "not-checked", "error"]);
+export const ViolationStatusSchema = z.enum(["verified", "contradicted", "no-predicate", "not-checked", "undetermined", "error"]);
 export type ViolationStatus = z.infer<typeof ViolationStatusSchema>;
 
 export const VerificationSchema = z.object({
@@ -148,6 +158,10 @@ export const VerificationSchema = z.object({
         .unknown()
         .optional()
         .describe("2.10.0: what replaying the claimed state proved — policy, scanId, replay status/failure, arrival conditions, observed url/viewport, mismatches"),
+      context: z
+        .unknown()
+        .optional()
+        .describe("2.13.0: contextual evidence the predicate decided on — focus/visibility trace per recipe step, accessibility facts, anatomy facts"),
     })
     .optional(),
   registries: z.record(z.string()).optional().describe("Registry versions the ids were checked against"),

@@ -140,3 +140,76 @@ export function groundingFor(kind: CheckKind): string[] {
 export function podeVirarAchado(kind: CheckKind): boolean {
   return CHECK_GROUNDING[kind].implements.length > 0;
 }
+
+/**
+ * 2.13.0 (NAT-85) — fundamentação das verificações contextuais (P1 associações, P2 anatomia, P3
+ * foco em transições). Ficam FORA de `CHECK_GROUNDING` de propósito: estes achados citam o id
+ * normativo diretamente (como `structure-accessible-name` cita `emag-2.2`), então não há ponte de
+ * vocabulário a gerar, e o gerador de aliases do eval (que recusa tipo não mapeado) não muda.
+ * As listas de regras aceitas por condição estão em `verify/contextual.ts`; o teste de
+ * fundamentação confere que cada id existe e é obrigatório ou proibido na base servida.
+ */
+export type ContextCheckKind =
+  | "context-error-identification"
+  | "context-status-message"
+  | "context-anatomy"
+  | "context-breadcrumb-current-not-link"
+  | "context-focus-restore"
+  | "context-focus-initial"
+  | "context-focus-contained"
+  | "context-focus-on-close";
+
+export const CONTEXT_GROUNDING: Record<ContextCheckKind, CheckGrounding> = {
+  "context-error-identification": {
+    implements: ["govbr-3.7.0-accessibility-global-271582e4fbe8", "emag-6.6"],
+    basis:
+      "e-MAG 6.6 / WCAG 3.3.1 (obrigatórias): 'Quando um erro de entrada de dados for automaticamente detectado, o item " +
+      "que apresenta erro deve ser identificado e descrito ao usuário por texto.' A relação é a que o Chromium expõe " +
+      "(invalid, descrição, nome), nunca a presença de aria-describedby — a regra do DS sobre aria-describedby é recomendada.",
+  },
+  "context-status-message": {
+    implements: [],
+    basis:
+      "WCAG 4.1.3 (AA): mensagens de status determináveis por papel ou propriedade sem receber foco. Não há regra " +
+      "obrigatória equivalente no DS ou no e-MAG (a do Message é recomendada); o achado cita a WCAG diretamente.",
+  },
+  "context-anatomy": {
+    implements: [
+      "govbr-3.7.0-component-message-d0c7ed3f91af",
+      "govbr-3.7.0-component-header-e58979706103",
+      "govbr-3.7.0-component-breadcrumb-478cffdbb111",
+      "govbr-3.7.0-component-breadcrumb-660169599b49",
+      "govbr-3.7.0-component-modal-672bf38f39fb",
+      "govbr-3.7.0-component-modal-39edd5c2d5cc",
+    ],
+    basis:
+      "Linhas 'Obrigatório' das tabelas de Anatomia (aba Designer) e 'O título é o único elemento obrigatório no Header' " +
+      "(com o substituto permitido). Partes 'Opcional' não têm verificação.",
+  },
+  "context-breadcrumb-current-not-link": {
+    implements: ["govbr-3.7.0-accessibility-breadcrumb-53db61fa81f9"],
+    basis: "'A página atual ou último elemento do breadcrumb, não deve ser considerado um link' (proibida).",
+  },
+  "context-focus-restore": {
+    implements: ["govbr-3.7.0-accessibility-modal-f36c91d7073c"],
+    basis:
+      "'Ao fechar a janela modal, o foco deve retornar ao último elemento focado na tela' (obrigatória). Restauração da " +
+      "Message é recomendada e a do Menu não tem texto: sem verificação.",
+  },
+  "context-focus-initial": {
+    implements: ["govbr-3.7.0-accessibility-modal-e0ce4b474163", "govbr-3.7.0-accessibility-modal-6f984d79466a"],
+    basis:
+      "Foco inicial da modal: informativa → botão fechar; com ação do usuário → botão de ação primária (obrigatórias). " +
+      "A exceção destrutiva ('assume') não está na base: foco num secundário fica sem decisão.",
+  },
+  "context-focus-contained": {
+    implements: ["govbr-3.7.0-accessibility-modal-744f67e17bec"],
+    basis: "'Após aberta, o fluxo de navegação deve percorrer apenas os elementos da janela modal' (obrigatória).",
+  },
+  "context-focus-on-close": {
+    implements: ["govbr-3.7.0-accessibility-message-ad83724b777f", "govbr-3.7.0-accessibility-menu-a3be6788bdea"],
+    basis:
+      "Message: 'No momento da exibição da mensagem, o foco do navegador deve estar sobre o botão fechar, quando houver'; " +
+      "Menu: 'Após abertura do menu, o foco deve cair imediatamente sobre o botão fechar, se houver' (obrigatórias).",
+  },
+};

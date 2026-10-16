@@ -91,6 +91,56 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Contextual verification: associations, anatomy, focus transitions (2.13.0, NAT-85)
+
+Until 2.12.0 the gate had predicates only for token values, the component root tag and the page
+regions; every relation between elements, every required part and every focus transition stayed
+`unverifiable`. 2.13.0 adds **nine closed conditions** in three families (`src/verify/contextual.ts`),
+cut from the normative control catalogue P0 (`catalogo-controles-1.0.0`) and grounded in the literal
+KB (D-124). A condition selects its predicate only when the cited rule is in its list **and**
+`evidence.data.expectedCondition` is exactly the condition; a generic norm (WCAG 1.3.1, 2.4.3, 2.1.2),
+a recommended or permitted rule, or a condition cited with another rule selects nothing.
+
+| Family | `expectedCondition` | Rules | Decides on |
+|---|---|---|---|
+| P1 | `input-error-item-identified` (+ `errorMessage`) | WCAG 3.3.1 · e-MAG 6.6 · `…global-271582e4fbe8` | error text appeared with the last action and the field changed appearance; Chromium exposes no `invalid`, the message is not in the computed description/name, and it does not name the field |
+| P1 | `input-error-described-in-text` | same | field changed appearance (or `invalid`) and no new text appeared |
+| P1 | `status-message-programmatically-determined` | WCAG 4.1.3 | container gained text without focus and without alert/status/log/aria-live (self, ancestors, descendants); focus moved into it = exception |
+| P2 | `required-anatomy-part-present` (+ `component`, `part`) | Message *Mensagem*, Header *Título* (logo/text substitute allowed), Breadcrumb *Título da página atual*, Modal *Botões* / *Conteúdo* | parts read through the `@govbr-ds/core` classes, open shadow roots included; hidden root, closed shadow root, optional part → no decision |
+| P2 | `current-page-crumb-not-link` | `…breadcrumb-53db61fa81f9` (prohibited) | last breadcrumb item contains `a[href]` |
+| P3 | `focus-returns-to-invoker-on-close` | `…modal-f36c91d7073c` | focus after closing ≠ invoker; no invoker → not applicable (rejected); invoker removed or new document → no decision |
+| P3 | `initial-focus-on-required-control` | `…modal-e0ce4b474163`, `…modal-6f984d79466a` | focus outside the dialog violates every reading; on the rule's target → rejected; a field in an action dialog → verified (Q3 a); another control (possible destructive exception, not in the KB) → no decision |
+| P3 | `tab-stays-within-modal` | `…modal-744f67e17bec` | a Tab with the dialog open moves focus outside it; Tab from the last focusable that wraps → rejected |
+| P3 | `focus-on-close-button-when-shown` | `…message-ad83724b777f`, `…menu-a3be6788bdea` | focus on the close button when the component is shown; no close button → not applicable (rejected) |
+
+- **New predicate outcome `undetermined`** → `checks.violation: "undetermined"` → `unverifiable`: the
+  predicate ran in the reproduced state, but the data do not decide. A contextual target that does not
+  exist in the state is `undetermined` too (unknown target is a limitation, not counter-evidence); the
+  older predicates keep their behaviour.
+- **Transition trace.** Predicates that need it get an observation before the first action and after
+  each one (deep focus across open shadow roots, subject shown / focus inside / close, primary, field and
+  tabbable controls, colours, visible text), with a short settle (two frames + finite animations, cap
+  1 s). The *trigger* is the last action; the invoker of an action with a selector is its target.
+  Without a contextual predicate the replay is the 2.12.0 one (no observer, no extra waits).
+- **Only stable focus decides.** Every focus-trace observation waits until the deep active element has not
+  changed for 400 ms (cap 2 s) and records `focusStable`; a P3 decision (and the 4.1.3 moved-focus exception)
+  on an unstable reading is `undetermined`, so a late `setTimeout(() => x.focus())` cannot produce `verified`.
+  The trigger is the last action that acts on the page (trailing `wait`s are skipped). Accessibility facts are
+  paired with trace subjects by element number, never by position. Implicit live regions (`<output>`,
+  timer/marquee) count for 4.1.3; a field failing native browser validation leaves "no text" undecided (the
+  browser bubble is not in the DOM). A last breadcrumb link to this same page leaves "current-page title
+  missing" undecided (a bare `href="#"` is a placeholder, not a link to the page); the current-page `h1` comes
+  from `main`.
+- **Evidence exported** with the verdict in `binding.context` (trace per step, accessibility facts,
+  anatomy facts); `registries.contextual` names the condition registry version.
+- **`scan_page`**: P2 runs inside the `structure` check and emits a finding (cited KB id, anchor = the
+  component root, `data.component/part`) only where the gate predicate would answer `verified`.
+- **Out, on purpose:** `aria-describedby` on every field (DS rule is recommended), WCAG 1.4.1 (depends
+  on visual cues the oracle does not measure), restoring focus for Message (recommended) and Menu (no
+  text), the destructive-modal exception (corpus text not in the KB), Pagination (type not declared in
+  the DOM). Grounding: `CONTEXT_GROUNDING` in `src/checkers/grounding.ts`, kept outside
+  `CHECK_GROUNDING` because these findings cite normative ids directly (no alias to generate).
+
 ### Knowledge versions: the literal base is served, 3.7.0 stays readable (2.12.0)
 
 Until 2.11.0 the oracle served `data/knowledge/versions/3.7.0/` — 186 rules (152 normative + 34

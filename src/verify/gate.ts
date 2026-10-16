@@ -38,6 +38,8 @@ import {
   type Membership,
 } from "./registries.js";
 import { selectPredicate } from "./predicates.js";
+import type { ContextEvidence } from "./contextual.js";
+import { collectAccessibility, collectAnatomy, traceObserver, type TraceObservation, type TraceRequest } from "../evidence/context.js";
 import { findingSha256 } from "./store.js";
 
 export interface GateInput {
@@ -126,6 +128,7 @@ export async function verifyFinding({ finding, live = false, actions = [], state
     live: boolean;
     elements: number | null;
     state?: StateBinding;
+    context?: unknown;
   } = { findingSha256: findingSha256(finding), stateFingerprint: null, live, elements: null };
 
   const rule = checkRule(finding);
@@ -185,9 +188,22 @@ export async function verifyFinding({ finding, live = false, actions = [], state
   if (scanState && !sameScanPage(finding.element.page, scanState.recipe.url)) {
     throw new ScanStateMisuseError(finding.element.page, scanState.recipe.url, scanState.scanId);
   }
+  // 2.13.0 (NAT-85): predicados de transição pedem o traço da reprodução (foco, visibilidade e
+  // texto antes da 1ª ação e depois de cada uma). Sem eles, a reprodução é a mesma da 2.12.0.
+  const context = selection.predicate?.context;
+  const claimData = (finding.evidence.data ?? {}) as Record<string, unknown>;
+  const traceRequest: TraceRequest | null = context?.trace
+    ? {
+        subject: finding.element.locator,
+        ...(context.trace.message && typeof claimData.errorMessage === "string" ? { message: claimData.errorMessage } : {}),
+        ...(context.trace.text ? { text: true } : {}),
+        ...(context.trace.focus ? { focus: true } : {}),
+      }
+    : null;
+  const observations: TraceObservation[] = [];
   try {
     await withPage(recipe.url, async (page) => {
-      const { attestation, fingerprint } = await reproduceState(page, recipe);
+      const { attestation, fingerprint } = await reproduceState(page, recipe, traceRequest ? traceObserver(traceRequest, observations) : undefined);
       binding.stateFingerprint = fingerprint;
       const state: StateBinding = {
         policy: attestation.policy,
@@ -237,7 +253,16 @@ export async function verifyFinding({ finding, live = false, actions = [], state
       const properties = [...new Set<StyleProperty>([...(selection.predicate?.properties ?? []), ...(observedHex ? COLOR_PROPERTIES : [])])];
       const evidence = await inspectPageComputedStyles(page, finding.element.page, finding.element.locator, properties);
       binding.elements = evidence.count;
-      if (evidence.count === 0) {
+      if (evidence.count === 0 && context && !context.trace) {
+        // Predicados contextuais: alvo desconhecido no estado é limitação, não contraprova.
+        checks.violation = "undetermined";
+        verifiedBy = `predicate:${selection.predicate!.id}`;
+        notes.push(
+          `Nenhum elemento para '${finding.element.locator}' no estado verificado: alvo desconhecido ou estado diferente do alegado. A alegação fica sem verificação; isto não indica ausência de defeito.`
+        );
+        return;
+      }
+      if (evidence.count === 0 && !context) {
         checks.evidenceConsistent = "fail";
         notes.push(
           `Nenhum elemento para '${finding.element.locator}' no estado verificado (${recipe.actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
@@ -275,8 +300,18 @@ export async function verifyFinding({ finding, live = false, actions = [], state
 
       // Finding an element cannot establish agreement with a structured assertion that is absent.
       checks.evidenceConsistent = selection.claimStatus === "missing" ? "unknown" : "pass";
+      let contextEvidence: ContextEvidence | undefined;
+      if (context) {
+        contextEvidence = {
+          actions: recipe.actions,
+          ...(context.trace ? { trace: observations } : {}),
+          ...(context.accessibility ? { accessibility: await collectAccessibility(page, finding.element.locator) } : {}),
+          ...(context.anatomy ? { anatomy: await collectAnatomy(page, finding.element.locator) } : {}),
+        };
+        binding.context = summarizeContext(contextEvidence);
+      }
       if (selection.predicate) {
-        const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page, facts);
+        const outcome = selection.predicate.evaluate(evidence.elements, finding.element.page, facts, contextEvidence);
         checks.violation = outcome.status;
         verifiedBy = `predicate:${selection.predicate.id}`;
         notes.push(outcome.detail);
@@ -460,4 +495,29 @@ function checkRegistryClaims(finding: Finding): { status: CheckStatus; detail: s
   }
 
   return passes.length > 0 ? { status: "pass", detail: passes.join(" ") } : null;
+}
+
+/**
+ * Evidência contextual exportada com o veredito (2.13.0): o traço por passo (foco, sujeitos exibidos,
+ * foco dentro), os fatos de acessibilidade e de anatomia. É o que um revisor confere sem reabrir a página.
+ */
+function summarizeContext(evidence: ContextEvidence): unknown {
+  return {
+    actions: evidence.actions.length,
+    ...(evidence.trace
+      ? {
+          trace: evidence.trace.map((o) => ({
+            step: o.step,
+            url: o.url,
+            active: o.activeDescription,
+            nextTarget: o.nextTarget,
+            subjects: o.subjects.map((s) => ({ ref: s.ref, shown: s.shown, focusInside: s.focusInside, text: s.text.slice(0, 120) })),
+            ...(o.message ? { message: o.message } : {}),
+            ...(o.error ? { error: o.error } : {}),
+          })),
+        }
+      : {}),
+    ...(evidence.accessibility ? { accessibility: evidence.accessibility } : {}),
+    ...(evidence.anatomy ? { anatomy: evidence.anatomy } : {}),
+  };
 }

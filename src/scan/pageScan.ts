@@ -6,11 +6,13 @@ import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type 
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
+import { ANATOMY_ROOT_SELECTOR, checkAnatomy } from "../checkers/anatomy.js";
+import { collectAnatomy } from "../evidence/context.js";
 import { inspectPageStructure } from "../evidence/pageFacts.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
-import { applyActions, type Arrival, type PageAction, type ReplayResult } from "./actions.js";
+import { applyActions, type Arrival, type PageAction, type ReplayObserver, type ReplayResult } from "./actions.js";
 import {
   FROZEN_DESKTOP_VIEWPORT,
   STATE_IDENTITY_NORMALIZATIONS,
@@ -151,9 +153,10 @@ export { applyActions, fingerprintPage };
  */
 export async function reproduceState(
   page: Page,
-  recipe: StateAttestation["recipe"]
+  recipe: StateAttestation["recipe"],
+  observe?: ReplayObserver
 ): Promise<{ attestation: StateAttestation; fingerprint: string }> {
-  const replay = await applyActions(page, recipe.actions);
+  const replay = await applyActions(page, recipe.actions, observe);
   // Mesma espera no scan e na reprodução: o fingerprint é tirado do estado assentado, não do meio
   // de uma transição disparada pela última ação.
   const settle = await settlePage(page);
@@ -265,6 +268,22 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
           rawFindings.push(...checkComponentStructure({ url: request.url }, evidence.elements, spec));
           observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
+      }
+    }
+
+    // 2.13.0 (NAT-85 P2): anatomia obrigatória ausente — parte do check de estrutura. Lê as raízes
+    // (.br-message, .br-header, .br-breadcrumb, .br-modal) no DOM claro e em shadow roots abertos.
+    if (checks.includes("structure")) {
+      const roots = await inspectPageComputedStyles(page, request.url, ANATOMY_ROOT_SELECTOR, []);
+      const facts = await collectAnatomy(page, ANATOMY_ROOT_SELECTOR);
+      if (facts.length === roots.count) {
+        rawFindings.push(
+          ...checkAnatomy(
+            { url: request.url },
+            roots.elements.map((element, i) => ({ locator: element.locator, snippet: element.outerHTML.slice(0, 300), facts: facts[i] })),
+            normalized.components.length ? normalized.components : undefined
+          )
+        );
       }
     }
 

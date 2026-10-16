@@ -153,6 +153,13 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
   };
 }
 
+/**
+ * 2.13.0 (NAT-85): versão do registro de condições contextuais (verify/contextual.ts) — quais
+ * regras selecionam quais predicados de associação, anatomia e foco. Recortado do catálogo P0
+ * `catalogo-controles-1.0.0`.
+ */
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.0.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
+
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {
   const wcagMeta = getWcagRegistry().meta;
@@ -163,5 +170,6 @@ export function registryVersions(): Record<string, string> {
     emag: `e-MAG 3.1 · ${emagCount()} recomendações`,
     kb: `gov.br DS KB ${kb.dsVersion} [${kb.knowledgeVersion}] · ${kb.totalRules} registros (${kb.extractionTimestamp})`,
     components: `@govbr-ds/core ${specs.version} · ${specs.totalComponents} componentes`,
+    contextual: CONTEXT_CONDITIONS_VERSION,
   };
 }
