@@ -91,6 +91,68 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### S5: error state declared by the DS component (2.14.2, evaluation profile only)
+
+Approved by Codex on NAT-61 (comment 8963921e) with binding limits. 2.14.1 left the gov.br DS error
+pattern — the error is a state class on the component wrapper plus a feedback text, with no
+`aria-invalid`, no `aria-errormessage` and no native validation — as `undetermined`. 2.14.2 adds one
+more way to establish the **precondition "the page detected an error on this field"**, and nothing
+else:
+
+| Signal | What is read |
+|---|---|
+| S5 — *estado de erro declarado pelo componente DS* | the nearest `.br-input` ancestor of the field, holding exactly one form field, gained `danger` through the last action (absent in the observation right before the trigger, present in the final state), same wrapper (registry number) before and after, no `success`/`warning`/`info` alongside |
+
+- **Source (DS knowledge, recorded in the evidence).** The *Estados* table of the Input developer tab
+  in the frozen literal corpus, `data/knowledge/versions/3.7.0-literal-2026-10-15/corpus/componentes/input__desenvolvedor.md`
+  (official source `core` at `20173bf2…`, `docs/components/input/input-dev.md`, sha256 `cfabfcba8464…`
+  checked against the version manifest): `Erro | danger | Entrada de dados com erros`, next to
+  `success`, `warning` and `info`. The mapping is **read from that file** by `src/data/dsComponentStates.ts`
+  (`getDsInputErrorState`) — if the hash or the table row does not match, the signal is unavailable, never
+  assumed. A confirmed verdict's detail names the component, the class, the wrapper, the transition and
+  the source (file, section, row, KB version, sha256, core commit).
+- **Closed mapping.** Only `br-input` → `danger`. No generalisation to other field components, to
+  `.danger` on any ancestor, to `.feedback.danger`, to `danger` on the field itself, or to alerts. A
+  `.br-input` with several fields, nested `.br-input`s, a different wrapper before/after, `danger`
+  already present before the trigger, or `danger` together with another state class → no signal (the
+  outcome stays `undetermined` unless S1–S4 hold).
+- **What it proves.** Only that an error was detected. It does **not** prove identification or
+  description, and alone it does not prove a 3.3.1 violation: WCAG 3.3.1 does not require programmatic
+  information, so the absence of `aria-invalid`/an AX association is not by itself a failure. The
+  textual-identification and description counter-proofs run exactly as before (a message that names the
+  field → `contradicted`; a field description or new text the oracle cannot rule out → `undetermined`).
+- **Profiles.** The mapping is DS knowledge: `getDsInputErrorState` calls `guardKnowledge`, so it is
+  under the same lock as the package, and the `knowledge-free` profile never calls it
+  (`verify/contextual.ts` skips S5 there). The trace keeps a *neutral* capture in both profiles
+  (`SubjectSnapshot.containers`: ancestors up to the first one holding another field, with their classes
+  and field counts — no DS names). In `knowledge-free`, a row whose detection rests only on S5 stays
+  `undetermined` → `unverifiable`; S1–S4 still confirm there.
+- Condition registry `contextual-1.2.0` (evaluation); the `knowledge-free` registry is unchanged
+  (`contextual-1.1.0`).
+
+**Tests.** `test/integration/p1-estado-ds.test.ts` (live browser, both profiles): DS positive (WCAG
+3.3.1 and e-MAG 6.6, source in the detail), knowledge-free stays `unverifiable` with zero lock attempts,
+the naming-message counter-proof still rejects, negatives `success`/`warning`/`info`, `danger` outside
+the component (form, field, `.feedback.danger`), `danger` on another field's wrapper, a wrapper with two
+fields, pre-existing `danger`, `danger`+`success`; the Codex green-success control on a DS wrapper in both
+profiles and both windows. `test/unit/contextual.test.ts`: the mapping read from the corpus, every
+binding/transition rule, counter-proofs, no mapping → no signal, the loader throws under the lock.
+`test/integration/knowledge-free.test.ts`: `getDsInputErrorState` is in the lock list. All 2.14.1
+regressions (`/sucesso-verde`, `/erro-so-aparencia`, S1–S4) unchanged.
+
+**Gate impact (NAT-86 development division, 1280×900, matrix d35b33f5…, run `2026-10-18T-nat61-2142`).**
+`evaluation`: **GO** — the four P1 3.3.1 positives (F1-01-D, F1-03-D, F1-08-D subject 2 `#telefone`,
+F1-11-D) confirm again, all through S5 alone (their pages set only `.br-input.danger`); D1 per row TP 23,
+TN 98, preserved 15, out of scope 25, not exercised 10; blocking 0, acceptance failures 0.
+`knowledge-free`: with the matrix-derived expectation (capacity 1.0.0) the same four WCAG rows are FN
+(NO-GO by 4 acceptance failures, 0 blocking), because only S5 supports their detection. govbr-eval
+versions the profile's capacity separately (`portao-nat86/capacidade-knowledge-free.json`, 1.1.0): those
+four rows are *não-confirmável por desenho* in this profile (a `confirmed` there would still be a
+blocking FP). The matrix was not edited and the defect is not turned into conformance. With capacity
+1.1.0 the `knowledge-free` gate is **GO**: TP 1 (F1-12-D, 4.1.3), TN 41, TN-por-desenho 79 (the four
+rows included, all `unverifiable`), preserved 15, out of scope 25, not exercised 10; blocking 0, lock
+attempts 0, acceptance failures 0.
+
 ### P1 needs programmatic evidence that the page detected an error (2.14.1, all profiles)
 
 Codex review of NAT-61 (comment 898d2cde) reproduced a false positive that the 2.14.0 focus fix left

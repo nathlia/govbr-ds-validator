@@ -160,7 +160,10 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
  */
 // 2.14.1 (NAT-61, revisão Codex): contextual-1.1.0 — P1 3.3.1 só decide "erro detectado" por sinal
 // programático estabelecido pela última ação (S1–S4, verify/contextual.ts); aparência não basta.
-export const CONTEXT_CONDITIONS_VERSION = "contextual-1.1.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
+// 2.14.2 (NAT-61, revisão Codex 8963921e): contextual-1.2.0 — S5, estado de erro declarado pelo
+// componente DS (só br-input → danger, tabela Estados do Input; só no perfil evaluation). O registro do
+// knowledge-free não muda: ele não interpreta o mapeamento.
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.2.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
 
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {

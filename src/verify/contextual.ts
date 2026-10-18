@@ -19,13 +19,16 @@
  *     secundário da modal fica `undetermined`, nunca `verified`;
  *   - Pagination (tipo contextual não declarado no DOM);
  *   - 2.14.1: erro detectado inferido da aparência do campo (cor, classe), do texto da mensagem ou do
- *     foco — P1 3.3.1 só confirma com sinal programático (S1–S4, ver errorSignals).
+ *     foco — P1 3.3.1 só confirma com sinal programático (S1–S4, ver errorSignals);
+ *   - 2.14.2: a única classe aceita é o estado de erro DECLARADO pelo componente DS (S5: br-input →
+ *     danger, tabela Estados do Input), só no perfil evaluation; nenhuma outra classe, cor ou alerta.
  */
 import type { Finding } from "../schema/finding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 import type { PageAction } from "../scan/actions.js";
 import type { AccessibilityFacts, AnatomyFacts, SubjectSnapshot, TraceObservation } from "../evidence/context.js";
 import { emagMembership, wcagMembership } from "./registries.js";
+import { getDsInputErrorState, type DsErrorStateMapping } from "../data/dsComponentStates.js";
 
 export type ContextOutcomeStatus = "verified" | "contradicted" | "undetermined";
 
@@ -313,19 +316,91 @@ function danglingDetail(facts: AccessibilityFacts | undefined): string {
  * S1 também identifica o item para a tecnologia assistiva (o Chromium expõe invalid), por isso em
  * item-identified ele contradiz antes de chegar aqui; serve de detecção em described-in-text.
  */
-type ErrorSignal = "S1" | "S2" | "S3" | "S4";
+type ErrorSignal = "S1" | "S2" | "S3" | "S4" | "S5";
 
 const SIGNAL_LABEL: Record<ErrorSignal, string> = {
   S1: "aria-invalid passou a valer no campo",
   S2: "validação nativa executada (evento invalid) e o campo inválido",
   S3: "aria-invalid passou a valer no contêiner só deste campo",
   S4: "aria-errormessage do campo aponta para a mensagem que apareceu",
+  S5: "estado de erro declarado pelo componente DS",
 };
 
 const NO_DETECTION =
   "nenhum sinal programático de que a página detectou erro neste campo pela última ação (aria-invalid no campo ou no contêiner só dele, evento invalid da validação nativa, aria-errormessage apontando para a mensagem); mudança de aparência, cor ou texto da mensagem não é evidência de erro detectado.";
 
-function errorSignals(pre: TraceObservation, subject: SubjectSnapshot, withMessage: boolean): ErrorSignal[] | undefined {
+const NO_DETECTION_DS =
+  " Nem estado de erro declarado pelo componente DS (br-input → danger) estabelecido pela última ação neste campo.";
+
+/**
+ * 2.14.2 (NAT-61, revisão Codex 8963921e) — S5 "estado de erro declarado pelo componente DS".
+ *
+ * Prova SÓ a precondição "erro detectado": a página pôs o componente do campo no estado que o DS
+ * documenta como "Erro / Entrada de dados com erros". Não prova identificação nem descrição do erro,
+ * e sozinho não prova violação de 3.3.1 (a WCAG não exige informação programática; a ausência de
+ * aria-invalid/associação não é falha por si) — as contraprovas de identificação textual e descrição
+ * continuam valendo, e ambiguidade fica `undetermined`.
+ *
+ * Regras fechadas:
+ *   - mapeamento único `br-input` → `danger` (tabela Estados, input__desenvolvedor.md); nada de outro
+ *     componente de campo, `.danger` em ancestral qualquer, `.feedback.danger` ou alerta;
+ *   - o contêiner é o `.br-input` MAIS PRÓXIMO do sujeito, com exatamente um campo de formulário na
+ *     subárvore; aninhado em outro `.br-input` ou com vários campos = vínculo incerto, sem sinal;
+ *   - o MESMO contêiner (número de registro) antes e depois do gatilho: `danger` ausente na observação
+ *     imediatamente antes, presente no estado final; erro pré-existente, troca de contêiner ou estado
+ *     conflitante (danger junto de success/warning/info) = sem sinal;
+ *   - interpretação só no perfil evaluation: o mapeamento é carregado por `getDsInputErrorState`, sob a
+ *     trava de conhecimento; o perfil knowledge-free nem o chama.
+ */
+export interface DsStateReading {
+  signal: boolean;
+  /** Com sinal: a evidência (componente, classe, transição, fonte). Sem sinal: o motivo, quando havia candidato. */
+  detail: string | null;
+}
+
+function nearestComponent(snapshot: SubjectSnapshot, componentClass: string) {
+  const wrappers = (snapshot.containers ?? []).filter((c) => c.classes.includes(componentClass));
+  return { wrappers, nearest: wrappers[0] };
+}
+
+export function dsDeclaredErrorState(before: SubjectSnapshot, subject: SubjectSnapshot, mapping: DsErrorStateMapping | null): DsStateReading {
+  if (!mapping) return { signal: false, detail: null };
+  const cls = mapping.componentClass;
+  const err = mapping.errorClass;
+  const now = nearestComponent(subject, cls);
+  if (!now.nearest || !now.nearest.classes.includes(err)) return { signal: false, detail: null };
+  const wrapperDesc = `.${cls} [registro ${now.nearest.ref}]`;
+  if (now.wrappers.length > 1 || now.nearest.fields !== 1) {
+    const nested = now.wrappers.length > 1 ? `, ${now.wrappers.length} .${cls} aninhados` : "";
+    return { signal: false, detail: `S5 não estabelecido: ${wrapperDesc} tem '${err}', mas o vínculo com o campo é incerto (${now.nearest.fields} campo(s) no contêiner${nested}).` };
+  }
+  const conflicting = mapping.otherStateClasses.filter((c) => now.nearest!.classes.includes(c));
+  if (conflicting.length > 0) {
+    return { signal: false, detail: `S5 não estabelecido: ${wrapperDesc} tem '${err}' junto de ${conflicting.map((c) => `'${c}'`).join(", ")} (estado conflitante).` };
+  }
+  const then = nearestComponent(before, cls);
+  if (!then.nearest || then.nearest.ref !== now.nearest.ref || then.wrappers.length !== 1 || then.nearest.fields !== 1) {
+    return { signal: false, detail: `S5 não estabelecido: antes do gatilho o contêiner .${cls} do campo não era o mesmo ${wrapperDesc} (troca de sujeito ou vínculo incerto).` };
+  }
+  if (then.nearest.classes.includes(err)) {
+    return { signal: false, detail: `S5 não estabelecido: ${wrapperDesc} já tinha '${err}' antes da última ação (erro pré-existente).` };
+  }
+  const src = mapping.source;
+  return {
+    signal: true,
+    detail:
+      `[componente ${cls}, classe '${err}' ("${mapping.errorMeaning}"), ${wrapperDesc} com 1 campo, transição ausente→presente pela última ação; ` +
+      `fonte ${src.file} §${src.section} "${src.row}" (base ${src.knowledgeVersion}, sha256 ${src.sha256.slice(0, 12)}, core ${src.coreCommit?.slice(0, 8) ?? "?"}); ` +
+      `prova só a precondição "erro detectado", não a identificação nem a descrição]`,
+  };
+}
+
+function errorSignals(
+  pre: TraceObservation,
+  subject: SubjectSnapshot,
+  withMessage: boolean,
+  options: EvaluateContextOptions = {}
+): { signals: ErrorSignal[]; ds: DsStateReading | null } | undefined {
   const before = pre.subjects.find((x) => x.ref === subject.ref);
   if (!before) return undefined;
   const out: ErrorSignal[] = [];
@@ -333,10 +408,19 @@ function errorSignals(pre: TraceObservation, subject: SubjectSnapshot, withMessa
   if ((subject.invalidEvents ?? 0) > (before.invalidEvents ?? 0) && subject.validityInvalid === true) out.push("S2");
   if (subject.ancestorInvalid === true && before.ancestorInvalid === false) out.push("S3");
   if (withMessage && subject.errorMessageLinked === true) out.push("S4");
-  return out;
+  // S5 é conhecimento do DS: o perfil knowledge-free não carrega nem interpreta o mapeamento.
+  const ds = options.knowledgeFree ? null : dsDeclaredErrorState(before, subject, getDsInputErrorState());
+  if (ds?.signal) out.push("S5");
+  return { signals: out, ds };
 }
 
-const signalDetail = (signals: ErrorSignal[]) => signals.map((x) => `${x}: ${SIGNAL_LABEL[x]}`).join("; ");
+const signalDetail = (signals: ErrorSignal[], ds: DsStateReading | null) =>
+  signals.map((x) => (x === "S5" && ds?.detail ? `${x}: ${SIGNAL_LABEL[x]} ${ds.detail}` : `${x}: ${SIGNAL_LABEL[x]}`)).join("; ");
+
+function noDetection(ds: DsStateReading | null, options: EvaluateContextOptions): string {
+  if (options.knowledgeFree) return NO_DETECTION;
+  return `${NO_DETECTION}${NO_DETECTION_DS}${ds?.detail ? ` ${ds.detail}` : ""}`;
+}
 
 function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
@@ -367,9 +451,10 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     if (normalizeText(ax.name).length >= 3 && contains(messageText, ax.name)) {
       return { status: "contradicted", detail: `a mensagem nomeia o campo ("${ax.name}") em texto.` };
     }
-    const signals = errorSignals(pre, subject, true);
-    if (signals === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
-    if (signals.length === 0) return { status: "undetermined", detail: `a mensagem "${messageText}" apareceu, mas ${NO_DETECTION}` };
+    const read = errorSignals(pre, subject, true, options);
+    if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    const { signals, ds } = read;
+    if (signals.length === 0) return { status: "undetermined", detail: `a mensagem "${messageText}" apareceu, mas ${noDetection(ds, options)}` };
     if (subject.nativeInvalid) {
       return {
         status: "undetermined",
@@ -378,7 +463,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     }
     return {
       status: "verified",
-      detail: `erro detectado (${signalDetail(signals)}) e a mensagem "${messageText}" apareceu; o Chromium não expõe invalid, a descrição é ${
+      detail: `erro detectado (${signalDetail(signals, ds)}) e a mensagem "${messageText}" apareceu; o Chromium não expõe invalid, a descrição é ${
         ax.description ? `"${ax.description}"` : "vazia"
       } e a mensagem não nomeia o campo ("${ax.name}").${danglingDetail(facts)}`,
     };
@@ -408,9 +493,10 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
         detail: "o campo usa validação nativa do navegador e está inválido: o aviso do navegador não está no DOM, então o texto não é decidível.",
       };
     }
-    const signals = errorSignals(pre, subject, false);
-    if (signals === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
-    if (signals.length === 0) return { status: "undetermined", detail: NO_DETECTION };
+    const read = errorSignals(pre, subject, false, options);
+    if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    const { signals, ds } = read;
+    if (signals.length === 0) return { status: "undetermined", detail: noDetection(ds, options) };
     const associated = appeared.filter((chunk) => contains(facts.ax!.description, chunk) || contains(facts.ax!.name, chunk));
     if (associated.length > 0) return { status: "contradicted", detail: `texto novo associado ao campo: "${associated.join(" ")}".` };
     if (facts.ax.description.trim()) {
@@ -419,7 +505,7 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
     if (appeared.length > 0) {
       return { status: "undetermined", detail: `apareceu texto novo ("${appeared.slice(0, 3).join(" | ")}") que o oráculo não descarta como descrição do erro.` };
     }
-    return { status: "verified", detail: `erro detectado (${signalDetail(signals)}) e nenhum texto novo apareceu; descrição vazia.${danglingDetail(facts)}` };
+    return { status: "verified", detail: `erro detectado (${signalDetail(signals, ds)}) e nenhum texto novo apareceu; descrição vazia.${danglingDetail(facts)}` };
   });
   return combine(outcomes, options.knowledgeFree ? "erro não descrito em texto (WCAG 3.3.1)" : "erro não descrito em texto (WCAG 3.3.1 / e-MAG 6.6)");
 }

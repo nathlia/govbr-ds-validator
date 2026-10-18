@@ -61,6 +61,14 @@ export interface SubjectSnapshot {
   invalidEvents?: number;
   validityInvalid?: boolean;
   errorMessageLinked?: boolean;
+  /**
+   * 2.14.2 (NAT-61, S5): captura NEUTRA dos contêineres do sujeito — ancestrais compostos, do mais
+   * próximo ao mais distante, até (inclusive) o primeiro cuja subárvore tem outro campo de formulário
+   * (teto 8; body/html fora). Cada um: número de registro, classes e quantos campos há na subárvore.
+   * Nenhum nome do DS aqui: a leitura normativa (componente → classe de estado) é conhecimento e só
+   * acontece no perfil evaluation (verify/contextual.ts, sob a trava do pacote).
+   */
+  containers?: Array<{ ref: number; classes: string[]; fields: number }>;
 }
 
 export interface TraceObservation {
@@ -336,6 +344,18 @@ function installHelpers(): void {
     }
     return false;
   }
+  /** Contêineres do campo até o primeiro que contém outro campo (inclusive), teto 8 — sem interpretar classe. */
+  function containers(el: Element): Array<{ ref: number; classes: string[]; fields: number }> {
+    const out: Array<{ ref: number; classes: string[]; fields: number }> = [];
+    let cur = composedParent(el);
+    while (cur && cur !== document.body && cur !== document.documentElement && out.length < 8) {
+      const fields = composedElements(cur).filter((x) => x.matches(FIELD));
+      out.push({ ref: ref(cur), classes: Array.from(cur.classList), fields: fields.length });
+      if (fields.some((x) => x !== el)) break;
+      cur = composedParent(cur);
+    }
+    return out;
+  }
   function snapshot(el: Element): Record<string, unknown> {
     const active = deepActive();
     return {
@@ -356,6 +376,7 @@ function installHelpers(): void {
       ancestorInvalid: ancestorInvalid(el),
       invalidEvents: invalidCounts.get(el) ?? 0,
       validityInvalid: !!(el as HTMLInputElement).validity && !(el as HTMLInputElement).validity.valid,
+      containers: containers(el),
     };
   }
   w.__govbrCtx = {

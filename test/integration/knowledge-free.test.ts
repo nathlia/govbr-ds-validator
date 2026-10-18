@@ -30,6 +30,7 @@ import {
 } from "../../src/data/lock.js";
 import * as load from "../../src/data/load.js";
 import * as knowledge from "../../src/data/knowledge.js";
+import * as dsStates from "../../src/data/dsComponentStates.js";
 import type { ToolTelemetryEvent } from "../../src/telemetry.js";
 
 /**
@@ -208,6 +209,8 @@ describe("trava de carregamento", () => {
     ["getKnowledgeConflicts", () => knowledge.getKnowledgeConflicts()],
     ["getComponentDefects", () => knowledge.getComponentDefects("button")],
     ["getEmagValidationTemplate", () => knowledge.getEmagValidationTemplate("6.6")],
+    // 2.14.2 (S5): o mapeamento br-input → danger é conhecimento do DS, sob a mesma trava
+    ["getDsInputErrorState", () => dsStates.getDsInputErrorState()],
   ];
 
   it("cada carregador de conhecimento lança sob a trava e conta a tentativa", () => {

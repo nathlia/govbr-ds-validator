@@ -9,6 +9,7 @@ import {
   CONTEXT_CONDITIONS,
   decideAnatomyPart,
   decideCurrentCrumbNotLink,
+  dsDeclaredErrorState,
   evaluateContext,
   normalizeText,
 } from "../../src/verify/contextual.js";
@@ -16,6 +17,8 @@ import { CONTEXT_GROUNDING } from "../../src/checkers/grounding.js";
 import { checkAnatomy } from "../../src/checkers/anatomy.js";
 import { getRuleById } from "../../src/data/knowledge.js";
 import { findEmagRule } from "../../src/data/load.js";
+import { getDsInputErrorState } from "../../src/data/dsComponentStates.js";
+import { KnowledgeLockedError, resetKnowledgeLock, runKnowledgeLocked } from "../../src/data/lock.js";
 import { EXPECTED_CONDITIONS as C } from "../../src/schema/structuredClaims.js";
 import type { Finding } from "../../src/schema/finding.js";
 import type { AnatomyFacts, SubjectSnapshot, TraceObservation } from "../../src/evidence/context.js";
@@ -236,5 +239,94 @@ describe("decisões de foco (traço sintético)", () => {
 
   it("o texto normalizado ignora caixa, acento e pontuação nas pontas", () => {
     expect(normalizeText("  Número do Cartão: ")).toBe("numero do cartao");
+  });
+});
+
+describe("P1 2.14.2: S5 — estado de erro declarado pelo componente DS (revisão Codex 8963921e)", () => {
+  const cond = CONTEXT_CONDITIONS.find((c) => c.check === "error-item-identified")!;
+  const described = CONTEXT_CONDITIONS.find((c) => c.check === "error-described-in-text")!;
+  const f = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorItemIdentified, errorMessage: "#m" });
+  const fd = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorDescribedInText });
+  const actions = [{ action: "fill" as const, selector: "#a", value: "1" }, { action: "click" as const, selector: "#ok" }];
+  type C = NonNullable<SubjectSnapshot["containers"]>;
+  const field = (containers: C) =>
+    snap({ ref: 1, shown: true, modal: false, classes: [], ariaInvalid: false, ancestorInvalid: false, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false, containers });
+  const wrap = (classes: string[], ref = 10, fields = 1) => ({ ref, classes: ["br-input", "mb-3", ...classes], fields });
+  const trace = (before: C, after: C, text = "Valor inválido.") => [
+    obs(0, null, [field(before)], { message: { found: 1, shown: false, text: "" }, visibleText: ["Cartão"] }),
+    obs(1, null, [field(after)], { message: { found: 1, shown: true, text }, visibleText: ["Cartão"] }),
+  ];
+  const ax = { ref: 1, tag: "input", idrefs: [], ax: { name: "Número do cartão", description: "", invalid: false } };
+  const run = (t: TraceObservation[], kf = false) => evaluateContext(cond, f, { actions, trace: t, accessibility: [ax] }, kf ? { knowledgeFree: true } : {});
+
+  it("mapeamento lido do corpus literal: br-input → danger, com a identidade da fonte", () => {
+    const m = getDsInputErrorState()!;
+    expect(m).not.toBeNull();
+    expect(m.componentClass).toBe("br-input");
+    expect(m.errorClass).toBe("danger");
+    expect(m.errorMeaning).toBe("Entrada de dados com erros");
+    expect(m.otherStateClasses.sort()).toEqual(["info", "success", "warning"]);
+    expect(m.source.file).toBe("corpus/componentes/input__desenvolvedor.md");
+    expect(m.source.coreCommit).toMatch(/^20173bf2/);
+    expect(m.source.sha256).toMatch(/^cfabfcba8464/);
+  });
+
+  it("positivo: o mesmo .br-input de um campo ganha danger pela última ação → erro detectado (só no evaluation)", () => {
+    const r = run(trace([wrap([])], [wrap(["danger"])]));
+    expect(r.status).toBe("verified");
+    expect(r.detail).toContain("S5: estado de erro declarado pelo componente DS");
+    expect(r.detail).toContain("input__desenvolvedor.md");
+    expect(r.detail).toContain("ausente→presente");
+    // knowledge-free: o mapeamento não é interpretado; só S5 sustentaria a detecção → undetermined
+    const kf = run(trace([wrap([])], [wrap(["danger"])]), true);
+    expect(kf.status).toBe("undetermined");
+    expect(kf.detail).not.toContain("br-input");
+    expect(kf.detail).not.toContain("danger");
+  });
+
+  it("negativos: success/warning/info, danger fora do componente, em outro campo, contêiner com vários campos, pré-existente, conflito, troca de contêiner", () => {
+    for (const s of ["success", "warning", "info"]) expect(run(trace([wrap([])], [wrap([s])])).status, s).toBe("undetermined");
+    // danger num ancestral que não é .br-input (ou .feedback.danger): sem generalização
+    expect(run(trace([{ ref: 9, classes: ["grupo"], fields: 1 }], [{ ref: 9, classes: ["grupo", "danger"], fields: 1 }])).status).toBe("undetermined");
+    // danger no .br-input de OUTRO campo: o contêiner do sujeito é o primeiro com outro campo (para ali)
+    expect(run(trace([wrap([]), { ref: 20, classes: ["form"], fields: 2 }], [wrap([]), { ref: 20, classes: ["form"], fields: 2 }])).status).toBe("undetermined");
+    // .br-input com vários campos: vínculo ambíguo
+    const amb = run(trace([wrap([], 10, 2)], [wrap(["danger"], 10, 2)]));
+    expect(amb.status).toBe("undetermined");
+    expect(amb.detail).toContain("vínculo com o campo é incerto");
+    // .br-input aninhado em outro .br-input: ambíguo
+    expect(run(trace([wrap([]), wrap([], 11)], [wrap(["danger"]), wrap([], 11)])).status).toBe("undetermined");
+    // danger já estava antes do gatilho
+    const pre = run(trace([wrap(["danger"])], [wrap(["danger"])]));
+    expect(pre.status).toBe("undetermined");
+    expect(pre.detail).toContain("pré-existente");
+    // estado conflitante
+    expect(run(trace([wrap([])], [wrap(["danger", "success"])])).detail).toContain("estado conflitante");
+    // outro contêiner (número de registro) depois do gatilho: troca de sujeito
+    expect(run(trace([wrap([], 10)], [wrap(["danger"], 12)])).status).toBe("undetermined");
+    // sem contêiner capturado antes
+    expect(run(trace([], [wrap(["danger"])])).status).toBe("undetermined");
+  });
+
+  it("S5 é só a precondição: as contraprovas de identificação textual e de descrição continuam valendo", () => {
+    // a mensagem nomeia o campo: identificado em texto → contradicted, mesmo com S5
+    expect(run(trace([wrap([])], [wrap(["danger"])], "Número do cartão: use 8 dígitos.")).status).toBe("contradicted");
+    // descrição: texto novo que o oráculo não descarta → undetermined, nunca verified
+    const t = trace([wrap([])], [wrap(["danger"])]);
+    t[1].visibleText = ["Cartão", "Valor inválido."];
+    expect(evaluateContext(described, fd, { actions, trace: t, accessibility: [ax] }).status).toBe("undetermined");
+    // sem texto novo e descrição vazia: erro só por cor com o estado declarado → verified no evaluation, undetermined no knowledge-free
+    const sem = trace([wrap([])], [wrap(["danger"])]);
+    expect(evaluateContext(described, fd, { actions, trace: sem, accessibility: [ax] }).status).toBe("verified");
+    expect(evaluateContext(described, fd, { actions, trace: sem, accessibility: [ax] }, { knowledgeFree: true }).status).toBe("undetermined");
+  });
+
+  it("dsDeclaredErrorState sem mapeamento (fonte divergente) não inventa sinal", () => {
+    expect(dsDeclaredErrorState(field([wrap([])]), field([wrap(["danger"])]), null)).toEqual({ signal: false, detail: null });
+  });
+
+  it("o mapeamento é conhecimento: lança sob a trava do perfil knowledge-free", () => {
+    expect(() => runKnowledgeLocked(() => getDsInputErrorState())).toThrow(KnowledgeLockedError);
+    resetKnowledgeLock();
   });
 });
