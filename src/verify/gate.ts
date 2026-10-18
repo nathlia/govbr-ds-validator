@@ -32,12 +32,13 @@ import {
   kbMembership,
   pageConstraintMembership,
   registryVersions,
+  registryVersionsKnowledgeFree,
   structureRuleMembership,
   tokenRuleMembership,
   wcagMembership,
   type Membership,
 } from "./registries.js";
-import { selectPredicate } from "./predicates.js";
+import { selectPredicate, selectPredicateKnowledgeFree } from "./predicates.js";
 import type { ContextEvidence } from "./contextual.js";
 import { collectAccessibility, collectAnatomy, traceObserver, type TraceObservation, type TraceRequest } from "../evidence/context.js";
 import { findingSha256 } from "./store.js";
@@ -56,6 +57,12 @@ export interface GateInput {
    * gravada, e URL, janela e fingerprint reproduzidos têm de ser os do scan.
    */
   scanState?: ScanStateClaim;
+  /**
+   * 2.14.0 (NAT-61): perfil knowledge-free. Fontes do DS e do e-MAG não são conferidas
+   * (`ruleExists: unknown`, nota neutra fixa, nunca `confirmed`); só a WCAG 2.2 e o axe-core; sem
+   * conferência de token no registro; só os predicados P1 pela fonte WCAG.
+   */
+  knowledgeFree?: boolean;
 }
 
 export interface ScanStateClaim {
@@ -119,7 +126,15 @@ export function verdictOf(checks: Checks): Verdict {
   return "unverifiable";
 }
 
-export async function verifyFinding({ finding, live = false, actions = [], stateFingerprint, arrival, scanState }: GateInput): Promise<Verification> {
+export async function verifyFinding({
+  finding,
+  live = false,
+  actions = [],
+  stateFingerprint,
+  arrival,
+  scanState,
+  knowledgeFree = false,
+}: GateInput): Promise<Verification> {
   const checks: Checks = { ruleExists: "unknown", applicability: "unknown", evidenceConsistent: "unknown", violation: "not-checked" };
   const notes: string[] = [];
   const binding: {
@@ -131,20 +146,20 @@ export async function verifyFinding({ finding, live = false, actions = [], state
     context?: unknown;
   } = { findingSha256: findingSha256(finding), stateFingerprint: null, live, elements: null };
 
-  const rule = checkRule(finding);
+  const rule = knowledgeFree ? checkRuleKnowledgeFree(finding) : checkRule(finding);
   checks.ruleExists = rule.ruleExists;
   checks.applicability = rule.applicability;
   let verifiedBy = rule.verifiedBy;
   notes.push(...rule.notes);
 
-  const claims = checkRegistryClaims(finding);
+  const claims = knowledgeFree ? null : checkRegistryClaims(finding);
   if (claims) {
     checks.evidenceConsistent = claims.status;
     notes.push(claims.detail);
     if (claims.status === "fail") verifiedBy = "token-registry";
   }
 
-  const selection = selectPredicate(finding);
+  const selection = knowledgeFree ? selectPredicateKnowledgeFree(finding) : selectPredicate(finding);
   const result = (): Verification => ({
     verdict: verdictOf(checks),
     verifiedBy,
@@ -152,7 +167,7 @@ export async function verifyFinding({ finding, live = false, actions = [], state
     checks: { ...checks },
     predicate: selection.predicate?.id ?? null,
     binding,
-    registries: registryVersions(),
+    registries: knowledgeFree ? registryVersionsKnowledgeFree() : registryVersions(),
   });
 
   if (verdictOf(checks) === "rejected") return result();
@@ -436,16 +451,7 @@ function checkRule(finding: Finding): RuleCheck {
   }
 
   // Uma referência WCAG cruzada também tem de existir: `emag-2.2` com `wcag: "9.9.9"` não passa.
-  if (source !== "wcag" && finding.rule.wcag) {
-    for (const reference of finding.rule.wcag.split(/[,;]/).map((value) => value.trim()).filter(Boolean)) {
-      const membership = wcagMembership(reference);
-      if (membership.status !== "member") {
-        check.ruleExists = "fail";
-        check.verifiedBy = "wcag-2.2-registry";
-        check.notes.push(`Referência WCAG inválida: ${membership.detail}`);
-      }
-    }
-  }
+  checkWcagCrossReference(finding, check);
 
   // D-27: verificação determinística tem de nomear norma existente em `implements`.
   if (finding.pathway === "deterministic" && (source === "govbr-ds-token" || source === "govbr-ds-structure" || source === "govbr-ds-page")) {
@@ -467,6 +473,63 @@ function checkRule(finding: Finding): RuleCheck {
     }
   }
 
+  return check;
+}
+
+/** Nota fixa das fontes que o perfil knowledge-free não confere (2.14.0, NAT-61). */
+export const KNOWLEDGE_FREE_SOURCE_NOTE = "Fonte não conferida neste perfil.";
+
+/** Uma referência WCAG cruzada também tem de existir — o mesmo laço dos dois perfis. */
+function checkWcagCrossReference(finding: Finding, check: RuleCheck): void {
+  if (finding.rule.source === "wcag" || !finding.rule.wcag) return;
+  for (const reference of finding.rule.wcag.split(/[,;]/).map((value) => value.trim()).filter(Boolean)) {
+    const membership = wcagMembership(reference);
+    if (membership.status !== "member") {
+      check.ruleExists = "fail";
+      check.verifiedBy = "wcag-2.2-registry";
+      check.notes.push(`Referência WCAG inválida: ${membership.detail}`);
+    }
+  }
+}
+
+/**
+ * Conferência de regra do perfil knowledge-free (2.14.0, NAT-61, plano §3): WCAG no registro público
+ * e axe-core como no perfil completo; DS e e-MAG viram `unknown` com nota neutra fixa — sem dizer se
+ * a regra existe, o que impede `confirmed`. Nenhum carregador de conhecimento é chamado.
+ */
+function checkRuleKnowledgeFree(finding: Finding): RuleCheck {
+  const { id, source } = finding.rule;
+  let check: RuleCheck;
+  switch (source) {
+    case "wcag": {
+      const cited = wcagMembership(id).status === "malformed" && finding.rule.wcag ? finding.rule.wcag : id;
+      check = fromMembership(wcagMembership(cited), "wcag-2.2-registry");
+      break;
+    }
+    case "axe-core":
+      check = {
+        ruleExists: "not-applicable",
+        applicability: "not-applicable",
+        verifiedBy: "axe-core",
+        notes: ["Regras do axe-core são produzidas pelo verificador embutido, não conferidas por este portão."],
+      };
+      break;
+    case "govbr-ds-kb":
+    case "emag":
+    case "govbr-ds-token":
+    case "govbr-ds-structure":
+    case "govbr-ds-page":
+      check = { ruleExists: "unknown", applicability: "unknown", verifiedBy: "rule-source-not-checked", notes: [KNOWLEDGE_FREE_SOURCE_NOTE] };
+      break;
+    default:
+      return {
+        ruleExists: "fail",
+        applicability: "unknown",
+        verifiedBy: "rule-source-index",
+        notes: [`Fonte de regra desconhecida: '${String(source)}'.`],
+      };
+  }
+  checkWcagCrossReference(finding, check);
   return check;
 }
 

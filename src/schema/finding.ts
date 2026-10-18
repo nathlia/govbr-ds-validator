@@ -217,3 +217,75 @@ export function nextFindingId(): string {
 export function resetFindingIds(): void {
   counter = 0;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// 2.14.0 (NAT-61): variante do esquema para o perfil knowledge-free
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Mesmos campos, mesmos tipos e os mesmos valores de enum (decisão 8: `RuleSource` nomeia
+// categorias, não traz norma); só as descrições que falavam do DS, do e-MAG ou de checagens que
+// aplicam a base mudam. As condições citadas são só as P1 que o perfil decide (WCAG 3.3.1, 4.1.3).
+// O esquema dos outros perfis (acima) não muda.
+
+const RuleRefSchemaKnowledgeFree = RuleRefSchema.extend({
+  id: z
+    .string()
+    .describe("Rule identifier, e.g. a WCAG 2.2 success criterion ('3.3.1') or an axe-core rule id ('color-contrast')"),
+  implements: z
+    .array(z.string())
+    .optional()
+    .describe("Rule ids a deterministic check implements (deterministic findings only)."),
+});
+
+const EvidenceSchemaKnowledgeFree = EvidenceSchema.extend({
+  data: z
+    .record(z.unknown())
+    .optional()
+    .describe(
+      "Machine-readable supporting values. Contextual conditions (verified live, in the state the actions reproduce; " +
+        "element.locator names the subject), by exact expectedCondition: " +
+        `wcag 3.3.1 (+ errorMessage = selector of the error text the last action made appear)=${EXPECTED_CONDITIONS.errorItemIdentified}; ` +
+        `wcag 3.3.1 (no error text at all)=${EXPECTED_CONDITIONS.errorDescribedInText}; ` +
+        `wcag 4.1.3 (subject = the status container)=${EXPECTED_CONDITIONS.statusMessage}. ` +
+        "Free-text observed/expected remain human explanations, not semantic gate inputs."
+    ),
+});
+
+const VerificationSchemaKnowledgeFree = z.object({
+  verdict: VerdictSchema,
+  verifiedBy: z.string().describe("Which oracle check produced the verdict, e.g. 'wcag-2.2-registry', 'live-inspection'"),
+  detail: z.string().optional(),
+  checks: z
+    .object({
+      ruleExists: CheckStatusSchema.describe("The cited id is a member of a versioned public registry (WCAG 2.2); other sources are not checked in this profile"),
+      applicability: CheckStatusSchema.describe("The rule can support a finding"),
+      evidenceConsistent: CheckStatusSchema.describe("Machine-readable values and, when live, the element in the checked state agree with the claim"),
+      violation: ViolationStatusSchema,
+    })
+    .optional(),
+  predicate: z.string().nullable().optional().describe("Implemented predicate used to verify the violation, if any"),
+  binding: z
+    .object({
+      findingSha256: z.string().describe("SHA-256 of the verified payload (everything except verification)"),
+      stateFingerprint: z.string().nullable(),
+      live: z.boolean(),
+      elements: z.number().int().nullable(),
+      state: z
+        .unknown()
+        .optional()
+        .describe("What replaying the claimed state proved — policy, scanId, replay status/failure, arrival conditions, observed url/viewport, mismatches"),
+      context: z
+        .unknown()
+        .optional()
+        .describe("Contextual evidence the predicate decided on — focus/visibility trace per recipe step, accessibility facts"),
+    })
+    .optional(),
+  registries: z.record(z.string()).optional().describe("Registry versions the ids were checked against"),
+});
+
+/** `Finding` do perfil knowledge-free: mesma forma, descrições neutras. */
+export const FindingSchemaKnowledgeFree = FindingSchema.extend({
+  rule: RuleRefSchemaKnowledgeFree,
+  evidence: EvidenceSchemaKnowledgeFree,
+  verification: VerificationSchemaKnowledgeFree.optional().describe("Present for heuristic findings that passed the gate"),
+});

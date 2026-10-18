@@ -1,6 +1,6 @@
 {
   "name": "govbr-ds-validator-server",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "description": "MCP server exposing gov.br Design System and e-MAG accessibility knowledge as a queryable validation oracle — TCC 2 artifact",
   "type": "module",
   "main": "dist/index.js",
@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "build:wcag": "tsx scripts/build-wcag.ts"
+    "build:wcag": "tsx scripts/build-wcag.ts",
+    "inventario:sem-conhecimento": "tsx scripts/inventario-sem-conhecimento.ts",
+    "invariancia:perfis": "tsx scripts/invariancia-perfis.ts"
   },
   "engines": {
     "node": ">=18"

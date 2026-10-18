@@ -137,8 +137,22 @@ export async function runAxeScan(url: string, selector?: string): Promise<AxeSca
   return withPage(url, (page) => runAxeScanOnPage(page, url, selector));
 }
 
+export interface AxeScanOptions {
+  /**
+   * 2.14.0 (NAT-61): anotar o achado com a recomendação e-MAG (sufixo em `rule.description` e
+   * `evidence.data.emagId`). Padrão: sim. O perfil knowledge-free desliga: sai só a saída do axe.
+   */
+  emag?: boolean;
+}
+
 /** Run axe against an already-loaded page so aggregate scans do not navigate twice. */
-export async function runAxeScanOnPage(page: Page, url: string, selector?: string): Promise<AxeScanResult> {
+export async function runAxeScanOnPage(
+  page: Page,
+  url: string,
+  selector?: string,
+  options: AxeScanOptions = {}
+): Promise<AxeScanResult> {
+  const withEmag = options.emag ?? true;
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
   await page.evaluate(axeSource);
@@ -151,7 +165,7 @@ export async function runAxeScanOnPage(page: Page, url: string, selector?: strin
   const findings: Finding[] = [];
 
   for (const violation of axeResults.violations) {
-    const emagId = AXE_TO_EMAG[violation.id];
+    const emagId = withEmag ? AXE_TO_EMAG[violation.id] : undefined;
     const emagRule = emagId ? findEmagRule(emagId) : undefined;
     const wcag = wcagFromTags(violation.tags);
 
@@ -174,7 +188,9 @@ export async function runAxeScanOnPage(page: Page, url: string, selector?: strin
         evidence: {
           observed: node.failureSummary ?? violation.description,
           expected: violation.help,
-          data: { helpUrl: violation.helpUrl, axeTags: violation.tags, emagId: emagId ?? null },
+          data: withEmag
+            ? { helpUrl: violation.helpUrl, axeTags: violation.tags, emagId: emagId ?? null }
+            : { helpUrl: violation.helpUrl, axeTags: violation.tags },
         },
         severity: IMPACT_TO_SEVERITY[violation.impact ?? "moderate"] ?? "moderate",
         nature: "syntactic",

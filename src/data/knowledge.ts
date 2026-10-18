@@ -13,6 +13,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
+import { guardKnowledge } from "./lock.js";
 
 // ajv-formats ships CJS typings that NodeNext resolves as a namespace.
 const addFormats = addFormatsModule as unknown as (ajv: Ajv2020) => void;
@@ -176,6 +177,7 @@ function canonicalize(rule: KnowledgeRule): KnowledgeRule {
 let kb: KnowledgeBase | undefined;
 
 export function getKnowledgeBase(): KnowledgeBase {
+  guardKnowledge("getKnowledgeBase");
   if (kb) return kb;
 
   const version = versionDir();
@@ -288,6 +290,7 @@ export function normalizeText(value: string): string {
  * `context` (`applicability.ts`), para não mudar o resultado de chamadas antigas.
  */
 export function filterRules(filter: RuleFilter = {}): KnowledgeRule[] {
+  guardKnowledge("filterRules");
   const { rules } = getKnowledgeBase();
   const q = filter.query?.toLowerCase();
 
@@ -313,6 +316,7 @@ export function filterRules(filter: RuleFilter = {}): KnowledgeRule[] {
 
 /** Canonical implementation evidence (force:"example") for a component. */
 export function getEvidence(component?: string): KnowledgeRule[] {
+  guardKnowledge("getEvidence");
   return getKnowledgeBase().rules.filter(
     (r) => r.force === "example" && (component === undefined || r.component === component)
   );
@@ -323,6 +327,7 @@ export function getEvidence(component?: string): KnowledgeRule[] {
  * one no longer lists (`legacy` set) — old findings and references keep their anchor.
  */
 export function getRuleById(id: string): KnowledgeRule | undefined {
+  guardKnowledge("getRuleById");
   const base = getKnowledgeBase();
   return base.byId.get(id) ?? base.legacyById.get(id);
 }
@@ -353,6 +358,7 @@ export interface KnowledgeConflicts {
 let conflicts: KnowledgeConflicts | undefined;
 
 export function getKnowledgeConflicts(): KnowledgeConflicts {
+  guardKnowledge("getKnowledgeConflicts");
   if (conflicts) return conflicts;
   const version = versionDir();
   const reports = join(KNOWLEDGE_DIR, `versions/${version}/reports`);
@@ -369,6 +375,7 @@ export function getKnowledgeConflicts(): KnowledgeConflicts {
  * component specs so the agent knows the reference artifact is imperfect.
  */
 export function getComponentDefects(component: string): PackageAccessibilityFinding[] {
+  guardKnowledge("getComponentDefects");
   const audit = getKnowledgeConflicts().packageAudit;
   return (audit.accessibilityFindings ?? []).filter((f) => f.component === component);
 }
@@ -388,6 +395,7 @@ let emagTemplates: Map<string, EmagValidationTemplate> | undefined;
 
 /** KB validation template for an e-MAG recommendation id (e.g. "6.2"). */
 export function getEmagValidationTemplate(recommendation: string): EmagValidationTemplate | undefined {
+  guardKnowledge("getEmagValidationTemplate");
   if (!emagTemplates) {
     const version = versionDir();
     const file = JSON.parse(

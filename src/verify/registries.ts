@@ -173,3 +173,15 @@ export function registryVersions(): Record<string, string> {
     contextual: CONTEXT_CONDITIONS_VERSION,
   };
 }
+
+/** 2.14.0 (NAT-61): o registro de condições do perfil knowledge-free — só P1 pela fonte WCAG. */
+export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.0.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
+
+/** Versões do perfil knowledge-free: só registros públicos (WCAG 2.2) e o registro de condições P1. */
+export function registryVersionsKnowledgeFree(): Record<string, string> {
+  const wcagMeta = getWcagRegistry().meta;
+  return {
+    wcag: `${wcagMeta.standard} · ${wcagMeta.inWcag22} critérios · ${wcagMeta.source} (${wcagMeta.retrievedAt})`,
+    contextual: CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE,
+  };
+}

@@ -20,7 +20,8 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FindingSchema, type Finding } from "./schema/finding.js";
+import { FindingSchema, FindingSchemaKnowledgeFree, type Finding } from "./schema/finding.js";
+import { knowledgeLockAttempts, lockKnowledgeForProcess, runKnowledgeLocked } from "./data/lock.js";
 import {
   getTokenRegistry,
   getEmag,
@@ -104,7 +105,13 @@ export interface ServerOptions {
   reportsDir?: string;
   telemetry?: ToolTelemetryOptions;
   /** Full authoring surface, or the smaller surface used by controlled evaluations. */
-  toolProfile?: "full" | "evaluation" | "normative" | "deterministic" | "evidence";
+  toolProfile?: "full" | "evaluation" | "normative" | "deterministic" | "evidence" | "knowledge-free";
+  /**
+   * 2.14.0 (NAT-61): alcance da trava de conhecimento do perfil knowledge-free. `process` (padrão)
+   * trava o processo inteiro; `call` trava só a execução de cada ferramenta do perfil — para testes e
+   * para o inventário, que sobem um servidor `evaluation` e um `knowledge-free` no mesmo processo.
+   */
+  knowledgeLock?: "process" | "call";
 }
 
 function json(data: unknown) {
@@ -460,7 +467,7 @@ function normativeContextFor(componentsFound: string[]) {
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
   const requestedProfile = options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE ?? "full";
-  const toolProfile = (["full", "evaluation", "normative", "deterministic", "evidence"] as const)
+  const toolProfile = (["full", "evaluation", "normative", "deterministic", "evidence", "knowledge-free"] as const)
     .includes(requestedProfile as never)
     ? requestedProfile as NonNullable<ServerOptions["toolProfile"]>
     : "full";
@@ -468,7 +475,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const hasDeterministic = toolProfile === "full" || toolProfile === "evaluation" || toolProfile === "deterministic";
   const hasEvidence = toolProfile === "full" || toolProfile === "evidence";
   const hasCombinedGate = toolProfile === "full" || toolProfile === "evaluation";
-  const telemetry = new ToolTelemetry(options.telemetry);
+  /**
+   * 2.14.0 (NAT-61): terceiro braço. As ferramentas de medição do perfil evaluation sem nada da base
+   * de conhecimento: scan_page só com axe, get_finding_details como está e verify_finding com
+   * reprodução de estado, registro WCAG e predicados P1. Sem recursos nem prompt. Os carregadores de
+   * conhecimento ficam travados (data/lock.ts) e as tentativas vão para a telemetria.
+   */
+  const knowledgeFree = toolProfile === "knowledge-free";
+  if (knowledgeFree && options.knowledgeLock !== "call") lockKnowledgeForProcess();
+  const telemetry = new ToolTelemetry(
+    knowledgeFree
+      ? { ...options.telemetry, knowledgeLockAttempts: () => knowledgeLockAttempts().attempts }
+      : options.telemetry
+  );
+  /** Ferramenta instrumentada; no perfil knowledge-free, executada sob a trava de conhecimento. */
+  const tool = <TArgs, TResult>(name: string, handler: (args: TArgs) => Promise<TResult>) =>
+    instrumentTool(telemetry, name, knowledgeFree ? (args: TArgs) => runKnowledgeLocked(() => handler(args)) : handler);
   const findingStore = new FindingStore();
   const verificationStore = new VerificationStore();
   const pageScanCache = new PageScanCache();
@@ -511,8 +533,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   });
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
-  // the same DS release (logs to stderr — stdout is the MCP transport).
-  warnOnVersionMismatch();
+  // the same DS release (logs to stderr — stdout is the MCP transport). Sem base no knowledge-free.
+  if (!knowledgeFree) warnOnVersionMismatch();
 
   // ══════════════════════════════════════════════════════════════════════════
   // Oracle knowledge tools (A1–A4)
@@ -1001,11 +1023,89 @@ export function createServer(options: ServerOptions = {}): McpServer {
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),
           // Só na primeira página (cursor ausente ou 0): a continuação não repete o ponteiro.
-          ...(hasNorms && !cursor ? normativeContextFor(result.coverage.componentsFound) : {}),
+          ...(hasNorms && !cursor ? normativeContextFor(result.coverage.componentsFound ?? []) : {}),
           ...batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars, memberLimit }),
         });
       }
     )
+  );
+
+  if (knowledgeFree) server.registerTool(
+    "scan_page",
+    {
+      title: "Varredura determinística (axe-core)",
+      description:
+        "Carrega a página uma vez e executa o axe-core no estado reproduzido. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
+      inputSchema: {
+        url: z.string().describe("URL da página"),
+        selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
+        actions: PageActionsSchema
+          .optional()
+          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
+        arrival: ArrivalSchema
+          .optional()
+          .describe("Condições que mostram que o estado pedido foi alcançado (caminho, diálogo aberto, erro visível, controle expandido, foco, elemento visível); não satisfeitas, nada é varrido"),
+        compareToScanId: z
+          .string()
+          .optional()
+          .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
+        ...FindingPageInputShape,
+        ...FamilyViewInputShape,
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    tool("scan_page", async ({ url, selectors, actions, arrival, compareToScanId, detail, cursor, limit, maxChars, view, memberLimit }) => {
+      const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
+      const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
+      if (compareToScanId && !previousFindings) {
+        return json({ error: `compareToScanId '${compareToScanId}' não existe nesta sessão MCP.` });
+      }
+      const result = await scanPage(
+        { url, selectors, actions, ...(arrival ? { arrival } : {}) },
+        pageScanCache,
+        { knowledgeFree: true }
+      );
+      if (result.status === "state-not-reached") {
+        return json({
+          url,
+          status: result.status,
+          scanId: null,
+          stateFingerprint: null,
+          limitation: result.limitation,
+          state: result.state,
+        });
+      }
+      const scanId = findingStore.putBatch("page", result.findings, {
+        stateFingerprint: result.stateFingerprint,
+        cacheHit: result.cacheHit,
+        ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
+        coverage: result.coverage,
+        state: result.state,
+      });
+      const stateDiff = compareToScanId && previousFindings
+        ? {
+            previousScanId: compareToScanId,
+            previousFingerprint: previousLedger?.stateFingerprint ?? null,
+            currentFingerprint: result.stateFingerprint,
+            stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
+            findings: diffFindings(previousFindings, result.findings),
+          }
+        : undefined;
+      return json({
+        url,
+        status: result.status,
+        scanId,
+        stateFingerprint: result.stateFingerprint,
+        state: result.state,
+        cacheHit: result.cacheHit,
+        ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
+        coverage: result.coverage,
+        summary: summarize(result.findings),
+        deduplication: result.deduplication,
+        ...(stateDiff ? { stateDiff } : {}),
+        ...batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars, memberLimit }),
+      });
+    })
   );
 
   if (toolProfile === "full") server.registerTool(
@@ -1171,7 +1271,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     )
   );
 
-  if (hasDeterministic) server.registerTool(
+  if (hasDeterministic || knowledgeFree) server.registerTool(
     "get_finding_details",
     {
       title: "Detalhes de findings já produzidos",
@@ -1193,8 +1293,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(
-      telemetry,
+    tool(
       "get_finding_details",
       async ({ ids, scanId, detail, cursor, limit, maxChars, view, memberLimit, familyId }) => {
         if ((!ids && !scanId) || (ids && scanId)) {
@@ -1232,9 +1331,25 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Verification gate (C3) and report (D2–D4)
   // ══════════════════════════════════════════════════════════════════════════
 
-  if (hasCombinedGate) server.registerTool(
+  if (hasCombinedGate || knowledgeFree) server.registerTool(
     "verify_finding",
-    {
+    knowledgeFree ? {
+      title: "Portão de verificação anti-alucinação",
+      description:
+        "Confere em separado: existência da regra citada (critérios WCAG 2.2 no registro público; regras do axe-core são do verificador embutido; outras fontes não são conferidas neste perfil), consistência dos dados estruturados (expectedCondition e campos da condição) e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions ou pela receita do scanId. Dados estruturados ausentes ou sem predicado deixam o resultado unverifiable; dados contraditórios rejeitam; confirmed exige a violação verificada. observed/expected em texto livre são explicações humanas e não são interpretados. O servidor guarda o resultado para este payload exato.",
+      inputSchema: {
+        finding: FindingSchemaKnowledgeFree.describe("O achado candidato, no esquema Finding"),
+        live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
+        actions: PageActionsSchema.optional().describe("Ações reproduzidas antes da verificação, quando o estado alegado depende de interação"),
+        stateFingerprint: z.string().optional().describe("Fingerprint do estado alegado (de scan_page); se o estado reproduzido for outro, a alegação fica sem verificação (limitação)"),
+        arrival: ArrivalSchema.optional().describe("Condições de chegada do estado alegado; não satisfeitas, a alegação fica sem verificação"),
+        scanId: z
+          .string()
+          .optional()
+          .describe("scan_page desta sessão cujo estado é o alegado: reaplica a receita gravada e exige a mesma URL, janela e fingerprint. Não envie actions/arrival/stateFingerprint junto"),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    } : {
       title: "Portão de verificação anti-alucinação",
       description:
         "Confere em separado: existência da regra num registro versionado, aplicabilidade, consistência dos dados estruturados (property, observed/observedHex ou observedTag e expectedCondition) com cada elemento vivo e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions. Dados estruturados ausentes ou sem predicado deixam o resultado unverifiable; dados contraditórios rejeitam; confirmed exige a violação verificada. observed/expected em texto livre são explicações humanas e não são interpretados. O servidor guarda o resultado para este payload exato.",
@@ -1251,7 +1366,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    instrumentTool(telemetry, "verify_finding", async ({ finding, live, actions, stateFingerprint, arrival, scanId }) => {
+    tool("verify_finding", async ({ finding, live, actions, stateFingerprint, arrival, scanId }) => {
       let scanState: Parameters<typeof verifyFinding>[0]["scanState"];
       if (scanId) {
         if (actions !== undefined || arrival !== undefined || stateFingerprint !== undefined) {
@@ -1276,7 +1391,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
           fingerprint: ledger.stateFingerprint,
         };
       }
-      const verification = await verifyFinding({ finding, live: live ?? false, actions, stateFingerprint, arrival, scanState });
+      const verification = await verifyFinding({
+        finding: finding as Finding,
+        live: live ?? false,
+        actions,
+        stateFingerprint,
+        arrival,
+        scanState,
+        ...(knowledgeFree ? { knowledgeFree: true } : {}),
+      });
       const stored = verificationStore.record(finding, verification);
       return json({ findingId: finding.id, verificationId: stored.verificationId, verification });
     })

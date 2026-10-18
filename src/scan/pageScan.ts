@@ -84,11 +84,14 @@ export interface PageScanResult {
     checks: PageScanCheck[];
     /** Explicit selectors from the request; empty means each checker uses its documented default. */
     selectors: string[];
-    evidenceSelectors: string[];
+    /** Ausente no perfil knowledge-free (2.14.0): só o axe roda, sem seletores de evidência. */
+    evidenceSelectors?: string[];
     axeScope: string | null;
     elementsInspected: number;
-    componentsRequested: string[];
-    componentsFound: string[];
+    /** Ausente no perfil knowledge-free (2.14.0): a lista dos componentes do DS é conhecimento. */
+    componentsRequested?: string[];
+    /** Ausente no perfil knowledge-free (2.14.0). */
+    componentsFound?: string[];
     axe?: { engine: { name: string; version: string }; passes: number; incomplete: number };
     actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string }>;
   };
@@ -213,7 +216,17 @@ function normalizedRequest(request: PageScanRequest) {
   };
 }
 
-export async function scanPage(request: PageScanRequest, cache: PageScanCache): Promise<PageScanOutcome> {
+export interface PageScanOptions {
+  /**
+   * 2.14.0 (NAT-61): perfil sem conhecimento do DS/e-MAG. Só o axe roda (as checagens de tokens,
+   * estrutura, anatomia e página aplicam a base), sem a anotação e-MAG, e a cobertura não lista
+   * componentes do DS. Nenhum carregador de conhecimento é chamado.
+   */
+  knowledgeFree?: boolean;
+}
+
+export async function scanPage(request: PageScanRequest, cache: PageScanCache, options: PageScanOptions = {}): Promise<PageScanOutcome> {
+  if (options.knowledgeFree) return scanPageKnowledgeFree(request, cache);
   const viewport = request.viewport ?? { ...FROZEN_DESKTOP_VIEWPORT };
   return withPage(request.url, async (page): Promise<PageScanOutcome> => {
     const { attestation: state, fingerprint: stateFingerprint } = await reproduceState(page, {
@@ -331,6 +344,63 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache): 
           ...(action.action === "press" ? { key: action.key } : {}),
         })),
         ...(axe ? { axe } : {}),
+      },
+      deduplication: {
+        input: deduplicated.inputCount,
+        output: deduplicated.outputCount,
+        merged: deduplicated.merged,
+        key: deduplicated.key,
+      },
+    };
+    cache.set(cacheKey, value);
+    return { ...value, state, cacheHit: false, cacheMissReason: "no-exact-fingerprint-and-scope-match" };
+  }, { viewport });
+}
+
+/**
+ * `scan_page` do perfil knowledge-free (2.14.0, NAT-61, plano §3): a mesma carga, receita, chegada,
+ * fingerprint e cache do scanner completo, e só o axe-core com a saída do próprio axe. Fica separado
+ * do `scanPage` para que o caminho dos outros perfis não mude em nada.
+ */
+async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCache): Promise<PageScanOutcome> {
+  const viewport = request.viewport ?? { ...FROZEN_DESKTOP_VIEWPORT };
+  return withPage(request.url, async (page): Promise<PageScanOutcome> => {
+    const { attestation: state, fingerprint: stateFingerprint } = await reproduceState(page, {
+      url: request.url,
+      viewport,
+      viewportSource: request.viewport ? "cli" : "frozen-desktop",
+      actions: request.actions ?? [],
+      ...(request.arrival ? { arrival: request.arrival } : {}),
+    });
+    if (!state.reached) {
+      return { status: "state-not-reached", url: request.url, stateFingerprint: null, state, limitation: unreachedLimitation(state) };
+    }
+    const selectors = [...(request.selectors ?? [])].sort();
+    const checks: PageScanCheck[] = ["axe"];
+    const cacheKey = hash({ profile: "knowledge-free", stateFingerprint, selectors, checks, actions: request.actions ?? [] });
+    const cached = cache.get(cacheKey);
+    if (cached) return { ...cached, state, cacheHit: true };
+
+    const axeScope = selectors.length ? selectors.join(", ") : undefined;
+    const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false });
+    const deduplicated = deduplicateFindings(result.findings);
+    const value: CachedScan = {
+      status: "scanned",
+      url: request.url,
+      stateFingerprint,
+      findings: deduplicated.findings,
+      observations: [],
+      coverage: {
+        checks,
+        selectors,
+        axeScope: axeScope ?? "document",
+        elementsInspected: 0,
+        actionsApplied: (request.actions ?? []).map((action) => ({
+          action: action.action,
+          ...(action.selector ? { selector: action.selector } : {}),
+          ...(action.action === "press" ? { key: action.key } : {}),
+        })),
+        axe: { engine: result.engine, passes: result.passeCount, incomplete: result.incompleteCount },
       },
       deduplication: {
         input: deduplicated.inputCount,

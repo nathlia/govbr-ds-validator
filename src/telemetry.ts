@@ -17,12 +17,19 @@ export interface ToolTelemetryEvent {
   cacheMissReason?: string;
   stateFingerprint?: string;
   error?: string;
+  /**
+   * 2.14.0 (NAT-61): tentativas de carregar conhecimento sob a trava do perfil knowledge-free,
+   * acumuladas no processo. Só existe nesse perfil; maior que zero = isolamento falho.
+   */
+  knowledgeLockAttempts?: number;
 }
 
 export interface ToolTelemetryOptions {
   runId?: string;
   file?: string;
   onEvent?: (event: ToolTelemetryEvent) => void;
+  /** 2.14.0: contador da trava de conhecimento, anexado a cada evento (perfil knowledge-free). */
+  knowledgeLockAttempts?: () => number;
 }
 
 type ToolResult = {
@@ -74,11 +81,13 @@ export class ToolTelemetry {
   private readonly runId: string;
   private readonly file?: string;
   private readonly onEvent?: (event: ToolTelemetryEvent) => void;
+  private readonly lockAttempts?: () => number;
 
   constructor(options: ToolTelemetryOptions = {}) {
     this.runId = options.runId ?? process.env.GOVBR_VALIDATOR_RUN_ID ?? "unscoped";
     this.file = options.file ?? process.env.GOVBR_VALIDATOR_TELEMETRY_FILE;
     this.onEvent = options.onEvent;
+    this.lockAttempts = options.knowledgeLockAttempts;
     if (this.file) mkdirSync(dirname(this.file), { recursive: true });
   }
 
@@ -146,6 +155,7 @@ export class ToolTelemetry {
   }
 
   private emit(event: ToolTelemetryEvent): void {
+    if (this.lockAttempts) event = { ...event, knowledgeLockAttempts: this.lockAttempts() };
     this.onEvent?.(event);
     if (this.file) appendFileSync(this.file, `${JSON.stringify(event)}\n`, "utf8");
   }

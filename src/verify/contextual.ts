@@ -190,12 +190,27 @@ export function contextRuleOf(finding: Finding): ContextRule | null {
   return null;
 }
 
-export function conditionsForRule(rule: ContextRule): ContextCondition[] {
-  return CONTEXT_CONDITIONS.filter((c) => c.rules.some((r) => r.source === rule.source && r.id === rule.id));
+export function conditionsForRule(rule: ContextRule, pool: ContextCondition[] = CONTEXT_CONDITIONS): ContextCondition[] {
+  return pool.filter((c) => c.rules.some((r) => r.source === rule.source && r.id === rule.id));
 }
 
-export function conditionByName(name: unknown): ContextCondition | undefined {
-  return CONTEXT_CONDITIONS.find((c) => c.condition === name);
+export function conditionByName(name: unknown, pool: ContextCondition[] = CONTEXT_CONDITIONS): ContextCondition | undefined {
+  return pool.find((c) => c.condition === name);
+}
+
+/**
+ * 2.14.0 (NAT-61, decisões 5 e 6): as condições que o perfil knowledge-free decide — só P1, e só
+ * pela fonte WCAG. P1 testa critérios da WCAG (3.3.1, 4.1.3), não regras do DS; as fontes e-MAG e
+ * da base saem das listas porque conferi-las é conhecimento curado.
+ */
+export const KNOWLEDGE_FREE_CONDITIONS: ContextCondition[] = CONTEXT_CONDITIONS.filter((c) => c.family === "P1").map((c) => ({
+  ...c,
+  rules: c.rules.filter((r) => r.source === "wcag"),
+}));
+
+export interface EvaluateContextOptions {
+  /** 2.14.0: rótulos sem referência ao e-MAG (perfil knowledge-free). */
+  knowledgeFree?: boolean;
 }
 
 // ───────────────────────────── utilidades ─────────────────────────────
@@ -276,7 +291,7 @@ function danglingDetail(facts: AccessibilityFacts | undefined): string {
 
 // ───────────────────────────── P1 ─────────────────────────────
 
-function errorItemIdentified(evidence: ContextEvidence, finding: Finding): ContextOutcome {
+function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
   if (typeof window === "string") return { status: "undetermined", detail: window };
   const { pre, final } = window;
@@ -320,10 +335,10 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding): Conte
       } e a mensagem não nomeia o campo ("${ax.name}").${danglingDetail(facts)}`,
     };
   });
-  return combine(outcomes, "item em erro não identificado (WCAG 3.3.1 / e-MAG 6.6)");
+  return combine(outcomes, options.knowledgeFree ? "item em erro não identificado (WCAG 3.3.1)" : "item em erro não identificado (WCAG 3.3.1 / e-MAG 6.6)");
 }
 
-function errorDescribedInText(evidence: ContextEvidence): ContextOutcome {
+function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
   if (typeof window === "string") return { status: "undetermined", detail: window };
   const { pre, final } = window;
@@ -360,7 +375,7 @@ function errorDescribedInText(evidence: ContextEvidence): ContextOutcome {
     }
     return { status: "verified", detail: `erro detectado (${changed ? "o campo mudou de aparência" : "invalid=true"}) e nenhum texto novo apareceu; descrição vazia.${danglingDetail(facts)}` };
   });
-  return combine(outcomes, "erro não descrito em texto (WCAG 3.3.1 / e-MAG 6.6)");
+  return combine(outcomes, options.knowledgeFree ? "erro não descrito em texto (WCAG 3.3.1)" : "erro não descrito em texto (WCAG 3.3.1 / e-MAG 6.6)");
 }
 
 function statusMessage(evidence: ContextEvidence): ContextOutcome {
@@ -608,12 +623,17 @@ function focusOnClose(evidence: ContextEvidence, finding: Finding): ContextOutco
   });
 }
 
-export function evaluateContext(condition: ContextCondition, finding: Finding, evidence: ContextEvidence): ContextOutcome {
+export function evaluateContext(
+  condition: ContextCondition,
+  finding: Finding,
+  evidence: ContextEvidence,
+  options: EvaluateContextOptions = {}
+): ContextOutcome {
   switch (condition.check) {
     case "error-item-identified":
-      return errorItemIdentified(evidence, finding);
+      return errorItemIdentified(evidence, finding, options);
     case "error-described-in-text":
-      return errorDescribedInText(evidence);
+      return errorDescribedInText(evidence, options);
     case "status-message":
       return statusMessage(evidence);
     case "anatomy-part":

@@ -23,6 +23,8 @@ import type { PageEvidence, ElementEvidence } from "./types.js";
 import { withPage } from "./browser.js";
 import { AUTHORED_CSS_NAMES, partitionDeclarations, type RawDeclaration } from "./cssProvenance.js";
 import { getDsStylesheet } from "../data/load.js";
+import { isKnowledgeLocked } from "../data/lock.js";
+import type { DsStylesheetIndex } from "./cssProvenance.js";
 import { INTERACTIVE_TAGS, NAME_PROBE_KEY, approximateAccessibleName, chromiumAccessibleNames, removeProbe } from "./accessibleName.js";
 import type { Page } from "playwright";
 
@@ -31,6 +33,12 @@ export const DEFAULT_SELECTOR =
 
 /** Separator between shadow trees in a locator: `host >>> element-inside-the-shadow-root`. */
 export const SHADOW_STEP = ">>>";
+
+/** Índice vazio usado sob a trava de conhecimento (2.14.0): nenhuma declaração é atribuída ao DS. */
+const EMPTY_DS_STYLESHEET: DsStylesheetIndex = {
+  meta: { source: "none", version: "none", generatedAt: "", files: [], selectors: 0, declarations: 0 },
+  declarations: {},
+};
 
 export const COMPUTED_STYLE_PROPERTIES = [
   "backgroundColor", "color", "fontFamily", "fontSize", "fontWeight", "lineHeight",
@@ -343,7 +351,9 @@ export async function inspectPageComputedStyles(
     throw error;
   }
 
-  const dsStylesheet = getDsStylesheet();
+  // 2.14.0 (NAT-61): sem conhecimento, a folha do DS não é lida — toda declaração conta como da
+  // página. Nenhuma resposta do perfil knowledge-free expõe a partição (só os predicados de token a usam).
+  const dsStylesheet = isKnowledgeLocked() ? EMPTY_DS_STYLESHEET : getDsStylesheet();
   const withProvenance = elements.map(({ authoredRaw, nameProbeIndex, ...element }) => {
     const evidence = {
       ...element,

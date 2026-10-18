@@ -27,6 +27,8 @@ import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 import {
   ANATOMY_PARTS,
+  CONTEXT_CONDITIONS,
+  KNOWLEDGE_FREE_CONDITIONS,
   anatomyPartFor,
   conditionByName,
   conditionsForRule,
@@ -325,11 +327,34 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   return none(generic);
 }
 
+/**
+ * Seleção do perfil knowledge-free (2.14.0, NAT-61, decisão 5): só as condições P1 citadas pela fonte
+ * WCAG selecionam predicado. Token, estrutura, página, P2 e P3 aplicam a base do DS e ficam
+ * desligados; nenhuma mensagem afirma que uma regra fora da WCAG existe.
+ */
+export function selectPredicateKnowledgeFree(finding: Finding): PredicateSelection {
+  const { source, id } = finding.rule;
+  const data = (finding.evidence.data ?? {}) as Record<string, unknown>;
+  const generic: PredicateSelection = {
+    predicate: null,
+    reason:
+      `Nenhum predicado implementado para ${source} '${id}' neste perfil: só critérios WCAG com condição ` +
+      "estruturada têm predicado. Localizar o elemento não confirma a alegação.",
+  };
+  if (source !== "wcag") return generic;
+  return selectContextPredicate(finding, data, KNOWLEDGE_FREE_CONDITIONS, { knowledgeFree: true }) ?? generic;
+}
+
 /** Seleção das condições contextuais (P1–P3). `null`: a alegação não é contextual. */
-function selectContextPredicate(finding: Finding, data: Record<string, unknown>): PredicateSelection | null {
+function selectContextPredicate(
+  finding: Finding,
+  data: Record<string, unknown>,
+  pool: typeof CONTEXT_CONDITIONS = CONTEXT_CONDITIONS,
+  options: { knowledgeFree?: boolean } = {}
+): PredicateSelection | null {
   const rule = contextRuleOf(finding);
-  const forRule = rule ? conditionsForRule(rule) : [];
-  const requested = conditionByName(data.expectedCondition);
+  const forRule = rule ? conditionsForRule(rule, pool) : [];
+  const requested = conditionByName(data.expectedCondition, pool);
   if (!requested && forRule.length === 0) return null;
   const cited = `${finding.rule.source} '${finding.rule.id}'`;
   if (!requested) {
@@ -374,7 +399,7 @@ function selectContextPredicate(finding: Finding, data: Record<string, unknown>)
         detail: `Condição estruturada '${condition.condition}' (${condition.family}) aceita para ${cited}; ${elements.length} sujeito(s) no estado final.`,
       }),
       evaluate: (_elements, _url, _facts, context) =>
-        evaluateContext(condition, finding, context ?? { actions: [] }),
+        evaluateContext(condition, finding, context ?? { actions: [] }, options),
     },
   };
 }

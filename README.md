@@ -91,6 +91,54 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Knowledge-free profile: the third arm (2.14.0, NAT-61)
+
+`GOVBR_VALIDATOR_TOOL_PROFILE=knowledge-free` serves the arm *ferramentas* (D-132, plan
+`plano-nat61-braco-ferramentas-2026-10-18.md`). Same image, same server name, same tool names as
+`evaluation`; only the profile changes. The comparison *ferramentas → com* estimates the incremental
+contribution of the **DS + e-MAG package served and applied by the oracle** (rule lookups, normative
+context, checks that apply the base). It does **not** isolate "normative knowledge" in general: WCAG
+2.2 (public registry) and axe-core's own output stay in both arms, and the model keeps what it learned
+in training.
+
+| Tool | In `knowledge-free` |
+|---|---|
+| `get_ds_rules`, `get_design_tokens`, `get_emag_rules`, `get_page_rules`, `get_component_spec` | not registered |
+| `scan_page` | axe-core only, in the reproduced state (load, recipe, arrival, fingerprint, `scanId`, diff, cache unchanged). No `checks`/`tokenChecks`/`components` in the schema, no e-MAG annotation (`rule.description` suffix, `evidence.data.emagId`), no `coverage.componentsRequested`/`componentsFound`/`evidenceSelectors`, no `observations`, no `normativeContext` |
+| `get_finding_details` | unchanged (inherits the stripped batch) |
+| `verify_finding` | state replay as in `evaluation`; WCAG rules checked against the WCAG 2.2 registry; `axe-core` as before; `govbr-ds-*` and `emag` sources → `ruleExists: unknown`, fixed note "Fonte não conferida neste perfil." (never `confirmed`, never rejected for the missing registry); only the three P1 conditions cited with source `wcag` select a predicate (3.3.1 ×2, 4.1.3), with labels that do not cite the e-MAG; no token-registry claim check; `registries` = `wcag` + `contextual`; `Finding` schema with neutral descriptions (the `RuleSource` enum values stay, decision 8) |
+| resources, prompt `validate_page` | not registered |
+
+**Proof that nothing leaks, three locks:**
+
+1. **By construction** (`src/data/lock.ts`). Every knowledge loader of `data/load.ts` and
+   `data/knowledge.ts` (`getKnowledgeBase`, `getRuleById`, `filterRules`, `getEvidence`, `getTokenRegistry`,
+   `getComponentSpecs`, `getEmag`, `findEmagRule`, `getPageRules`, `getDsStylesheet`, `getKnowledgeConflicts`,
+   `getComponentDefects`, `getEmagValidationTemplate`) calls `guardKnowledge()`; under the lock it counts and
+   throws. `createServer` locks the whole process by default (`knowledgeLock: "call"` scopes it to each
+   tool call, for tests and the inventory). Every telemetry event of the profile carries
+   `knowledgeLockAttempts`; `> 0` = isolation failed. The WCAG registry and the axe bundle stay readable.
+2. **By observation** (`npm run inventario:sem-conhecimento`). Real responses of `knowledge-free` and
+   `evaluation` on the development controls (`govbr-corpus/public/controles/a/`, never `b/`) and the frozen
+   screens A and B (`govbr-telas`), scanned with a dictionary generated from `data/` (KB ids, titles and
+   6-word shingles of every version, legacy ids, token names, compound spec classes, published check ids,
+   e-MAG titles/paraphrases, conflicts and package audit, page-rule prose, retired tool names, fixed terms).
+   No global subtraction: a hit is forgiven only as an **echo** of the caller's own arguments, in a
+   **page field** when the term is in that page's served/rendered bytes, in an **axe field** when the term
+   is in the axe bundle, or as a **named exception** (`RuleSource` enum values; fingerprint normalization
+   labels). Everything else is "sem explicação". Acceptance: 0 in `knowledge-free`, > 0 in `evaluation`
+   (positive control), canaries firing, lock = 0, and axe parity per page (the `knowledge-free` axe findings
+   equal the `evaluation` ones minus the e-MAG fields). The detector is auxiliary; lock 1 is the guarantee.
+3. **Per run.** `tools/list` of the profile has a pinned sha256 (`test/integration/knowledge-free.test.ts`);
+   the runner checks the exposed inventory and hash (eval side, after NAT-86).
+
+**Invariance.** `evaluation` (and `full`, `normative`, `deterministic`, `evidence`) are unchanged:
+`npm run invariancia:perfis -- --base <2.13.0 tree, built>` compares full payloads of both builds (all
+calls of the inventory plus lookups, resources, prompt, the `full` checkers and the CLI on screens A/B),
+normalizing only what varied between two runs of the same 2.13.0 build (A/A): timings, ids the page draws
+on each load (Angular app id, DS `list-N`) and state hashes derived from them. The `evaluation`
+`tools/list` sha256 is pinned to the 2.13.0 value in the test above.
+
 ### Contextual verification: associations, anatomy, focus transitions (2.13.0, NAT-85)
 
 Until 2.12.0 the gate had predicates only for token values, the component root tag and the page
@@ -546,6 +594,7 @@ part of the run configuration and must not be pooled across measurements:
 | `evidence` | raw authored/computed-style inspection, without rules or scanner verdicts |
 | `evaluation` | compatibility profile combining the three pathways plus the verification gate |
 | `full` | authoring/development surface, including individual checkers and report persistence |
+| `knowledge-free` | 2.14.0: the measurement tools of `evaluation` without the DS + e-MAG package the oracle serves and applies — `scan_page` (axe-core only), `get_finding_details`, `verify_finding` (state replay, WCAG 2.2 registry, P1 predicates). WCAG and axe-core remain; see *Knowledge-free profile* below |
 
 The deterministic profile exposes no normative resources, and the normative profile exposes no
 scanner. This makes norms-only, scanner-only and evidence-only arms mechanically distinct instead

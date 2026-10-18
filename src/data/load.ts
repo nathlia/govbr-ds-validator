@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import type { DsStylesheetIndex } from "../evidence/cssProvenance.js";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { guardKnowledge } from "./lock.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Works from both src/ (tsx) and dist/ (compiled) since data/ sits at package root.
@@ -104,28 +105,34 @@ let componentSpecs: ComponentSpecsData | undefined;
 let dsStylesheet: DsStylesheetIndex | undefined;
 
 export function getTokenRegistry(): TokenRegistry {
+  guardKnowledge("getTokenRegistry");
   return (tokens ??= load<TokenRegistry>("tokens.json"));
 }
 
 export function getEmag(): EmagData {
+  guardKnowledge("getEmag");
   return (emag ??= load<EmagData>("emag.json"));
 }
 
 export function getPageRules(): PageRulesData {
+  guardKnowledge("getPageRules");
   return (pageRules ??= load<PageRulesData>("ds-page-rules.json"));
 }
 
 /** Índice das declarações que a folha oficial do DS publica — ver `evidence/cssProvenance.ts`. */
 export function getDsStylesheet(): DsStylesheetIndex {
+  guardKnowledge("getDsStylesheet");
   return (dsStylesheet ??= load<DsStylesheetIndex>("ds-stylesheet.json"));
 }
 
 export function getComponentSpecs(): ComponentSpecsData {
+  guardKnowledge("getComponentSpecs");
   return (componentSpecs ??= load<ComponentSpecsData>("component-specs.json"));
 }
 
 /** Find an e-MAG rule by id (e.g. "3.5") across all sections. */
 export function findEmagRule(id: string): (EmagRule & { section: string }) | undefined {
+  guardKnowledge("findEmagRule");
   for (const [section, data] of Object.entries(getEmag().sections)) {
     const rule = data.rules.find((r) => r.id === id);
     if (rule) return { ...rule, section };
