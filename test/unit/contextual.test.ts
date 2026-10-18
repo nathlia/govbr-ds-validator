@@ -164,7 +164,9 @@ describe("P1: fatos de acessibilidade pareados pelo número do elemento", () => 
   const cond = CONTEXT_CONDITIONS.find((c) => c.check === "error-item-identified")!;
   const f = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorItemIdentified, errorMessage: "#m" });
   const actions = [{ action: "fill" as const, selector: "#a", value: "1" }, { action: "click" as const, selector: "#ok" }];
-  const field = (ref: number, colors: string) => snap({ ref, shown: true, colors, modal: false, classes: [] });
+  // 2.14.1: o sinal de erro detectado é programático (S3: aria-invalid no contêiner só do campo).
+  const field = (ref: number, colors: string, ancestorInvalid = colors === "vermelho") =>
+    snap({ ref, shown: true, colors, modal: false, classes: [], ariaInvalid: false, ancestorInvalid, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false });
   const trace = [
     obs(0, null, [field(1, "cinza"), field(2, "cinza")], { message: { found: 1, shown: false, text: "" } }),
     obs(1, null, [field(1, "vermelho"), field(2, "vermelho")], { message: { found: 1, shown: true, text: "Valor inválido." } }),
@@ -181,6 +183,28 @@ describe("P1: fatos de acessibilidade pareados pelo número do elemento", () => 
 
   it("contagens diferentes entre traço e árvore de acessibilidade não decidem", () => {
     expect(evaluateContext(cond, f, { actions, trace, accessibility: [ax(1, false)] }).status).toBe("undetermined");
+  });
+
+  it("2.14.1: só sinal programático novo decide o erro detectado; aparência, sinal antigo ou evento sem invalidez não", () => {
+    const um = (before: Partial<SubjectSnapshot>, after: Partial<SubjectSnapshot>) => [
+      obs(0, null, [{ ...field(1, "cinza", false), ...before }], { message: { found: 1, shown: false, text: "" } }),
+      obs(1, null, [{ ...field(1, "verde", false), ...after }], { message: { found: 1, shown: true, text: "Valor inválido." } }),
+    ];
+    const run = (t: TraceObservation[]) => evaluateContext(cond, f, { actions, trace: t, accessibility: [ax(1, false)] }).status;
+    expect(run(um({}, {}))).toBe("undetermined"); // só a aparência mudou
+    expect(run(um({ ancestorInvalid: true }, { ancestorInvalid: true }))).toBe("undetermined"); // S3 já valia antes
+    expect(run(um({}, { ancestorInvalid: true }))).toBe("verified"); // S3
+    expect(run(um({ invalidEvents: 1 }, { invalidEvents: 1, validityInvalid: true }))).toBe("undetermined"); // nenhum evento no gatilho
+    expect(run(um({}, { invalidEvents: 1, validityInvalid: false }))).toBe("undetermined"); // evento, mas o campo é válido agora
+    expect(run(um({}, { invalidEvents: 1, validityInvalid: true }))).toBe("verified"); // S2
+    expect(run(um({}, { invalidEvents: 1, validityInvalid: true, nativeInvalid: true }))).toBe("undetermined"); // balão nativo
+    expect(run(um({}, { errorMessageLinked: true }))).toBe("verified"); // S4
+    const described = CONTEXT_CONDITIONS.find((c) => c.check === "error-described-in-text")!;
+    const fd = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorDescribedInText });
+    const runD = (t: TraceObservation[]) => evaluateContext(described, fd, { actions, trace: t, accessibility: [ax(1, false)] }).status;
+    expect(runD(um({}, { errorMessageLinked: true }))).toBe("undetermined"); // S4 não vale sem mensagem pedida
+    expect(runD(um({}, { ariaInvalid: true }))).toBe("verified"); // S1
+    expect(runD(um({ ariaInvalid: true }, { ariaInvalid: true }))).toBe("undetermined");
   });
 });
 

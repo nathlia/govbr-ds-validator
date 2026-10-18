@@ -41,6 +41,26 @@ export interface SubjectSnapshot {
   /** Validação nativa ativa e falhando (o balão do navegador não está no DOM). */
   nativeInvalid?: boolean;
   classes: string[];
+  /**
+   * 2.14.1 (NAT-61, revisão Codex): sinais PROGRAMÁTICOS de que a página detectou erro no sujeito —
+   * nenhum deles lê aparência, palavra ou cor. O predicado P1 compara cada um com a observação antes
+   * do gatilho (precisa ser estabelecido pela última ação).
+   *   ariaInvalid      aria-invalid no próprio sujeito com valor diferente de ausente/""/"false".
+   *   ancestorInvalid  aria-invalid (idem) num ancestral composto cuja subárvore não contém outro campo
+   *                    de formulário além do sujeito — o contêiner só deste campo.
+   *   invalidEvents    quantos eventos `invalid` (validação de restrições nativa efetivamente executada:
+   *                    checkValidity/reportValidity/envio) o sujeito recebeu desde que o documento foi
+   *                    observado. Ouvido em captura no documento: dentro de shadow root não é visto (o
+   *                    evento não é composto) e fica 0 — o predicado não decide por ele.
+   *   validityInvalid  `validity.valid === false` agora.
+   *   errorMessageLinked  só quando a observação pede a mensagem: algum IDREF de aria-errormessage do
+   *                    sujeito (mesma árvore) é a mensagem exibida, ancestral ou descendente dela.
+   */
+  ariaInvalid?: boolean;
+  ancestorInvalid?: boolean;
+  invalidEvents?: number;
+  validityInvalid?: boolean;
+  errorMessageLinked?: boolean;
 }
 
 export interface TraceObservation {
@@ -113,6 +133,16 @@ function installHelpers(): void {
   const SHADOW_STEP = ">>>";
   const els: Element[] = [];
   const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  // Eventos `invalid` por elemento (2.14.1): a validação de restrições nativa que a página EXECUTOU.
+  const invalidCounts = new Map<Element, number>();
+  document.addEventListener(
+    "invalid",
+    (event) => {
+      const target = event.target;
+      if (target instanceof Element) invalidCounts.set(target, (invalidCounts.get(target) ?? 0) + 1);
+    },
+    true
+  );
 
   function ref(el: Element): number {
     const i = els.indexOf(el);
@@ -290,6 +320,22 @@ function installHelpers(): void {
     const form = field.form;
     return !(form && form.noValidate) && !field.formNoValidate;
   }
+  function invalidAttr(el: Element): boolean {
+    const v = el.getAttribute("aria-invalid");
+    return v !== null && v.trim() !== "" && v.trim().toLowerCase() !== "false";
+  }
+  const FIELD = "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']), select, textarea";
+  /** aria-invalid num ancestral que contém só este campo (pára no primeiro que contém outro campo). */
+  function ancestorInvalid(el: Element): boolean {
+    let cur = composedParent(el);
+    while (cur && cur !== document.body && cur !== document.documentElement) {
+      const others = composedElements(cur).filter((x) => x !== el && x.matches(FIELD));
+      if (others.length > 0) return false;
+      if (invalidAttr(cur)) return true;
+      cur = composedParent(cur);
+    }
+    return false;
+  }
   function snapshot(el: Element): Record<string, unknown> {
     const active = deepActive();
     return {
@@ -306,6 +352,10 @@ function installHelpers(): void {
       liveRegion: liveRegion(el),
       nativeInvalid: nativeInvalid(el),
       classes: Array.from(el.classList),
+      ariaInvalid: invalidAttr(el),
+      ancestorInvalid: ancestorInvalid(el),
+      invalidEvents: invalidCounts.get(el) ?? 0,
+      validityInvalid: !!(el as HTMLInputElement).validity && !(el as HTMLInputElement).validity.valid,
     };
   }
   w.__govbrCtx = {
@@ -385,7 +435,8 @@ export async function observeStep(page: Page, step: number, next: PageAction | u
     ({ step, subject, message, text }) => {
       const h = (window as unknown as { __govbrCtx: Helpers }).__govbrCtx;
       const active = h.deepActive();
-      const subjects = h.deepQueryAll(subject).map((el) => h.snapshot(el));
+      const subjectEls = h.deepQueryAll(subject);
+      const subjects = subjectEls.map((el) => h.snapshot(el));
       let messageInfo: { found: number; shown: boolean; text: string } | null = null;
       if (message) {
         const found = h.deepQueryAll(message);
@@ -395,6 +446,18 @@ export async function observeStep(page: Page, step: number, next: PageAction | u
           shown: shownOnes.length > 0,
           text: shownOnes.map((el) => h.textChunks(el, () => false).join(" ")).join(" ").slice(0, 500),
         };
+        // aria-errormessage do sujeito resolvido na mesma árvore aponta para a mensagem exibida?
+        subjectEls.forEach((el, i) => {
+          const root = el.getRootNode() as Document | ShadowRoot;
+          const targets = (el.getAttribute("aria-errormessage") ?? "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((id) => root.getElementById(id))
+            .filter((t): t is HTMLElement => t !== null);
+          (subjects[i] as SubjectSnapshot).errorMessageLinked = targets.some((t) =>
+            shownOnes.some((m) => m === t || h.inside(m, t) || h.inside(t, m))
+          );
+        });
       }
       const visibleText = text ? h.textChunks(document.body, () => false) : undefined;
       return {

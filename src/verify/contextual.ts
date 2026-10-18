@@ -17,7 +17,9 @@
  *   - restauração do foco da Message (recomendada), do Menu (sem texto) e com invocador removido;
  *   - a exceção da modal destrutiva (texto do corpus que não virou regra) — por isso foco num botão
  *     secundário da modal fica `undetermined`, nunca `verified`;
- *   - Pagination (tipo contextual não declarado no DOM).
+ *   - Pagination (tipo contextual não declarado no DOM);
+ *   - 2.14.1: erro detectado inferido da aparência do campo (cor, classe), do texto da mensagem ou do
+ *     foco — P1 3.3.1 só confirma com sinal programático (S1–S4, ver errorSignals).
  */
 import type { Finding } from "../schema/finding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -292,30 +294,49 @@ function danglingDetail(facts: AccessibilityFacts | undefined): string {
 // ───────────────────────────── P1 ─────────────────────────────
 
 /**
- * 2.14.0 (NAT-86 §7.3): o "segundo sinal" de erro (o campo mudou de aparência) só vale comparado no
- * MESMO estado de foco. Até a 2.13.0 comparava-se o campo logo antes do gatilho (focado, depois do
- * preenchimento) com o estado final (desfocado pelo clique no botão): a perda do anel de foco virava
- * "erro detectado", e uma página que aceita o valor e mostra mensagem de sucesso saía `confirmed`
- * (controle F1-10-N, falso positivo). Agora a referência é a observação mais recente antes do gatilho,
- * no mesmo documento, em que o campo tinha o mesmo foco que tem no estado final.
+ * 2.14.1 (NAT-61, revisão Codex 898d2cde): evidência de que a PÁGINA DETECTOU ERRO neste campo,
+ * separada da evidência de associação/descrição da mensagem.
+ *
+ * Até a 2.14.0 o "erro detectado" era inferido: mensagem nova + o campo mudou de aparência (desde a
+ * 2.14.0 no mesmo estado de foco). Uma página que aceita qualquer valor, pinta o campo de verde e diz
+ * "concluída com sucesso" saía `confirmed` — cor muda por sucesso, preenchimento válido, carregando,
+ * desabilitado. Aparência, cor, classe, palavra da mensagem e foco NÃO são mais sinal de detecção.
+ *
+ * O conjunto fechado (cada sinal precisa ser estabelecido pela ÚLTIMA ação: ausente na observação
+ * imediatamente antes do gatilho, presente no estado final; o campo tem de existir antes do gatilho):
+ *   S1 `aria-invalid` (≠ ausente/""/"false") passou a valer no próprio campo;
+ *   S2 validação de restrições nativa EXECUTADA: o campo recebeu evento `invalid` durante o gatilho
+ *      e está com `validity.valid === false` no estado final;
+ *   S3 `aria-invalid` passou a valer num ancestral composto que contém só este campo de formulário;
+ *   S4 (só item-identified) o `aria-errormessage` do campo aponta, na mesma árvore, para a mensagem
+ *      que a última ação fez aparecer (o autor declarou aquela mensagem como o erro deste campo).
+ * S1 também identifica o item para a tecnologia assistiva (o Chromium expõe invalid), por isso em
+ * item-identified ele contradiz antes de chegar aqui; serve de detecção em described-in-text.
  */
-function sameFocusBaseline(evidence: ContextEvidence, pre: TraceObservation, subject: SubjectSnapshot): SubjectSnapshot | null | undefined {
-  const earlier = (evidence.trace ?? [])
-    .filter((o) => !o.error && o.step <= pre.step && o.documentToken === pre.documentToken)
-    .sort((a, b) => b.step - a.step);
-  let seen = false;
-  for (const o of earlier) {
-    const snap = o.subjects.find((x) => x.ref === subject.ref);
-    if (!snap) continue;
-    seen = true;
-    if (snap.focusInside === subject.focusInside) return snap;
-  }
-  // undefined: o campo não existia antes do gatilho; null: existia, mas nunca no mesmo estado de foco.
-  return seen ? null : undefined;
+type ErrorSignal = "S1" | "S2" | "S3" | "S4";
+
+const SIGNAL_LABEL: Record<ErrorSignal, string> = {
+  S1: "aria-invalid passou a valer no campo",
+  S2: "validação nativa executada (evento invalid) e o campo inválido",
+  S3: "aria-invalid passou a valer no contêiner só deste campo",
+  S4: "aria-errormessage do campo aponta para a mensagem que apareceu",
+};
+
+const NO_DETECTION =
+  "nenhum sinal programático de que a página detectou erro neste campo pela última ação (aria-invalid no campo ou no contêiner só dele, evento invalid da validação nativa, aria-errormessage apontando para a mensagem); mudança de aparência, cor ou texto da mensagem não é evidência de erro detectado.";
+
+function errorSignals(pre: TraceObservation, subject: SubjectSnapshot, withMessage: boolean): ErrorSignal[] | undefined {
+  const before = pre.subjects.find((x) => x.ref === subject.ref);
+  if (!before) return undefined;
+  const out: ErrorSignal[] = [];
+  if (subject.ariaInvalid === true && before.ariaInvalid === false) out.push("S1");
+  if ((subject.invalidEvents ?? 0) > (before.invalidEvents ?? 0) && subject.validityInvalid === true) out.push("S2");
+  if (subject.ancestorInvalid === true && before.ancestorInvalid === false) out.push("S3");
+  if (withMessage && subject.errorMessageLinked === true) out.push("S4");
+  return out;
 }
 
-const SAME_FOCUS_UNKNOWN =
-  "o campo nunca foi observado antes da última ação no mesmo estado de foco que tem agora: mudança de aparência por foco não é sinal de erro, e não há com o que comparar.";
+const signalDetail = (signals: ErrorSignal[]) => signals.map((x) => `${x}: ${SIGNAL_LABEL[x]}`).join("; ");
 
 function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
@@ -346,19 +367,18 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     if (normalizeText(ax.name).length >= 3 && contains(messageText, ax.name)) {
       return { status: "contradicted", detail: `a mensagem nomeia o campo ("${ax.name}") em texto.` };
     }
-    const before = sameFocusBaseline(evidence, pre, subject);
-    if (before === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
-    if (before === null) return { status: "undetermined", detail: SAME_FOCUS_UNKNOWN };
-    if (before.colors === subject.colors) {
+    const signals = errorSignals(pre, subject, true);
+    if (signals === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    if (signals.length === 0) return { status: "undetermined", detail: `a mensagem "${messageText}" apareceu, mas ${NO_DETECTION}` };
+    if (subject.nativeInvalid) {
       return {
         status: "undetermined",
-        detail:
-          "a mensagem apareceu, mas o campo não mudou de aparência (comparado no mesmo estado de foco): falta um segundo sinal de que a página detectou erro neste campo.",
+        detail: "a validação nativa do navegador está ativa e o campo está inválido: o balão do navegador (fora do DOM) aponta o campo, então a identificação do item não é decidível.",
       };
     }
     return {
       status: "verified",
-      detail: `erro detectado (mensagem "${messageText}" apareceu e o campo mudou de aparência no mesmo estado de foco); o Chromium não expõe invalid, a descrição é ${
+      detail: `erro detectado (${signalDetail(signals)}) e a mensagem "${messageText}" apareceu; o Chromium não expõe invalid, a descrição é ${
         ax.description ? `"${ax.description}"` : "vazia"
       } e a mensagem não nomeia o campo ("${ax.name}").${danglingDetail(facts)}`,
     };
@@ -388,17 +408,9 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
         detail: "o campo usa validação nativa do navegador e está inválido: o aviso do navegador não está no DOM, então o texto não é decidível.",
       };
     }
-    const before = sameFocusBaseline(evidence, pre, subject);
-    const changed = before !== undefined && before !== null && before.colors !== subject.colors;
-    if (!changed && !facts.ax.invalid) {
-      return {
-        status: "undetermined",
-        detail:
-          before === null
-            ? `nenhum sinal de erro decidível: invalid ausente e ${SAME_FOCUS_UNKNOWN}`
-            : "nenhum sinal de erro detectado no campo (aparência igual no mesmo estado de foco, invalid ausente).",
-      };
-    }
+    const signals = errorSignals(pre, subject, false);
+    if (signals === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    if (signals.length === 0) return { status: "undetermined", detail: NO_DETECTION };
     const associated = appeared.filter((chunk) => contains(facts.ax!.description, chunk) || contains(facts.ax!.name, chunk));
     if (associated.length > 0) return { status: "contradicted", detail: `texto novo associado ao campo: "${associated.join(" ")}".` };
     if (facts.ax.description.trim()) {
@@ -407,7 +419,7 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
     if (appeared.length > 0) {
       return { status: "undetermined", detail: `apareceu texto novo ("${appeared.slice(0, 3).join(" | ")}") que o oráculo não descarta como descrição do erro.` };
     }
-    return { status: "verified", detail: `erro detectado (${changed ? "o campo mudou de aparência" : "invalid=true"}) e nenhum texto novo apareceu; descrição vazia.${danglingDetail(facts)}` };
+    return { status: "verified", detail: `erro detectado (${signalDetail(signals)}) e nenhum texto novo apareceu; descrição vazia.${danglingDetail(facts)}` };
   });
   return combine(outcomes, options.knowledgeFree ? "erro não descrito em texto (WCAG 3.3.1)" : "erro não descrito em texto (WCAG 3.3.1 / e-MAG 6.6)");
 }

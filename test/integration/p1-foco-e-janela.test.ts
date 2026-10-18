@@ -23,6 +23,7 @@ const STYLE = `<style>
   .grupo input { border: 1px solid rgb(136, 136, 136); }
   .grupo input:focus { border-color: rgb(0, 0, 200); box-shadow: 0 0 0 3px rgb(150, 150, 255); outline: none; }
   .grupo.erro input { border-color: rgb(200, 0, 0); }
+  .grupo input.ok { border-color: rgb(0, 128, 0); }
 </style>`;
 const page = (script: string) => `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Inscrição – Oficina</title>${STYLE}</head>
 <body><main><h1>Inscrição</h1><form id="f" novalidate><div class="grupo" id="g"><label for="codigo">Código da turma</label><input id="codigo"></div>
@@ -33,12 +34,17 @@ f.addEventListener('submit', (e) => { e.preventDefault(); ${script} });</script>
 const PAGES: Record<string, string> = {
   // Aceita qualquer valor e mostra sucesso: não há erro nenhum (o caso do F1-10-N).
   "/sucesso": page("r.textContent = 'Inscrição registrada. Você tem 2 vagas.';"),
-  // Erro de verdade: marca o grupo e mostra a mensagem, sem associação programática.
-  "/erro": page("g.classList.add('erro'); const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; g.appendChild(m);"),
+  // Erro de verdade: marca o grupo (S3, aria-invalid no contêiner só do campo) e mostra a mensagem, sem associação.
+  "/erro": page("g.classList.add('erro'); g.setAttribute('aria-invalid','true'); const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; g.appendChild(m);"),
   // Erro só por cor (descrito em texto: não).
-  "/so-cor": page("g.classList.add('erro');"),
+  "/so-cor": page("g.classList.add('erro'); g.setAttribute('aria-invalid','true');"),
+  // 2.14.1 — o repro da revisão Codex (NAT-61 898d2cde): aceita qualquer valor, pinta o campo de verde
+  // e diz que deu certo. O campo muda de aparência no MESMO estado de foco (não é o anel de foco).
+  "/sucesso-verde": page("c.classList.add('ok'); r.textContent = 'Inscrição concluída com sucesso.';"),
+  // Mesmo erro do /erro, só pela aparência (o mecanismo que a 2.14.0 aceitava): agora não decide.
+  "/erro-so-aparencia": page("g.classList.add('erro'); const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; g.appendChild(m);"),
   // Erro que devolve o foco ao campo: a comparação é com o campo focado antes do envio.
-  "/erro-foco-volta": page("g.classList.add('erro'); const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; g.appendChild(m); c.focus();"),
+  "/erro-foco-volta": page("g.classList.add('erro'); g.setAttribute('aria-invalid','true'); const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; g.appendChild(m); c.focus();"),
 };
 
 let server: Server;
@@ -89,7 +95,8 @@ describe("P1: aparência do campo comparada no mesmo estado de foco (NAT-86 §7.
       const r = await both(claim("/sucesso", source, id, data));
       expect(r.evaluation.verdict, `${source} evaluation`).not.toBe("confirmed");
       expect(r.evaluation.checks?.violation).toBe("undetermined");
-      expect(r.evaluation.detail).toContain("mesmo estado de foco");
+      // 2.14.1: o motivo mudou — não há sinal programático de erro detectado (antes: foco diferente).
+      expect(r.evaluation.detail).toContain("nenhum sinal programático");
       if (r.knowledgeFree) expect(r.knowledgeFree.verdict, `${source} knowledge-free`).not.toBe("confirmed");
     }
     const described = await both(claim("/sucesso", "wcag", "3.3.1", { expectedCondition: C.errorDescribedInText }));
@@ -106,6 +113,30 @@ describe("P1: aparência do campo comparada no mesmo estado de foco (NAT-86 §7.
     const soCor = await both(claim("/so-cor", "wcag", "3.3.1", { expectedCondition: C.errorDescribedInText }));
     expect(soCor.evaluation.verdict).toBe("confirmed");
     expect(soCor.knowledgeFree!.verdict).toBe("confirmed");
+  });
+});
+
+describe("P1 2.14.1: erro detectado exige sinal programático (revisão Codex, NAT-61 898d2cde)", () => {
+  it("repro: sucesso + campo verde (aparência mudou no mesmo estado de foco) nunca confirma, nos dois perfis e na janela 1280x900", async () => {
+    const item = { expectedCondition: C.errorItemIdentified, errorMessage: "#retorno" };
+    for (const janela of [undefined, "1280x900"]) {
+      if (janela) process.env.GOVBR_VALIDATOR_VIEWPORT = janela;
+      for (const [source, id] of [["wcag", "3.3.1"], ["emag", "6.6"]] as const) {
+        const r = await both(claim("/sucesso-verde", source, id, item));
+        expect(r.evaluation.verdict, `${source} ${janela}`).toBe("unverifiable");
+        expect(r.evaluation.checks?.violation).toBe("undetermined");
+        if (r.knowledgeFree) expect(r.knowledgeFree.verdict, `${source} kf ${janela}`).toBe("unverifiable");
+      }
+      const described = await both(claim("/sucesso-verde", "wcag", "3.3.1", { expectedCondition: C.errorDescribedInText }));
+      expect(described.evaluation.verdict).not.toBe("confirmed");
+      expect(described.knowledgeFree!.verdict).not.toBe("confirmed");
+    }
+  });
+
+  it("erro de verdade só pela aparência (sem sinal programático): escopo reduzido, unverifiable nos dois perfis", async () => {
+    const r = await both(claim("/erro-so-aparencia", "wcag", "3.3.1", { expectedCondition: C.errorItemIdentified, errorMessage: "#codigo-msg" }));
+    expect(r.evaluation.verdict).toBe("unverifiable");
+    expect(r.knowledgeFree!.verdict).toBe("unverifiable");
   });
 });
 

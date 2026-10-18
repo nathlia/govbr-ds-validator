@@ -158,7 +158,9 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
  * regras selecionam quais predicados de associação, anatomia e foco. Recortado do catálogo P0
  * `catalogo-controles-1.0.0`.
  */
-export const CONTEXT_CONDITIONS_VERSION = "contextual-1.0.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
+// 2.14.1 (NAT-61, revisão Codex): contextual-1.1.0 — P1 3.3.1 só decide "erro detectado" por sinal
+// programático estabelecido pela última ação (S1–S4, verify/contextual.ts); aparência não basta.
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.1.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
 
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {
@@ -175,7 +177,7 @@ export function registryVersions(): Record<string, string> {
 }
 
 /** 2.14.0 (NAT-61): o registro de condições do perfil knowledge-free — só P1 pela fonte WCAG. */
-export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.0.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
+export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.1.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
 
 /** Versões do perfil knowledge-free: só registros públicos (WCAG 2.2) e o registro de condições P1. */
 export function registryVersionsKnowledgeFree(): Record<string, string> {

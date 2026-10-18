@@ -78,10 +78,12 @@ function page(body: string, script = ""): string {
 const FORM = `<form id="f" novalidate>
   <div class="campo" id="caixa"><label for="codigo">Número da sala</label><input id="codigo" type="text"></div>
   <button id="enviar" type="submit">Reservar</button></form><div id="resumo"></div>`;
+// 2.14.1: erro detectado exige sinal programático (aqui S3: aria-invalid no contêiner só do campo);
+// a classe 'erro' sozinha (mudança de aparência) deixou de ser evidência de detecção.
 const VALIDA = (onError: string) => `
   const f = document.getElementById('f'); const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa');
   f.addEventListener('submit', (e) => { e.preventDefault(); const old = document.getElementById('codigo-msg'); if (old) old.remove();
-    if (!/^\\d{3}$/.test(c.value)) { caixa.classList.add('erro'); ${onError} } });`;
+    if (!/^\\d{3}$/.test(c.value)) { caixa.classList.add('erro'); caixa.setAttribute('aria-invalid','true'); ${onError} } });`;
 const MSG = `const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = 'Valor inválido.'; caixa.appendChild(m);`;
 
 const PAGES: Record<string, string> = {

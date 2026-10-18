@@ -91,6 +91,75 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### P1 needs programmatic evidence that the page detected an error (2.14.1, all profiles)
+
+Codex review of NAT-61 (comment 898d2cde) reproduced a false positive that the 2.14.0 focus fix left
+open: a page that accepts **any** value, paints the field green and says "Inscrição concluída com
+sucesso." came out `confirmed` for WCAG 3.3.1 (`input-error-item-identified`) in both profiles, also at
+1280×900. "A message appeared + the field changed appearance (under the same focus state)" is an
+inference, not evidence of error detection: colour changes for success, valid input, loading, disabled.
+
+2.14.1 separates **(a) evidence that the page detected an error on this field** from **(b) evidence
+about the message's association/description**. `input-error-item-identified` and
+`input-error-described-in-text` decide (b) only after (a) holds through one of a closed set of
+programmatic signals, each **established by the last action** (absent in the observation right before
+the trigger, present in the final state; the field must exist before the trigger):
+
+| Signal | What is read (`src/evidence/context.ts`) |
+|---|---|
+| S1 | `aria-invalid` (any value other than absent/""/"false") newly set on the field itself |
+| S2 | native constraint validation actually **run**: the field received an `invalid` event during the trigger (`checkValidity`/`reportValidity`/submit) and has `validity.valid === false` in the final state |
+| S3 | `aria-invalid` newly set on a composed ancestor whose subtree holds no other form field (the field's own wrapper; a fieldset/group with other fields does not count) |
+| S4 | *item-identified only*: the field's `aria-errormessage` resolves (same tree) to the message the last action made appear, or to its ancestor/descendant |
+
+Never evidence of detection: field appearance (colours, classes), the wording of the message
+("sucesso", "erro"…), focus, the message's role. Without a signal the outcome is `undetermined` →
+`unverifiable`, never `confirmed`. Side effects that follow from the rules already in place: S1 also
+exposes `invalid` to assistive technology, so for item-identified it **contradicts** the claim (as
+before); S2 with the browser's interactive validation active (no `novalidate`) stays `undetermined` (the
+bubble, outside the DOM, points at the field); the `invalid` event is heard by a capture listener on the
+document, so a field inside a shadow root never yields S2 (the event is not composed).
+
+**Scope reduction (declared).** Every P1 3.3.1 confirmation that rested only on the appearance change is
+now `unverifiable` — in particular the gov.br DS pattern where the error state is a class on the wrapper
+(`.danger`-style colour) and a feedback text, with no `aria-invalid`, no `aria-errormessage` and no native
+validation. WCAG 4.1.3 (`status-message-programmatically-determined`) is unchanged: it never used the
+appearance inference and a success message is also a status message. Which declared positives of the
+NAT-86 development gate still confirm and which became `undetermined` is recorded in the gate run below
+(*Gate impact*). Condition registry: `contextual-1.1.0`. Regressions: the Codex repro
+(`/sucesso-verde`) and a real error shown only by appearance (`/erro-so-aparencia`) in
+`test/integration/p1-foco-e-janela.test.ts` (both profiles, both windows); S2/S3/S4 positives, appearance
+changed before the trigger, `aria-invalid` already set before the trigger, `aria-invalid` on a group with
+another field, native validation run on a valid field in `test/integration/contextual-gate.test.ts`;
+pure decisions in `test/unit/contextual.test.ts`. Fixtures that confirmed through appearance alone were
+given an explicit S3 (`aria-invalid` on the field's wrapper) so they keep exercising the (b) half; the
+earlier F1-10-N focus regression (`/sucesso`) still never confirms, now for the stricter reason.
+
+**Gate impact (NAT-86 development division, 1280×900, matrix d35b33f5…, run `2026-10-18T-nat61-2141`).**
+None of the four declared P1 3.3.1 positives of D-127 carries any of S1–S4, so **all four become
+`undetermined`** (TP → FN): F1-01-D, F1-03-D, F1-08-D (subject 2, `#telefone`) and F1-11-D
+(`input-error-described-in-text`) — 8 rows in `evaluation` (WCAG 3.3.1 + e-MAG 6.6), 4 in
+`knowledge-free` (WCAG 3.3.1). No P1 3.3.1 positive still confirms; F1-12-D (WCAG 4.1.3) still does.
+No other row changed, no false positive appeared (blocking = 0 in both profiles); the gate is therefore
+**NO-GO by acceptance failures** (8 and 4). The matrix was not edited: whether those positives are
+re-declared, re-built with a programmatic signal or kept as known FNs is the author's decision.
+
+### Leak detector: per-tool fields, exact echo only (2.14.1, auxiliary)
+
+Codex review (comment db6d022d): `classify` forgave a term found **anywhere** in the call arguments,
+and the page-field allowlist keyed on generic last names (`detail`, `name`, `description`…). Now
+(`scripts/lib/vazamento.ts`, `TOOL_FIELDS`): page and axe fields are declared **per tool by full leaf
+path** (locators, snippets, URLs, trace texts and accessible name of the replay; axe rule/help/tags/
+failure summary); server prose (`detail`, `observed`) is never a page field. An echo is forgiven only
+when the term **is the whole value** of a declared argument (e.g. `finding.rule.id`) in the leaf
+declared to echo it (e.g. `verify_finding` `$.verification.detail`), or the tool's own name in a protocol
+error text. Any other dictionary term in that same leaf — enrichment — still counts, and every forgiven
+hit is still reported with tool, path and argument path. Canaries and unit tests cover enrichment in the
+echo field, echo outside the declared field, a term carried inside another argument, and page terms in
+generic fields. This remains an **auxiliary** detector, not a universal proof: it only sees dictionary
+terms (paraphrases pass); the guarantee is the load lock. The eval copy
+(`govbr-eval/scripts/vazamento/nucleo.ts`) is byte-identical (drift guard).
+
 ### Two fixes from the NAT-86 no-model gate (2.14.0, all profiles)
 
 - **P1: field appearance is compared under the same focus state.** Up to 2.13.0,
@@ -100,7 +169,8 @@ Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_
   message came out `confirmed` (development control F1-10-N, a blocking false positive in the gate). The
   reference is now the most recent observation before the trigger, in the same document, where the field
   had the same focus state as in the final state; with none, the predicate answers `undetermined`. The
-  message alone is never the error signal: the field's own appearance (or `invalid`) must change. This is a
+  message alone is never the error signal: the field's own appearance (or `invalid`) must change *(superseded
+  in 2.14.1: appearance is no longer a signal at all; see above)*. This is a
   deliberate change of `evaluation` relative to 2.13.0 (P1 verdicts only); the regression is
   `test/integration/p1-foco-e-janela.test.ts` (synthetic, same mechanism).
 - **Oracle window from the harness.** `GOVBR_VALIDATOR_VIEWPORT=WIDTHxHEIGHT` (read by the process, not in
@@ -140,8 +210,9 @@ in training.
    screens A and B (`govbr-telas`), scanned with a dictionary generated from `data/` (KB ids, titles and
    6-word shingles of every version, legacy ids, token names, compound spec classes, published check ids,
    e-MAG titles/paraphrases, conflicts and package audit, page-rule prose, retired tool names, fixed terms).
-   No global subtraction: a hit is forgiven only as an **echo** of the caller's own arguments, in a
-   **page field** when the term is in that page's served/rendered bytes, in an **axe field** when the term
+   No global subtraction: a hit is forgiven only as an **echo** of the caller's own arguments (2.14.1: the
+   whole value of a declared argument in the leaf declared for it), in a **page field** (2.14.1: declared
+   per tool by full path) when the term is in that page's served/rendered bytes, in an **axe field** when the term
    is in the axe bundle, or as a **named exception** (`RuleSource` enum values; fingerprint normalization
    labels). Everything else is "sem explicação". Acceptance: 0 in `knowledge-free`, > 0 in `evaluation`
    (positive control), canaries firing, lock = 0, and axe parity per page (the `knowledge-free` axe findings
@@ -168,8 +239,8 @@ a recommended or permitted rule, or a condition cited with another rule selects 
 
 | Family | `expectedCondition` | Rules | Decides on |
 |---|---|---|---|
-| P1 | `input-error-item-identified` (+ `errorMessage`) | WCAG 3.3.1 · e-MAG 6.6 · `…global-271582e4fbe8` | error text appeared with the last action and the field changed appearance; Chromium exposes no `invalid`, the message is not in the computed description/name, and it does not name the field |
-| P1 | `input-error-described-in-text` | same | field changed appearance (or `invalid`) and no new text appeared |
+| P1 | `input-error-item-identified` (+ `errorMessage`) | WCAG 3.3.1 · e-MAG 6.6 · `…global-271582e4fbe8` | error text appeared with the last action and (2.14.1) a programmatic error signal S2–S4 was established by it (until 2.14.0: "the field changed appearance"); Chromium exposes no `invalid`, the message is not in the computed description/name, and it does not name the field |
+| P1 | `input-error-described-in-text` | same | (2.14.1) error signal S1–S3 established by the last action (until 2.14.0: appearance or `invalid`) and no new text appeared |
 | P1 | `status-message-programmatically-determined` | WCAG 4.1.3 | container gained text without focus and without alert/status/log/aria-live (self, ancestors, descendants); focus moved into it = exception |
 | P2 | `required-anatomy-part-present` (+ `component`, `part`) | Message *Mensagem*, Header *Título* (logo/text substitute allowed), Breadcrumb *Título da página atual*, Modal *Botões* / *Conteúdo* | parts read through the `@govbr-ds/core` classes, open shadow roots included; hidden root, closed shadow root, optional part → no decision |
 | P2 | `current-page-crumb-not-link` | `…breadcrumb-53db61fa81f9` (prohibited) | last breadcrumb item contains `a[href]` |

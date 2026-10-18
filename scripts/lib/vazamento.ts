@@ -1,21 +1,28 @@
 /**
- * Detector de vazamento de conhecimento do DS/e-MAG em respostas MCP (2.14.0, NAT-61, plano §5.2).
+ * Detector de vazamento de conhecimento do DS/e-MAG em respostas MCP (2.14.0, NAT-61, plano §5.2;
+ * 2.14.1 apertado pela revisão Codex db6d022d).
  *
- * É um detector AUXILIAR: a garantia por construção é a trava de carregamento (src/data/lock.ts).
- * Ele procura, em cada folha de texto de cada resposta, termos de um dicionário gerado do `data/`
- * desta versão (nunca escrito à mão) e classifica cada ocorrência:
+ * É um detector AUXILIAR, não prova universal de ausência: a garantia por construção é a trava de
+ * carregamento (src/data/lock.ts). Ele só vê o que está no dicionário (gerado do `data/` desta versão,
+ * nunca escrito à mão: ids, títulos, trechos de 6 palavras, tokens, classes…); uma paráfrase curta, um
+ * fato do DS reescrito com outras palavras ou um termo fora do dicionário passam. Em cada folha de texto
+ * de cada resposta ele procura os termos e classifica cada ocorrência:
  *
- *   - `eco`: o termo está nos argumentos que o próprio chamador enviou nesta chamada (ex.: um id de
- *     regra que o agente citou e o portão repete). Não é enriquecimento do servidor.
- *   - `pagina`: a folha está num campo medido da página (snippet, outerHTML, localizador, texto
- *     observado…) E o termo existe nos bytes servidos/renderizados DESSA página. Classes `br-*` e
- *     textos da tela estão lá.
- *   - `axe`: a folha está num campo que reproduz a saída do axe-core E o termo existe no bundle do axe.
+ *   - `eco`: o termo é o VALOR INTEIRO de um argumento que o chamador enviou, numa folha declarada para
+ *     ecoar aquele argumento naquela ferramenta (TOOL_FIELDS.echo; ex.: o id de regra citado, repetido no
+ *     detalhe do veredito), ou o nome da própria ferramenta no texto de erro. Termo presente em outro
+ *     ponto dos argumentos, ou eco fora do campo declarado, NÃO é perdoado.
+ *   - `pagina`: a folha está num campo medido da página declarado PARA AQUELA FERRAMENTA pelo caminho
+ *     inteiro (TOOL_FIELDS.page: localizador, snippet, URL, textos e nome acessível do traço) E o termo
+ *     existe nos bytes servidos/renderizados DESSA página. Nome final genérico (detail, name,
+ *     description) não perdoa.
+ *   - `axe`: a folha está num campo declarado da saída do axe-core E o termo existe no bundle do axe.
  *   - `excecao-nomeada`: as normalizações de fingerprint declaradas no plano (§3).
  *   - `sem-explicacao`: qualquer outra ocorrência. O aceite do perfil knowledge-free é zero.
  *
- * Não há subtração global: um termo da página só é perdoado num campo de página, e cada perdão sai no
- * relatório com o caminho e a justificativa.
+ * Não há subtração global: cada perdão sai no relatório com o caminho, a ferramenta e a justificativa
+ * (e o caminho do argumento, no eco). Ferramenta sem campos declarados não perdoa nada além do eco do
+ * próprio nome e das exceções nomeadas.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -226,32 +233,122 @@ export function leaves(value: unknown, path = "$", out: Array<{ path: string; te
   return out;
 }
 
-/** Campos medidos da página: só neles um termo presente na página é perdoado. */
-export const PAGE_FIELDS = new Set([
-  "snippet",
-  "outerHTML",
-  "locator",
-  "selector",
-  "selectors",
-  "evidenceSelectors",
-  "axeScope",
-  "url",
-  "page",
-  "path",
-  "text",
-  "title",
-  "message",
-  "activeDescription",
-  "nextTarget",
-  "observed",
-  "detail",
-  "visibleText",
-  "name",
-  "description",
-]);
+/**
+ * 2.14.1 (revisão Codex db6d022d): campos declarados POR FERRAMENTA, pelo caminho inteiro da folha
+ * (nunca pelo nome final: `detail`, `name`, `description` genéricos não perdoam nada).
+ *
+ *   page  folhas que transcrevem o que foi medido na página (localizador, snippet, URL, texto e nome
+ *         acessível observados no traço). Prosa do servidor (`detail`, `observed`) NÃO entra: um termo
+ *         da página citado numa frase do servidor sai `sem-explicacao` (falha conservadora).
+ *   axe   folhas que reproduzem a saída do axe-core (id, help, tags, failureSummary).
+ *   echo  folha → caminhos dos argumentos cujo VALOR INTEIRO pode voltar ali (ex.: o id da regra que o
+ *         chamador citou, repetido no detalhe do veredito). Perdoa só o termo idêntico ao valor do
+ *         argumento; qualquer outro termo na mesma folha (enriquecimento) continua contando.
+ *
+ * O texto não-JSON (`$`, mensagens de erro do protocolo) pode ecoar o nome da própria ferramenta.
+ */
+export interface ToolFields {
+  page: string[];
+  axe: string[];
+  echo: Array<{ path: string; args: string[] }>;
+}
 
-/** Campos que reproduzem a saída do axe-core (id, help, helpUrl, tags, failureSummary). */
-export const AXE_FIELDS = new Set(["id", "ruleId", "description", "expected", "observed", "helpUrl", "axeTags", "representative"]);
+const element = (prefix: string) => [`${prefix}.element.locator`, `${prefix}.element.snippet`, `${prefix}.element.page`];
+const axeFinding = (prefix: string) => [
+  `${prefix}.rule.id`,
+  `${prefix}.rule.description`,
+  `${prefix}.rule.wcag`,
+  `${prefix}.evidence.expected`,
+  `${prefix}.evidence.observed`,
+  `${prefix}.evidence.data.helpUrl`,
+  `${prefix}.evidence.data.axeTags[*]`,
+];
+const observedState = (prefix: string) => [
+  `${prefix}.observed.url`,
+  `${prefix}.observed.path`,
+  `${prefix}.observed.focus.locator`,
+  `${prefix}.observed.unobservableRoots[*]`,
+];
+const SCAN_PAGE_FIELDS = [
+  ...element("$.findings[*]"),
+  ...element("$.families[*].example"),
+  ...element("$.observations[*]"),
+  ...observedState("$.state"),
+  "$.url",
+];
+const SCAN_AXE_FIELDS = [
+  ...axeFinding("$.findings[*]"),
+  "$.families[*].example.rule.id",
+  "$.families[*].example.observed",
+  "$.families[*].rule.id",
+];
+const CONTEXT = "$.verification.binding.context";
+
+export const TOOL_FIELDS: Record<string, ToolFields> = {
+  scan_page: {
+    page: SCAN_PAGE_FIELDS,
+    axe: SCAN_AXE_FIELDS,
+    echo: [
+      { path: "$.url", args: ["url"] },
+      { path: "$.state.recipe.url", args: ["url"] },
+      { path: "$.state.recipe.actions[*].selector", args: ["actions[*].selector"] },
+      { path: "$.state.replay.failure.selector", args: ["actions[*].selector"] },
+    ],
+  },
+  get_finding_details: {
+    page: [...SCAN_PAGE_FIELDS, "$.members[*].locator", ...observedState("$.ledger.state")],
+    axe: SCAN_AXE_FIELDS,
+    echo: [{ path: "$.familyId", args: ["familyId"] }],
+  },
+  verify_finding: {
+    page: [
+      ...observedState("$.verification.binding.state"),
+      `${CONTEXT}.trace[*].url`,
+      `${CONTEXT}.trace[*].activeDescription`,
+      `${CONTEXT}.trace[*].message.text`,
+      `${CONTEXT}.trace[*].visibleText[*]`,
+      `${CONTEXT}.trace[*].subjects[*].text`,
+      `${CONTEXT}.trace[*].subjects[*].classes[*]`,
+      `${CONTEXT}.accessibility[*].ax.name`,
+      `${CONTEXT}.accessibility[*].ax.description`,
+      `${CONTEXT}.anatomy[*].classes[*]`,
+      `${CONTEXT}.anatomy[*].messageText[*]`,
+      `${CONTEXT}.anatomy[*].header.titleText`,
+      `${CONTEXT}.anatomy[*].header.infoText`,
+      `${CONTEXT}.anatomy[*].breadcrumb.items[*].text`,
+      `${CONTEXT}.anatomy[*].breadcrumb.h1`,
+      `${CONTEXT}.anatomy[*].breadcrumb.title`,
+    ],
+    axe: [],
+    echo: [
+      {
+        path: "$.verification.detail",
+        args: ["finding.rule.id", "finding.rule.source", "finding.rule.wcag", "finding.evidence.data.expectedCondition", "finding.evidence.data.component", "finding.evidence.data.part"],
+      },
+      { path: "$.findingId", args: ["finding.id"] },
+      { path: "$.verification.binding.state.scanId", args: ["scanId"] },
+    ],
+  },
+};
+
+/** Valores (strings) de um caminho de argumento ("finding.rule.id", "actions[*].selector"). */
+export function argValues(args: unknown, path: string): string[] {
+  let current: unknown[] = [args];
+  for (const raw of path.split(".")) {
+    const many = raw.endsWith("[*]");
+    const key = many ? raw.slice(0, -3) : raw;
+    const next: unknown[] = [];
+    for (const c of current) {
+      if (!c || typeof c !== "object" || Array.isArray(c)) continue;
+      const v = (c as Record<string, unknown>)[key];
+      if (many) {
+        if (Array.isArray(v)) next.push(...v);
+      } else if (v !== undefined) next.push(v);
+    }
+    current = next;
+  }
+  return current.filter((v): v is string => typeof v === "string");
+}
 
 /** Exceções nomeadas do plano (§3): política de fingerprint, igual nos braços. */
 export const NAMED_EXCEPTIONS: Array<{ path: RegExp; terms: string[]; why: string }> = [
@@ -270,8 +367,10 @@ export const NAMED_EXCEPTIONS: Array<{ path: RegExp; terms: string[]; why: strin
 export type Classification = "eco" | "pagina" | "axe" | "excecao-nomeada" | "sem-explicacao";
 
 export interface Provenance {
-  /** Argumentos da chamada, serializados. */
-  args: string;
+  /** Ferramenta cuja resposta é varrida (ou a superfície: "tools/list", "serverInfo"…). */
+  tool: string;
+  /** Argumentos da chamada, como objeto (o nome da ferramenta é `tool`). */
+  args: unknown;
   /** Bytes servidos + DOM renderizado da página, quando a chamada é sobre uma página. */
   page: string | null;
   /** Bundle do axe-core. */
@@ -283,10 +382,14 @@ function contains(haystack: string, hit: Hit): boolean {
   return words(haystack).join(" ").includes(hit.term);
 }
 
-const lastKey = (path: string) => path.replace(/\[\*\]/g, "").split(".").pop() ?? "";
+/** O termo é o valor inteiro (eco exato), não um pedaço dele. */
+function sameValue(hit: Hit, value: string): boolean {
+  if (hit.kind === "exact") return value.trim() === hit.term;
+  return words(value).join(" ") === hit.term;
+}
 
 export function classify(hit: Hit, provenance: Provenance, normalizedWordCache?: Map<string, string>): { class: Classification; why: string } {
-  const containsCached = (key: "page" | "axe" | "args", haystack: string) => {
+  const containsCached = (key: "page" | "axe", haystack: string) => {
     if (hit.kind === "exact") return haystack.includes(hit.term);
     let normalized = normalizedWordCache?.get(key);
     if (normalized === undefined) {
@@ -298,13 +401,24 @@ export function classify(hit: Hit, provenance: Provenance, normalizedWordCache?:
   for (const exception of NAMED_EXCEPTIONS) {
     if (exception.path.test(hit.path) && exception.terms.includes(hit.term)) return { class: "excecao-nomeada", why: exception.why };
   }
-  if (containsCached("args", provenance.args)) return { class: "eco", why: "o termo está nos argumentos enviados pelo chamador nesta chamada" };
-  const key = lastKey(hit.path);
-  if (provenance.page !== null && PAGE_FIELDS.has(key) && containsCached("page", provenance.page)) {
-    return { class: "pagina", why: `campo medido da página (${key}) e o termo existe nos bytes servidos/renderizados da página` };
+  if (hit.path === "$" && sameValue(hit, provenance.tool)) {
+    return { class: "eco", why: `eco exato do nome da ferramenta chamada (${provenance.tool}) no texto de erro` };
   }
-  if (AXE_FIELDS.has(key) && containsCached("axe", provenance.axe)) {
-    return { class: "axe", why: `campo da saída do axe-core (${key}) e o termo existe no bundle do axe` };
+  const fields = TOOL_FIELDS[provenance.tool];
+  if (!fields) return { class: "sem-explicacao", why: "" };
+  for (const echo of fields.echo) {
+    if (echo.path !== hit.path) continue;
+    for (const argPath of echo.args) {
+      if (argValues(provenance.args, argPath).some((v) => sameValue(hit, v))) {
+        return { class: "eco", why: `eco exato do argumento ${argPath} no campo ${hit.path} de ${provenance.tool}` };
+      }
+    }
+  }
+  if (provenance.page !== null && fields.page.includes(hit.path) && containsCached("page", provenance.page)) {
+    return { class: "pagina", why: `campo medido da página (${provenance.tool} ${hit.path}) e o termo existe nos bytes servidos/renderizados da página` };
+  }
+  if (fields.axe.includes(hit.path) && containsCached("axe", provenance.axe)) {
+    return { class: "axe", why: `campo da saída do axe-core (${provenance.tool} ${hit.path}) e o termo existe no bundle do axe` };
   }
   return { class: "sem-explicacao", why: "" };
 }

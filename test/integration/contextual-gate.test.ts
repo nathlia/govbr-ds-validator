@@ -36,14 +36,48 @@ function page(body: string, script = ""): string {
 const FORM = (extra = "") => `<form id="f" novalidate>
   <div class="campo" id="caixa-codigo"><label for="codigo">Código da visita</label><input id="codigo" type="text"${extra}></div>
   <button id="enviar" type="submit">Enviar</button></form><div id="resumo"></div>`;
-const VALIDA = (onError: string) => `
+// 2.14.1: o erro detectado exige sinal programático. Padrão das fixtures: S3 (aria-invalid no
+// contêiner só do campo); SINAL "" deixa só a mudança de aparência (classe 'erro'), que não basta.
+const S3 = "caixa.setAttribute('aria-invalid','true');";
+const VALIDA = (onError: string, sinal = S3) => `
   const f = document.getElementById('f'); const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa-codigo');
   f.addEventListener('submit', (e) => { e.preventDefault(); const old = document.getElementById('codigo-msg'); if (old) old.remove();
-    if (!/^\\d{6}$/.test(c.value)) { caixa.classList.add('erro'); ${onError} } });`;
+    if (!/^\\d{6}$/.test(c.value)) { caixa.classList.add('erro'); ${sinal} ${onError} } });`;
 const MSG = (text: string) => `const m = document.createElement('span'); m.id = 'codigo-msg'; m.textContent = '${text}'; caixa.appendChild(m);`;
 
 const PAGES: Record<string, string> = {
   "/p1-defeito": page(FORM(), VALIDA(MSG("Valor inválido."))),
+  // 2.14.1 — conjunto de sinais de erro detectado (S1..S4) e o que não é sinal.
+  "/p1-so-aparencia": page(FORM(), VALIDA(MSG("Valor inválido."), "")),
+  "/p1-errormessage": page(FORM(), VALIDA(MSG("Valor inválido.") + " c.setAttribute('aria-errormessage','codigo-msg');", "")),
+  "/p1-checkvalidity": page(
+    FORM(" required"),
+    `const f = document.getElementById('f'); const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa-codigo');
+     f.addEventListener('submit', (e) => { e.preventDefault(); if (!f.checkValidity()) { ${MSG("Valor inválido.")} } });`
+  ),
+  "/p1-checkvalidity-valido": page(
+    FORM(" required"),
+    `const f = document.getElementById('f'); const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa-codigo');
+     f.addEventListener('submit', (e) => { e.preventDefault(); f.checkValidity(); ${MSG("Recebido.")} });`
+  ),
+  "/p1-grupo-invalido": page(
+    `<form id="f" novalidate><fieldset id="grupo"><legend>Visita</legend><div class="campo" id="caixa-codigo"><label for="codigo">Código da visita</label><input id="codigo"></div>
+     <label for="data">Data</label><input id="data"></fieldset><button id="enviar" type="submit">Enviar</button></form>`,
+    `const caixa = document.getElementById('caixa-codigo'); document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault();
+       document.getElementById('grupo').setAttribute('aria-invalid','true'); ${MSG("Valor inválido.")} });`
+  ),
+  "/p1-invalido-antes": page(
+    FORM(),
+    `const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa-codigo');
+     c.addEventListener('input', () => caixa.setAttribute('aria-invalid','true'));
+     document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); ${MSG("Valor inválido.")} });`
+  ),
+  "/p1-aparencia-antes": page(
+    FORM(),
+    `const c = document.getElementById('codigo'); const caixa = document.getElementById('caixa-codigo');
+     c.addEventListener('input', () => caixa.classList.add('erro'));
+     document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); ${MSG("Valor inválido.")} });`
+  ),
   "/p1-conforme": page(FORM(), VALIDA(MSG("Valor inválido.") + " c.setAttribute('aria-invalid','true'); c.setAttribute('aria-describedby','codigo-msg');")),
   "/p1-idref-quebrado": page(FORM(), VALIDA(MSG("Valor inválido.") + " c.setAttribute('aria-describedby','codigo-msgs');")),
   "/p1-nomeia-campo": page(FORM(), VALIDA(MSG("Código da visita: use 6 dígitos."))),
@@ -54,7 +88,7 @@ const PAGES: Record<string, string> = {
     `<form id="f" novalidate><campo-visita id="cv"></campo-visita><button id="enviar" type="submit">Enviar</button></form><span id="cv-msg" hidden>Valor inválido.</span>`,
     `customElements.define('campo-visita', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
       r.innerHTML = '<style>input{border:1px solid rgb(136,136,136)} input.erro{border-color:rgb(200,0,0)}</style><label for="i">Código da visita</label><input id="i" aria-describedby="cv-msg">'; } });
-     document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('cv').shadowRoot.getElementById('i'); i.classList.add('erro'); document.getElementById('cv-msg').hidden = false; });`
+     document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('cv').shadowRoot.getElementById('i'); i.classList.add('erro'); document.getElementById('cv').setAttribute('aria-invalid','true'); document.getElementById('cv-msg').hidden = false; });`
   ),
   "/p1-shadow-conforme": page(
     `<form id="f" novalidate><campo-visita id="cv"></campo-visita><button id="enviar" type="submit">Enviar</button></form>`,
@@ -65,7 +99,7 @@ const PAGES: Record<string, string> = {
   "/p1-dois-campos": page(
     `<form id="f" novalidate><div class="campo" id="ca"><label for="a">Nome</label><input id="a"></div><div class="campo" id="cb"><label for="b">Telefone</label><input id="b"></div><button id="enviar" type="submit">Enviar</button></form>`,
     `document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); for (const [id, box] of [['a','ca'],['b','cb']]) {
-       document.getElementById(box).classList.add('erro'); const m = document.createElement('span'); m.id = id + '-msg'; m.textContent = 'Valor inválido.'; document.getElementById(box).appendChild(m); }
+       document.getElementById(box).classList.add('erro'); document.getElementById(box).setAttribute('aria-invalid','true'); const m = document.createElement('span'); m.id = id + '-msg'; m.textContent = 'Valor inválido.'; document.getElementById(box).appendChild(m); }
        const a = document.getElementById('a'); a.setAttribute('aria-invalid','true'); a.setAttribute('aria-describedby','a-msg'); });`
   ),
   "/p1-status": page(FORM(), VALIDA("document.getElementById('resumo').textContent = '1 campo precisa de correção.';")),
@@ -206,6 +240,34 @@ describe("P1 — associação controle↔erro (WCAG 3.3.1 / e-MAG 6.6)", () => {
     const c = await verdict(claim("/p1-conforme", "#codigo", EMAG66, identified()), SUBMIT);
     expect(c.verdict).toBe("rejected");
     expect(c.checks?.violation).toBe("contradicted");
+  });
+
+  it("2.14.1: erro detectado só por sinal programático estabelecido pela última ação (S2, S3, S4); aparência sozinha não confirma", async () => {
+    const s3 = await verdict(claim("/p1-defeito", "#codigo", WCAG331, identified()), SUBMIT);
+    expect(s3.detail).toContain("S3");
+    const s4 = await verdict(claim("/p1-errormessage", "#codigo", WCAG331, identified()), SUBMIT);
+    expect(s4.verdict).toBe("confirmed");
+    expect(s4.detail).toContain("S4");
+    const VAZIO: PageAction[] = [{ action: "fill", selector: "#codigo", value: "" }, { action: "click", selector: "#enviar" }];
+    const s2 = await verdict(claim("/p1-checkvalidity", "#codigo", WCAG331, identified()), VAZIO);
+    expect(s2.verdict).toBe("confirmed");
+    expect(s2.detail).toContain("S2");
+    // Sem sinal: undetermined → unverifiable, nunca confirmed.
+    for (const [path, actions] of [
+      ["/p1-so-aparencia", SUBMIT], // mensagem + mudança de aparência (o mecanismo da 2.14.0)
+      ["/p1-aparencia-antes", SUBMIT], // aparência mudou antes do gatilho
+      ["/p1-invalido-antes", SUBMIT], // aria-invalid no contêiner já valia antes do gatilho: não é estabelecido por ela
+      ["/p1-grupo-invalido", SUBMIT], // aria-invalid num grupo com outro campo: não aponta este campo
+      ["/p1-checkvalidity-valido", SUBMIT], // validação nativa executada, mas o campo é válido (nenhum evento invalid)
+    ] as const) {
+      const v = await verdict(claim(path, "#codigo", WCAG331, identified()), [...actions]);
+      expect(v.verdict, path).toBe("unverifiable");
+      expect(v.checks?.violation, path).toBe("undetermined");
+    }
+    const soAparencia = await verdict(claim("/p1-so-aparencia", "#codigo", WCAG331, identified()), SUBMIT);
+    expect(soAparencia.detail).toContain("nenhum sinal programático");
+    const soCor = await verdict(claim("/p1-so-aparencia", "#codigo", WCAG331, { expectedCondition: C.errorDescribedInText }), SUBMIT);
+    expect(soCor.verdict).toBe("unverifiable");
   });
 
   it("IDREF quebrado: a relação calculada decide, e o alvo ausente aparece no detalhe", async () => {

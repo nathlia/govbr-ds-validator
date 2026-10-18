@@ -51,17 +51,21 @@ function canaries(dict: Dictionary, axe: string): Array<{ name: string; ok: bool
   const token = [...dict.exact.values()].find((t) => t.source === "tokens:name")!.term;
   const emagTitle = [...dict.phrases.values()].find((t) => t.source === "emag:title")!.term;
   const page = `<html><body><div style="color: var(${token})">x</div></body></html>`;
-  const cases: Array<{ name: string; text: string; args: unknown; page: string | null; expect: Classification }> = [
-    { name: "título da base numa nota do servidor", text: JSON.stringify({ note: `Veja ${kbTitle}.` }), args: {}, page, expect: "sem-explicacao" },
-    { name: "id da base enriquecido pelo servidor", text: JSON.stringify({ next: { ruleId: kbId } }), args: {}, page, expect: "sem-explicacao" },
-    { name: "título e-MAG anexado à descrição", text: JSON.stringify({ rule: { description: `x (e-MAG 1.1: ${emagTitle})` } }), args: {}, page, expect: "sem-explicacao" },
-    { name: "token num snippet SEM o token na página", text: JSON.stringify({ element: { snippet: `<i style="color:var(${token})">` } }), args: {}, page: "<html></html>", expect: "sem-explicacao" },
-    { name: "token num campo do servidor COM o token na página", text: JSON.stringify({ note: `use ${token}` }), args: {}, page, expect: "sem-explicacao" },
-    { name: "token num snippet COM o token na página", text: JSON.stringify({ element: { snippet: `<div style="color: var(${token})">` } }), args: {}, page, expect: "pagina" },
-    { name: "id da base ecoado do argumento", text: JSON.stringify({ detail: `Nenhum predicado para govbr-ds-kb '${kbId}'.` }), args: { finding: { rule: { id: kbId } } }, page, expect: "eco" },
+  // 2.14.1 (revisão Codex db6d022d): casos por ferramenta, campo declarado e eco exato.
+  const cases: Array<{ name: string; tool: string; text: string; args: unknown; page: string | null; expect: Classification }> = [
+    { name: "título da base numa nota do servidor", tool: "verify_finding", text: JSON.stringify({ note: `Veja ${kbTitle}.` }), args: {}, page, expect: "sem-explicacao" },
+    { name: "id da base enriquecido pelo servidor", tool: "verify_finding", text: JSON.stringify({ next: { ruleId: kbId } }), args: {}, page, expect: "sem-explicacao" },
+    { name: "título e-MAG anexado à descrição", tool: "scan_page", text: JSON.stringify({ findings: [{ rule: { description: `x (e-MAG 1.1: ${emagTitle})` } }] }), args: {}, page, expect: "sem-explicacao" },
+    { name: "token num snippet SEM o token na página", tool: "scan_page", text: JSON.stringify({ findings: [{ element: { snippet: `<i style="color:var(${token})">` } }] }), args: {}, page: "<html></html>", expect: "sem-explicacao" },
+    { name: "token num campo do servidor COM o token na página", tool: "scan_page", text: JSON.stringify({ note: `use ${token}` }), args: {}, page, expect: "sem-explicacao" },
+    { name: "token num campo genérico 'detail' COM o token na página", tool: "scan_page", text: JSON.stringify({ limitation: { detail: `use ${token}` } }), args: {}, page, expect: "sem-explicacao" },
+    { name: "token num snippet COM o token na página", tool: "scan_page", text: JSON.stringify({ findings: [{ element: { snippet: `<div style="color: var(${token})">` } }] }), args: {}, page, expect: "pagina" },
+    { name: "id da base ecoado do argumento", tool: "verify_finding", text: JSON.stringify({ verification: { detail: `Nenhum predicado para govbr-ds-kb '${kbId}'.` } }), args: { finding: { rule: { id: kbId } } }, page, expect: "eco" },
+    { name: "id citado ecoado FORA do campo declarado", tool: "verify_finding", text: JSON.stringify({ verification: { next: { ruleId: kbId } } }), args: { finding: { rule: { id: kbId } } }, page, expect: "sem-explicacao" },
+    { name: "título da base no campo de eco, com o título só dentro de outro argumento", tool: "verify_finding", text: JSON.stringify({ verification: { detail: `Regra: ${kbTitle}.` } }), args: { finding: { rule: { id: kbId }, evidence: { observed: `nota do agente: ${kbTitle}` } } }, page, expect: "sem-explicacao" },
   ];
   return cases.map((c) => {
-    const { hits } = scanResponse(dict, c.text, { args: JSON.stringify(c.args), page: c.page, axe });
+    const { hits } = scanResponse(dict, c.text, { tool: c.tool, args: c.args, page: c.page, axe });
     const got = hits.map((h) => h.class);
     const ok = got.length > 0 && got.every((g) => g === c.expect);
     return { name: c.name, ok, detail: `esperado ${c.expect}, obtido [${got.join(", ") || "nenhuma ocorrência"}]` };
@@ -166,8 +170,9 @@ try {
     const exempt = new Map<string, { class: string; why: string; term: string; source: string; path: string; label: string; count: number }>();
     const unexplained = new Map<string, { term: string; source: string; path: string; label: string; page: string | null; count: number }>();
     const responses = records.map((r) => {
-      // O nome da ferramenta chamada também é argumento do chamador (ex.: "get_ds_rules not found").
-      const { hits } = scanResponse(dict, r.text, { args: JSON.stringify({ name: r.name, arguments: r.args ?? {} }), page: r.page ? corpora.get(r.page) ?? null : null, axe });
+      // Proveniência por ferramenta (2.14.1): o eco vale só como valor exato no campo declarado; o nome
+      // da ferramenta pode voltar no texto de erro (ex.: "get_ds_rules not found").
+      const { hits } = scanResponse(dict, r.text, { tool: r.name, args: r.args ?? {}, page: r.page ? corpora.get(r.page) ?? null : null, axe });
       for (const h of hits) {
         byClass[h.class] = (byClass[h.class] ?? 0) + 1;
         const key = `${h.class}|${h.term}|${h.path}|${r.label}`;
