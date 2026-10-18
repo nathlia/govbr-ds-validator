@@ -10,19 +10,22 @@
  * explicação (senão o detector estaria quebrado); canários do detector disparando.
  *
  *   npm run inventario:sem-conhecimento -- [--saida dir] [--controles N] [--corpus ..] [--telas ..]
+ *
+ * Roda sobre o dist/ (rode npm run build antes): é a build que o runner sobe, e o código que vai para
+ * page.evaluate não passa pela transformação do tsx (que injeta __name e quebra no navegador).
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
-import { createServer } from "../src/server.js";
-import { closeBrowser } from "../src/evidence/browser.js";
-import { knowledgeLockAttempts, runKnowledgeLocked } from "../src/data/lock.js";
-import { PageScanCache, scanPage, type PageScanResult } from "../src/scan/pageScan.js";
-import type { Finding } from "../src/schema/finding.js";
-import { CHECK_GROUNDING, type CheckKind } from "../src/checkers/grounding.js";
-import { pageConstraints } from "../src/checkers/pageStructure.js";
-import { constraintsForComponent, getComponentSpecs } from "../src/data/load.js";
+import { createServer } from "../dist/server.js";
+import { closeBrowser } from "../dist/evidence/browser.js";
+import { knowledgeLockAttempts, runKnowledgeLocked } from "../dist/data/lock.js";
+import { PageScanCache, scanPage, type PageScanResult } from "../dist/scan/pageScan.js";
+import type { Finding } from "../dist/schema/finding.js";
+import { CHECK_GROUNDING, type CheckKind } from "../dist/checkers/grounding.js";
+import { pageConstraints } from "../dist/checkers/pageStructure.js";
+import { constraintsForComponent, getComponentSpecs } from "../dist/data/load.js";
 import { Session, argValue, scanSequence, sha256, startPages, verifyBattery, type Build, type CallRecord } from "./lib/perfis-harness.js";
 import { buildDictionary, scanResponse, type Classification, type Dictionary } from "./lib/vazamento.js";
 
