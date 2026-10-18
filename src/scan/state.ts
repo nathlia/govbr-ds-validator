@@ -36,6 +36,27 @@ export const STATE_IDENTITY_POLICY = "state-identity-1" as const;
  */
 export const FROZEN_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
+/**
+ * 2.14.0 (NAT-86 §7.5a): janela das ferramentas MCP declarada pelo HARNESS, por variável de ambiente
+ * lida pelo processo (`GOVBR_VALIDATOR_VIEWPORT=1280x900`), fora do esquema MCP — o agente continua sem
+ * escolher janela. Ausente: a janela desktop congelada, como até a 2.13.0. Malformada: erro, nunca o
+ * padrão em silêncio. A origem vai para a atestação de estado (`viewportSource`).
+ */
+export function oracleViewport(env: NodeJS.ProcessEnv = process.env): {
+  viewport: { width: number; height: number };
+  source: "frozen-desktop" | "harness";
+} {
+  const raw = env.GOVBR_VALIDATOR_VIEWPORT;
+  if (raw === undefined || raw === "") return { viewport: { ...FROZEN_DESKTOP_VIEWPORT }, source: "frozen-desktop" };
+  const match = /^(\d{2,5})x(\d{2,5})$/.exec(raw.trim());
+  const width = match ? Number(match[1]) : NaN;
+  const height = match ? Number(match[2]) : NaN;
+  if (!match || width < 1 || height < 1) {
+    throw new Error(`GOVBR_VALIDATOR_VIEWPORT inválido: '${raw}' (esperado LARGURAxALTURA, ex.: 1280x900).`);
+  }
+  return { viewport: { width, height }, source: "harness" };
+}
+
 export interface ObservedState {
   url: string;
   path: string;

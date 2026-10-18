@@ -14,7 +14,7 @@ import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
 import { applyActions, type Arrival, type PageAction, type ReplayObserver, type ReplayResult } from "./actions.js";
 import {
-  FROZEN_DESKTOP_VIEWPORT,
+  oracleViewport,
   STATE_IDENTITY_NORMALIZATIONS,
   STATE_IDENTITY_POLICY,
   evaluateArrival,
@@ -57,7 +57,8 @@ export interface StateAttestation {
     url: string;
     viewport: { width: number; height: number };
     /** `frozen-desktop`: a janela congelada das ferramentas MCP; `cli`: declarada pela linha de base. */
-    viewportSource: "frozen-desktop" | "cli";
+    /** 2.14.0: `harness` = declarada pelo harness em GOVBR_VALIDATOR_VIEWPORT (fora do esquema MCP). */
+    viewportSource: "frozen-desktop" | "cli" | "harness";
     actions: PageScanAction[];
     arrival?: Arrival;
   };
@@ -227,12 +228,13 @@ export interface PageScanOptions {
 
 export async function scanPage(request: PageScanRequest, cache: PageScanCache, options: PageScanOptions = {}): Promise<PageScanOutcome> {
   if (options.knowledgeFree) return scanPageKnowledgeFree(request, cache);
-  const viewport = request.viewport ?? { ...FROZEN_DESKTOP_VIEWPORT };
+  const window = oracleViewport();
+  const viewport = request.viewport ?? window.viewport;
   return withPage(request.url, async (page): Promise<PageScanOutcome> => {
     const { attestation: state, fingerprint: stateFingerprint } = await reproduceState(page, {
       url: request.url,
       viewport,
-      viewportSource: request.viewport ? "cli" : "frozen-desktop",
+      viewportSource: request.viewport ? "cli" : window.source,
       actions: request.actions ?? [],
       ...(request.arrival ? { arrival: request.arrival } : {}),
     });
@@ -363,12 +365,13 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
  * do `scanPage` para que o caminho dos outros perfis não mude em nada.
  */
 async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCache): Promise<PageScanOutcome> {
-  const viewport = request.viewport ?? { ...FROZEN_DESKTOP_VIEWPORT };
+  const window = oracleViewport();
+  const viewport = request.viewport ?? window.viewport;
   return withPage(request.url, async (page): Promise<PageScanOutcome> => {
     const { attestation: state, fingerprint: stateFingerprint } = await reproduceState(page, {
       url: request.url,
       viewport,
-      viewportSource: request.viewport ? "cli" : "frozen-desktop",
+      viewportSource: request.viewport ? "cli" : window.source,
       actions: request.actions ?? [],
       ...(request.arrival ? { arrival: request.arrival } : {}),
     });

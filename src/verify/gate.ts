@@ -26,7 +26,7 @@ import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspe
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { reproduceState, unreachedLimitation, type PageScanAction, type StateAttestation } from "../scan/pageScan.js";
 import type { Arrival } from "../scan/actions.js";
-import { FROZEN_DESKTOP_VIEWPORT, STATE_IDENTITY_POLICY, compareStates, sameScanPage, type StateMismatch } from "../scan/state.js";
+import { oracleViewport, STATE_IDENTITY_POLICY, compareStates, sameScanPage, type StateMismatch } from "../scan/state.js";
 import {
   emagMembership,
   kbMembership,
@@ -194,8 +194,8 @@ export async function verifyFinding({
   // desktop congelada — o agente não escolhe janela.
   const recipe: StateAttestation["recipe"] = scanState?.recipe ?? {
     url: finding.element.page,
-    viewport: { ...FROZEN_DESKTOP_VIEWPORT },
-    viewportSource: "frozen-desktop",
+    viewport: oracleViewport().viewport,
+    viewportSource: oracleViewport().source,
     actions,
     ...(arrival ? { arrival } : {}),
   };

@@ -291,6 +291,32 @@ function danglingDetail(facts: AccessibilityFacts | undefined): string {
 
 // ───────────────────────────── P1 ─────────────────────────────
 
+/**
+ * 2.14.0 (NAT-86 §7.3): o "segundo sinal" de erro (o campo mudou de aparência) só vale comparado no
+ * MESMO estado de foco. Até a 2.13.0 comparava-se o campo logo antes do gatilho (focado, depois do
+ * preenchimento) com o estado final (desfocado pelo clique no botão): a perda do anel de foco virava
+ * "erro detectado", e uma página que aceita o valor e mostra mensagem de sucesso saía `confirmed`
+ * (controle F1-10-N, falso positivo). Agora a referência é a observação mais recente antes do gatilho,
+ * no mesmo documento, em que o campo tinha o mesmo foco que tem no estado final.
+ */
+function sameFocusBaseline(evidence: ContextEvidence, pre: TraceObservation, subject: SubjectSnapshot): SubjectSnapshot | null | undefined {
+  const earlier = (evidence.trace ?? [])
+    .filter((o) => !o.error && o.step <= pre.step && o.documentToken === pre.documentToken)
+    .sort((a, b) => b.step - a.step);
+  let seen = false;
+  for (const o of earlier) {
+    const snap = o.subjects.find((x) => x.ref === subject.ref);
+    if (!snap) continue;
+    seen = true;
+    if (snap.focusInside === subject.focusInside) return snap;
+  }
+  // undefined: o campo não existia antes do gatilho; null: existia, mas nunca no mesmo estado de foco.
+  return seen ? null : undefined;
+}
+
+const SAME_FOCUS_UNKNOWN =
+  "o campo nunca foi observado antes da última ação no mesmo estado de foco que tem agora: mudança de aparência por foco não é sinal de erro, e não há com o que comparar.";
+
 function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
   if (typeof window === "string") return { status: "undetermined", detail: window };
@@ -320,17 +346,19 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     if (normalizeText(ax.name).length >= 3 && contains(messageText, ax.name)) {
       return { status: "contradicted", detail: `a mensagem nomeia o campo ("${ax.name}") em texto.` };
     }
-    const before = pre.subjects.find((s) => s.ref === subject.ref);
-    if (!before) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    const before = sameFocusBaseline(evidence, pre, subject);
+    if (before === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    if (before === null) return { status: "undetermined", detail: SAME_FOCUS_UNKNOWN };
     if (before.colors === subject.colors) {
       return {
         status: "undetermined",
-        detail: "a mensagem apareceu, mas o campo não mudou de aparência: falta um segundo sinal de que a página detectou erro neste campo.",
+        detail:
+          "a mensagem apareceu, mas o campo não mudou de aparência (comparado no mesmo estado de foco): falta um segundo sinal de que a página detectou erro neste campo.",
       };
     }
     return {
       status: "verified",
-      detail: `erro detectado (mensagem "${messageText}" apareceu e o campo mudou de aparência); o Chromium não expõe invalid, a descrição é ${
+      detail: `erro detectado (mensagem "${messageText}" apareceu e o campo mudou de aparência no mesmo estado de foco); o Chromium não expõe invalid, a descrição é ${
         ax.description ? `"${ax.description}"` : "vazia"
       } e a mensagem não nomeia o campo ("${ax.name}").${danglingDetail(facts)}`,
     };
@@ -360,10 +388,16 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
         detail: "o campo usa validação nativa do navegador e está inválido: o aviso do navegador não está no DOM, então o texto não é decidível.",
       };
     }
-    const before = pre.subjects.find((s) => s.ref === subject.ref);
-    const changed = before !== undefined && before.colors !== subject.colors;
+    const before = sameFocusBaseline(evidence, pre, subject);
+    const changed = before !== undefined && before !== null && before.colors !== subject.colors;
     if (!changed && !facts.ax.invalid) {
-      return { status: "undetermined", detail: "nenhum sinal de erro detectado no campo (aparência igual, invalid ausente)." };
+      return {
+        status: "undetermined",
+        detail:
+          before === null
+            ? `nenhum sinal de erro decidível: invalid ausente e ${SAME_FOCUS_UNKNOWN}`
+            : "nenhum sinal de erro detectado no campo (aparência igual no mesmo estado de foco, invalid ausente).",
+      };
     }
     const associated = appeared.filter((chunk) => contains(facts.ax!.description, chunk) || contains(facts.ax!.name, chunk));
     if (associated.length > 0) return { status: "contradicted", detail: `texto novo associado ao campo: "${associated.join(" ")}".` };

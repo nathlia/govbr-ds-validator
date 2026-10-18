@@ -91,6 +91,23 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### Two fixes from the NAT-86 no-model gate (2.14.0, all profiles)
+
+- **P1: field appearance is compared under the same focus state.** Up to 2.13.0,
+  `input-error-item-identified` and `input-error-described-in-text` compared the field right before the
+  trigger (focused, after `fill`) with the final state (unfocused by the click on the submit button): the
+  loss of the focus ring counted as "error detected", and a page that accepts the value and shows a success
+  message came out `confirmed` (development control F1-10-N, a blocking false positive in the gate). The
+  reference is now the most recent observation before the trigger, in the same document, where the field
+  had the same focus state as in the final state; with none, the predicate answers `undetermined`. The
+  message alone is never the error signal: the field's own appearance (or `invalid`) must change. This is a
+  deliberate change of `evaluation` relative to 2.13.0 (P1 verdicts only); the regression is
+  `test/integration/p1-foco-e-janela.test.ts` (synthetic, same mechanism).
+- **Oracle window from the harness.** `GOVBR_VALIDATOR_VIEWPORT=WIDTHxHEIGHT` (read by the process, not in
+  any MCP schema — the agent still cannot choose a window) replaces the frozen 1280×720 for `scan_page` and
+  `verify_finding`; the state proof records `viewportSource: "harness"`. Unset: 1280×720 `frozen-desktop`,
+  as before. Malformed: error, never a silent default. The baseline CLI's own `viewport` still wins.
+
 ### Knowledge-free profile: the third arm (2.14.0, NAT-61)
 
 `GOVBR_VALIDATOR_TOOL_PROFILE=knowledge-free` serves the arm *ferramentas* (D-132, plan
@@ -132,7 +149,7 @@ in training.
 3. **Per run.** `tools/list` of the profile has a pinned sha256 (`test/integration/knowledge-free.test.ts`);
    the runner checks the exposed inventory and hash (eval side, after NAT-86).
 
-**Invariance.** `evaluation` (and `full`, `normative`, `deterministic`, `evidence`) are unchanged:
+**Invariance.** Apart from the two gate fixes above (P1 under equal focus; the window only when the harness sets it), `evaluation` (and `full`, `normative`, `deterministic`, `evidence`) are unchanged — measured on the knowledge-free commit, before the fixes:
 `npm run invariancia:perfis -- --base <2.13.0 tree, built>` compares full payloads of both builds (all
 calls of the inventory plus lookups, resources, prompt, the `full` checkers and the CLI on screens A/B),
 normalizing only what varied between two runs of the same 2.13.0 build (A/A): timings, ids the page draws
