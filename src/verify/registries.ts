@@ -163,7 +163,10 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
 // 2.14.2 (NAT-61, revisão Codex 8963921e): contextual-1.2.0 — S5, estado de erro declarado pelo
 // componente DS (só br-input → danger, tabela Estados do Input; só no perfil evaluation). O registro do
 // knowledge-free não muda: ele não interpreta o mapeamento.
-export const CONTEXT_CONDITIONS_VERSION = "contextual-1.2.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
+// 2.14.3 (NAT-61, revisão Codex 4d66c40e): contextual-1.3.0 / knowledge-free contextual-1.2.0 — P1
+// item-identified exige o vínculo ESTA mensagem ↔ ESTE campo (IDREF exato do campo ou contêiner só do
+// campo, estável); seletor de várias mensagens, mensagem global/de outro campo = undetermined.
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.3.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
 
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {
@@ -180,7 +183,7 @@ export function registryVersions(): Record<string, string> {
 }
 
 /** 2.14.0 (NAT-61): o registro de condições do perfil knowledge-free — só P1 pela fonte WCAG. */
-export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.1.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
+export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.2.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
 
 /** Versões do perfil knowledge-free: só registros públicos (WCAG 2.2) e o registro de condições P1. */
 export function registryVersionsKnowledgeFree(): Record<string, string> {

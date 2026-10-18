@@ -91,6 +91,61 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### P1: the claimed message must belong to the claimed field (2.14.3, all profiles)
+
+Codex review of NAT-61 (comment 4d66c40e, repro `testing/nat61-message-binding-review.mts`): field
+*Telefone* enters an error state (S3, and S5 in `evaluation`); its own message says "Telefone invalido.";
+another field's message says "Numero recusado." in the same action. With subject `#target`,
+`errorMessage=#right` was rejected (the message names the field — correct), but `errorMessage=#wrong`
+came out **`confirmed` in both profiles**: `input-error-item-identified` read the selector's (aggregated)
+text and the subject's signals without proving they were the same pair.
+
+2.14.3 keeps three questions apart: **(a)** the page detected an error on this field (S1–S5, unchanged);
+**(b)** *this* message belongs to *this* field; **(c)** the item is identified/described to the user
+(the AX and textual counter-proofs, unchanged). (b) holds through one of:
+
+| Binding | What is read (`src/evidence/context.ts`, `SubjectSnapshot.binding`) |
+|---|---|
+| explicit reference | the field's own `aria-errormessage` / `aria-describedby` resolved **in the field's tree** to the exact message element (or a wrapper/part of it with the same text and no form field). An IDREF to a generic ancestor — one holding a field, or text beyond the message (e.g. a summary with several fields' messages) — does not bind and is listed in the detail. The link supports attribution only: the computed description/name still contradicts (an `aria-describedby` to the message puts it in the description → `contradicted`), and the link is never automatic proof of a violation |
+| strict structural containment | the message is inside a composed ancestor of the field whose subtree holds **no other form field** (the same wrapper criterion as S3/S5), walking up only until the first ancestor with another field and never into `form`/`main`/dialogs; that wrapper must already have been the field's wrapper before the trigger (same registry number, one field). Neutral facts (tag, id, text, registry numbers — no class names), so it works in both profiles; the DS reading of the wrapper (S5) stays `evaluation`-only |
+
+"A new message in the same wrapper through the transition" is the structural binding **plus** the
+temporal evidence already required (the message appeared through the last action), not a separate
+permission. Simultaneity of two fields validated together is not association. **`undetermined`**: a
+global/external message with no explicit relation, a selector matching more than one element
+(`found > 1`: the aggregated text is not one field's message), an IDREF to a generic container, a message
+in a multi-field wrapper, a wrapper created by the action itself, an element claimed as "message" that
+contains a form field. ARIA is **not** the only way to attribute — the structural cases are the ones the
+gate measures (DS feedback appended inside the field's `.br-input`). A confirmed verdict's detail records
+the pair (attribute → target, or message ↔ wrapper ↔ field registry numbers).
+
+Condition registries: `contextual-1.3.0` (evaluation), `contextual-1.2.0` (knowledge-free).
+
+**Tests.** `test/integration/p1-vinculo-mensagem.test.ts` (live browser, both profiles): Codex's pair
+(`#right` naming the field → `rejected`, `#wrong` → `unverifiable`); the same with a generic right
+message → `confirmed` via the single-field wrapper, wrong one `unverifiable`; a selector matching two
+messages; an IDREF to a summary holding two fields' messages; an external message linked by
+`aria-errormessage` (`confirmed`), by `aria-describedby` (`rejected` by the description) and unlinked
+(`unverifiable`); single-field vs multi-field wrapper under the same S2 signal.
+`test/unit/contextual.test.ts`: every binding rule on synthetic facts (stable/unstable wrapper, wrapper
+with two fields before the trigger, message holding a field, no binding facts, `found > 1`, binding is
+not proof: naming message and exposed `invalid` still contradict, binding without detection stays
+`undetermined`). `contextual-gate.test.ts`: the open-shadow-root case whose message sits outside the
+custom element with an IDREF that cannot cross the boundary is now `unverifiable` (global message, no
+relation); the same message inside a wrapper holding only the host confirms. All earlier regressions
+(S1–S5, success-green, the S5 negatives) unchanged.
+
+**Gate impact (NAT-86 development division, 1280×900, matrix d35b33f5…, run `2026-10-18T-nat61-2143`).**
+`evaluation`: **GO**, row totals identical to 2.14.2 (D1 per row TP 23, TN 98, preserved 15, out of
+scope 25, not exercised 10; blocking 0, acceptance failures 0). The only change is at claim level, in
+F1-08-D subject 2 (`#telefone`): the claims citing the *other* fields' messages (`#cartao-erro`,
+`#email-erro`, for WCAG 3.3.1 and e-MAG 6.6) went `confirmed` → `unverifiable` ("não pertence
+comprovadamente a este campo"); the claim with its own `#telefone-erro` (appended inside the field's
+`.br-input`) still confirms through the structural binding, so the row stays TP. `knowledge-free`
+(capacity 1.1.0): **GO**, no verdict changed (TP 1, TN 41, TN-por-desenho 79, preserved 15, out of scope
+25, not exercised 10; blocking 0, lock attempts 0, acceptance failures 0) — in this profile those rows
+already rested on S5 alone and stay `unverifiable` by design.
+
 ### S5: error state declared by the DS component (2.14.2, evaluation profile only)
 
 Approved by Codex on NAT-61 (comment 8963921e) with binding limits. 2.14.1 left the gov.br DS error
@@ -172,7 +227,7 @@ the trigger, present in the final state; the field must exist before the trigger
 | S1 | `aria-invalid` (any value other than absent/""/"false") newly set on the field itself |
 | S2 | native constraint validation actually **run**: the field received an `invalid` event during the trigger (`checkValidity`/`reportValidity`/submit) and has `validity.valid === false` in the final state |
 | S3 | `aria-invalid` newly set on a composed ancestor whose subtree holds no other form field (the field's own wrapper; a fieldset/group with other fields does not count) |
-| S4 | *item-identified only*: the field's `aria-errormessage` resolves (same tree) to the message the last action made appear, or to its ancestor/descendant |
+| S4 | *item-identified only*: the field's `aria-errormessage` resolves (same tree) to the message the last action made appear, or to its ancestor/descendant (2.14.3: only the exact message, or a wrapper/part with the same text and no form field — never a generic container) |
 
 Never evidence of detection: field appearance (colours, classes), the wording of the message
 ("sucesso", "erro"…), focus, the message's role. Without a signal the outcome is `undetermined` →
@@ -301,7 +356,7 @@ a recommended or permitted rule, or a condition cited with another rule selects 
 
 | Family | `expectedCondition` | Rules | Decides on |
 |---|---|---|---|
-| P1 | `input-error-item-identified` (+ `errorMessage`) | WCAG 3.3.1 · e-MAG 6.6 · `…global-271582e4fbe8` | error text appeared with the last action and (2.14.1) a programmatic error signal S2–S4 was established by it (until 2.14.0: "the field changed appearance"); Chromium exposes no `invalid`, the message is not in the computed description/name, and it does not name the field |
+| P1 | `input-error-item-identified` (+ `errorMessage`) | WCAG 3.3.1 · e-MAG 6.6 · `…global-271582e4fbe8` | error text appeared with the last action and (2.14.1) a programmatic error signal S2–S5 was established by it (until 2.14.0: "the field changed appearance"); (2.14.3) the message is bound to **this** field — the field's own IDREF to the exact message, or a stable wrapper holding only this field; Chromium exposes no `invalid`, the message is not in the computed description/name, and it does not name the field |
 | P1 | `input-error-described-in-text` | same | (2.14.1) error signal S1–S3 established by the last action (until 2.14.0: appearance or `invalid`) and no new text appeared |
 | P1 | `status-message-programmatically-determined` | WCAG 4.1.3 | container gained text without focus and without alert/status/log/aria-live (self, ancestors, descendants); focus moved into it = exception |
 | P2 | `required-anatomy-part-present` (+ `component`, `part`) | Message *Mensagem*, Header *Título* (logo/text substitute allowed), Breadcrumb *Título da página atual*, Modal *Botões* / *Conteúdo* | parts read through the `@govbr-ds/core` classes, open shadow roots included; hidden root, closed shadow root, optional part → no decision |

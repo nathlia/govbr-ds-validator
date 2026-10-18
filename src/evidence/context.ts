@@ -69,6 +69,28 @@ export interface SubjectSnapshot {
    * acontece no perfil evaluation (verify/contextual.ts, sob a trava do pacote).
    */
   containers?: Array<{ ref: number; classes: string[]; fields: number }>;
+  /**
+   * 2.14.3 (NAT-61, revisão Codex 4d66c40e): o vínculo ESTA mensagem ↔ ESTE campo, só quando a
+   * observação pede a mensagem e o seletor casa exatamente um elemento exibido. Fatos neutros (nenhum
+   * nome do DS); o predicado decide.
+   *   explicit    IDREF do próprio campo (aria-errormessage, aria-describedby) resolvido na árvore do
+   *               campo para a mensagem EXATA — o próprio elemento, ou um embrulho/parte dela com o
+   *               mesmo texto e nenhum campo de formulário dentro. Um ancestral genérico (com campo, ou
+   *               com texto além da mensagem) não vincula e vai para `explicitRejected`.
+   *   structural  a mensagem está dentro de um ancestral composto do campo cuja subárvore não tem outro
+   *               campo de formulário (o mesmo critério de contêiner de S3/S5), parando no primeiro que
+   *               tem outro campo e nunca subindo para form/main/diálogo. `wrapperRef` = esse contêiner;
+   *               o predicado exige que ele já fosse contêiner do campo antes do gatilho (estável).
+   *   messageHoldsField  a "mensagem" contém um campo de formulário: é contêiner, não mensagem.
+   */
+  binding?: {
+    messageRef: number;
+    message: string | null;
+    messageHoldsField: boolean;
+    explicit: { attribute: string; targetRef: number; target: string | null; relation: "exata" | "embrulho" | "parte" } | null;
+    explicitRejected: string[];
+    structural: { wrapperRef: number; wrapper: string | null } | null;
+  };
 }
 
 export interface TraceObservation {
@@ -467,17 +489,59 @@ export async function observeStep(page: Page, step: number, next: PageAction | u
           shown: shownOnes.length > 0,
           text: shownOnes.map((el) => h.textChunks(el, () => false).join(" ")).join(" ").slice(0, 500),
         };
-        // aria-errormessage do sujeito resolvido na mesma árvore aponta para a mensagem exibida?
+        // 2.14.3: vínculo mensagem↔campo só com UMA mensagem casada pelo seletor (várias = ambíguo).
+        const FIELD_SEL =
+          "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']), select, textarea";
+        const m = found.length === 1 && shownOnes.length === 1 ? shownOnes[0] : null;
+        const textOf = (x: Element) => h.norm(h.textChunks(x, () => false).join(" "));
+        // identidade neutra do par (tag, id, texto): nenhuma classe, para não carregar vocabulário do DS
+        const ident = (x: Element) => {
+          const text = h.norm(x.textContent ?? "").slice(0, 40);
+          return `<${x.tagName.toLowerCase()}${x.id ? `#${x.id}` : ""}>${text ? ` "${text}"` : ""}`;
+        };
+        const holdsField = (x: Element) => h.composedElements(x).some((y) => y.matches(FIELD_SEL));
+        const GENERIC = (x: Element) => {
+          const tag = x.tagName.toLowerCase();
+          const role = x.getAttribute("role");
+          return ["form", "main", "dialog", "body", "html"].includes(tag) || ["form", "main", "dialog", "alertdialog"].includes(role ?? "");
+        };
         subjectEls.forEach((el, i) => {
+          const snap = subjects[i] as SubjectSnapshot;
+          snap.errorMessageLinked = false;
+          if (!m) return;
           const root = el.getRootNode() as Document | ShadowRoot;
-          const targets = (el.getAttribute("aria-errormessage") ?? "")
-            .split(/\s+/)
-            .filter(Boolean)
-            .map((id) => root.getElementById(id))
-            .filter((t): t is HTMLElement => t !== null);
-          (subjects[i] as SubjectSnapshot).errorMessageLinked = targets.some((t) =>
-            shownOnes.some((m) => m === t || h.inside(m, t) || h.inside(t, m))
-          );
+          const messageHoldsField = holdsField(m);
+          const rejected: string[] = [];
+          let explicit: NonNullable<SubjectSnapshot["binding"]>["explicit"] = null;
+          for (const attribute of ["aria-errormessage", "aria-describedby"]) {
+            for (const id of (el.getAttribute(attribute) ?? "").split(/\s+/).filter(Boolean)) {
+              const t = root.getElementById(id);
+              if (!t) continue;
+              let relation: "exata" | "embrulho" | "parte" | null = null;
+              if (t === m) relation = "exata";
+              else if (h.inside(t, m) || h.inside(m, t)) {
+                const outer = h.inside(t, m) ? t : m;
+                const same = textOf(t) !== "" && textOf(t) === textOf(m);
+                if (same && !holdsField(outer)) relation = h.inside(t, m) ? "embrulho" : "parte";
+                else rejected.push(`${attribute}→#${id} ${ident(t)} (contêiner genérico ou texto diferente da mensagem)`);
+              }
+              if (relation && !explicit && !messageHoldsField) explicit = { attribute, targetRef: h.ref(t), target: ident(t), relation };
+            }
+          }
+          let structural: NonNullable<SubjectSnapshot["binding"]>["structural"] = null;
+          if (!messageHoldsField) {
+            let cur = h.composedParent(el);
+            while (cur && !GENERIC(cur)) {
+              if (h.composedElements(cur).some((x) => x !== el && x.matches(FIELD_SEL))) break;
+              if (h.inside(cur, m)) {
+                structural = { wrapperRef: h.ref(cur), wrapper: ident(cur) };
+                break;
+              }
+              cur = h.composedParent(cur);
+            }
+          }
+          snap.errorMessageLinked = explicit?.attribute === "aria-errormessage";
+          snap.binding = { messageRef: h.ref(m), message: ident(m), messageHoldsField, explicit, explicitRejected: rejected, structural };
         });
       }
       const visibleText = text ? h.textChunks(document.body, () => false) : undefined;

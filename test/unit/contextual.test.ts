@@ -168,8 +168,13 @@ describe("P1: fatos de acessibilidade pareados pelo número do elemento", () => 
   const f = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorItemIdentified, errorMessage: "#m" });
   const actions = [{ action: "fill" as const, selector: "#a", value: "1" }, { action: "click" as const, selector: "#ok" }];
   // 2.14.1: o sinal de erro detectado é programático (S3: aria-invalid no contêiner só do campo).
+  // 2.14.3: a mensagem está no contêiner só do campo (registro 50+ref), estável desde antes do gatilho.
   const field = (ref: number, colors: string, ancestorInvalid = colors === "vermelho") =>
-    snap({ ref, shown: true, colors, modal: false, classes: [], ariaInvalid: false, ancestorInvalid, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false });
+    snap({
+      ref, shown: true, colors, modal: false, classes: [], ariaInvalid: false, ancestorInvalid, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false,
+      containers: [{ ref: 50 + ref, classes: [], fields: 1 }],
+      binding: { messageRef: 90, message: "<span#m>", messageHoldsField: false, explicit: null, explicitRejected: [], structural: { wrapperRef: 50 + ref, wrapper: "<div>" } },
+    });
   const trace = [
     obs(0, null, [field(1, "cinza"), field(2, "cinza")], { message: { found: 1, shown: false, text: "" } }),
     obs(1, null, [field(1, "vermelho"), field(2, "vermelho")], { message: { found: 1, shown: true, text: "Valor inválido." } }),
@@ -250,7 +255,10 @@ describe("P1 2.14.2: S5 — estado de erro declarado pelo componente DS (revisã
   const actions = [{ action: "fill" as const, selector: "#a", value: "1" }, { action: "click" as const, selector: "#ok" }];
   type C = NonNullable<SubjectSnapshot["containers"]>;
   const field = (containers: C) =>
-    snap({ ref: 1, shown: true, modal: false, classes: [], ariaInvalid: false, ancestorInvalid: false, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false, containers });
+    snap({
+      ref: 1, shown: true, modal: false, classes: [], ariaInvalid: false, ancestorInvalid: false, invalidEvents: 0, validityInvalid: false, errorMessageLinked: false, containers,
+      binding: { messageRef: 90, message: "<span#m>", messageHoldsField: false, explicit: null, explicitRejected: [], structural: containers[0] ? { wrapperRef: containers[0].ref, wrapper: "<div.br-input>" } : null },
+    });
   const wrap = (classes: string[], ref = 10, fields = 1) => ({ ref, classes: ["br-input", "mb-3", ...classes], fields });
   const trace = (before: C, after: C, text = "Valor inválido.") => [
     obs(0, null, [field(before)], { message: { found: 1, shown: false, text: "" }, visibleText: ["Cartão"] }),
@@ -328,5 +336,71 @@ describe("P1 2.14.2: S5 — estado de erro declarado pelo componente DS (revisã
   it("o mapeamento é conhecimento: lança sob a trava do perfil knowledge-free", () => {
     expect(() => runKnowledgeLocked(() => getDsInputErrorState())).toThrow(KnowledgeLockedError);
     resetKnowledgeLock();
+  });
+});
+
+describe("P1 2.14.3: vínculo ESTA mensagem ↔ ESTE campo (revisão Codex 4d66c40e)", () => {
+  const cond = CONTEXT_CONDITIONS.find((c) => c.check === "error-item-identified")!;
+  const f = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorItemIdentified, errorMessage: "#m" });
+  const actions = [{ action: "click" as const, selector: "#ok" }];
+  type B = NonNullable<SubjectSnapshot["binding"]>;
+  const binding = (over: Partial<B> = {}): B => ({ messageRef: 90, message: "<span#m>", messageHoldsField: false, explicit: null, explicitRejected: [], structural: null, ...over });
+  // detecção por S3 (independe do perfil); containers antes do gatilho: o contêiner 50 só deste campo
+  const field = (over: Partial<SubjectSnapshot>, ancestorInvalid: boolean) =>
+    snap({ ref: 1, shown: true, modal: false, classes: [], ariaInvalid: false, ancestorInvalid, invalidEvents: 0, validityInvalid: false, containers: [{ ref: 50, classes: [], fields: 1 }], ...over });
+  const trace = (after: Partial<SubjectSnapshot>, msg: Partial<NonNullable<TraceObservation["message"]>> = {}, before: Partial<SubjectSnapshot> = {}) => [
+    obs(-1, null, [field(before, false)], { message: { found: 1, shown: false, text: "" } }),
+    obs(0, null, [field(after, true)], { message: { found: 1, shown: true, text: "Valor inválido.", ...msg } }),
+  ];
+  const ax = { ref: 1, tag: "input", idrefs: [], ax: { name: "Telefone", description: "", invalid: false } };
+  const run = (t: TraceObservation[], kf = false) => evaluateContext(cond, f, { actions, trace: t, accessibility: [ax] }, kf ? { knowledgeFree: true } : {});
+
+  it("contenção estrita e estável vincula, nos dois perfis; o par fica registrado", () => {
+    for (const kf of [false, true]) {
+      const r = run(trace({ binding: binding({ structural: { wrapperRef: 50, wrapper: "<div#grupo>" } }) }), kf);
+      expect(r.status).toBe("verified");
+      expect(r.detail).toContain("vínculo estrutural");
+      expect(r.detail).toContain("[registro 50]");
+    }
+  });
+
+  it("referência explícita exata (ou embrulho/parte com o mesmo texto) vincula", () => {
+    const r = run(trace({ binding: binding({ explicit: { attribute: "aria-errormessage", targetRef: 90, target: "<span#m>", relation: "exata" } }) }));
+    expect(r.status).toBe("verified");
+    expect(r.detail).toContain("vínculo explícito: aria-errormessage");
+  });
+
+  it("sem vínculo: mensagem de outro campo/global, IDREF para contêiner genérico, contêiner instável ou de vários campos → undetermined", () => {
+    expect(run(trace({ binding: binding() })).status).toBe("undetermined"); // nenhum vínculo
+    const gen = run(trace({ binding: binding({ explicitRejected: ["aria-describedby→#resumo <div#resumo> (contêiner genérico ou texto diferente da mensagem)"] }) }));
+    expect(gen.status).toBe("undetermined");
+    expect(gen.detail).toContain("contêiner genérico");
+    // contêiner criado pela própria ação (não era do campo antes do gatilho)
+    expect(run(trace({ binding: binding({ structural: { wrapperRef: 77, wrapper: "<div>" } }) })).detail).toContain("instável");
+    // antes do gatilho o contêiner tinha outro campo
+    expect(run(trace({ binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) }, {}, { containers: [{ ref: 50, classes: [], fields: 2 }] })).status).toBe("undetermined");
+    // o elemento "mensagem" contém um campo: é contêiner
+    expect(run(trace({ binding: binding({ messageHoldsField: true, structural: { wrapperRef: 50, wrapper: "<div>" } }) })).status).toBe("undetermined");
+    // nenhum fato de vínculo (seletor com várias mensagens exibidas no navegador não gera binding)
+    expect(run(trace({})).status).toBe("undetermined");
+  });
+
+  it("seletor que casa vários elementos → undetermined antes de qualquer sujeito", () => {
+    const r = run(trace({ binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) }, { found: 2 }));
+    expect(r.status).toBe("undetermined");
+    expect(r.detail).toContain("casa 2 elementos");
+  });
+
+  it("o vínculo não é prova automática: a mensagem certa que nomeia o campo contradiz; invalid exposto contradiz", () => {
+    const bound = { binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) };
+    expect(run(trace(bound, { text: "Telefone inválido." })).status).toBe("contradicted");
+    const t = trace(bound);
+    expect(evaluateContext(cond, f, { actions, trace: t, accessibility: [{ ...ax, ax: { ...ax.ax, invalid: true } }] }).status).toBe("contradicted");
+  });
+
+  it("vínculo sem erro detectado continua undetermined (simultaneidade não é detecção)", () => {
+    const t = trace({ ancestorInvalid: false, binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) });
+    t[1].subjects[0].ancestorInvalid = false;
+    expect(run(t).status).toBe("undetermined");
   });
 });

@@ -90,6 +90,13 @@ const PAGES: Record<string, string> = {
       r.innerHTML = '<style>input{border:1px solid rgb(136,136,136)} input.erro{border-color:rgb(200,0,0)}</style><label for="i">Código da visita</label><input id="i" aria-describedby="cv-msg">'; } });
      document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('cv').shadowRoot.getElementById('i'); i.classList.add('erro'); document.getElementById('cv').setAttribute('aria-invalid','true'); document.getElementById('cv-msg').hidden = false; });`
   ),
+  // 2.14.3: o mesmo, com a mensagem dentro de um contêiner que delimita só o campo (o host + a mensagem)
+  "/p1-shadow-grupo": page(
+    `<form id="f" novalidate><div id="grupo"><campo-visita id="cv"></campo-visita><span id="cv-msg" hidden>Valor inválido.</span></div><button id="enviar" type="submit">Enviar</button></form>`,
+    `customElements.define('campo-visita', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = '<style>input{border:1px solid rgb(136,136,136)} input.erro{border-color:rgb(200,0,0)}</style><label for="i">Código da visita</label><input id="i" aria-describedby="cv-msg">'; } });
+     document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('cv').shadowRoot.getElementById('i'); i.classList.add('erro'); document.getElementById('cv').setAttribute('aria-invalid','true'); document.getElementById('cv-msg').hidden = false; });`
+  ),
   "/p1-shadow-conforme": page(
     `<form id="f" novalidate><campo-visita id="cv"></campo-visita><button id="enviar" type="submit">Enviar</button></form>`,
     `customElements.define('campo-visita', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
@@ -281,9 +288,12 @@ describe("P1 — associação controle↔erro (WCAG 3.3.1 / e-MAG 6.6)", () => {
     expect(v.verdict).toBe("rejected");
   });
 
-  it("shadow root aberto: IDREF que não atravessa a fronteira confirma; mensagem na mesma raiz rejeita", async () => {
+  it("shadow root aberto: IDREF que não atravessa a fronteira não vincula (2.14.3); contêiner só do campo confirma; mensagem na mesma raiz rejeita", async () => {
+    // 2.14.3 (revisão Codex 4d66c40e): a mensagem fora do campo, com IDREF que não resolve na árvore dele, é global/externa sem vínculo
     const d = await verdict(claim("/p1-shadow", "campo-visita >>> input", WCAG331, identified("#cv-msg")), [{ action: "click", selector: "#enviar" }]);
-    expect(d.verdict).toBe("confirmed");
+    expect(d.verdict).toBe("unverifiable");
+    const g = await verdict(claim("/p1-shadow-grupo", "campo-visita >>> input", WCAG331, identified("#cv-msg")), [{ action: "click", selector: "#enviar" }]);
+    expect(g.verdict).toBe("confirmed");
     const c = await verdict(claim("/p1-shadow-conforme", "campo-visita >>> input", WCAG331, identified("campo-visita >>> #m")), [{ action: "click", selector: "#enviar" }]);
     expect(c.verdict).toBe("rejected");
   });

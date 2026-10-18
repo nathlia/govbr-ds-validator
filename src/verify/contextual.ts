@@ -21,7 +21,9 @@
  *   - 2.14.1: erro detectado inferido da aparência do campo (cor, classe), do texto da mensagem ou do
  *     foco — P1 3.3.1 só confirma com sinal programático (S1–S4, ver errorSignals);
  *   - 2.14.2: a única classe aceita é o estado de erro DECLARADO pelo componente DS (S5: br-input →
- *     danger, tabela Estados do Input), só no perfil evaluation; nenhuma outra classe, cor ou alerta.
+ *     danger, tabela Estados do Input), só no perfil evaluation; nenhuma outra classe, cor ou alerta;
+ *   - 2.14.3: mensagem sem vínculo comprovado com o campo (IDREF exato ou contêiner só do campo) —
+ *     proximidade, simultaneidade ou seletor que casa várias mensagens não associam (messageBinding).
  */
 import type { Finding } from "../schema/finding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -312,7 +314,8 @@ function danglingDetail(facts: AccessibilityFacts | undefined): string {
  *      e está com `validity.valid === false` no estado final;
  *   S3 `aria-invalid` passou a valer num ancestral composto que contém só este campo de formulário;
  *   S4 (só item-identified) o `aria-errormessage` do campo aponta, na mesma árvore, para a mensagem
- *      que a última ação fez aparecer (o autor declarou aquela mensagem como o erro deste campo).
+ *      EXATA que a última ação fez aparecer (2.14.3: o próprio elemento ou embrulho/parte com o mesmo
+ *      texto; nunca um contêiner genérico) — o autor declarou aquela mensagem como o erro deste campo.
  * S1 também identifica o item para a tecnologia assistiva (o Chromium expõe invalid), por isso em
  * item-identified ele contradiz antes de chegar aqui; serve de detecção em described-in-text.
  */
@@ -422,6 +425,59 @@ function noDetection(ds: DsStateReading | null, options: EvaluateContextOptions)
   return `${NO_DETECTION}${NO_DETECTION_DS}${ds?.detail ? ` ${ds.detail}` : ""}`;
 }
 
+/**
+ * 2.14.3 (NAT-61, revisão Codex 4d66c40e) — "ESTA mensagem pertence a ESTE campo", separado de (a) o
+ * sistema detectou erro (errorSignals) e (c) o item foi identificado/descrito (contraprovas AX/texto).
+ * Até a 2.14.2 o seletor da mensagem e os sinais do sujeito eram lidos sem provar que formavam um par:
+ * Telefone em erro + a mensagem de OUTRO campo na mesma ação saía `confirmed`.
+ *
+ * Vínculo aceito (um basta; o par fica registrado no detalhe):
+ *   1. referência explícita — IDREF do próprio campo (aria-errormessage / aria-describedby) resolvido na
+ *      árvore do campo para a mensagem exata (nunca um ancestral genérico com campos ou outro texto). Apoia
+ *      a atribuição; não prova violação: a descrição AX/o texto ainda contradizem antes daqui;
+ *   2. contenção estrutural estrita — a mensagem está num contêiner que delimita SÓ este campo (subárvore
+ *      sem outro campo, nunca form/main/diálogo), e esse contêiner já era do campo antes do gatilho
+ *      (estável). Vale nos dois perfis; nenhuma leitura do DS aqui.
+ *   3. "mensagem nova no contêiner pela transição" é o (2) mais a evidência temporal já exigida (a mensagem
+ *      apareceu pela última ação), não uma permissão separada.
+ * Sem vínculo: mensagem global/externa sem relação explícita, seletor que casa várias mensagens, IDREF para
+ * contêiner genérico, contêiner de vários campos, contêiner instável → `undetermined`. Proximidade e
+ * simultaneidade (dois campos validados na mesma ação) não são associação.
+ */
+function messageBinding(pre: TraceObservation, subject: SubjectSnapshot): { bound: true; detail: string } | { bound: false; detail: string } {
+  const b = subject.binding;
+  if (!b) return { bound: false, detail: "a mensagem alegada não foi vinculada ao campo (nenhum fato de vínculo coletado)." };
+  const rejected = b.explicitRejected.length ? ` IDREF sem vínculo: ${b.explicitRejected.join("; ")}.` : "";
+  if (b.messageHoldsField) {
+    return { bound: false, detail: `o elemento alegado como mensagem (${b.message ?? `registro ${b.messageRef}`}) contém campo de formulário: é contêiner, não a mensagem deste campo.${rejected}` };
+  }
+  if (b.explicit) {
+    const e = b.explicit;
+    return {
+      bound: true,
+      detail: `vínculo explícito: ${e.attribute} do campo [registro ${subject.ref}] → ${e.target ?? `registro ${e.targetRef}`} (${e.relation}) = mensagem ${b.message ?? `registro ${b.messageRef}`}`,
+    };
+  }
+  if (b.structural) {
+    const before = pre.subjects.find((x) => x.ref === subject.ref);
+    const stable = (before?.containers ?? []).some((c) => c.ref === b.structural!.wrapperRef && c.fields === 1);
+    if (!stable) {
+      return {
+        bound: false,
+        detail: `a mensagem está em ${b.structural.wrapper ?? "um contêiner"} [registro ${b.structural.wrapperRef}] só deste campo, mas esse contêiner não era do campo antes do gatilho (instável): vínculo não estabelecido.${rejected}`,
+      };
+    }
+    return {
+      bound: true,
+      detail: `vínculo estrutural: mensagem ${b.message ?? ""} [registro ${b.messageRef}] dentro de ${b.structural.wrapper ?? "contêiner"} [registro ${b.structural.wrapperRef}] que delimita só o campo [registro ${subject.ref}], estável desde antes do gatilho`,
+    };
+  }
+  return {
+    bound: false,
+    detail: `a mensagem alegada (${b.message ?? `registro ${b.messageRef}`}) não pertence comprovadamente a este campo: nenhum IDREF do campo aponta para ela e ela não está num contêiner só deste campo (proximidade ou simultaneidade não são associação).${rejected}`,
+  };
+}
+
 function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
   if (typeof window === "string") return { status: "undetermined", detail: window };
@@ -432,6 +488,12 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
   }
   if (!final.message.shown || !final.message.text.trim()) {
     return { status: "undetermined", detail: `A mensagem de erro '${selector}' não está visível com texto no estado reproduzido.` };
+  }
+  if (final.message.found > 1) {
+    return {
+      status: "undetermined",
+      detail: `O seletor '${selector}' casa ${final.message.found} elementos: a mensagem alegada é ambígua (o texto agregado não é a mensagem de um campo).`,
+    };
   }
   if (pre.message?.shown && normalizeText(pre.message.text) === normalizeText(final.message.text)) {
     return { status: "undetermined", detail: `A mensagem '${final.message.text}' já estava visível antes da última ação: a detecção do erro não foi observada.` };
@@ -455,6 +517,8 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
     const { signals, ds } = read;
     if (signals.length === 0) return { status: "undetermined", detail: `a mensagem "${messageText}" apareceu, mas ${noDetection(ds, options)}` };
+    const binding = messageBinding(pre, subject);
+    if (!binding.bound) return { status: "undetermined", detail: `erro detectado (${signalDetail(signals, ds)}), mas ${binding.detail}` };
     if (subject.nativeInvalid) {
       return {
         status: "undetermined",
@@ -463,7 +527,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     }
     return {
       status: "verified",
-      detail: `erro detectado (${signalDetail(signals, ds)}) e a mensagem "${messageText}" apareceu; o Chromium não expõe invalid, a descrição é ${
+      detail: `erro detectado (${signalDetail(signals, ds)}); ${binding.detail}; a mensagem "${messageText}" apareceu pela última ação; o Chromium não expõe invalid, a descrição é ${
         ax.description ? `"${ax.description}"` : "vazia"
       } e a mensagem não nomeia o campo ("${ax.name}").${danglingDetail(facts)}`,
     };
