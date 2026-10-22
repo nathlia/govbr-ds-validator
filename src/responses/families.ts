@@ -283,7 +283,11 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
     const item = {
       familyId,
       count: members.length,
-      rule: { source: first.rule.source, id: first.rule.id },
+      rule: {
+        source: first.rule.source,
+        id: first.rule.id,
+        ...(first.rule.implements?.length ? { implements: [...first.rule.implements] } : {}),
+      },
       property: propertyOf(first),
       nature: first.nature,
       mode: first.mode,

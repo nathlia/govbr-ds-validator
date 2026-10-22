@@ -91,6 +91,28 @@ claude mcp add govbr-ds-validator -- node <abs-path>/dist/index.js
 Reports land in `reports/` by default; the thesis setup points `GOVBR_VALIDATOR_REPORTS_DIR` at
 `../govbr-eval/reports` so all evaluation artifacts live in the harness.
 
+### The gate grounds the oracle's own checks; silence is not conformance (2.15.0)
+
+From the screen-A diagnosis (2026-10-22, no model run): the agent rewrote `scan_page` findings
+without `rule.implements` — a field the `summary`/`evidence` projections did not show — and
+`verify_finding` rejected measured facts (A-06, P-01, P-02) by a schema slip. Same predicates,
+no new findings:
+
+- **D-27 decided server-side.** For `govbr-ds-token`, `govbr-ds-structure` and `govbr-ds-page` the
+  normative ids come from the check id (`CHECK_GROUNDING`, published structure/page constraints),
+  never from the payload; a differing payload `implements` is ignored and said so in `detail`. A
+  published check that names no rule (`ds-token-font-size`, D-32) is `unverifiable` with a `next`
+  hint (never `rejected`, never `confirmed`). `rejected` stays for contradictory data, a nonexistent
+  rule id, or a live counter-fact. `implements` is now in every finding projection (and in the family row).
+- **Fixed absence note.** `get_ds_rules` with 0 results / missing ids / unknown id, `get_emag_rules`
+  with unknown id or section, `get_component_spec` (always — the spec comes from static examples),
+  and every `verify_finding` `unverifiable` carry `absenceNote`: "Ausência nesta base ou nesta
+  especificação não é evidência de conformidade; o fato medido continua valendo pela WCAG/e-MAG."
+  `contradicted` still only comes from a live predicate measurement.
+- **`scan_page.checksOmitted`** (profiles with `checks`): which checks, token subchecks or
+  components did not run in this state, one line each on what was left unmeasured. Absent when
+  nothing was omitted; the knowledge-free `scan_page` has no `checks` and is unchanged.
+
 ### P1: the claimed message must belong to the claimed field (2.14.3, all profiles)
 
 Codex review of NAT-61 (comment 4d66c40e, repro `testing/nat61-message-binding-review.mts`): field

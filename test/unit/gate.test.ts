@@ -68,11 +68,22 @@ describe("verifyFinding — rule existence against versioned registries", () => 
     expect(v.checks?.ruleExists).toBe("fail");
   });
 
-  it("rejects a token check that has no norm (font-size, D-32) as not applicable", async () => {
+  it("keeps a token check that has no norm (font-size, D-32) unverifiable with a next step — never rejected (2.15.0)", async () => {
     const v = await verifyFinding({ finding: candidate({ rule: { id: "ds-token-font-size", source: "govbr-ds-token" } }) });
-    expect(v.verdict).toBe("rejected");
+    expect(v.verdict).toBe("unverifiable");
     expect(v.checks?.ruleExists).toBe("pass");
-    expect(v.checks?.applicability).toBe("fail");
+    expect(v.checks?.applicability).toBe("unknown");
+    expect(v.next).toBeTruthy();
+  });
+
+  it("resolves implements on the server for the oracle's own deterministic checks (2.15.0)", async () => {
+    for (const id of ["ds-structure-button-tag", "ds-page-header", "ds-token-color"]) {
+      const source = id.startsWith("ds-structure") ? "govbr-ds-structure" : id.startsWith("ds-page") ? "govbr-ds-page" : "govbr-ds-token";
+      const v = await verifyFinding({ finding: candidate({ rule: { id, source } as Partial<Finding["rule"]>, pathway: "deterministic" }) });
+      expect(v.verdict, id).not.toBe("rejected");
+      expect(v.checks?.applicability, id).toBe("pass");
+      expect(v.detail, id).toContain("Norma resolvida pelo servidor");
+    }
   });
 });
 

@@ -17,6 +17,7 @@ import { createServer, type ServerOptions } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { useKnowledgeVersion } from "../../src/data/knowledge.js";
 import { resetApplicabilityCache } from "../../src/data/applicability.js";
+import { ABSENCE_NOTE } from "../../src/responses/absence.js";
 
 const LIBRARY_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -279,7 +280,13 @@ describe("legacy get_ds_rules call shapes are byte-identical to 2.8.0", () => {
         expect(parsed.meta.knowledgeVersion).toBe("3.7.0");
         delete parsed.meta.knowledgeVersion;
       }
-      const text = parsed.meta ? JSON.stringify(parsed, null, 2) : raw;
+      // 2.15.0 acrescenta só a nota fixa de ausência (ids faltantes, 0 resultados), sempre com o mesmo texto.
+      const hadNote = "absenceNote" in parsed;
+      if (hadNote) {
+        expect(parsed.absenceNote).toBe(ABSENCE_NOTE);
+        delete parsed.absenceNote;
+      }
+      const text = parsed.meta || hadNote ? JSON.stringify(parsed, null, 2) : raw;
       expect(createHash("sha256").update(text).digest("hex"), JSON.stringify(shape.args)).toBe(shape.sha256);
     }
     for (const shape of snapshot.shapes.filter((s: { tool?: string }) => s.tool === "get_component_spec")) {

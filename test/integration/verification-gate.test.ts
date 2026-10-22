@@ -14,6 +14,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { EXPECTED_CONDITIONS } from "../../src/schema/structuredClaims.js";
+import { ABSENCE_NOTE } from "../../src/responses/absence.js";
 
 const FIXTURE_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -413,5 +414,144 @@ describe("save_report — the server-held verification decides", () => {
     expect(report.findings[0].verification.verifiedBy).toBe("predicate:token-color");
     expect(report.reviewItems[0].verification.verdict).toBe("unverifiable");
     expect(report.summary.total).toBe(1);
+  });
+});
+
+describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
+  /** O achado como o agente o reescreve a partir do scan: sem `implements` (tela A, ensaio 03). */
+  function withoutImplements(finding: Record<string, any>): Record<string, any> {
+    const { implements: _dropped, ...rule } = finding.rule;
+    return { ...finding, rule };
+  }
+
+  it("scan → verify round trip: the scanner's own findings confirm without implements in the payload", async () => {
+    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100 } })));
+    const own = (scan.findings as Array<Record<string, any>>).filter((f) =>
+      ["govbr-ds-structure", "govbr-ds-page"].includes(f.rule.source)
+    );
+    const ids = own.map((f) => f.rule.id);
+    expect(ids).toEqual(expect.arrayContaining(["ds-structure-button-tag", "ds-page-header", "ds-page-footer", "ds-page-skip-link"]));
+    for (const finding of own) {
+      expect(finding.rule.implements?.length, finding.rule.id).toBeGreaterThan(0);
+      const res = await verify(withoutImplements(finding), { live: true, scanId: scan.scanId });
+      expect(res.verification.verdict, finding.rule.id).toBe("confirmed");
+      expect(res.verification.detail, finding.rule.id).toContain("Norma resolvida pelo servidor");
+      expect(res.absenceNote, finding.rule.id).toBeUndefined();
+    }
+  });
+
+  it("controls without implements never confirm: invented id, forged payload, corrected fact, unreached state", async () => {
+    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100 } })));
+    const tag = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag")!);
+    const footer = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer")!);
+
+    // Id de regra inventado na mesma forma: não existe → rejected.
+    const invented = await verify({ ...tag, rule: { ...tag.rule, id: "ds-structure-botaozao-tag" } }, { live: true, scanId: scan.scanId });
+    expect(invented.verification.verdict).toBe("rejected");
+    expect(invented.verification.checks.ruleExists).toBe("fail");
+    const inventedPage = await verify({ ...footer, rule: { ...footer.rule, id: "ds-page-banner" } }, { live: true, scanId: scan.scanId });
+    expect(inventedPage.verification.verdict).not.toBe("confirmed");
+
+    // Payload forjado: dado estruturado que o documento contradiz → rejected.
+    const forgedTag = await verify({ ...tag, evidence: { ...tag.evidence, data: { ...tag.evidence.data, observedTag: "div" } } }, { live: true, scanId: scan.scanId });
+    expect(forgedTag.verification.verdict).toBe("rejected");
+    const forgedFooter = await verify({ ...footer, evidence: { ...footer.evidence, data: { ...footer.evidence.data, observedCount: 3 } } }, { live: true, scanId: scan.scanId });
+    expect(forgedFooter.verification.verdict).toBe("rejected");
+
+    // Fato corrigido: a mesma alegação sobre um elemento conforme (br-button em <button>) → contradicted.
+    const corrected = await verify({ ...tag, element: { ...tag.element, locator: "#cor-token" } }, { live: true });
+    expect(corrected.verification.verdict).toBe("rejected");
+    expect(corrected.verification.checks.violation === "contradicted" || corrected.verification.checks.evidenceConsistent === "fail").toBe(true);
+
+    // Estado não alcançado: a receita não reproduz → nunca confirmed (limitação, unverifiable).
+    const unreached = await verify(tag, { live: true, actions: [{ action: "click", selector: "#nao-existe" }] });
+    expect(unreached.verification.verdict).toBe("unverifiable");
+    expect(unreached.verification.binding.state.reached).toBe(false);
+    // Fingerprint de outro estado: idem.
+    const otherState = await verify(tag, { live: true, stateFingerprint: "sha256:outro-estado" });
+    expect(otherState.verification.verdict).toBe("unverifiable");
+  });
+
+  it("the summary and evidence projections the agent reads carry implements", async () => {
+    for (const detail of ["summary", "evidence"]) {
+      const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["structure", "page"], view: "findings", detail } })));
+      const tag = (scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag");
+      expect(tag?.rule.implements, detail).toEqual(["govbr-3.7.0-component-global-e30aab6e9a68"]);
+    }
+    const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } })));
+    const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer");
+    expect(footer?.rule.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+    expect(footer?.example.rule.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+  });
+
+  it("a payload implements that differs is ignored, not trusted: the server's grounding decides", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "br-button em <button>", implements: ["govbr-inexistente"] },
+        element: { locator: "#link-botao" },
+        evidence: { observed: "br-button aplicado a <a>", expected: "<button>", data: { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag } },
+        pathway: "deterministic",
+      }),
+      { live: true }
+    );
+    expect(res.verification.verdict).toBe("confirmed");
+    expect(res.verification.detail).toContain("foi ignorado");
+  });
+
+  it("a published check without a norm (ds-token-font-size) is unverifiable with next, never rejected nor confirmed", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-token-font-size", source: "govbr-ds-token", description: "Escala tipográfica" },
+        element: { locator: "#cor-arbitraria" },
+        evidence: { observed: "font-size 16.8px", expected: "escala", data: { property: "font-size", observed: "16.8px" } },
+        pathway: "deterministic",
+      }),
+      { live: true }
+    );
+    expect(res.verification.verdict).toBe("unverifiable");
+    expect(res.verification.checks.applicability).toBe("unknown");
+    expect(res.verification.next).toContain("rule: null");
+    expect(res.absenceNote).toBe(ABSENCE_NOTE);
+  });
+});
+
+describe("silence is not conformance (2.15.0)", () => {
+  it("empty or silent answers carry the fixed absence note", async () => {
+    const call = async (name: string, args: Record<string, unknown>) => JSON.parse(textOf(await client.callTool({ name, arguments: args })));
+    expect((await call("get_ds_rules", { component: "pagination", query: "aria-current" })).absenceNote).toBe(ABSENCE_NOTE);
+    expect((await call("get_ds_rules", { id: "govbr-nao-existe" })).absenceNote).toBe(ABSENCE_NOTE);
+    expect((await call("get_ds_rules", { ids: ["govbr-nao-existe"] })).absenceNote).toBe(ABSENCE_NOTE);
+    expect((await call("get_emag_rules", { id: "9.9" })).absenceNote).toBe(ABSENCE_NOTE);
+    expect((await call("get_component_spec", { component: "pagination" })).absenceNote).toBe(ABSENCE_NOTE);
+    expect((await call("get_component_spec", { component: "nao-existe" })).absenceNote).toBe(ABSENCE_NOTE);
+    // Resposta com resultado não leva a nota.
+    expect((await call("get_ds_rules", { component: "button" })).absenceNote).toBeUndefined();
+    expect((await call("get_emag_rules", { id: "1.5" })).absenceNote).toBeUndefined();
+  });
+
+  it("without live, no verdict is contradicted: a counter-fact has to be measured", async () => {
+    const res = await verify(
+      claim({
+        rule: { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "br-button em <button>" },
+        element: { locator: "#cor-token" },
+        evidence: { observed: "br-button aplicado a <a>", expected: "<button>", data: { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag } },
+      }),
+      { live: false }
+    );
+    expect(res.verification.checks.violation).not.toBe("contradicted");
+    expect(res.verification.verdict).toBe("unverifiable");
+    expect(res.absenceNote).toBe(ABSENCE_NOTE);
+  });
+});
+
+describe("scan_page.checksOmitted (2.15.0)", () => {
+  it("lists, in this state, the checks that did not run and what was left unmeasured", async () => {
+    const narrowed = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["axe", "structure"] } })));
+    expect(narrowed.checksOmitted.items.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
+    expect(narrowed.checksOmitted.items[0].why).toContain("tokens");
+    const sub = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["tokens"], tokenChecks: ["font"], components: ["button"] } })));
+    expect(sub.checksOmitted.items.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
+    const full = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page } })));
+    expect(full.checksOmitted).toBeUndefined();
   });
 });

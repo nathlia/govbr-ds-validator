@@ -97,6 +97,7 @@ import {
 } from "./responses/findings.js";
 import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
 import { PageScanCache, scanPage } from "./scan/pageScan.js";
+import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
@@ -119,6 +120,56 @@ function json(data: unknown) {
 }
 
 const StylePropertySchema = z.enum(STYLE_PROPERTIES);
+
+/**
+ * 2.15.0: o que um check omitido deixa de medir. Na tela A (ensaio 03) o agente varreu o diálogo com
+ * checks ["axe","structure"] e a cor fora da paleta (#334333), que o check tokens acusa nesse estado,
+ * não apareceu — e o scan não dizia que tokens não tinha rodado.
+ */
+const CHECK_OMISSION_WHY = {
+  tokens: "cores, fonte, raio e espaçamento fora do registro de tokens do DS não foram medidos neste estado.",
+  structure: "a tag raiz e o nome acessível dos componentes br-* não foram conferidos neste estado.",
+  axe: "as regras do axe-core (WCAG) não rodaram neste estado.",
+  page: "as regiões obrigatórias do Template Base (cabeçalho, rodapé) e o salto para o conteúdo não foram conferidos neste estado.",
+} as const;
+const TOKEN_CHECK_OMISSION_WHY = {
+  color: "cores fora da paleta do DS não foram medidas neste estado.",
+  font: "família tipográfica fora da Rawline não foi medida neste estado.",
+  radius: "raio de borda fora dos tokens não foi medido neste estado.",
+  spacing: "espaçamento fora dos tokens não foi medido neste estado.",
+} as const;
+
+/** Checks que NÃO rodaram neste estado, um por linha com o que ficou sem medir. Vazio: nada omitido. */
+function checksOmittedFor(
+  checks: Array<keyof typeof CHECK_OMISSION_WHY> | undefined,
+  tokenChecks: Array<keyof typeof TOKEN_CHECK_OMISSION_WHY> | undefined,
+  components: string[] | undefined,
+) {
+  const omitted: Array<{ check: string; why: string }> = [];
+  const active = checks ?? (Object.keys(CHECK_OMISSION_WHY) as Array<keyof typeof CHECK_OMISSION_WHY>);
+  for (const check of Object.keys(CHECK_OMISSION_WHY) as Array<keyof typeof CHECK_OMISSION_WHY>) {
+    if (!active.includes(check)) omitted.push({ check, why: CHECK_OMISSION_WHY[check] });
+  }
+  if (active.includes("tokens") && tokenChecks) {
+    for (const sub of Object.keys(TOKEN_CHECK_OMISSION_WHY) as Array<keyof typeof TOKEN_CHECK_OMISSION_WHY>) {
+      if (!tokenChecks.includes(sub)) omitted.push({ check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
+    }
+  }
+  if (active.includes("structure") && components?.length) {
+    omitted.push({
+      check: "structure.components",
+      why: `a estrutura só foi conferida para ${[...components].sort().join(", ")}; os demais componentes br-* não foram conferidos neste estado.`,
+    });
+  }
+  return omitted.length
+    ? {
+        checksOmitted: {
+          note: "Checks que não rodaram neste estado. Zero achados de um check omitido não é ausência de defeito: repita o scan neste estado sem restringir checks para medir.",
+          items: omitted,
+        },
+      }
+    : {};
+}
 
 function selectorBatch(selector?: string, selectors?: string[]): string | string[] | undefined {
   const batch = [...(selector ? [selector] : []), ...(selectors ?? [])];
@@ -634,11 +685,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (context) {
         const hasContext = Boolean(context.components?.length || context.regions?.length || context.terms?.length);
         if (!hasContext) return json({ error: "context vazio: informe components, regions ou terms." });
-        return json(contextResponse(context, filter, { detail: detail ?? "summary", limit, offset }));
+        const answer = contextResponse(context, filter, { detail: detail ?? "summary", limit, offset });
+        return json(answer.total === 0 ? { ...answer, absenceNote: ABSENCE_NOTE } : answer);
       }
       if (id) {
         const rule = getRuleById(id);
-        if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.` });
+        if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.`, absenceNote: ABSENCE_NOTE });
         return json({
           kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
           rule,
@@ -657,6 +709,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
             ...project(rule),
           })),
+          ...(found.length < ids.length ? { absenceNote: ABSENCE_NOTE } : {}),
         });
       }
 
@@ -694,6 +747,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         detail: detail === "full" ? "full" : "brief",
         rules: page.map(project),
       };
+      if (rules.length === 0) response.absenceNote = ABSENCE_NOTE;
       if (skip + page.length < rules.length) {
         response.more = {
           remaining: rules.length - (skip + page.length),
@@ -756,13 +810,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const emag = getEmag();
       if (id) {
         const rule = findEmagRule(id);
-        if (!rule) return json({ error: `Regra '${id}' não encontrada. Use section para listar ids válidos.` });
+        if (!rule) return json({ error: `Regra '${id}' não encontrada. Use section para listar ids válidos.`, absenceNote: ABSENCE_NOTE });
         // KB enrichment (Phase 2.6): how to verify this recommendation.
         const template = getEmagValidationTemplate(id);
         return json(template ? { ...rule, validationTemplate: template } : rule);
       }
       if (section) {
-        return json({ meta: emag.meta, section: emag.sections[String(section)] ?? `Seção ${section} não encontrada` });
+        const found = emag.sections[String(section)];
+        return json({ meta: emag.meta, section: found ?? `Seção ${section} não encontrada`, ...(found ? {} : { absenceNote: ABSENCE_NOTE }) });
       }
       return json({
         meta: emag.meta,
@@ -862,6 +917,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return json({
           error: `Componente '${component}' não encontrado.`,
           available: Object.keys(specs.components),
+          absenceNote: ABSENCE_NOTE,
         });
       }
       const includeExamples = include_examples ?? false;
@@ -890,6 +946,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
         })),
         examples: includeExamples ? spec.examples.slice(0, 5) : [],
         availableExamples: spec.examples.map((e) => e.name),
+        // 2.15.0: a especificação é extraída dos exemplos estáticos; atributo, regra ou estado que ela
+        // não lista (ex.: ARIA escrito em tempo de execução) não é prova de conformidade.
+        absenceNote: ABSENCE_NOTE,
       });
     })
   );
@@ -1017,6 +1076,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
+          ...checksOmittedFor(checks, tokenChecks, components),
           // Fora da pontuação, de propósito (D-27): o que o oráculo observa mas não afirma.
           observations: result.observations,
           summary: summarize(result.findings),
@@ -1401,7 +1461,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(knowledgeFree ? { knowledgeFree: true } : {}),
       });
       const stored = verificationStore.record(finding, verification);
-      return json({ findingId: finding.id, verificationId: stored.verificationId, verification });
+      // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
+      // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
+      return json({
+        findingId: finding.id,
+        verificationId: stored.verificationId,
+        verification,
+        ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
+      });
     })
   );
 

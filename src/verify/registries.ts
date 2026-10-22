@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { constraintsForComponent, findEmagRule, getComponentSpecs, getEmag, type EmagRule } from "../data/load.js";
 import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "../data/knowledge.js";
-import { CHECK_GROUNDING, type CheckKind } from "../checkers/grounding.js";
+import { CHECK_GROUNDING, groundingFor, type CheckKind } from "../checkers/grounding.js";
 import { pageConstraints, type PageConstraint } from "../checkers/pageStructure.js";
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../data");
@@ -151,6 +151,28 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
     normalizedId: id,
     detail: `'${id}' não é uma restrição de página publicada. Ids citáveis vêm de get_page_rules: ${pageConstraints().map((c) => c.id).join(", ")}.`,
   };
+}
+
+/**
+ * 2.15.0 (D-27 no servidor): a norma que uma verificação do próprio oráculo implementa, resolvida
+ * pelo id do check — nunca pelo `implements` do payload. Na tela A (ensaio 03, 2.14.3) o agente
+ * reescreveu achados do scan_page sem `implements`, campo que as projeções não mostravam, e o portão
+ * rejeitou fatos medidos por um erro de esquema.
+ *
+ * `null`: o id não é verificação publicada desta fonte (a existência já falha na conferência de
+ * membro). `[]`: a verificação existe e não nomeia norma (D-27/D-32) — não sustenta achado.
+ */
+export function groundingForCheckId(source: string, id: string): string[] | null {
+  switch (source) {
+    case "govbr-ds-token":
+      return tokenRuleMembership(id).entry?.implements ?? null;
+    case "govbr-ds-structure":
+      return structureRuleMembership(id).status === "member" ? groundingFor("structure-tag") : null;
+    case "govbr-ds-page":
+      return pageConstraintMembership(id).entry?.implements ?? null;
+    default:
+      return null;
+  }
 }
 
 /**

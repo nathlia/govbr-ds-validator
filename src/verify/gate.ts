@@ -33,6 +33,7 @@ import {
   pageConstraintMembership,
   registryVersions,
   registryVersionsKnowledgeFree,
+  groundingForCheckId,
   structureRuleMembership,
   tokenRuleMembership,
   wcagMembership,
@@ -104,6 +105,18 @@ export class ScanStateMisuseError extends Error {
   }
 }
 
+/**
+ * 2.15.0: resultado do portão. `next` é o próximo passo quando a conferência não decide aqui
+ * (verificação do oráculo sem norma nomeada); não faz parte do esquema Finding.
+ */
+export type GateVerification = Verification & { next?: string };
+
+/** Próximo passo fixo para verificação do oráculo sem norma nomeada (D-27, 2.15.0). */
+export const UNGROUNDED_NEXT =
+  "Esta verificação do oráculo não nomeia norma: o desvio é observação, não achado do oráculo. " +
+  "Se o fato medido viola um critério que você justifica, reescreva o achado com source 'wcag' ou 'emag' " +
+  "e esse critério; senão, mantenha o fato com rule: null.";
+
 interface Checks {
   ruleExists: CheckStatus;
   applicability: CheckStatus;
@@ -134,7 +147,7 @@ export async function verifyFinding({
   arrival,
   scanState,
   knowledgeFree = false,
-}: GateInput): Promise<Verification> {
+}: GateInput): Promise<GateVerification> {
   const checks: Checks = { ruleExists: "unknown", applicability: "unknown", evidenceConsistent: "unknown", violation: "not-checked" };
   const notes: string[] = [];
   const binding: {
@@ -151,6 +164,8 @@ export async function verifyFinding({
   checks.applicability = rule.applicability;
   let verifiedBy = rule.verifiedBy;
   notes.push(...rule.notes);
+  // 2.15.0: verificação do oráculo sem norma nunca confirma — e também não rejeita o fato medido.
+  const ungrounded = rule.ungrounded === true;
 
   const claims = knowledgeFree ? null : checkRegistryClaims(finding);
   if (claims) {
@@ -160,14 +175,15 @@ export async function verifyFinding({
   }
 
   const selection = knowledgeFree ? selectPredicateKnowledgeFree(finding) : selectPredicate(finding);
-  const result = (): Verification => ({
-    verdict: verdictOf(checks),
+  const result = (): GateVerification => ({
+    verdict: ungrounded && verdictOf(checks) === "confirmed" ? "unverifiable" : verdictOf(checks),
     verifiedBy,
     detail: notes.join(" "),
     checks: { ...checks },
     predicate: selection.predicate?.id ?? null,
     binding,
     registries: knowledgeFree ? registryVersionsKnowledgeFree() : registryVersions(),
+    ...(ungrounded ? { next: UNGROUNDED_NEXT } : {}),
   });
 
   if (verdictOf(checks) === "rejected") return result();
@@ -346,6 +362,8 @@ interface RuleCheck {
   applicability: CheckStatus;
   verifiedBy: string;
   notes: string[];
+  /** 2.15.0: verificação publicada do oráculo cujo id não nomeia norma (D-27) — `unverifiable` + next. */
+  ungrounded?: boolean;
 }
 
 function fromMembership<T>(membership: Membership<T>, verifiedBy: string): RuleCheck {
@@ -400,12 +418,8 @@ function checkRule(finding: Finding): RuleCheck {
       break;
     }
     case "govbr-ds-token": {
-      const membership = tokenRuleMembership(id);
-      check = fromMembership(membership, "token-check-index");
-      if (membership.entry && membership.entry.implements.length === 0) {
-        check.applicability = "fail";
-        check.notes.push(`'${id}' não tem norma que sustente achado; o desvio é observação (D-27/D-32).`);
-      }
+      // 2.15.0: a falta de norma (token-font-size, D-32) é decidida abaixo, pelo id, no servidor.
+      check = fromMembership(tokenRuleMembership(id), "token-check-index");
       break;
     }
     case "govbr-ds-structure":
@@ -453,23 +467,38 @@ function checkRule(finding: Finding): RuleCheck {
   // Uma referência WCAG cruzada também tem de existir: `emag-2.2` com `wcag: "9.9.9"` não passa.
   checkWcagCrossReference(finding, check);
 
-  // D-27: verificação determinística tem de nomear norma existente em `implements`.
-  if (finding.pathway === "deterministic" && (source === "govbr-ds-token" || source === "govbr-ds-structure" || source === "govbr-ds-page")) {
-    const declared = finding.rule.implements ?? [];
-    if (declared.length === 0) {
-      check.applicability = "fail";
+  // D-27, decidido no servidor (2.15.0): a norma de uma verificação do próprio oráculo sai do id do
+  // check (CHECK_GROUNDING / restrições publicadas), nunca do `implements` do payload — que pode faltar
+  // (as projeções não o mostravam até a 2.14.3) ou divergir. Sem norma nomeada: `unverifiable` com
+  // próximo passo, nunca `rejected` (o fato medido não é desmentido pela falta de norma).
+  if (source === "govbr-ds-token" || source === "govbr-ds-structure" || source === "govbr-ds-page") {
+    const grounded = groundingForCheckId(source, id);
+    if (grounded !== null && grounded.length === 0) {
+      if (check.applicability !== "fail") check.applicability = "unknown";
+      check.ungrounded = true;
       check.verifiedBy = "rule-grounding-index";
       check.notes.push(
-        `'${id}' não declara qual regra normativa implementa. Verificação determinística sem norma nomeada não produz achado — produz observação de revisão (D-27).`
+        `'${id}' é verificação do oráculo sem norma nomeada: o desvio é observação de revisão, não achado do oráculo (D-27/D-32). Isto não desmente o fato medido.`
       );
-    }
-    const missing = declared.filter((ruleId) =>
-      ruleId.startsWith("emag-") ? !findEmagRule(ruleId.replace(/^emag-/, "")) : !getRuleById(ruleId)
-    );
-    if (missing.length > 0) {
-      check.ruleExists = "fail";
-      check.verifiedBy = "rule-grounding-index";
-      check.notes.push(`'${id}' declara implementar ${missing.join(", ")}, que não existe(m) no oráculo.`);
+    } else if (grounded !== null) {
+      const declared = finding.rule.implements;
+      const differs =
+        declared !== undefined && (declared.length !== grounded.length || declared.some((ruleId) => !grounded.includes(ruleId)));
+      check.notes.push(
+        `Norma resolvida pelo servidor a partir de '${id}': ${grounded.join(", ")}.${
+          differs ? ` O implements enviado (${declared!.join(", ") || "vazio"}) foi ignorado.` : ""
+        }`
+      );
+      // Ids do próprio oráculo que não existem na base são defeito do oráculo (o teste de fundamentação
+      // os confere); se acontecer, a alegação não se sustenta aqui.
+      const missing = grounded.filter((ruleId) =>
+        ruleId.startsWith("emag-") ? !findEmagRule(ruleId.replace(/^emag-/, "")) : !getRuleById(ruleId)
+      );
+      if (missing.length > 0) {
+        check.ruleExists = "fail";
+        check.verifiedBy = "rule-grounding-index";
+        check.notes.push(`'${id}' implementa ${missing.join(", ")}, que não existe(m) no oráculo (defeito do oráculo).`);
+      }
     }
   }
 

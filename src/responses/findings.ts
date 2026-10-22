@@ -140,6 +140,9 @@ export function projectFinding(finding: Finding, detail: FindingDetail): unknown
     rule: {
       id: finding.rule.id,
       source: finding.rule.source,
+      // 2.15.0: a norma que a verificação do oráculo implementa, visível em toda projeção — o agente
+      // reescrevia o achado sem ela e o portão o rejeitava (tela A, ensaio 03).
+      ...(finding.rule.implements?.length ? { implements: [...finding.rule.implements] } : {}),
       ...(detail === "evidence"
         ? { description: finding.rule.description, wcag: finding.rule.wcag }
         : {}),
