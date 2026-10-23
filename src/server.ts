@@ -22,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 import { FindingSchema, FindingSchemaKnowledgeFree, type Finding } from "./schema/finding.js";
 import { knowledgeLockAttempts, lockKnowledgeForProcess, runKnowledgeLocked } from "./data/lock.js";
+import { normativeUnit, boundedNormativeUnit, legacyResolution, emagUnits } from "./data/normativeUnits.js";
+import { componentProvenance } from "./data/componentProvenance.js";
 import {
   getTokenRegistry,
   getEmag,
@@ -226,6 +228,8 @@ function briefRule(r: KnowledgeRule) {
     component: r.component ?? null,
     validationStrategy: r.validationStrategy,
     caveats: inferenceCaveats(r),
+    normativeContext: normativeUnit(r),
+    legacyResolution: legacyResolution(r),
     ...(r.legacy ? { legacy: r.legacy } : {}),
   };
 }
@@ -272,6 +276,8 @@ function projectRule(r: KnowledgeRule) {
     sourceUrl: r.source.url,
     notes: r.notes ?? null,
     caveats: inferenceCaveats(r),
+    normativeContext: normativeUnit(r),
+    legacyResolution: legacyResolution(r),
     ...(r.legacy ? { legacy: r.legacy } : {}),
   };
 }
@@ -298,6 +304,7 @@ function summarizeCandidate(candidate: ContextCandidate) {
     ruleId: r.id,
     title: r.title,
     force: r.force,
+    normativeContext: boundedNormativeUnit(r, 800),
     obligation: candidate.obligation,
     reasons: candidate.reasons,
     applicability: {
@@ -322,6 +329,7 @@ function projectCandidate(candidate: ContextCandidate, detail: CandidateDetail) 
   return {
     ruleId: id,
     ...projection,
+    normativeContext: boundedNormativeUnit(r, 2500),
     obligation: candidate.obligation,
     source: { ...(r.standard ? { standard: r.standard } : {}), url: r.source.url, version: r.standardVersion ?? r.dsVersion },
     reasons: candidate.reasons,
@@ -356,10 +364,20 @@ function contextPage(
   let chars = 0;
   let budgetHit = false;
   for (const candidate of candidates.slice(skip, skip + take)) {
-    const item = projectCandidate(candidate, detail);
+    let item = projectCandidate(candidate, detail);
     // Tamanho como sai na resposta: aninhado em `candidates`, cada linha ganha 4 espaços + vírgula.
-    const text = JSON.stringify(item, null, 2);
-    const size = text.length + 4 * text.split("\n").length + 2;
+    let text = JSON.stringify(item, null, 2);
+    let size = text.length + 4 * text.split("\n").length + 2;
+    if (items.length === 0 && size > budget) {
+      // Even a rule's own literal text may be large. Preserve its identity/order and make the
+      // required exact-id continuation explicit instead of bypassing the response budget.
+      item = { ruleId: candidate.rule.id, force: candidate.rule.force,
+        applicability: { status: "unknown" },
+        contextStatus: "context-deferred", note: "Unidade excede o orçamento desta projeção. Leia o id completo, incluindo condições e alternativas, antes de julgar.",
+        next: { tool: "get_ds_rules", arguments: { id: candidate.rule.id } } } as unknown as ReturnType<typeof projectCandidate>;
+      text = JSON.stringify(item, null, 2);
+      size = text.length + 4 * text.split("\n").length + 2;
+    }
     if (items.length > 0 && chars + size > budget) {
       budgetHit = true;
       break;
@@ -692,8 +710,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const rule = getRuleById(id);
         if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.`, absenceNote: ABSENCE_NOTE });
         return json({
-          kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+          kind: rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
           rule,
+          normativeContext: normativeUnit(rule),
+          legacyResolution: legacyResolution(rule),
         });
       }
       if (ids) {
@@ -706,7 +726,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           detail: detail === "full" ? "full" : "brief",
           missing: ids.filter((ruleId) => !foundIds.has(ruleId)),
           rules: found.map((rule) => ({
-            kind: NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+            kind: rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
             ...project(rule),
           })),
           ...(found.length < ids.length ? { absenceNote: ABSENCE_NOTE } : {}),
@@ -813,11 +833,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (!rule) return json({ error: `Regra '${id}' não encontrada. Use section para listar ids válidos.`, absenceNote: ABSENCE_NOTE });
         // KB enrichment (Phase 2.6): how to verify this recommendation.
         const template = getEmagValidationTemplate(id);
-        return json(template ? { ...rule, validationTemplate: template } : rule);
+        const templateRule = template ? getRuleById(template.ruleId) : undefined;
+        const templateCitation = template ? {
+          id: template.ruleId,
+          kind: templateRule?.legacy ? "historical" : templateRule ? "current" : "unresolved",
+          ...(templateRule ? { legacyResolution: legacyResolution(templateRule) } : { absenceNote: ABSENCE_NOTE }),
+        } : undefined;
+        const normativeContext = emagUnits(id);
+        const description = id === "3.9" && normativeContext.sourceContext
+          ? normativeContext.sourceContext.text : rule.description;
+        return json({ ...rule, description, normativeContext, ...(template ? { validationTemplate: { ...template, citation: templateCitation } } : {}) });
       }
       if (section) {
         const found = emag.sections[String(section)];
-        return json({ meta: emag.meta, section: found ?? `Seção ${section} não encontrada`, ...(found ? {} : { absenceNote: ABSENCE_NOTE }) });
+        return json({ meta: emag.meta, section: found ? { ...found, rules: found.rules.map((rule) => {
+          const normativeContext = emagUnits(rule.id);
+          return { ...rule, ...(rule.id === "3.9" && normativeContext.sourceContext ? { description: normativeContext.sourceContext.text } : {}), normativeContext };
+        }) } : `Seção ${section} não encontrada`, ...(found ? {} : { absenceNote: ABSENCE_NOTE }) });
       }
       return json({
         meta: emag.meta,
@@ -929,6 +961,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const { candidates } = contextCandidates({ components: [spec.name] }, {});
       return json({
         ...spec,
+        implementationEvidence: componentProvenance(spec.name),
         constraints: constraintsForComponent(spec),
         rules: {
           retrieval: "automatic",

@@ -8,6 +8,26 @@ validation procedure as an MCP prompt.
 
 Supersedes the TCC 1 proof of concept (archived in `../poc-tcc1`).
 
+Since **2.16.0 (NAT-96)**, `get_ds_rules` adds derived `normativeContext` for literal
+KB clauses: section title, the main clause, adjacent clauses with independent forces and
+citations, and a coherent literal paragraph. Empty extracted conditions/exceptions are not
+proof that the source is unconditional. Force filters select the main rule while retaining
+context alternatives; query/context filtering and ranking are unchanged. The frozen KB files
+and the historical `3.7.0` `get_ds_rules` projections remain unchanged. Snapshot coordinates refer to UTF-16
+offsets in the LF-normalized frozen file, separately from upstream `source.charRange`.
+Context pages keep the existing 12,000-character budget. A large unit is explicitly marked
+`context-deferred`, with unknown applicability, honest deferred-clause counts and an exact-id
+continuation; that follow-up returns the complete unit. Deferred context must be read before
+making a normative judgment. This preserves page ordering and component interleaving.
+
+`get_emag_rules` shares these literal clauses and keeps the extensive-table condition in
+recommendation 3.9. Legacy IDs are historical pointers with exact (literal equality), partial
+(different text in the existing map), or absent successors; this is not a semantic-equivalence
+adjudication. `get_component_spec.implementationEvidence` separates static HTML and versioned,
+hashed core source-code evidence from normative clauses and actual page observations. The
+official core 3.7.0 pagination example is tested before initialization, after initialization,
+and after a page click; its ARIA technique is not promoted to a universal requirement.
+
 ## Related repositories
 
 | Repo | Role |
