@@ -1,5 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { runWithCallContext } from "./evidence/browser.js";
+import { thrownToContractError } from "./responses/errors.js";
 
 export interface ToolTelemetryEvent {
   runId: string;
@@ -161,10 +163,18 @@ export class ToolTelemetry {
   }
 }
 
+/**
+ * 3.3.0 (S-01, N-07): a chamada roda no contexto do pedido MCP (AbortSignal do cliente + prazo, lidos
+ * por withPage), e uma exceção que escapa vira erro do contrato (errorCode, mensagem limpa, next) em vez
+ * do texto cru do SDK. A telemetria continua registrando o erro.
+ */
 export function instrumentTool<TArgs, TResult>(
   telemetry: ToolTelemetry,
   name: string,
   handler: (args: TArgs) => Promise<TResult>
-): (args: TArgs) => Promise<TResult> {
-  return (args) => telemetry.measure(name, args, () => handler(args));
+): (args: TArgs, extra?: { signal?: AbortSignal }) => Promise<TResult> {
+  return (args, extra) =>
+    runWithCallContext(name, extra?.signal, () => telemetry.measure(name, args, () => handler(args))).catch(
+      (error) => thrownToContractError(error, name) as unknown as TResult,
+    );
 }

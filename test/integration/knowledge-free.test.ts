@@ -395,8 +395,12 @@ describe("verify_finding knowledge-free", () => {
     // Referência justificada fora dos registros (texto livre) e achado com id do DS também não rejeitam.
     const kb = claim("/axe", "img", { id: "govbr-3.7.0-accessibility-global-271582e4fbe8", source: "govbr-ds-kb" });
     expect((await runKnowledgeLocked(() => verifyFinding({ finding: kb, live: true, knowledgeFree: true }))).verdict).toBe("unverifiable");
+    // 3.3.0 (S-05): o achado do axe é reconferido rodando só aquela regra do axe no alvo — a imagem sem
+    // alt reprova de novo, e o achado confirma (sem nada da base de conhecimento).
     const axeFinding = claim("/axe", "img", { id: "image-alt", source: "axe-core" });
-    expect((await runKnowledgeLocked(() => verifyFinding({ finding: axeFinding, live: true, knowledgeFree: true }))).verdict).toBe("unverifiable");
+    const axeVerdict = await runKnowledgeLocked(() => verifyFinding({ finding: axeFinding, live: true, knowledgeFree: true }));
+    expect(axeVerdict.verdict).toBe("confirmed");
+    expect(axeVerdict.verifiedBy).toBe("axe-recheck:image-alt");
     expect(knowledgeLockAttempts().attempts).toBe(0);
   });
 

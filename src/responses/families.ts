@@ -273,14 +273,16 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
   let membersListed = 0;
   let stopReason: PartialReason | undefined;
   let memberLimitHit = false;
+  let trimmedForBudget = false;
 
   while (index < families.length) {
     if (projected.length >= limit) { stopReason = "limit"; break; }
     if (projected.length > 0 && expired(options)) { stopReason = "time-limit"; break; }
     const { familyId, members } = families[index];
     const first = members[0];
-    const listed = members.slice(0, memberLimit).map((member) => member.id);
-    const item = {
+    const makeItem = (listedCount: number) => {
+    const listed = members.slice(0, listedCount).map((member) => member.id);
+    return {
       familyId,
       count: members.length,
       rule: {
@@ -295,7 +297,8 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
       stateFingerprint: state,
       evidenceSignature: evidenceSignature(first),
       value: valueOf(first),
-      example: projectFinding(first, "summary"),
+      // 3.3.0 (N-05): o exemplo não repete o que a família já diz (página, severidade, natureza, modo, via).
+      example: slimExample(projectFinding(first, "summary") as Record<string, unknown>),
       gate: gateTally(members, options.verificationFor),
       memberIds: listed,
       membersReturned: listed.length,
@@ -307,9 +310,21 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
           }
         : {}),
     };
-    const itemChars = JSON.stringify(item).length + (projected.length ? 1 : 0);
+    };
+    let item = makeItem(Math.min(memberLimit, members.length));
+    let itemChars = JSON.stringify(item).length + (projected.length ? 1 : 0);
     if (projected.length > 0 && usedChars + itemChars > maxChars) { stopReason = "char-budget"; break; }
-    if (listed.length < members.length) memberLimitHit = true;
+    // 3.3.0 (N-02): a 1ª família da página nunca é descartada por não caber — os ids dela é que são
+    // cortados (com nextMemberCursor), e as contagens refletem o que veio.
+    const untrimmed = item.membersReturned;
+    for (let n = item.membersReturned; projected.length === 0 && itemChars > maxChars && n > 1; ) {
+      n = Math.max(1, Math.floor(n / 2));
+      item = makeItem(n);
+      itemChars = JSON.stringify(item).length;
+    }
+    if (item.membersReturned < untrimmed) trimmedForBudget = true;
+    const listed = item.memberIds;
+    if (listed.length < members.length && listed.length === Math.min(memberLimit, members.length)) memberLimitHit = true;
     projected.push(item);
     usedChars += itemChars;
     membersListed += listed.length;
@@ -318,7 +333,10 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
 
   const membersNotReturned = findings.length - membersListed -
     families.slice(0, cursor).reduce((sum, family) => sum + family.members.length, 0);
-  const reasons: PartialReason[] = [...(stopReason ? [stopReason] : []), ...(memberLimitHit ? ["member-limit" as const] : [])];
+  const reasons: PartialReason[] = [
+    ...(stopReason ? [stopReason] : trimmedForBudget ? ["char-budget" as const] : []),
+    ...(memberLimitHit ? ["member-limit" as const] : []),
+  ];
   const versions = identityVersions(findings, state);
 
   return {
@@ -410,4 +428,10 @@ export function familyIndex(findings: Finding[], stateFingerprint: string | null
     largestFamily: largest,
     hint: "view=families agrupa instâncias idênticas (contagem, exemplo, ids); a lista de findings e as contagens não mudam.",
   };
+}
+
+function slimExample(example: Record<string, unknown>) {
+  const { page: _page, ...element } = (example.element ?? {}) as Record<string, unknown>;
+  const { severity: _s, nature: _n, mode: _m, pathway: _p, ...rest } = example;
+  return { ...rest, element };
 }

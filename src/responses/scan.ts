@@ -158,6 +158,91 @@ function compactObservation(o: Observation, n: number) {
  * Observações dentro do orçamento: contagem por tipo, o porquê uma vez por tipo e itens compactos
  * (sem trecho de HTML); o resto pela continuação exata (get_finding_details view=observations).
  */
+/**
+ * 3.3.0 (N-03): limite por campo nas respostas — strings ≤ `maxString` (com "…[+N]"), listas ≤
+ * `maxArray`. Só a resposta encolhe; o ledger guarda o valor inteiro (a receita é reaplicada como foi).
+ */
+export function boundStrings<T>(value: T, maxString = 300, maxArray = 50, depth = 0): T {
+  if (typeof value === "string") {
+    return (value.length > maxString ? `${value.slice(0, maxString)}…[+${value.length - maxString}]` : value) as T;
+  }
+  if (Array.isArray(value)) {
+    const head = value.slice(0, maxArray).map((v) => boundStrings(v, maxString, maxArray, depth + 1));
+    return (value.length > maxArray ? [...head, `…[+${value.length - maxArray} itens]`] : head) as T;
+  }
+  if (value && typeof value === "object" && depth < 8) {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, boundStrings(v, maxString, maxArray, depth + 1)])) as T;
+  }
+  return value;
+}
+
+/**
+ * 3.3.0 (N-03): o teto vale para a resposta inteira. Se, depois de famílias e partes com continuação,
+ * o envelope ainda passa de `maxChars`, encolhe o que se repete ou tem outra fonte — textos de
+ * `checksRun.limits` (ficam os códigos), cobertura (ficam as contagens), estado (fica o essencial; o
+ * inteiro está no ledger: get_finding_details(scanId)) — e só então declara `exceedsMaxChars`.
+ */
+export function enforceCeiling(response: Record<string, unknown>, maxChars: number, scanId: string): Record<string, unknown> {
+  if (textSize(response) <= maxChars) return response;
+  let out = { ...response };
+  const squeezed: string[] = [];
+  const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
+    [
+      "checksRun → códigos",
+      (r) => {
+        const cr = r.checksRun as { limits?: Array<{ code: string }>; coverageNote?: string; executed?: unknown } | undefined;
+        if (!cr) return null;
+        const { coverageNote: _n, ...rest } = cr;
+        return { ...r, checksRun: { ...rest, limits: (cr.limits ?? []).map((l) => l.code) } };
+      },
+    ],
+    [
+      "coverage → contagens",
+      (r) => {
+        const c = r.coverage as Record<string, unknown> | undefined;
+        if (!c) return null;
+        const count = (k: string) => (Array.isArray(c[k]) ? (c[k] as unknown[]).length : undefined);
+        return { ...r, coverage: { checks: c.checks, elementsInspected: c.elementsInspected, componentsFound: count("componentsFound"), actionsApplied: count("actionsApplied") } };
+      },
+    ],
+    [
+      "state → essencial (inteiro no ledger)",
+      (r) => {
+        const st = r.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown } } | undefined;
+        if (!st) return null;
+        const o = st.observed ?? {};
+        return {
+          ...r,
+          state: {
+            reached: st.reached,
+            replay: st.replay?.status,
+            settled: st.settle?.settled,
+            observed: { url: o.url, path: o.path, viewport: o.viewport, ...(o.httpStatus ? { httpStatus: o.httpStatus } : {}) },
+            ...(scanId ? { full: { tool: "get_finding_details", arguments: { scanId } } } : {}),
+          },
+        };
+      },
+    ],
+    ["investigate → removido", (r) => (r.investigate ? (({ investigate: _i, ...rest }) => rest)(r) : null)],
+    ["familyHint/chaves → removidos", (r) => (({ familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, detailHint: _d, ...rest }) => rest)(r)],
+  ];
+  for (const [label, transform] of steps) {
+    if (textSize(out) <= maxChars) break;
+    const next = transform(out);
+    if (!next) continue;
+    out = next;
+    squeezed.push(label);
+  }
+  out = { ...out, squeezed };
+  if (textSize(out) > maxChars) {
+    out.exceedsMaxChars = {
+      maxChars,
+      note: "O mínimo desta resposta não cabe no orçamento pedido; ela foi devolvida assim mesmo. Peça maxChars maior.",
+    };
+  }
+  return out;
+}
+
 export function observationsBlock(observations: Observation[], scanId: string, budget: number) {
   const byKind: Record<string, number> = {};
   const whyByKind: Record<string, string> = {};
@@ -168,7 +253,7 @@ export function observationsBlock(observations: Observation[], scanId: string, b
   const items: ReturnType<typeof compactObservation>[] = [];
   let used = 0;
   for (const [i, o] of observations.entries()) {
-    const item = compactObservation(o, i + 1);
+    const item = boundStrings(compactObservation(o, i + 1), 200);
     const size = textSize(item) + 1;
     if (used + size > budget) break;
     items.push(item);
@@ -193,7 +278,7 @@ export function observationsBlock(observations: Observation[], scanId: string, b
 
 /** Página de observações completas (com trecho e dados), por cursor; o orçamento conta a resposta inteira. */
 export function observationPage(observations: Observation[], scanId: string, cursor: number, maxChars: number) {
-  const items = observations.map((o, i) => ({ n: i + 1, ...o }));
+  const items = observations.map((o, i) => boundStrings({ n: i + 1, ...o }, 400));
   return budgetPage(
     items,
     cursor,
@@ -275,13 +360,24 @@ export function assembleScan(
   scanId: string,
   maxChars: number,
   page: (familyBudget: number) => Record<string, unknown>,
+  options: { firstScanPage?: boolean } = {},
+) {
+  return enforceCeiling(assembleScanPage(head, observations, scanId, maxChars, page, options), maxChars, scanId);
+}
+
+function assembleScanPage(
+  head: Record<string, unknown>,
+  observations: Observation[] | null,
+  scanId: string,
+  maxChars: number,
+  page: (familyBudget: number) => Record<string, unknown>,
   /**
    * 3.1.0: `firstScanPage` = 1ª página de um scan_page (sem cursor). Só ali, como último recurso, a
    * página de achados pode começar vazia na continuação (cursor 0). Em continuações e em
    * get_finding_details a página guarda sempre ≥ 1 item (a continuação anda) e diz que passou do teto.
    */
   options: { firstScanPage?: boolean } = {},
-) {
+): Record<string, unknown> {
   const build = (obsBudget: number) => {
     const obs = observations ? observationsBlock(observations, scanId, obsBudget) : undefined;
     const fixed = { ...head, ...(obs ? { observations: obs } : {}) };
@@ -291,16 +387,52 @@ export function assembleScan(
       familyBudget = Math.max(200, familyBudget - (textSize(response) - maxChars) - 100);
       response = { ...fixed, ...page(familyBudget) };
     }
+    // 3.3.0 (N-05): a reserva de 900 é estimativa; se sobrou espaço e ficaram itens de fora, a página
+    // usa a sobra (no máximo 2 tentativas, e só fica com a tentativa que ainda cabe).
+    for (let i = 0; i < 2 && response.nextCursor !== undefined && maxChars - textSize(response) > 150; i++) {
+      const wider = familyBudget + (maxChars - textSize(response)) - 50;
+      const trial = { ...fixed, ...page(wider) };
+      if (textSize(trial) > maxChars) break;
+      familyBudget = wider;
+      response = trial;
+    }
     return response;
   };
-  let response = build(observations ? Math.max(300, Math.floor(maxChars * 0.1)) : 0);
+  const obsShare = observations ? Math.max(300, Math.floor(maxChars * 0.1)) : 0;
+  let response = build(obsShare);
+  const compacted: string[] = [];
+  const moveInvestigate = (h: Record<string, unknown>, keep: number) => {
+    const inv = h.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
+    if (!inv?.items || inv.items.length <= keep) return h;
+    const moved = inv.items.slice(keep).map((i) => i.component);
+    return {
+      ...h,
+      investigate: {
+        ...inv,
+        items: inv.items.slice(0, keep),
+        more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] },
+      },
+    };
+  };
+  // 3.3.0 (N-05): famílias antes de investigate no orçamento. Se ficaram famílias de fora e o
+  // investigate tem mais de um componente, ele cede o espaço (os demais vão para investigate.more).
+  const invItems = (head.investigate as { items?: unknown[] } | undefined)?.items;
+  const listed = (r: Record<string, unknown>) => (Array.isArray(r.families) ? r.families.length : Array.isArray(r.findings) ? r.findings.length : 0);
+  if (response.nextCursor !== undefined && invItems && invItems.length > 1) {
+    const moved = moveInvestigate(head, 1);
+    const retry: Record<string, unknown> = assembleScanPage(moved, observations, scanId, maxChars, page, options);
+    // Só cede quando a página de fato ganha itens; senão nada muda.
+    if (listed(retry) > listed(response) && textSize(retry) <= maxChars) {
+      const label = "investigate.items > 1 → investigate.more (famílias primeiro)";
+      return { ...retry, compacted: [label, ...((retry.compacted as string[] | undefined) ?? [])] };
+    }
+  }
   // A 1ª família entra sempre; se ainda passa do teto, as observações ficam só na contagem + continuação.
   if (observations && textSize(response) > maxChars) response = build(0);
   if (textSize(response) <= maxChars) return response;
   // 3.1.0: o cabeçalho também conta (receita, chegada, stateDiff, investigate). Se ainda passa do teto,
   // encolhe as partes que têm continuação, na ordem, e diz o que encolheu e onde está o resto.
   // Só entra em `compacted` o que tinha itens e de fato encolheu.
-  const compacted: string[] = [];
   const shrink = (part: string, transform: (h: Record<string, unknown>) => Record<string, unknown>) => {
     if (textSize(response) <= maxChars) return;
     head = transform(head);
@@ -315,21 +447,10 @@ export function assembleScan(
       observations: minimalObservations(all, scanId),
     }));
   }
-  const inv = head.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
   for (const keep of [3, 1, 0]) {
+    const inv = head.investigate as { items?: unknown[] } | undefined;
     if (!inv?.items || inv.items.length <= keep) continue;
-    shrink(`investigate.items > ${keep} → investigate.more`, (h) => {
-      const items = inv.items!;
-      const moved = items.slice(keep).map((i) => i.component);
-      return {
-        ...h,
-        investigate: {
-          ...inv,
-          items: items.slice(0, keep),
-          more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] },
-        },
-      };
-    });
+    shrink(`investigate.items > ${keep} → investigate.more`, (h) => moveInvestigate(h, keep));
   }
   const diff = head.stateDiff as { findings?: { addedIds?: unknown[]; removedIds?: unknown[] } } | undefined;
   if (diff?.findings && ((diff.findings.addedIds?.length ?? 0) + (diff.findings.removedIds?.length ?? 0)) > 0) {
@@ -342,15 +463,29 @@ export function assembleScan(
   const p = page(200);
   const listKey = (["families", "findings"] as const).find((k) => Array.isArray(p[k]));
   const items = listKey ? (p[listKey] as unknown[]).length : 0;
+  // 3.3.0 (N-02): antes de esvaziar a página, o envelope encolhe (textos fixos, cobertura, estado) e a
+  // 1ª família fica — cortada nos ids. Só se nem assim couber, a página começa na continuação.
+  const squeezedPage = enforceCeiling({ ...head, ...p, ...(compacted.length ? { compacted: [...compacted] } : {}) }, maxChars, scanId);
+  if (items > 0 && !squeezedPage.exceedsMaxChars) return squeezedPage;
   if (options.firstScanPage && scanId && listKey && items > 0) {
     // Último recurso (1ª página do scan_page): a página de achados começa na continuação (cursor 0).
     compacted.push(`${listKey} → get_finding_details(scanId, cursor:0)`);
+    // N-02: nada da página veio, então nada conta como devolvido — um único cursor (0), coerente.
+    const totalItems = Number(p.totalFamilies ?? p.total ?? items);
+    const totalFindings = Number(p.totalFindings ?? p.total ?? items);
     return {
       ...head,
       ...p,
       [listKey]: [],
       count: 0,
       cursor: 0,
+      truncated: true,
+      complete: false,
+      partial: {
+        reasons: ["char-budget"],
+        ...(listKey === "families" ? { familiesNotReturned: totalItems, membersNotReturned: totalFindings } : { notReturned: totalItems }),
+        nextCursor: 0,
+      },
       nextCursor: 0,
       next: { tool: "get_finding_details", arguments: { scanId, cursor: 0 } },
       compacted: [...compacted],

@@ -23,7 +23,21 @@ export const PageActionSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
-export const PageActionsSchema = z.array(PageActionSchema).max(20);
+/** 3.3.0 (N-08): soma das esperas fixas de uma receita; 20 × 5 s passava do prazo do cliente. */
+export const RECIPE_WAIT_BUDGET_MS = 15_000;
+
+export const PageActionsSchema = z
+  .array(PageActionSchema)
+  .max(20)
+  .superRefine((actions, ctx) => {
+    const total = actions.reduce((sum, a) => sum + (a.action === "wait" && !a.selector ? (a.ms ?? 0) : 0), 0);
+    if (total > RECIPE_WAIT_BUDGET_MS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `a soma das esperas fixas (wait.ms) é ${total} ms, acima do orçamento de ${RECIPE_WAIT_BUDGET_MS} ms por receita; use wait com selector (espera pela condição) ou menos esperas`,
+      });
+    }
+  });
 
 export type PageAction = z.infer<typeof PageActionSchema>;
 

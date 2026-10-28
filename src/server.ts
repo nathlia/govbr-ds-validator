@@ -87,8 +87,8 @@ import { verifyFinding } from "./verify/gate.js";
 import { VerificationStore } from "./verify/store.js";
 import { ArrivalSchema, PageActionsSchema } from "./scan/actions.js";
 import type { StateAttestation } from "./scan/pageScan.js";
-import { sameScanPage } from "./scan/state.js";
-import { validateFindings, buildReport, persistReport, summarize } from "./report/report.js";
+import { sameScanPage, scanPageKey } from "./scan/state.js";
+import { validateFindings, buildReport, persistReport, summarize, REPORT_NOTES_MAX_CHARS } from "./report/report.js";
 import { buildValidatePagePrompt } from "./prompts/validatePage.js";
 import { ToolTelemetry, instrumentTool, type ToolTelemetryOptions } from "./telemetry.js";
 import {
@@ -99,6 +99,7 @@ import {
   deduplicateFindings,
   diffFindings,
   type FindingDetail,
+  PAGE_CONTENT_NOTE,
 } from "./responses/findings.js";
 import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
 import { PageScanCache, scanPage } from "./scan/pageScan.js";
@@ -134,7 +135,7 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { assembleScan, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
+import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
 
@@ -183,7 +184,8 @@ function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }], ...(isError ? { isError: true } : {}) };
 }
 
-const StylePropertySchema = z.enum(STYLE_PROPERTIES);
+// 3.3.0 (N-10): "outline" está nas duas listas; o enum publicado não repete valor.
+const StylePropertySchema = z.enum([...new Set(STYLE_PROPERTIES)] as unknown as [StyleProperty, ...StyleProperty[]]);
 
 /** Erro de sessão (scanId/familyId/ids desconhecidos): os ids só valem na sessão MCP que os gerou. */
 function sessionFailure(error: string, errorCode: ContractError["errorCode"], field: string, extra: Record<string, unknown> = {}) {
@@ -729,6 +731,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const observationStore = new Map<string, Observation[]>();
   /** Revisão da 3.0.0: diff completo de findings por scanId (o cabeçalho leva só contagens). */
   const diffStore = new Map<string, { previousScanId: string; diff: ReturnType<typeof diffFindings> }>();
+  /** 3.3.0 (N-04): coletas do inspect_computed_styles por argumentos, para paginar sem recarregar. */
+  const inspectSnapshots = new Map<string, { id: string; takenAt: string; evidence: Record<string, unknown>; elements: unknown[] }>();
+  let inspectSnapshotCounter = 0;
   const recordDiff = (scanId: string, previousScanId: string, previous: Finding[], current: Finding[]) => {
     const diff = diffFindings(previous, current);
     diffStore.set(scanId, { previousScanId, diff });
@@ -1488,28 +1493,47 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(STYLE_PROPERTIES.length)
           .optional()
           .describe("Somente propriedades necessárias; omitir mantém o contrato completo legado"),
-        cursor: z.number().int().min(0).optional().describe("Continuação devolvida em nextCursor (repete a coleta na mesma página e devolve os elementos seguintes)"),
+        cursor: z.number().int().min(0).optional().describe("Continuação devolvida em nextCursor (pagina a mesma coleta, guardada no servidor; a página não é recarregada)"),
       }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(telemetry, "inspect_computed_styles", async ({ url, selector, selectors, properties, cursor }) => {
       // Revisão da 3.0.0 (M3): elementos no orçamento de 8.000, em ordem do DOM, com continuação.
-      const { elements, ...evidence } = await inspectComputedStyles(url, selectorBatch(selector, selectors), properties);
+      // 3.3.0 (N-04): a coleta é feita uma vez e guardada; a continuação pagina a mesma coleta (ids
+      // estáveis), sem recarregar a página. Sem coleta guardada (outra sessão), coleta de novo e avisa.
       const args = { url, ...(selector ? { selector } : {}), ...(selectors ? { selectors } : {}), ...(properties ? { properties } : {}) };
+      const key = JSON.stringify(args);
+      let snapshot = cursor ? inspectSnapshots.get(key) : undefined;
+      const recollected = Boolean(cursor) && !snapshot;
+      if (!snapshot) {
+        const { elements, ...evidence } = await inspectComputedStyles(url, selectorBatch(selector, selectors), properties);
+        inspectSnapshotCounter += 1;
+        // N-03: atributos, classes e textos da página com teto por campo.
+        snapshot = { id: `I-${String(inspectSnapshotCounter).padStart(3, "0")}`, takenAt: new Date().toISOString(), evidence, elements: elements.map((e) => boundStrings(e, 300, 40)) };
+        inspectSnapshots.delete(key);
+        inspectSnapshots.set(key, snapshot);
+        while (inspectSnapshots.size > 20) inspectSnapshots.delete(inspectSnapshots.keys().next().value as string);
+      }
+      const { elements, evidence, id: snapshotId, takenAt } = snapshot;
+      const start = cursor ?? 0;
       return ok(
-        budgetPage(elements, cursor ?? 0, (page, next) => ({
+        budgetPage(elements, start, (page, next) => ({
           contract: CONTRACT,
           kind: "evidence",
           ...evidence,
-          cursor: Math.min(cursor ?? 0, elements.length),
+          snapshotId,
+          takenAt,
+          ...(recollected ? { warning: "A coleta original não está nesta sessão: a página foi coletada de novo e pode ter mudado; recomece sem cursor." } : {}),
+          pageContent: PAGE_CONTENT_NOTE,
+          cursor: Math.min(start, elements.length),
           returned: page.length,
           elements: page,
           ...(next !== null
             ? {
                 nextCursor: next,
-                next: step("request-detail", "próximos elementos (a coleta é repetida na mesma página)", "inspect_computed_styles", { ...args, cursor: next }),
+                next: step("request-detail", "próximos elementos da mesma coleta (a página não é recarregada)", "inspect_computed_styles", { ...args, cursor: next }),
               }
-            : {}),
+            : start > 0 ? { status: "end-of-results" } : {}),
         })),
       );
     })
@@ -1532,6 +1556,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
         : "Orçamento da resposta inteira em caracteres (padrão 8000): cabeçalho, checksRun, investigate e observações entram na conta; as famílias ficam com o resto, com cursor",
     );
 
+  /** 3.3.0 (N-09): diff entre páginas diferentes é dito, não escondido. */
+  const comparePage = (previousLedger: Record<string, unknown> | undefined, url: string) => {
+    const previousUrl = (previousLedger?.state as { recipe?: { url?: string } } | undefined)?.recipe?.url;
+    if (!previousUrl || sameScanPage(previousUrl, url)) return {};
+    return { urlChanged: true, previousUrl, warning: "O scan comparado é de outra página: o diff compara páginas diferentes, não estados da mesma página." };
+  };
+
   /** Estado não alcançado: nada foi varrido; o próximo passo é reproduzir o estado. */
   function unreachedResponse(url: string, result: { status: string; limitation: unknown; state: unknown }) {
     return ok({
@@ -1542,7 +1573,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       scanId: null,
       stateFingerprint: null,
       limitation: result.limitation,
-      state: result.state,
+      state: boundStrings(result.state),
       next: [step("reproduce-state", "corrija actions/arrival (limitation.detail diz o que falhou) e repita o scan", "scan_page")],
       absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE,
     });
@@ -1645,6 +1676,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               previousFingerprint: previousLedger?.stateFingerprint ?? null,
               currentFingerprint: result.stateFingerprint,
               stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
+              ...comparePage(previousLedger, url),
               findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
               elementsInspectedDelta:
                 typeof (previousLedger?.coverage as { elementsInspected?: unknown } | undefined)?.elementsInspected === "number"
@@ -1664,10 +1696,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           status: result.status,
           scanId,
           stateFingerprint: result.stateFingerprint,
-          state: result.state,
+          state: boundStrings(result.state),
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
-          coverage: result.coverage,
+          coverage: boundStrings(result.coverage),
           checksRun: checksRunFor(
             { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
             result.coverage,
@@ -1741,6 +1773,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             previousFingerprint: previousLedger?.stateFingerprint ?? null,
             currentFingerprint: result.stateFingerprint,
             stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
+            ...comparePage(previousLedger, url),
             findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
           }
         : undefined;
@@ -1751,10 +1784,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         status: result.status,
         scanId,
         stateFingerprint: result.stateFingerprint,
-        state: result.state,
+        state: boundStrings(result.state),
         cacheHit: result.cacheHit,
         ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
-        coverage: result.coverage,
+        coverage: boundStrings(result.coverage),
         checksRun: checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
         summary: summarize(result.findings),
         deduplication: result.deduplication,
@@ -2035,14 +2068,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
           }
           return ok({ contract: CONTRACT, kind: "family-members", scanId, ...members });
         }
-        const { found, missing } = ids ? findingStore.get(ids) : { found: batch ?? [], missing: [] };
+        // 3.3.0 (N-10): o mesmo id pedido duas vezes vem uma vez.
+        const { found, missing } = ids ? findingStore.get([...new Set(ids)]) : { found: batch ?? [], missing: [] };
         const familyView = view as "findings" | "families" | undefined;
         // Revisão da 3.0.0 (M3): o ledger (estado, cobertura) entra na conta do orçamento; na
         // continuação ele não se repete (já veio na 1ª página).
         const head = {
           contract: CONTRACT,
           kind: "finding-details",
-          requested: ids?.length ?? found.length,
+          requested: ids ? new Set(ids).size : found.length,
           ...(scanId ? { scanId } : {}),
           ...(ledger && !cursor ? { ledger } : {}),
           missing,
@@ -2186,25 +2220,54 @@ export function createServer(options: ServerOptions = {}): McpServer {
       }),
     },
     instrumentTool(telemetry, "save_report", async ({ url, finding_ids, findings, notes }) => {
-      const stored = findingStore.get(finding_ids ?? []);
-      if (stored.missing.length) {
-        return sessionFailure("Alguns finding_ids não existem nesta sessão MCP; o relatório não foi salvo.", "missing-finding-ids", "finding_ids", {
-          missingFindingIds: stored.missing,
+      // 3.3.0 (S-07): a página do relatório é uma URL http(s) absoluta; ids repetidos contam uma vez;
+      // achados de outra página não entram.
+      if (scanPageKey(url) === null || !/^https?:$/.test(new URL(url).protocol)) {
+        return fail({
+          error: `url '${url.slice(0, 200)}' não é uma URL http(s) absoluta; o relatório não foi salvo.`,
+          errorCode: "invalid-url",
+          field: "url",
+          next: [step("fix-input", "repita com a URL da página validada (a mesma do scan_page)", "save_report")],
         });
       }
-      const { accepted, reviewItems, rejected } = validateFindings(findings ?? [], {
+      const stored = findingStore.get([...new Set(finding_ids ?? [])]);
+      if (stored.missing.length) {
+        return sessionFailure("Alguns finding_ids não existem nesta sessão MCP; o relatório não foi salvo.", "missing-finding-ids", "finding_ids", {
+          missingFindingIds: stored.missing.slice(0, 50),
+        });
+      }
+      const otherPage = stored.found.filter((f) => !sameScanPage(f.element.page, url));
+      if (otherPage.length) {
+        return fail({
+          error: `${otherPage.length} finding_ids são de outra página que ${url.slice(0, 200)}; o relatório não foi salvo.`,
+          errorCode: "report-page-mismatch",
+          field: "finding_ids",
+          otherPageIds: otherPage.slice(0, 50).map((f) => f.id),
+          next: [step("fix-input", "salve um relatório por página: repita sem esses ids (ou com a url da página deles)", "save_report")],
+        });
+      }
+      const notesCapped = notes !== undefined && notes.length > REPORT_NOTES_MAX_CHARS ? `${notes.slice(0, REPORT_NOTES_MAX_CHARS)}… [notas truncadas em ${REPORT_NOTES_MAX_CHARS} caracteres]` : notes;
+      const { accepted, reviewItems, rejected, normalized, duplicates } = validateFindings(findings ?? [], {
         serverFindings: stored.found,
         verificationFor: (finding) => verificationStore.lookup(finding)?.verification,
+        reportUrl: url,
       });
-      const report = buildReport(url, accepted, notes, reviewItems);
+      const report = buildReport(url, accepted, notesCapped, reviewItems);
       const persisted = persistReport(report, reportsDir);
+      // N-03: a resposta é um resumo + caminhos, nunca o conteúdo; listas longas vêm cortadas com contagem.
+      const brief = <T,>(items: T[], n: number) => items.slice(0, n);
       return ok({
         contract: CONTRACT,
         kind: "report",
         summary: report.summary,
         accepted: accepted.length,
         reviewItems: reviewItems.length,
-        rejected,
+        rejected: brief(rejected, 20).map((r) => ({ index: r.index, errors: r.errors.slice(0, 3).map((e) => (e.length > 300 ? `${e.slice(0, 299)}…` : e)) })),
+        ...(rejected.length > 20 ? { rejectedNotShown: rejected.length - 20 } : {}),
+        rejectedTotal: rejected.length,
+        ...(normalized.length ? { normalized: brief(normalized, 20), ...(normalized.length > 20 ? { normalizedNotShown: normalized.length - 20 } : {}) } : {}),
+        ...(duplicates ? { duplicatesIgnored: duplicates } : {}),
+        ...(notesCapped !== notes ? { notesTruncated: true } : {}),
         jsonPath: persisted.jsonPath,
         markdownPath: persisted.markdownPath,
       });

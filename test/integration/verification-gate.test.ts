@@ -188,14 +188,15 @@ describe("verify_finding — what can be confirmed", () => {
 });
 
 describe("verify_finding — what is rejected", () => {
-  it("rejects when one of the asserted elements does not violate: the claim covers all of them", async () => {
+  it("a broad locator (one element violates, its sibling does not) is ambiguous: unverifiable + fix-locator, never confirmed (3.3.0, S-04)", async () => {
     const res = await verify(claim({ element: { locator: ".par" } }), {});
-    expect(res.verification.verdict).toBe("rejected");
-    // The conforming sibling does not carry the claimed value, so the claim fails on it before any
-    // predicate runs; a claim about a set of elements is judged on each one.
-    expect(res.verification.checks.evidenceConsistent).toBe("fail");
+    expect(res.verification.verdict).toBe("unverifiable");
+    expect(res.verification.issue).toBe("locator-ambiguous");
+    expect(res.reasons[0].code).toBe("locator-ambiguous");
+    expect(res.actions[0].action).toBe("fix-locator");
+    expect(res.observation.status).toBe("not-evaluated");
     expect(res.verification.binding.elements).toBe(2);
-    expect(res.verification.detail).toContain("1 de 2");
+    expect(res.verification.detail).toContain("falta em 1");
   });
 
   it("rejects a mismatched property: the colour is real, on another property", async () => {
@@ -217,7 +218,7 @@ describe("verify_finding — what is rejected", () => {
     }
   });
 
-  it("rejects an unsupported expected condition instead of confirming an actual defect", async () => {
+  it("an unsupported expected condition never confirms: unverifiable + fix-evidence-data (3.3.0, S-04)", async () => {
     for (const entry of supportedStructuredClaims()) {
       const correctEvidence = entry.correct.evidence as Claim;
       const correctData = correctEvidence.data as Claim;
@@ -225,8 +226,9 @@ describe("verify_finding — what is rejected", () => {
         ...entry.correct,
         evidence: { ...correctEvidence, data: { ...correctData, expectedCondition: "outra-condicao" } },
       });
-      expect(res.verification.verdict, entry.name).toBe("rejected");
-      expect(res.verification.checks.evidenceConsistent, entry.name).toBe("fail");
+      expect(res.verification.verdict, entry.name).toBe("unverifiable");
+      expect(res.verification.issue, entry.name).toBe("evidence-inconsistent");
+      expect(res.actions[0].action, entry.name).toBe("fix-evidence-data");
     }
   });
 
@@ -243,17 +245,18 @@ describe("verify_finding — what is rejected", () => {
     expect(res.verification.checks.evidenceConsistent).toBe("fail");
   });
 
-  it("rejects absent evidence: the locator resolves to nothing", async () => {
+  it("a locator that resolves to nothing is a state limitation, not counter-evidence: unverifiable (3.3.0, S-04)", async () => {
     const res = await verify(claim({ element: { locator: "#nao-existe" } }));
-    expect(res.verification.verdict).toBe("rejected");
-    expect(res.verification.checks.evidenceConsistent).toBe("fail");
+    expect(res.verification.verdict).toBe("unverifiable");
+    expect(res.verification.issue).toBe("locator-no-elements");
+    expect(res.actions[0].action).toBe("reproduce-state");
     expect(res.verification.binding.elements).toBe(0);
   });
 
-  it("rejects absent evidence in the wrong state, confirms the claimed one, and leaves an unreproduced claimed state unverifiable", async () => {
+  it("absent evidence in the wrong state is unverifiable (not rejected), the claimed state confirms, an unreproduced claimed state stays unverifiable", async () => {
     const stateful = claim({ element: { locator: "#aviso" } });
     const withoutState = await verify(stateful);
-    expect(withoutState.verification.verdict).toBe("rejected");
+    expect(withoutState.verification.verdict).toBe("unverifiable");
     expect(withoutState.verification.detail).toContain("actions");
 
     const actions = [{ action: "click", selector: "#abrir" }, { action: "wait", selector: "#aviso" }];

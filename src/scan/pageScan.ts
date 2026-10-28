@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Page } from "playwright";
-import { withPage } from "../evidence/browser.js";
+import { httpStatusOf, nativeDialogsOf, withPage } from "../evidence/browser.js";
 import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
@@ -152,6 +152,21 @@ function hash(value: unknown): string {
 export { applyActions, fingerprintPage };
 
 /**
+ * 3.3.0 (S-10, S-11, S-19): o que a página fez fora do DOM medido — status HTTP de erro, diálogos
+ * nativos descartados, iframes não varridos. Só aparece quando existe (a resposta comum não cresce).
+ */
+function pageCircumstances(page: Page): Partial<ObservedState> {
+  const out: Partial<ObservedState> = {};
+  const status = httpStatusOf(page);
+  if (status !== null && (status < 200 || status >= 400)) out.httpStatus = status;
+  const dialogs = nativeDialogsOf(page);
+  if (dialogs.length) out.nativeDialogs = dialogs.map((d) => ({ type: d.type, message: d.message.slice(0, 120) }));
+  const frames = page.frames().filter((f) => f !== page.mainFrame());
+  if (frames.length) out.framesNotScanned = { count: frames.length, urls: frames.slice(0, 5).map((f) => f.url().slice(0, 200)) };
+  return out;
+}
+
+/**
  * Reproduz a receita numa página recém-carregada e mede o que ela provou. Usado igualmente pelo
  * scanner e pelo portão: o mesmo código decide "estado alcançado" para qualquer chamador.
  */
@@ -177,7 +192,7 @@ export async function reproduceState(
       recipe,
       replay,
       settle,
-      observed: snapshot.observed,
+      observed: { ...snapshot.observed, ...pageCircumstances(page) },
       arrival,
       reached: replay.status === "applied" && arrival.status !== "not-reached",
     },

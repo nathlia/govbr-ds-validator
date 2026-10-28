@@ -70,6 +70,12 @@ export interface ObservedState {
    * fingerprint. `null` = não foi possível saber se há raízes fechadas (sem CDP).
    */
   unobservableRoots: string[] | null;
+  /** 3.3.0 (S-11): status HTTP da navegação principal, só quando não é 2xx/3xx (página de erro). */
+  httpStatus?: number;
+  /** 3.3.0 (S-19): alert/confirm/prompt nativos que o oráculo descartou (fora do fingerprint). */
+  nativeDialogs?: Array<{ type: string; message: string }>;
+  /** 3.3.0 (S-10): iframes cujo conteúdo nenhum check mediu (fora do fingerprint). */
+  framesNotScanned?: { count: number; urls: string[] };
 }
 
 export interface ArrivalCondition {

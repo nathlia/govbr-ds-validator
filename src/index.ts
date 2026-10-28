@@ -35,6 +35,15 @@ async function shutdown(): Promise<void> {
   process.exit(0);
 }
 
+// 3.3.0 (S-22): uma rejeição solta do Playwright (ex.: diálogo numa sessão já fechada) não derruba o
+// servidor; vai para o stderr (o stdout é só JSON-RPC) e as chamadas seguintes continuam atendidas.
+process.on("unhandledRejection", (reason) => {
+  console.error(`[govbr-ds-validator] rejeição não tratada (ignorada): ${reason instanceof Error ? reason.message.split("\n")[0] : String(reason)}`);
+});
+process.on("uncaughtException", (error) => {
+  console.error(`[govbr-ds-validator] exceção não tratada (ignorada): ${error.message.split("\n")[0]}`);
+});
+
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 process.stdin.on("close", shutdown);

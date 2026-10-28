@@ -36,16 +36,16 @@ describe("bounded finding responses", () => {
     expect(second.truncated).toBe(false);
   });
 
-  it("returns evidence without bulky machine data and full on explicit request", () => {
+  it("returns evidence with the structured data verify needs (3.3.0, N-01), without the snippet, and full on explicit request", () => {
     const evidence = buildFindingPage(findings, { detail: "evidence" });
     expect(evidence.findings[0]).toHaveProperty("evidence.expected");
-    expect(evidence.findings[0]).not.toHaveProperty("evidence.data");
+    expect(evidence.findings[0]).toHaveProperty("evidence.data.observedHex", "#ff5733");
     expect(evidence.findings[0]).not.toHaveProperty("element.snippet");
 
     const full = buildFindingPage(findings, { detail: "full" });
     expect(full.findings[0]).toHaveProperty("evidence.data.observedHex", "#ff5733");
     expect(full.findings[0]).toHaveProperty("element.snippet");
-    expect(JSON.stringify(evidence).length).toBeLessThan(JSON.stringify(full).length);
+    // 3.3.0 (N-01): evidence leva evidence.data (o que o verify lê), então já não é sempre menor que full.
     expect(JSON.stringify(buildFindingPage(findings)).length).toBeLessThan(JSON.stringify(evidence).length);
   });
 

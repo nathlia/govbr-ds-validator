@@ -78,6 +78,8 @@ describe("scan_page budget: the head counts (3.1.0)", () => {
     const b = assembleScan(big, null, "S-1", SCAN_DEFAULT_MAX_CHARS, () => ({ cursor: 3, families: [{ a: 1 }], nextCursor: 4 }));
     expect((b.families as unknown[]).length).toBe(1);
     expect(b.nextCursor).toBe(4);
-    expect(b.exceedsMaxChars).toBeDefined();
+    // 3.3.0 (N-03): o estado gigante encolhe para o essencial (o inteiro fica no ledger) e a resposta cabe.
+    expect(JSON.stringify(b).length).toBeLessThanOrEqual(SCAN_DEFAULT_MAX_CHARS);
+    expect(b.squeezed).toContain("state → essencial (inteiro no ledger)");
   });
 });

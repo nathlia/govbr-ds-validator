@@ -425,9 +425,10 @@ describe("P2 — anatomia obrigatória ausente", () => {
     expect(inexistente.verdict).toBe("unverifiable");
   });
 
-  it("alegação contradita: component/part que não são da regra citada rejeitam", async () => {
+  it("alegação incoerente: component/part que não são da regra citada não decidem (3.3.0, S-04: unverifiable, corrigir evidence.data)", async () => {
     const v = await verdict(claim("/p2-message", "#m2", MENSAGEM, anatomy("modal", "botoes")));
-    expect(v.verdict).toBe("rejected");
+    expect(v.verdict).toBe("unverifiable");
+    expect((v as { issue?: string }).issue).toBe("evidence-inconsistent");
   });
 
   it("scan_page emite o candidato com âncora de ausência só na raiz defeituosa, e o portão o reconfirma", async () => {

@@ -215,8 +215,8 @@ describe("revisão: leitura do verify_finding", () => {
       });
       expect(legacy.data.reasons[0].code).toBe("citation-legacy-superseded");
       expect(legacy.data.about).toBe("citation");
-      // A sucessora não tem predicado: o fato não é desmentido (segue a sucessora, §11).
-      expect(legacy.data.observation.status).toBe("not-contradicted");
+      // A sucessora não tem predicado: nada foi medido — "não avaliado" (3.3.0, S-05; segue a sucessora, §11).
+      expect(legacy.data.observation.status).toBe("not-evaluated");
       expect(legacy.data.actions[0]).toMatchObject({ action: "correct-citation", tool: "get_ds_rules" });
     } finally {
       await client.close();

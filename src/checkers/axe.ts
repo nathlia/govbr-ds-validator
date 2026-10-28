@@ -207,3 +207,68 @@ export async function runAxeScanOnPage(
     incompleteCount: axeResults.incomplete.length,
   };
 }
+
+/** 3.3.0 (S-05): resultado de uma única regra do axe sobre os elementos de um localizador. */
+export interface AxeRuleRecheck {
+  version: string;
+  known: boolean;
+  matched: number;
+  violating: number;
+  passing: number;
+  incomplete: number;
+  inapplicable: number;
+  /** Fora do alcance da regra e oculto: o estado pode ser outro — não decide. */
+  hidden: number;
+}
+
+/**
+ * Roda só `ruleId` no documento inteiro (regras como aria-hidden-focus e region precisam do contexto)
+ * e classifica cada elemento de `locator`: reprovado, aprovado, incompleto ou fora do alcance da regra.
+ * Um seletor inválido sobe como erro do navegador (o portão o traduz para invalid-locator).
+ */
+export async function runAxeRuleOnLocator(page: Page, locator: string, ruleId: string): Promise<AxeRuleRecheck> {
+  const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
+  await page.evaluate(axeSource);
+  return (await page.evaluate(
+    async ({ locator, ruleId, step }: { locator: string; ruleId: string; step: string }) => {
+      // @ts-expect-error axe is injected into the page context above
+      const engine = axe;
+      const version = String(engine.version);
+      const known = (engine.getRules() as Array<{ ruleId: string }>).some((r) => r.ruleId === ruleId);
+      // Localizador do axe com saltos de shadow root (`a >>> b`): cada salto desce no shadowRoot aberto.
+      const hops = locator.split(` ${step} `);
+      let roots: Array<Document | ShadowRoot> = [document];
+      let targets: Element[] = [];
+      hops.forEach((hop, index) => {
+        targets = roots.flatMap((root) => Array.from(root.querySelectorAll(hop)));
+        if (index < hops.length - 1) roots = targets.map((el) => el.shadowRoot).filter((r): r is ShadowRoot => Boolean(r));
+      });
+      const empty = { version, known, matched: targets.length, violating: 0, passing: 0, incomplete: 0, inapplicable: 0, hidden: 0 };
+      if (!known || targets.length === 0) return empty;
+      const result = await engine.run(document, {
+        runOnly: { type: "rule", values: [ruleId] },
+        resultTypes: ["violations", "passes", "incomplete"],
+        elementRef: true,
+      });
+      const bucket = (list: Array<{ nodes: Array<{ element?: Element }> }>) =>
+        new Set(list.flatMap((r) => r.nodes.map((n) => n.element).filter((e): e is Element => Boolean(e))));
+      const violations = bucket(result.violations);
+      const passes = bucket(result.passes);
+      const incomplete = bucket(result.incomplete);
+      for (const el of targets) {
+        if (violations.has(el)) empty.violating += 1;
+        else if (incomplete.has(el)) empty.incomplete += 1;
+        else if (passes.has(el)) empty.passing += 1;
+        else {
+          // Fora do alcance da regra: num elemento visível é contraprova; oculto, pode ser estado (S-04).
+          const style = getComputedStyle(el);
+          const visible = el.getClientRects().length > 0 && style.visibility !== "hidden" && style.display !== "none";
+          if (visible) empty.inapplicable += 1;
+          else empty.hidden += 1;
+        }
+      }
+      return empty;
+    },
+    { locator, ruleId, step: SHADOW_STEP },
+  )) as AxeRuleRecheck;
+}

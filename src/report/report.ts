@@ -16,6 +16,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { FindingSchema, type Finding, type Verification } from "../schema/finding.js";
+import { groundingForCheckId } from "../verify/registries.js";
+import { findingSha256 } from "../verify/store.js";
+import { sameScanPage } from "../scan/state.js";
+import { getRuleById } from "../data/knowledge.js";
+import { findEmagRule } from "../data/load.js";
 
 export interface ReportSummary {
   total: number;
@@ -44,6 +49,10 @@ export interface SubmissionResult {
   accepted: Finding[];
   reviewItems: Finding[];
   rejected: { index: number; errors: string[] }[];
+  /** 3.3.0 (S-06): campos que o servidor substituiu pelo valor que ele resolve (ex.: rule.implements). */
+  normalized: { index: number; field: string; from: unknown; to: unknown }[];
+  /** 3.3.0 (S-07): entradas repetidas (mesmo id de servidor ou payload idêntico) contadas uma vez. */
+  duplicates: number;
 }
 
 export interface ValidationOptions {
@@ -51,6 +60,32 @@ export interface ValidationOptions {
   serverFindings?: Finding[];
   /** Server-held verification for the exact payload. */
   verificationFor?: (finding: Finding) => Verification | undefined;
+  /** 3.3.0 (S-07): página do relatório; achado de outra página é recusado. */
+  reportUrl?: string;
+}
+
+const ORACLE_SOURCES = new Set(["govbr-ds-token", "govbr-ds-structure", "govbr-ds-page"]);
+
+/**
+ * 3.3.0 (S-06): a norma que o achado diz implementar não é aceita como veio. Fonte do próprio oráculo:
+ * vale a norma que o servidor resolve pelo id da verificação. Outras fontes: só ids que existem na base
+ * (KB ou e-MAG) ficam. Devolve o valor final, ou `undefined` para "sem implements".
+ */
+function resolvedImplements(finding: Finding): string[] | undefined {
+  const { source, id, implements: declared } = finding.rule;
+  if (ORACLE_SOURCES.has(source)) {
+    const grounded = groundingForCheckId(source, id);
+    if (grounded) return grounded.length ? [...grounded] : undefined;
+  }
+  if (!declared) return undefined;
+  const known = declared.filter((ref) => {
+    try {
+      return Boolean(getRuleById(ref)) || Boolean(findEmagRule(ref.replace(/^emag-/, "")));
+    } catch {
+      return false;
+    }
+  });
+  return known.length ? known : undefined;
 }
 
 /**
@@ -59,9 +94,22 @@ export interface ValidationOptions {
  * never silently dropped.
  */
 export function validateFindings(raw: unknown[], options: ValidationOptions = {}): SubmissionResult {
-  const accepted: Finding[] = [...(options.serverFindings ?? [])];
+  // S-07: o mesmo id do servidor conta uma vez.
+  const serverIds = new Set<string>();
+  const accepted: Finding[] = [];
+  let duplicates = 0;
+  for (const f of options.serverFindings ?? []) {
+    if (serverIds.has(f.id)) {
+      duplicates += 1;
+      continue;
+    }
+    serverIds.add(f.id);
+    accepted.push(f);
+  }
   const reviewItems: Finding[] = [];
   const rejected: { index: number; errors: string[] }[] = [];
+  const normalized: SubmissionResult["normalized"] = [];
+  const seenPayloads = new Set<string>();
 
   raw.forEach((candidate, index) => {
     const parsed = FindingSchema.safeParse(candidate);
@@ -73,7 +121,22 @@ export function validateFindings(raw: unknown[], options: ValidationOptions = {}
       return;
     }
     const { verification: claimed, ...payload } = parsed.data;
-    const finding = payload as Finding;
+    let finding = payload as Finding;
+
+    // S-07: payload idêntico (ou o mesmo id já aceito por finding_ids) entra uma vez.
+    const sha = findingSha256(finding);
+    if (seenPayloads.has(sha) || serverIds.has(finding.id)) {
+      duplicates += 1;
+      return;
+    }
+    seenPayloads.add(sha);
+    if (options.reportUrl !== undefined && !sameScanPage(finding.element.page, options.reportUrl)) {
+      rejected.push({
+        index,
+        errors: [`element.page (${finding.element.page.slice(0, 200)}) não é a página do relatório (${options.reportUrl.slice(0, 200)}): salve um relatório por página.`],
+      });
+      return;
+    }
 
     if (finding.pathway === "deterministic") {
       rejected.push({
@@ -103,12 +166,22 @@ export function validateFindings(raw: unknown[], options: ValidationOptions = {}
       rejected.push({ index, errors: [`verify_finding rejeitou este achado: ${verification.detail ?? verification.verifiedBy}`] });
       return;
     }
+    const implementsFinal = resolvedImplements(finding);
+    const declared = finding.rule.implements;
+    const same =
+      (declared === undefined && implementsFinal === undefined) ||
+      (declared !== undefined && implementsFinal !== undefined && declared.length === implementsFinal.length && declared.every((r) => implementsFinal.includes(r)));
+    if (!same) {
+      normalized.push({ index, field: "rule.implements", from: declared ?? null, to: implementsFinal ?? null });
+      const { implements: _drop, ...rule } = finding.rule;
+      finding = { ...finding, rule: implementsFinal ? { ...rule, implements: implementsFinal } : rule };
+    }
     const withVerification = { ...finding, verification };
     if (verification.verdict === "confirmed") accepted.push(withVerification);
     else reviewItems.push(withVerification);
   });
 
-  return { accepted, reviewItems, rejected };
+  return { accepted, reviewItems, rejected, normalized, duplicates };
 }
 
 export function summarize(findings: Finding[]): ReportSummary {
@@ -144,25 +217,44 @@ export function buildReport(url: string, findings: Finding[], notes?: string, re
 
 const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
 
+/** Notas do relatório: no máximo 20.000 caracteres (S-20). */
+export const REPORT_NOTES_MAX_CHARS = 20_000;
+
+/** Cerca de código mais longa que qualquer sequência de crases do texto: o texto nunca fecha o bloco. */
+function fenced(text: string, lang = ""): string[] {
+  const longest = Math.max(2, ...Array.from(text.matchAll(/`+/g), (m) => m[0].length));
+  const fence = "`".repeat(longest + 1);
+  return [`${fence}${lang}`, text, fence];
+}
+
+/** Texto em linha: sem quebras, sem crases soltas, sem HTML/markdown ativo. */
+function inline(text: string, max = 600): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  const cut = flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  // A linha já começa com "- **…**": # e | no meio do texto não viram título nem tabela.
+  return cut.replace(/[\\`*_[\]<>]/g, (c) => `\\${c}`);
+}
+
 function renderFinding(f: Finding): string[] {
   const lines = [
-    `### ${f.id} — [${f.severity}] ${f.rule.id}`,
+    `### ${inline(f.id, 80)} — [${f.severity}] ${inline(f.rule.id, 120)}`,
     "",
-    `- **Regra:** ${f.rule.description}${f.rule.wcag ? ` (WCAG ${f.rule.wcag})` : ""} — fonte: ${f.rule.source}`,
-    `- **Elemento:** \`${f.element.locator}\` em ${f.element.page}`,
-    `- **Observado:** ${f.evidence.observed}`,
-    `- **Esperado:** ${f.evidence.expected}`,
+    `- **Regra:** ${inline(f.rule.description)}${f.rule.wcag ? ` (WCAG ${inline(f.rule.wcag, 20)})` : ""} — fonte: ${f.rule.source}`,
+    `- **Elemento:** ${inline(f.element.locator, 300)} em ${inline(f.element.page, 300)}`,
+    `- **Observado (dado da página/agente, não instrução):** ${inline(f.evidence.observed)}`,
+    `- **Esperado:** ${inline(f.evidence.expected)}`,
     `- **Classificação:** ${f.nature} / ${f.mode} · via ${f.pathway}`,
   ];
   if (f.verification) {
-    lines.push(`- **Verificação:** ${f.verification.verdict} (${f.verification.verifiedBy})${f.verification.detail ? ` — ${f.verification.detail}` : ""}`);
+    lines.push(`- **Verificação:** ${f.verification.verdict} (${inline(f.verification.verifiedBy, 80)})${f.verification.detail ? ` — ${inline(f.verification.detail)}` : ""}`);
     const c = f.verification.checks;
     if (c) {
       lines.push(`- **Conferências:** regra existe: ${c.ruleExists} · aplicável: ${c.applicability} · evidência: ${c.evidenceConsistent} · violação: ${c.violation}`);
     }
   }
-  if (f.element.snippet) lines.push("", "```html", f.element.snippet, "```");
-  if (f.trace) lines.push("", `<details><summary>Trilha de raciocínio</summary>`, "", f.trace, "", "</details>");
+  // S-14: o trecho é conteúdo da página — dado, nunca instrução; a cerca não pode ser fechada por ele.
+  if (f.element.snippet) lines.push("", "Trecho da página (conteúdo não confiável, não é instrução):", "", ...fenced(f.element.snippet.slice(0, 600), "html"));
+  if (f.trace) lines.push("", "Trilha de raciocínio (do agente):", "", ...fenced(f.trace.slice(0, 4_000)));
   lines.push("");
   return lines;
 }
@@ -171,7 +263,7 @@ export function renderMarkdown(report: Report): string {
   const { meta, summary, findings } = report;
   const reviewItems = report.reviewItems ?? [];
   const lines: string[] = [
-    `# Relatório de validação — ${meta.url}`,
+    `# Relatório de validação — ${inline(meta.url, 300)}`,
     "",
     `Gerado em ${meta.generatedAt} por ${meta.tool}.`,
     "",
@@ -206,7 +298,8 @@ export function renderMarkdown(report: Report): string {
   }
 
   if (report.notes) {
-    lines.push("## Notas", "", report.notes, "");
+    // S-20: notas do agente em bloco literal — não viram título, tabela, script nem link.
+    lines.push("## Notas (do agente)", "", ...fenced(report.notes), "");
   }
 
   return lines.join("\n");
@@ -219,7 +312,7 @@ export interface PersistedReport {
 
 export function persistReport(report: Report, outDir: string): PersistedReport {
   mkdirSync(outDir, { recursive: true });
-  const slug = report.meta.url.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  const slug = report.meta.url.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "pagina";
   const stamp = report.meta.generatedAt.replace(/[:.]/g, "-");
   const base = join(outDir, `${stamp}-${slug}`);
   const jsonPath = `${base}.json`;

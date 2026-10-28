@@ -263,7 +263,9 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
     expect(r.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: recipe.url, actions: recipe.actions, arrival: recipe.arrival, checks: ["tokens", "page"] } });
     expect(r.investigate.doNotRepeat).toBe(MESSAGES["scan-no-repeat"]);
     expect(r.investigate.items.length).toBeLessThanOrEqual(5);
-    expect(r.investigate.items.map((i: { component: string }) => i.component)).toEqual(r.coverage.componentsFound.slice(0, 5));
+    // 3.3.0 (N-05): famílias antes de investigate — os componentes que cedem espaço vão para investigate.more, na ordem.
+    const listedComponents = [...r.investigate.items.map((i: { component: string }) => i.component), ...(r.investigate.more?.components ?? [])];
+    expect(listedComponents.slice(0, 5)).toEqual(r.coverage.componentsFound.slice(0, 5));
     for (const item of r.investigate.items) {
       expect(Object.keys(item)).toEqual(["component", "stateRef", "unmeasured", "next"]);
       expect(item.stateRef).toBe(r.scanId);

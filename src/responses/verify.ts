@@ -84,6 +84,29 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
       reasons.push({ object: "evidence", code: "evidence-inconsistent", detail, status: "not-evaluated" });
     }
   }
+  // 3.3.0 (S-04, N-01, N-06): o que impediu a decisão sem contraevidência medida — sempre "não avaliado".
+  switch (v.issue) {
+    case "evidence-inconsistent":
+      reasons.push({ object: "evidence", code: "evidence-inconsistent", detail, status: "not-evaluated" });
+      break;
+    case "evidence-incomplete":
+      reasons.push({ object: "evidence", code: "evidence-incomplete", detail, status: "not-evaluated" });
+      break;
+    case "locator-no-elements":
+      reasons.push({ object: "state", code: "locator-no-elements", detail, status: "not-evaluated" });
+      break;
+    case "locator-ambiguous":
+      reasons.push({ object: "evidence", code: "locator-ambiguous", detail, status: "not-evaluated" });
+      break;
+    case "invalid-locator":
+      reasons.push({ object: "evidence", code: "invalid-locator", detail, status: "not-evaluated" });
+      break;
+    case "page-http-error":
+      reasons.push({ object: "state", code: "page-http-error", detail, status: "not-evaluated" });
+      break;
+    default:
+      break;
+  }
   const limitation = ((binding as { state?: unknown }).state as { limitation?: { kind: string } } | undefined)?.limitation;
   if (limitation) {
     reasons.push({
@@ -98,10 +121,11 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
       reasons.push({ object: "fact", code: "fact-contradicted", detail, status: "contradicted" });
       break;
     case "no-predicate":
-      reasons.push({ object: "fact", code: "no-predicate", detail, status: "not-contradicted" });
+      // S-05: sem predicado nada foi medido — "não avaliado", não "não desmentido".
+      if (v.issue !== "evidence-incomplete") reasons.push({ object: "fact", code: "no-predicate", detail, status: "not-evaluated" });
       break;
     case "undetermined":
-      reasons.push({ object: "fact", code: "undetermined", detail, status: "not-contradicted" });
+      if (!v.issue) reasons.push({ object: "fact", code: "undetermined", detail, status: "not-contradicted" });
       break;
     case "error":
       reasons.push({ object: "state", code: "page-error", detail, status: "not-evaluated" });
@@ -120,11 +144,15 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
   return { reasons, legacy };
 }
 
+const FACT_NOT_MEASURED =
+  "O oráculo não tem predicado que meça este fato: nada foi medido; o fato não foi avaliado nem desmentido.";
+
 function observationMessage(status: ObservationStatus, about: About): string {
   if (status === "verified") return MESSAGES["fact-verified"];
   if (status === "contradicted") return MESSAGES["fact-contradicted"];
   if (status === "not-contradicted") return MESSAGES["fact-not-contradicted"];
   if (about === "none") return PREDICATE_NOT_RUN;
+  if (about === "fact") return FACT_NOT_MEASURED;
   return factNotEvaluated(
     about === "applicability" ? "aplicabilidade" : about === "state" ? "reprodução do estado" : about === "evidence" ? "evidência" : "citação",
   );
@@ -162,8 +190,27 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
         add(step("keep-uncertain", UNGROUNDED_NEXT));
         break;
       case "evidence-registry-inconsistent":
+        add(step("measure-condition", "O valor alegado é de um token do DS: meça de novo e corrija evidence.data antes de reenviar.", "verify_finding", undefined, { keep: ["element", ...(scanId ? ["scanId"] : [])] }));
+        break;
       case "evidence-inconsistent":
-        add(step("measure-condition", "Corrija os dados estruturados da evidência (evidence.data) com o valor medido e repita.", "verify_finding", undefined, { keep: ["element", ...(scanId ? ["scanId"] : [])] }));
+        add(step("fix-evidence-data", "Corrija os dados estruturados (evidence.data: property, valor observado e expectedCondition exata do predicado) e repita; o fato não foi avaliado.", "verify_finding", undefined, { keep: ["element", ...(scanId ? ["scanId"] : [])] }));
+        break;
+      case "evidence-incomplete":
+        add(
+          step(
+            "request-detail",
+            "Faltam campos de evidence.data: peça o achado com get_finding_details (detail 'evidence' ou 'full' traz evidence.data) e reenvie o payload completo.",
+            "get_finding_details",
+            { ids: [finding.id], detail: "full" },
+          ),
+        );
+        break;
+      case "locator-ambiguous":
+      case "invalid-locator":
+        add(step("fix-locator", r.code === "invalid-locator" ? "Use um seletor CSS válido (sem XPath nem text=) e repita." : "Restrinja element.locator ao elemento do defeito (o localizador resolveu elementos com valores diferentes) e repita.", "verify_finding", undefined, { keep: ["evidence", ...(scanId ? ["scanId"] : [])] }));
+        break;
+      case "page-http-error":
+        add(step("reproduce-state", "A página reaberta é uma página de erro HTTP: cite a URL da página validada (element.page) e repita."));
         break;
       case "evidence-contradicted":
         add(step("measure-condition", "O valor medido no elemento difere do alegado: meça de novo no estado certo antes de reenviar."));
@@ -192,7 +239,6 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
         break;
     }
   }
-  void finding;
   return out.slice(0, 3);
 }
 

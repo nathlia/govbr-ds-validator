@@ -79,6 +79,11 @@ export const ACTION_LABELS = {
   "reproduce-state": "reproduzir estado",
   "measure-condition": "medir condição",
   "keep-uncertain": "manter observação incerta",
+  // 3.3.0 (N-06, N-07, S-01): passos que corrigem a entrada em vez de remedir.
+  "fix-evidence-data": "corrigir dados da evidência",
+  "fix-locator": "corrigir localizador",
+  "fix-input": "corrigir entrada",
+  retry: "repetir",
 } as const;
 export type ActionCode = keyof typeof ACTION_LABELS;
 
@@ -128,7 +133,18 @@ export type ErrorCode =
   | "too-many-ids"
   | "missing-finding-ids"
   | "invalid-argument"
-  | "unknown-parameter";
+  | "unknown-parameter"
+  // 3.3.0 (S-01, S-08, N-07, N-08, S-07): navegador, prazo e relatório no formato do contrato.
+  | "invalid-url"
+  | "unsupported-scheme"
+  | "origin-not-allowed"
+  | "navigation-timeout"
+  | "network-error"
+  | "tool-timeout"
+  | "aborted"
+  | "page-error"
+  | "internal-error"
+  | "report-page-mismatch";
 
 export interface ContractError {
   error: string;

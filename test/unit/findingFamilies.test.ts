@@ -235,7 +235,10 @@ describe("finding families", () => {
     const budget = buildFamilyPage(findings, { maxChars: 1_000, memberLimit: 40 });
     expect(budget.count).toBe(1);
     expect(budget.partial?.reasons).toEqual(["char-budget"]);
-    expect(budget.partial?.membersNotReturned).toBe(11);
+    // 3.3.0 (N-02): a 1ª família não estoura o orçamento — os ids dela são cortados, e a contagem diz isso.
+    const returned = (budget.families[0] as { membersReturned: number; membersNotReturned: number }).membersReturned;
+    expect(returned).toBeLessThanOrEqual(40);
+    expect(budget.partial?.membersNotReturned).toBe(findings.length - returned);
 
     let clock = 0;
     const timed = buildFamilyPage(findings, { memberLimit: 40, deadline: 0, now: () => clock++ });

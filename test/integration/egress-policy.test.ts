@@ -34,7 +34,8 @@ describe("egress policy (unit)", () => {
       "file:///C:/ground-truth.json",
       "data:text/html,<p>x</p>",
     ]) {
-      expect(() => assertUrlAllowed(url, policy), url).toThrow(/fora da política/);
+      // 3.3.0 (S-08): file:/data: caem antes, no esquema; as outras, na política de origens.
+      expect(() => assertUrlAllowed(url, policy), url).toThrow(/fora da política|não suportado/);
     }
     expect(() => assertUrlAllowed("not a url", policy)).toThrow(/URL inválida/);
   });

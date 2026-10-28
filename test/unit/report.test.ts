@@ -136,7 +136,7 @@ describe("report rendering and persistence", () => {
     const report = buildReport("http://localhost:3000", [valid], "nota de teste");
     const md = renderMarkdown(report);
     expect(md).toContain("# Relatório de validação");
-    expect(md).toContain("**Observado:** background #ff0000");
+    expect(md).toContain("**Observado (dado da página/agente, não instrução):** background #ff0000");
     expect(md).toContain("**Esperado:** token do DS");
     expect(md).toContain("triagem para revisão humana");
     expect(md).toContain("nota de teste");

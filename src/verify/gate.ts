@@ -21,7 +21,8 @@ import type { CheckStatus, Finding, Verdict, Verification, ViolationStatus } fro
 import { findEmagRule, getPageRules, getTokenRegistry } from "../data/load.js";
 import { getRuleById } from "../data/knowledge.js";
 import { normalizeColor } from "../checkers/color.js";
-import { withPage } from "../evidence/browser.js";
+import { BrowserToolError, POLICY_OR_DEADLINE, sanitizeErrorMessage, withPage } from "../evidence/browser.js";
+import { runAxeRuleOnLocator as axeRuleOnLocator } from "../checkers/axe.js";
 import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { reproduceState, unreachedLimitation, type PageScanAction, type StateAttestation } from "../scan/pageScan.js";
@@ -109,7 +110,19 @@ export class ScanStateMisuseError extends Error {
  * 2.15.0: resultado do portão. `next` é o próximo passo quando a conferência não decide aqui
  * (verificação do oráculo sem norma nomeada); não faz parte do esquema Finding.
  */
-export type GateVerification = Verification & { next?: string };
+export type GateVerification = Verification & { next?: string; issue?: GateIssue };
+
+/**
+ * 3.3.0 (S-04, N-06): o que impediu a decisão, quando não é contraevidência medida. Todos dão
+ * `unverifiable` (nunca `rejected`): o fato não foi avaliado, a entrada é que precisa ser corrigida.
+ */
+export type GateIssue =
+  | "evidence-inconsistent" // dados estruturados do payload malformados/incoerentes entre si
+  | "evidence-incomplete" // o id tem predicado, mas faltam campos de evidence.data (projeção sem dados)
+  | "locator-no-elements" // o localizador não achou nada no estado reproduzido
+  | "locator-ambiguous" // o localizador resolveu elementos com valores diferentes do alegado
+  | "invalid-locator" // o navegador recusou o seletor (XPath, text=, sintaxe)
+  | "page-http-error"; // a página reaberta respondeu com status HTTP de erro
 
 /** Próximo passo fixo para verificação do oráculo sem norma nomeada (D-27, 2.15.0). */
 export const UNGROUNDED_NEXT =
@@ -175,7 +188,7 @@ export async function verifyFinding({
   }
 
   const selection = knowledgeFree ? selectPredicateKnowledgeFree(finding) : selectPredicate(finding);
-  const result = (): GateVerification => ({
+  const baseResult = (): GateVerification => ({
     verdict: ungrounded && verdictOf(checks) === "confirmed" ? "unverifiable" : verdictOf(checks),
     verifiedBy,
     detail: notes.join(" "),
@@ -186,15 +199,26 @@ export async function verifyFinding({
     ...(ungrounded ? { next: UNGROUNDED_NEXT } : {}),
   });
 
+  let issue: GateIssue | undefined;
+  const result = (): GateVerification => ({
+    ...baseResult(),
+    ...(issue ? { issue } : {}),
+  });
+
   if (verdictOf(checks) === "rejected") return result();
   if (!selection.predicate && selection.claimStatus === "contradicted") {
-    checks.evidenceConsistent = "fail";
+    // 3.3.0 (S-04): dados do payload incoerentes entre si (ex.: expectedCondition com erro de
+    // digitação) não são contraevidência medida — o fato não foi avaliado; corrija evidence.data.
+    checks.violation = "undetermined";
+    issue = "evidence-inconsistent";
     notes.push(selection.reason);
     return result();
   }
   if (!selection.predicate) {
     checks.violation = "no-predicate";
     notes.push(selection.reason);
+    // N-01: há predicado para este id, mas o payload veio sem os dados estruturados que ele lê.
+    if (selection.claimStatus === "missing") issue = "evidence-incomplete";
   }
   if (!live) {
     if (selection.predicate) {
@@ -281,6 +305,60 @@ export async function verifyFinding({
         return;
       }
 
+      // 3.3.0 (S-11): a página reaberta é uma página de erro HTTP — nada é medido nela.
+      const httpStatus = attestation.observed.httpStatus;
+      if (httpStatus !== undefined) {
+        issue = "page-http-error";
+        checks.violation = "undetermined";
+        notes.push(`A página reaberta respondeu HTTP ${httpStatus}: nada foi medido numa página de erro. A alegação fica sem verificação; isto não indica ausência de defeito.`);
+        return;
+      }
+
+      // 3.3.0 (S-05): achado do axe-core (ou que nomeia evidence.data.axeRule) — o axe roda de novo só
+      // com aquela regra, no estado reproduzido, e decide sobre os elementos do localizador.
+      const axeRule = axeRuleOf(finding);
+      if (axeRule) {
+        const outcome = await axeRuleOnLocator(page, finding.element.locator, axeRule);
+        verifiedBy = `axe-recheck:${axeRule}`;
+        binding.elements = outcome.matched;
+        if (!outcome.known) {
+          if (finding.rule.source === "axe-core") checks.ruleExists = "fail";
+          checks.violation = "undetermined";
+          notes.push(`'${axeRule}' não é regra do axe-core ${outcome.version}.`);
+          return;
+        }
+        if (finding.rule.source === "axe-core") {
+          checks.ruleExists = "pass";
+          checks.applicability = "pass";
+        }
+        if (outcome.matched === 0) {
+          issue = "locator-no-elements";
+          checks.violation = "undetermined";
+          notes.push(`Nenhum elemento para '${finding.element.locator}' no estado verificado; o axe não decidiu sobre o alvo. Se o defeito só existe depois de uma interação, envie actions ou cite o scanId.`);
+          return;
+        }
+        const { violating, passing, incomplete, inapplicable, hidden, matched } = outcome;
+        if (violating === matched) {
+          checks.evidenceConsistent = "pass";
+          checks.violation = "verified";
+          notes.push(`axe-core ${outcome.version} (só a regra ${axeRule}) reprovou ${violating} de ${matched} elemento(s) do localizador no estado verificado.`);
+        } else if (violating === 0 && incomplete === 0 && hidden === 0) {
+          checks.violation = "contradicted";
+          notes.push(
+            `axe-core ${outcome.version} (só a regra ${axeRule}) não reprovou nenhum dos ${matched} elemento(s): ${passing} passaram e ${inapplicable} estão fora do alcance da regra.`
+          );
+        } else {
+          if (violating > 0) issue = "locator-ambiguous";
+          checks.violation = "undetermined";
+          notes.push(
+            `axe-core ${outcome.version} (só a regra ${axeRule}): ${violating} reprovado(s), ${passing} aprovado(s), ${incomplete} incompleto(s), ${inapplicable} fora do alcance e ${hidden} oculto(s), de ${matched} elemento(s). ${
+              hidden > 0 && violating === 0 ? "Elemento oculto neste estado: se o defeito aparece depois de uma interação, envie actions ou cite o scanId." : "Restrinja o localizador ao elemento do defeito."
+            }`
+          );
+        }
+        return;
+      }
+
       const properties = [...new Set<StyleProperty>([...(selection.predicate?.properties ?? []), ...(observedHex ? COLOR_PROPERTIES : [])])];
       const evidence = await inspectPageComputedStyles(page, finding.element.page, finding.element.locator, properties);
       binding.elements = evidence.count;
@@ -294,7 +372,9 @@ export async function verifyFinding({
         return;
       }
       if (evidence.count === 0 && !context) {
-        checks.evidenceConsistent = "fail";
+        // 3.3.0 (S-04): alvo ausente é limitação do estado (interação, atraso), não contraprova.
+        issue = "locator-no-elements";
+        checks.violation = "undetermined";
         notes.push(
           `Nenhum elemento para '${finding.element.locator}' no estado verificado (${recipe.actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
         );
@@ -309,10 +389,20 @@ export async function verifyFinding({
               .map((value) => normalizeColor(value))
               .includes(observedHex)
         );
-        if (without.length > 0) {
+        if (without.length === evidence.count) {
           checks.evidenceConsistent = "fail";
           notes.push(
-            `O valor alegado ${observedHex} não está nas cores computadas de ${without.length} de ${evidence.count} elemento(s) (${without.slice(0, 3).map((e) => e.locator).join(", ")}).`
+            `O valor alegado ${observedHex} não está nas cores computadas de nenhum dos ${evidence.count} elemento(s) (${without.slice(0, 3).map((e) => e.locator).join(", ")}).`
+          );
+          return;
+        }
+        if (without.length > 0) {
+          // 3.3.0 (S-04): localizador largo — parte dos elementos tem o valor, parte não. Não é
+          // contraprova do fato; o localizador é que não nomeia só o elemento do defeito.
+          issue = "locator-ambiguous";
+          checks.violation = "undetermined";
+          notes.push(
+            `O localizador '${finding.element.locator}' resolveu ${evidence.count} elemento(s); o valor alegado ${observedHex} está em ${evidence.count - without.length} e falta em ${without.length} (${without.slice(0, 3).map((e) => e.locator).join(", ")}). Restrinja o localizador ao elemento do defeito.`
           );
           return;
         }
@@ -351,8 +441,19 @@ export async function verifyFinding({
       }
     }, { viewport: recipe.viewport });
   } catch (error) {
-    if (checks.evidenceConsistent !== "fail") checks.violation = "error";
-    notes.push(`Falha ao reabrir a página: ${error instanceof Error ? error.message : String(error)}`);
+    // 3.3.0 (S-01, S-08): política de URL, prazo e cancelamento não são sobre a página — sobem como erro.
+    if (error instanceof BrowserToolError && POLICY_OR_DEADLINE.has(error.errorCode)) throw error;
+    const raw = error instanceof Error ? error.message : String(error);
+    const message = sanitizeErrorMessage(raw);
+    if (/selector|Unexpected token|Unknown engine|is not a valid/i.test(raw)) {
+      // N-06: o problema é o localizador, não a página.
+      issue = "invalid-locator";
+      checks.violation = "undetermined";
+      notes.push(`Localizador recusado pelo navegador: ${message}. Use um seletor CSS válido (sem XPath nem text=).`);
+    } else {
+      if (checks.evidenceConsistent !== "fail") checks.violation = "error";
+      notes.push(`Falha ao reabrir a página: ${message}`);
+    }
   }
   return result();
 }
@@ -612,4 +713,11 @@ function summarizeContext(evidence: ContextEvidence): unknown {
     ...(evidence.accessibility ? { accessibility: evidence.accessibility } : {}),
     ...(evidence.anatomy ? { anatomy: evidence.anatomy } : {}),
   };
+}
+
+/** 3.3.0 (S-05): regra do axe que o portão pode rodar de novo — a do achado axe-core, ou evidence.data.axeRule. */
+function axeRuleOf(finding: Finding): string | null {
+  if (finding.rule.source === "axe-core") return finding.rule.id;
+  const named = (finding.evidence.data as Record<string, unknown> | undefined)?.axeRule;
+  return typeof named === "string" && /^[a-z0-9-]{2,60}$/.test(named) ? named : null;
 }
