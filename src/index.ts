@@ -4,10 +4,20 @@
  *   claude mcp add govbr-ds-validator -- node <path>/dist/index.js
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.js";
+import { createServer, UnknownToolProfileError } from "./server.js";
 import { closeBrowser } from "./evidence/browser.js";
 
-const server = createServer();
+let server: ReturnType<typeof createServer>;
+try {
+  server = createServer();
+} catch (err) {
+  // 2.17.1 (NAT-106): perfil desconhecido falha na subida — uma linha no stderr (stdout é só JSON-RPC).
+  if (err instanceof UnknownToolProfileError) {
+    console.error(`[govbr-ds-validator] ${err.message}`);
+    process.exit(2);
+  }
+  throw err;
+}
 const transport = new StdioServerTransport();
 
 async function shutdown(): Promise<void> {

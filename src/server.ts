@@ -107,11 +107,34 @@ import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.j
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
 
+/** Perfis de ferramentas válidos (`toolProfile` / `GOVBR_VALIDATOR_TOOL_PROFILE`). */
+export const TOOL_PROFILES = ["full", "evaluation", "normative", "deterministic", "evidence", "knowledge-free"] as const;
+export type ToolProfile = (typeof TOOL_PROFILES)[number];
+
+/**
+ * 2.17.1 (NAT-106): perfil desconhecido é erro, não volta para `full` em silêncio (um `knowledge_free`
+ * digitado errado daria ao braço sem conhecimento a base inteira).
+ */
+export class UnknownToolProfileError extends Error {
+  readonly code = "unknown-tool-profile";
+  constructor(readonly profile: string) {
+    super(`unknown tool profile "${profile}" (GOVBR_VALIDATOR_TOOL_PROFILE); valid: ${TOOL_PROFILES.join(", ")}`);
+    this.name = "UnknownToolProfileError";
+  }
+}
+
+/** Perfil efetivo: vazio/ausente = `full` (padrão de sempre); qualquer outro nome fora da lista lança. */
+export function resolveToolProfile(requested: string | undefined | null): ToolProfile {
+  if (requested === undefined || requested === null || requested === "") return "full";
+  if ((TOOL_PROFILES as readonly string[]).includes(requested)) return requested as ToolProfile;
+  throw new UnknownToolProfileError(requested);
+}
+
 export interface ServerOptions {
   reportsDir?: string;
   telemetry?: ToolTelemetryOptions;
   /** Full authoring surface, or the smaller surface used by controlled evaluations. */
-  toolProfile?: "full" | "evaluation" | "normative" | "deterministic" | "evidence" | "knowledge-free";
+  toolProfile?: ToolProfile;
   /**
    * 2.14.0 (NAT-61): alcance da trava de conhecimento do perfil knowledge-free. `process` (padrão)
    * trava o processo inteiro; `call` trava só a execução de cada ferramenta do perfil — para testes e
@@ -709,11 +732,7 @@ function normativeContextFor(componentsFound: string[]) {
 
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
-  const requestedProfile = options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE ?? "full";
-  const toolProfile = (["full", "evaluation", "normative", "deterministic", "evidence", "knowledge-free"] as const)
-    .includes(requestedProfile as never)
-    ? requestedProfile as NonNullable<ServerOptions["toolProfile"]>
-    : "full";
+  const toolProfile = resolveToolProfile(options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE);
   const hasNorms = toolProfile === "full" || toolProfile === "evaluation" || toolProfile === "normative";
   const hasDeterministic = toolProfile === "full" || toolProfile === "evaluation" || toolProfile === "deterministic";
   const hasEvidence = toolProfile === "full" || toolProfile === "evidence";
@@ -773,6 +792,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const server = new McpServer({
     name: "govbr-ds-validator",
     version: VERSAO,
+    // 2.17.1 (NAT-106): perfil efetivo legível pelo runner no initialize (serverInfo), sem tocar o tools/list.
+    description: `toolProfile=${toolProfile}`,
   });
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe

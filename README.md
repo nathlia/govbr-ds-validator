@@ -75,6 +75,14 @@ evaluation muda (novos parâmetros `match` e `vocabulary`). Benchmark de desenvo
 (vocabulário ligado) / 67,9% (desligado); P@5 médio 40,3% / 37,7% — metas de 90% e 70% ainda não
 atingidas. Autorrecuperação por título sem acento: 15,5% → 98,4%.
 
+Desde a **2.17.1 (NAT-106)**, perfil de ferramentas desconhecido é erro, não volta para `full` em
+silêncio (um `knowledge_free` digitado errado daria ao braço sem conhecimento a base inteira):
+`createServer({toolProfile})` lança `UnknownToolProfileError` (`code: "unknown-tool-profile"`) e o
+processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a lista válida (`full`,
+`evaluation`, `normative`, `deterministic`, `evidence`, `knowledge-free`), sem nada no stdout. Vazio ou
+ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
+(`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
+
 ## Related repositories
 
 | Repo | Role |
