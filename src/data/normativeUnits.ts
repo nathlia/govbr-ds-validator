@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getKnowledgeBase, type KnowledgeRule } from "./knowledge.js";
+import { getKnowledgeBase, type KnowledgeBase, type KnowledgeRule } from "./knowledge.js";
 import { guardKnowledge } from "./lock.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/versions");
@@ -91,7 +91,40 @@ export function legacyResolution(rule: KnowledgeRule) {
     reason: rule.legacy.reason, note: "Id histórico: não integra a enumeração normativa da versão servida." };
 }
 
+/**
+ * 2.16.1: the KB is frozen per process (a version switch builds a new KnowledgeBase object), so
+ * derived units are memoized per KB object and rule id. Only the KB's own rule objects are cached;
+ * any other object (tests, synthetic rules) is computed uncached. Cached values are deep-frozen so a
+ * caller cannot alter what the next caller receives.
+ */
+const unitMemo = new WeakMap<KnowledgeBase, Map<string, ReturnType<typeof computeNormativeUnit>>>();
+const emagMemo = new WeakMap<KnowledgeBase, Map<string, ReturnType<typeof computeEmagUnits>>>();
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  }
+  return value;
+}
+
+function memoFor<V>(memo: WeakMap<KnowledgeBase, Map<string, V>>, base: KnowledgeBase) {
+  let map = memo.get(base);
+  if (!map) memo.set(base, (map = new Map()));
+  return map;
+}
+
 export function normativeUnit(rule: KnowledgeRule) {
+  guardKnowledge("normativeUnit");
+  const base = getKnowledgeBase();
+  if (base.byId.get(rule.id) !== rule) return computeNormativeUnit(rule);
+  const map = memoFor(unitMemo, base);
+  if (!map.has(rule.id)) map.set(rule.id, deepFreeze(computeNormativeUnit(rule)));
+  return map.get(rule.id);
+}
+
+/** Uncached computation (exported for the memo-equivalence test). */
+export function computeNormativeUnit(rule: KnowledgeRule) {
   guardKnowledge("normativeUnit");
   const base = getKnowledgeBase();
   if (rule.force === "example" || rule.legacy || typeof rule.source.corpusFile !== "string") return undefined;
@@ -123,8 +156,37 @@ export function boundedNormativeUnit(rule: KnowledgeRule, maxChars: number) {
     next: { tool: "get_ds_rules", arguments: { id: rule.id } } };
 }
 
+/**
+ * 2.16.1 list projection: listings never inline units (measured 2.16.0: query "tabela" 241k chars).
+ * Each rule carries only a pointer with honest counts; the exact-id call returns the full unit.
+ * The completeness/applicability caveat travels once per response (LIST_CONTEXT_NOTE).
+ */
+export const LIST_CONTEXT_NOTE = "normativeContext em listagens é só referência (context-deferred): aplicabilidade desconhecida; a unidade completa (cláusulas adjacentes com forças próprias, parágrafo literal, condições e alternativas) vem pela chamada em next, por id exato. Leia-a antes de julgar.";
+
+export function normativeUnitRef(rule: KnowledgeRule) {
+  const unit = normativeUnit(rule);
+  if (!unit) return undefined;
+  return { status: "context-deferred" as const, adjacentClauses: unit.adjacentClauses.length,
+    sourceParagraph: unit.sourceContext !== null, next: { tool: "get_ds_rules" as const, arguments: { id: rule.id } } };
+}
+
+/** Same pointer for an eMAG recommendation in a section listing; exact id returns the full clauses. */
+export function emagUnitsRef(id: string) {
+  const units = emagUnits(id);
+  return { status: "context-deferred" as const, clauses: units.clauses.length,
+    sourceParagraph: units.sourceContext !== null, next: { tool: "get_emag_rules" as const, arguments: { id } } };
+}
+
 /** Shared recommendation projection; never use the hand-maintained summary as a new norm. */
 export function emagUnits(id: string) {
+  guardKnowledge("emagUnits");
+  const map = memoFor(emagMemo, getKnowledgeBase());
+  if (!map.has(id)) map.set(id, deepFreeze(computeEmagUnits(id)));
+  return map.get(id)!;
+}
+
+/** Uncached computation (exported for the memo-equivalence test). */
+export function computeEmagUnits(id: string) {
   guardKnowledge("emagUnits");
   const rules = getKnowledgeBase().rules.filter((rule) => rule.standard === "eMAG" && rule.emagReferences.includes(id) && rule.force !== "example");
   return { knowledgeVersion: getKnowledgeBase().meta.knowledgeVersion, clauses: rules.map(clause),

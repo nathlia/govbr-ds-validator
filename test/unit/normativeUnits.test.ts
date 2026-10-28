@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { emagUnits, legacyResolution, normativeUnit, locateLiteralParagraph } from "../../src/data/normativeUnits.js";
+import { emagUnits, computeEmagUnits, legacyResolution, normativeUnit, computeNormativeUnit, locateLiteralParagraph } from "../../src/data/normativeUnits.js";
 import type { KnowledgeRule } from "../../src/data/knowledge.js";
 import { getKnowledgeBase, getEvidence, useKnowledgeVersion } from "../../src/data/knowledge.js";
 import { runKnowledgeLocked, resetKnowledgeLock } from "../../src/data/lock.js";
@@ -66,6 +66,30 @@ describe("NAT-96 derived source context", () => {
     expect(resolutions.some((r) => r.status === "no-audited-successor")).toBe(true);
     expect(resolutions.some((r) => r.successors.some((s) => s.relationship === "exact"))).toBe(true);
     expect(resolutions.some((r) => r.successors.some((s) => s.relationship === "partial"))).toBe(true);
+  });
+
+  it("memo returns output identical to the uncached computation, reused per rule id", () => {
+    const base = getKnowledgeBase();
+    const sample = base.rules.filter((r) => r.source.corpusFile && r.force !== "example").slice(0, 200);
+    for (const rule of sample) {
+      const cached = normativeUnit(rule);
+      expect(cached).toEqual(computeNormativeUnit(rule));
+      expect(normativeUnit(rule)).toBe(cached);
+    }
+    const all = base.rules.filter((r) => r.force !== "example" && !r.legacy && r.source.corpusFile);
+    const siblings = (r: KnowledgeRule) => all.filter((c) => c.id !== r.id && c.source.corpusFile === r.source.corpusFile && c.source.sectionPath === r.source.sectionPath).length;
+    const rich = sample.find((r) => siblings(r) > 0)!;
+    expect(normativeUnit(rich)!.adjacentClauses).toHaveLength(siblings(rich));
+    expect(Object.isFrozen(normativeUnit(rich)!.adjacentClauses)).toBe(true);
+    for (const id of ["1.7", "3.9", "4.4"]) {
+      expect(emagUnits(id)).toEqual(computeEmagUnits(id));
+      expect(emagUnits(id)).toBe(emagUnits(id));
+    }
+    // A switch of KB version builds a new KnowledgeBase, so the memo cannot leak across versions.
+    useKnowledgeVersion("3.7.0");
+    expect(emagUnits("3.9").sourceContext).toBeNull();
+    useKnowledgeVersion(undefined);
+    expect(emagUnits("3.9").sourceContext).not.toBeNull();
   });
 
   it("historical KB stays historical; knowledge lock prevents derived context exposure", () => {

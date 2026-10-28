@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 import { FindingSchema, FindingSchemaKnowledgeFree, type Finding } from "./schema/finding.js";
 import { knowledgeLockAttempts, lockKnowledgeForProcess, runKnowledgeLocked } from "./data/lock.js";
-import { normativeUnit, boundedNormativeUnit, legacyResolution, emagUnits } from "./data/normativeUnits.js";
+import { normativeUnit, boundedNormativeUnit, normativeUnitRef, legacyResolution, emagUnits, emagUnitsRef, LIST_CONTEXT_NOTE } from "./data/normativeUnits.js";
 import { componentProvenance } from "./data/componentProvenance.js";
 import {
   getTokenRegistry,
@@ -228,7 +228,7 @@ function briefRule(r: KnowledgeRule) {
     component: r.component ?? null,
     validationStrategy: r.validationStrategy,
     caveats: inferenceCaveats(r),
-    normativeContext: normativeUnit(r),
+    normativeContext: normativeUnitRef(r),
     legacyResolution: legacyResolution(r),
     ...(r.legacy ? { legacy: r.legacy } : {}),
   };
@@ -276,11 +276,14 @@ function projectRule(r: KnowledgeRule) {
     sourceUrl: r.source.url,
     notes: r.notes ?? null,
     caveats: inferenceCaveats(r),
-    normativeContext: normativeUnit(r),
+    normativeContext: normativeUnitRef(r),
     legacyResolution: legacyResolution(r),
     ...(r.legacy ? { legacy: r.legacy } : {}),
   };
 }
+
+/** Teto declarado por unidade em get_ds_rules(ids, detail='full'); acima dele, context-deferred (2.16.1). */
+const IDS_FULL_UNIT_MAX_CHARS = 2500;
 
 /** Orçamento aproximado da resposta inteira com context — o mesmo dos scanners (README). */
 const CONTEXT_MAX_CHARS = 12_000;
@@ -728,7 +731,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           rules: found.map((rule) => ({
             kind: rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
             ...project(rule),
+            ...(detail === "full" ? { normativeContext: boundedNormativeUnit(rule, IDS_FULL_UNIT_MAX_CHARS) } : {}),
           })),
+          ...(found.some((rule) => normativeUnit(rule)) ? { normativeContextNote: LIST_CONTEXT_NOTE } : {}),
           ...(found.length < ids.length ? { absenceNote: ABSENCE_NOTE } : {}),
         });
       }
@@ -767,6 +772,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         detail: detail === "full" ? "full" : "brief",
         rules: page.map(project),
       };
+      if (page.some((rule) => normativeUnit(rule))) response.normativeContextNote = LIST_CONTEXT_NOTE;
       if (rules.length === 0) response.absenceNote = ABSENCE_NOTE;
       if (skip + page.length < rules.length) {
         response.more = {
@@ -847,9 +853,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (section) {
         const found = emag.sections[String(section)];
         return json({ meta: emag.meta, section: found ? { ...found, rules: found.rules.map((rule) => {
-          const normativeContext = emagUnits(rule.id);
-          return { ...rule, ...(rule.id === "3.9" && normativeContext.sourceContext ? { description: normativeContext.sourceContext.text } : {}), normativeContext };
-        }) } : `Seção ${section} não encontrada`, ...(found ? {} : { absenceNote: ABSENCE_NOTE }) });
+          // 2.16.1: a listagem leva só a referência; a descrição contextual da 3.9 continua aqui.
+          const units = emagUnits(rule.id);
+          return { ...rule, ...(rule.id === "3.9" && units.sourceContext ? { description: units.sourceContext.text } : {}), normativeContext: emagUnitsRef(rule.id) };
+        }) } : `Seção ${section} não encontrada`, ...(found ? { normativeContextNote: LIST_CONTEXT_NOTE } : { absenceNote: ABSENCE_NOTE }) });
       }
       return json({
         meta: emag.meta,

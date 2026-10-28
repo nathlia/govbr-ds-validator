@@ -28,6 +28,17 @@ hashed core source-code evidence from normative clauses and actual page observat
 official core 3.7.0 pagination example is tested before initialization, after initialization,
 and after a page click; its ARIA technique is not promoted to a universal requirement.
 
+Since **2.16.1 (NAT-96 review)**, list responses no longer inline units: `get_ds_rules`
+listings (brief/full) and `ids` brief carry only a `context-deferred` pointer per rule
+(`adjacentClauses` count, `sourceParagraph`, `next` = exact-id call) plus one
+`normativeContextNote` per response; `ids` with `detail: "full"` inline a unit only up to
+2,500 characters, otherwise the same deferral. The single-rule `id` call still returns the
+complete unit. `get_emag_rules` section listings likewise point to the exact-id call (the 3.9
+contextual description is kept). Measured on `component: "input", limit: 5`: 34,706 → 4,627
+characters; `query: "tabela"` (40 rules): 241,400 → 29,407. Units are memoized per KB object
+and rule id (no rereading of the corpus per call); ranking, membership, forces and KB data are
+unchanged.
+
 ## Related repositories
 
 | Repo | Role |
