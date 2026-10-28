@@ -1,14 +1,13 @@
 /**
  * NAT-109 (3.3.0): defeitos de busca/contrato do reteste adversarial da 3.2.0, pela superfície MCP.
  */
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
-import { resetDenseCache, setDenseLoaderForTests } from "../../src/data/embeddings.js";
 import { RESPONSE_BUDGET } from "../../src/responses/contract.js";
 
 let client: Client;
@@ -21,10 +20,6 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await client.close();
-});
-afterEach(() => {
-  setDenseLoaderForTests(undefined);
-  resetDenseCache();
 });
 
 const raw = async (name: string, args: Record<string, unknown>) => {
@@ -155,14 +150,33 @@ describe("B-09/N-15: template de validação do e-MAG", () => {
   });
 });
 
-describe("N-18: dense sem modelo", () => {
-  it("retrieval:'dense' indisponível é erro dense-unavailable; hybrid cai para a léxica com engine léxico", async () => {
-    resetDenseCache();
-    setDenseLoaderForTests(async () => ({ status: "unavailable", reason: "simulado", model: "nope" }));
-    const d = await raw("get_ds_rules", { query: "foco modal", retrieval: "dense" });
-    expect(d).toMatchObject({ isError: true, data: { errorCode: "dense-unavailable", field: "retrieval" } });
-    const h = await raw("get_ds_rules", { query: "foco modal", retrieval: "hybrid" });
-    expect(h.isError).toBe(false);
-    expect(h.data.kb.ranking).toMatchObject({ engine: "govbr-lexical/1.2.0", dense: "unavailable" });
+describe("D-152: busca híbrida/vetorial removida", () => {
+  it("retrieval não existe mais: unknown-parameter", async () => {
+    const r = await raw("get_ds_rules", { query: "foco modal", retrieval: "hybrid" });
+    expect(r).toMatchObject({ isError: true, data: { errorCode: "unknown-parameter" } });
+    const tools = (await client.listTools()).tools.find((t) => t.name === "get_ds_rules")!;
+    expect(Object.keys(tools.inputSchema.properties ?? {})).not.toContain("retrieval");
+  });
+});
+
+describe("A-12: paginação sem aria-current", () => {
+  it("linha de tabela de API não sai como obrigação e vem depois da prosa", async () => {
+    const r = await raw("get_ds_rules", { query: "a página ativa só tem a classe active e o nav tem data-current, nenhum link tem aria-current", component: "pagination" });
+    const cards = r.data.results as Array<Record<string, any>>;
+    expect(cards.length).toBeGreaterThan(0);
+    const rows = cards.filter((c) => c.note?.code === "table-row");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const c of rows) expect(c).toMatchObject({ kind: "implementation-property", force: null, modality: "propriedade da implementação" });
+    expect(cards[0].note?.code).not.toBe("table-row");
+    const firstRow = cards.findIndex((c) => c.note?.code === "table-row");
+    expect(cards.slice(firstRow).every((c) => c.note?.code === "table-row")).toBe(true);
+    for (const c of cards) expect(c.modality === "obrigação" && c.note?.code === "table-row").toBe(false);
+  });
+  it("context.terms de várias palavras casa como frase, não por uma palavra comum", async () => {
+    const r = await raw("get_ds_rules", { context: { components: ["pagination"], terms: ["página atual", "estado"] }, validationStrategy: "semantic", limit: 5 });
+    const texts = (r.data.results as Array<Record<string, any>>).map((c) => String(c.requirement.text));
+    expect(texts.some((t) => /tipogr[aá]fica atual/i.test(t))).toBe(false);
+    expect(texts.some((t) => /janela atual/i.test(t))).toBe(false);
+    for (const c of r.data.results) if (c.why.matched.includes("página atual")) expect(c.requirement.text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()).toContain("pagina atual");
   });
 });

@@ -60,11 +60,6 @@ export const RANKING_WEIGHTS = {
     section: 0.4,
   },
   match: { exact: 1.0, stem: 0.8, vocabulary: 0.7, compoundPart: 0.5 },
-  /**
-   * 1.2.0 (N-05): a term found only in the project's paraphrase (normalizedRule), not in the DS text
-   * (title/originalText), counts this fraction and is reported as field "normalizedRule".
-   */
-  paraphraseOnly: 0.5,
   /** Extra credit for an identifier/number token matched exactly in the rule text or references. */
   identifier: 1.0,
   /** Extra credit per adjacent query word pair found adjacent in the rule text. */
@@ -158,7 +153,7 @@ export function pluralFold(word: string, accented?: string): string {
   else if (/[áéêíóôú]s$/.test(a)) w = word; // mês, país, português, através: singular
   else if (/[íé]ses$/.test(a) || (w.length > 4 && /eses$/.test(w))) w = w.slice(0, -2);
   else if (w.length > 4 && /(res|zes)$/.test(w)) w = w.slice(0, -2);
-  else if (w.length > 3 && /(ens|uns)$/.test(w)) w = w.slice(0, -2) + "m";
+  else if (w.length > 4 && /(ens|uns)$/.test(w)) w = w.slice(0, -2) + "m";
   else if (w.length > 4 && /veis$/.test(w)) w = w.slice(0, -4) + "vel";
   else if (/éis$/.test(a)) w = w.slice(0, -3) + "el";
   else if (w.length > 4 && /eis$/.test(w)) w = w.slice(0, -3) + "il";
@@ -192,8 +187,13 @@ function accentedForms(value: string): Map<string, string> {
   return map;
 }
 
-/** A word token: key = plural-folded form (both sides), stem = 6-letter prefix of it. */
-function wordToken(raw: string, accented?: string): Token {
+/**
+ * A word token. Index (and 1.1.0): key = the word as written. Query (1.2.0, N-04, `foldPlural`): key = the
+ * plural-folded form, so a plural question asks exactly what its singular asks ("campos" = "campo", which
+ * already matched both forms through the stem) — singular questions and the index do not move.
+ */
+function wordToken(raw: string, accented?: string, foldPlural = false): Token {
+  if (!foldPlural) return { key: raw, stem: stemOf(raw, accented), kind: "word" };
   const key = pluralFold(raw, accented);
   return { key, stem: stemOf(raw, accented), kind: "word", ...(key !== raw ? { surface: raw } : {}) };
 }
@@ -201,7 +201,8 @@ function wordToken(raw: string, accented?: string): Token {
 const TOKEN_RE = /\d+(?:[.,]\d+)+|[a-z0-9]+(?:-[a-z0-9]+)+|[a-z0-9]+/g;
 
 /** Tokens of a text in order (stopwords and 1-character tokens dropped; identifier parts added). */
-export function tokenize(value: string): Token[] {
+export function tokenize(value: string, options: { foldPlural?: boolean } = {}): Token[] {
+  const fold = options.foldPlural ?? false;
   const out: Token[] = [];
   const accents = /[^\x00-\x7f]/.test(value) ? accentedForms(value) : null;
   for (const raw of foldText(value).match(TOKEN_RE) ?? []) {
@@ -218,15 +219,20 @@ export function tokenize(value: string): Token[] {
       for (const part of raw.split("-")) {
         if (part.length < 2 || STOPWORDS.has(part)) continue;
         if (/^\d+$/.test(part)) out.push({ key: part, stem: part, kind: "number", partOf: raw });
-        else out.push({ ...wordToken(part, accents?.get(part)), partOf: raw });
+        else out.push({ ...wordToken(part, accents?.get(part), fold), partOf: raw });
       }
       continue;
     }
     if (raw.length < 2 || STOPWORDS.has(raw)) continue;
     if (/^\d+$/.test(raw)) out.push({ key: raw, stem: raw, kind: "number" });
-    else out.push(wordToken(raw, accents?.get(raw)));
+    else out.push(wordToken(raw, accents?.get(raw), fold));
   }
   return out;
+}
+
+/** Query tokens: plural folded to the singular (N-04). */
+export function tokenizeQuery(value: string): Token[] {
+  return tokenize(value, { foldPlural: true });
 }
 
 function codeUnitCompare(a: string, b: string): number {
@@ -510,7 +516,7 @@ export function analyzeQuery(
   const useVocab = options.vocabulary ?? vocabularyEnabledByDefault();
   // Order-independent: one concept per key; a key that occurs as a standalone word anywhere in the
   // question keeps full weight even if it also occurs inside an identifier ("aria-label label").
-  const all = tokenize(text);
+  const all = tokenizeQuery(text);
   const standalone = new Set(all.filter((t) => !t.partOf).map((t) => t.key));
   const tokens = [...new Map(all.map((t) => [t.key, standalone.has(t.key) ? { ...t, partOf: undefined } : t])).values()]
     .sort((a, b) => codeUnitCompare(a.key, b.key));
@@ -624,15 +630,18 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
         // With a hint, naming the component matches every rule of it: the hint already carries that.
         if (field === "component" && hint !== null) continue;
         const tf = maps.get(field)?.get(alt.key) ?? 0;
-        if (tf) {
+        if (field === "text") {
+          // Score as 1.1.0 (max over title/originalText/normalizedRule); only the REPORTED field tells a
+          // match found only in the project's paraphrase (N-05).
+          const ptf = (alt.byStem ? doc.paraStem : doc.paraExact).get(alt.key) ?? 0;
+          const t = Math.max(tf, ptf);
+          if (t) {
+            wtf += weight * t;
+            fields.push(tf ? "text" : "normalizedRule");
+          }
+        } else if (tf) {
           wtf += weight * tf;
           fields.push(field);
-        } else if (field === "text") {
-          const ptf = (alt.byStem ? doc.paraStem : doc.paraExact).get(alt.key) ?? 0;
-          if (ptf) {
-            wtf += weight * ptf * RANKING_WEIGHTS.paraphraseOnly;
-            fields.push("normalizedRule");
-          }
         }
       }
       if (!wtf) continue;
@@ -648,7 +657,7 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
     lexical += best * c.weight;
     covered += c.idf * c.weight;
     // 3.1.0: no identifier credit for a table row — an API/anatomy listing repeats identifiers by construction.
-    if (!doc.tableRow && c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("references"))) {
+    if (!doc.tableRow && c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("normalizedRule") || bestFields.includes("references"))) {
       bonus += RANKING_WEIGHTS.identifier * c.idf;
     }
     matched.push({
@@ -750,10 +759,9 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   const passes = (s: ScoredRule) => s.coverage >= f.minCoverage && (s.score >= f.minScore || s.coverage >= 1) && s.matched.length >= needTerms;
   // 3.1.0: the relative cut is set by the best PROSE clause; a table row only sets it when no prose passes.
   const top = (scored.find((s) => passes(s) && !indexFor(kb).docs[s.order].tableRow) ?? scored.find(passes))?.score ?? 0;
-  // 1.2.0 (N-06): an explicit `component` hint boosts, never demotes — the hinted component's own rules
-  // above the absolute floor are exempt from the relative cut, and promoteHinted keeps them in page 1.
-  const exempt = (s: ScoredRule) => hint !== null && s.ownComponent;
-  const filtered = scored.filter((s) => passes(s) && (input.relativeFloor === false || s.score >= f.relativeToTop * top || exempt(s)));
+  // 1.2.0 (N-06): an explicit `component` hint boosts ORDER only (promoteHinted); the floor is the 1.1.0 one
+  // (NAT-109 ablation: exempting own rules from the relative cut added noise without recall).
+  const filtered = scored.filter((s) => passes(s) && (input.relativeFloor === false || s.score >= f.relativeToTop * top));
   const results = hint !== null ? promoteHinted(filtered, (s) => s.ownComponent) : filtered;
   return {
     analysis,

@@ -2,27 +2,30 @@
  * NAT-109 (3.3.0): defeitos de busca/contrato do reteste adversarial da 3.2.0 (achados-3.2.0.md), unidade.
  */
 import { describe, it, expect } from "vitest";
-import { cleanText, promoteHinted, rankRules, tokenize } from "../../src/data/retrieval.js";
+import { cleanText, promoteHinted, rankRules, tokenize, tokenizeQuery } from "../../src/data/retrieval.js";
 import { parseColor, looksLikeColor } from "../../src/data/colorValue.js";
-import { DENSE_MIN_CLAUSE_TERMS, denseClauseAdmissible, kbAnchor } from "../../src/data/hybrid.js";
 import { clip, clipDeep, fail, unknownFieldsMessage, RESPONSE_BUDGET } from "../../src/responses/contract.js";
-import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "../../src/data/knowledge.js";
+import { getKnowledgeBase, getRuleById } from "../../src/data/knowledge.js";
 import { currentPointer, emagTemplateCitation, isTitleRecord } from "../../src/responses/retrieval.js";
 
-const keys = (text: string) => tokenize(text).map((t) => t.key).join(" ");
+const keys = (text: string) => tokenizeQuery(text).map((t) => t.key).join(" ");
 
-describe("N-04: plural dobrado nos dois sentidos (mesma função no índice e na consulta)", () => {
+describe("N-04: plural da consulta dobrado para o singular (o índice e o singular não mudam)", () => {
   const pairs: Array<[string, string]> = [
     ["campo", "campos"], // -s
     ["cor", "cores"], ["mês", "meses"], ["país", "países"], // -es
     ["botão", "botões"], ["ação", "ações"], // -ões
     ["capitão", "capitães"], ["alemão", "alemães"], // -ães
-    ["imagem", "imagens"], ["item", "itens"], ["bem", "bens"], // -ns
+    ["imagem", "imagens"], ["item", "itens"], // -ns
     ["papel", "papéis"], ["fácil", "fáceis"], ["sinal", "sinais"], ["nível", "níveis"], ["azul", "azuis"], // -is
     ["rótulo", "rótulos"], ["cabeçalho", "cabeçalhos"], ["token", "tokens"],
   ];
-  it.each(pairs)("%s ↔ %s: mesma chave exata", (singular, plural) => {
+  it.each(pairs)("%s ↔ %s: mesma chave exata na consulta", (singular, plural) => {
     expect(keys(plural)).toBe(keys(singular));
+  });
+  it("o índice guarda a palavra como escrita (o pool de candidatas da 1.1.0 não cresce)", () => {
+    expect(tokenize("campos").map((t) => t.key)).toEqual(["campos"]);
+    expect(tokenize("campos").map((t) => t.stem)).toEqual(["campo"]);
   });
 
   it("campos casa as cláusulas só com 'campo' e vice-versa (mesmo conjunto)", () => {
@@ -76,25 +79,6 @@ describe("N-06: pista de componente promove, nunca rebaixa", () => {
     const top = rankRules({ text, component }).results.slice(0, 5);
     expect(top.filter((s) => s.rule.component === component).length).toBeGreaterThanOrEqual(1);
     expect(top.some((s) => s.rule.component === null) || top.every((s) => s.rule.component === component)).toBe(true);
-  });
-});
-
-describe("N-08/N-09: admissão só-vetorial", () => {
-  const rule = (text: string) => ({ id: `t-${text}`, originalText: text, normalizedRule: "", title: "" }) as unknown as KnowledgeRule;
-  const q = (text: string) => new Set(tokenize(text).flatMap((t) => [t.key, t.stem]));
-  it(`cláusula com < ${DENSE_MIN_CLAUSE_TERMS} termos de conteúdo nunca entra só pelo vetor`, () => {
-    expect(denseClauseAdmissible(rule("Seu uso é opcional."), q("uso opcional"), 0.99, 0.87)).toBe(false);
-  });
-  it("sem termo em comum, só com cosseno ≥ limiar estrito; com termo em comum, o limiar normal basta", () => {
-    const r = rule("O texto deve ter contraste suficiente com o fundo da página.");
-    expect(denseClauseAdmissible(r, q("cinza claro difícil de ler"), 0.86, 0.87)).toBe(false);
-    expect(denseClauseAdmissible(r, q("cinza claro difícil de ler"), 0.871, 0.87)).toBe(true);
-    expect(denseClauseAdmissible(r, q("texto cinza"), 0.86, 0.87)).toBe(true);
-    expect(denseClauseAdmissible(r, q("cinza claro"), 0.99, undefined)).toBe(false);
-  });
-  it("âncora por maioria estrita", () => {
-    expect(kbAnchor("futebol botão").anchored).toBe(false);
-    expect(kbAnchor("foco botão").anchored).toBe(true);
   });
 });
 

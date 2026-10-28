@@ -4,7 +4,6 @@
  * do motor (retrieval.ts) ou a do adaptador de contexto (applicability.ts); este módulo só decide o
  * que sai, em que formato e dentro de que orçamento.
  */
-import type { RankingInfo } from "../data/hybrid.js";
 import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
 import { NORMATIVE_FORCES, getKnowledgeBase } from "../data/knowledge.js";
 import { normativeUnit, normativeUnitRef, legacyResolution, emagUnits } from "../data/normativeUnits.js";
@@ -32,6 +31,8 @@ export const IDS_MAX_DEFAULT = 10;
 export const IDS_MAX_INDEX = 20;
 export const CARD_TEXT_MAX = 600;
 export const INDEX_TITLE_MAX = 110;
+/** 3.3.0 (A-12): modalidade mostrada no cartão de uma linha de tabela. */
+export const IMPLEMENTATION_PROPERTY = "propriedade da implementação";
 /** 3.3.0 (N-02): o rótulo de page.stop mais longo, usado na prova de orçamento. */
 const LONGEST_STOP = "relevance-floor";
 /** 3.3.0 (N-07): acima disto (JSON dos argumentos), a ambiguidade ecoa os argumentos uma vez só. */
@@ -115,8 +116,6 @@ export interface Hit {
   field: string | null;
   /** Conflito documentado que nomeia a regra pelo título (conflicts.json), quando houver. */
   conflicts?: unknown[];
-  /** 3.2.0: busca híbrida/vetorial — em qual lista a regra apareceu. Ausente na léxica (forma da 3.1.0). */
-  via?: "lexical" | "dense" | "both";
   /** 3.3.0 (N-05): termos que casaram só na paráfrase do projeto (normalizedRule), não no texto mostrado. */
   paraphraseOnly?: string[];
 }
@@ -200,13 +199,6 @@ function requirementOf(rule: KnowledgeRule, ctx: CardContext) {
   return { heading: heading(rule), text, complete, ...(complete ? {} : { code: "text-deferred" as const }) };
 }
 
-/** Via da unidade (3.2.0): a das suas ocorrências; listas diferentes → "both". Sem via (léxica) → nada. */
-function viaOf(unit: Unit): { via?: "lexical" | "dense" | "both" } {
-  const vias = new Set(unit.hits.map((h) => h.via).filter((v): v is NonNullable<Hit["via"]> => v !== undefined));
-  if (!vias.size) return {};
-  return { via: vias.size === 1 ? [...vias][0] : "both" };
-}
-
 /** Cartão completo (§5.2). `why` só existe quando houve busca. */
 function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compact = false) {
   const main = mainHit(unit);
@@ -221,11 +213,14 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     ids: unitIds(unit),
     citeAs: rule.id,
     status: "investigate" as const,
-    force: rule.force,
-    modality: MODALITY[rule.force] ?? "indefinido",
+    // 3.3.0 (A-12): linha de tabela de API/anatomia é propriedade da implementação, não obrigação de
+    // comportamento — a força da tabela na base não vai para o cartão (o registro por id a mantém).
+    ...(table
+      ? { kind: "implementation-property" as const, force: null, modality: IMPLEMENTATION_PROPERTY }
+      : { force: rule.force, modality: MODALITY[rule.force] ?? "indefinido" }),
     requirement: requirementOf(rule, ctx),
     ...(withWhy
-      ? { why: { matched, ...(paraphrase.length ? { matchedInParaphrase: paraphrase } : {}), relation: main.relation, field: main.field, ...viaOf(unit) } }
+      ? { why: { matched, ...(paraphrase.length ? { matchedInParaphrase: paraphrase } : {}), relation: main.relation, field: main.field } }
       : {}),
     toVerify: compact ? toVerifyOf(rule, ctx).slice(0, 1) : toVerifyOf(rule, ctx),
     evidence: compact ? evidenceOf(rule).slice(0, 1) : evidenceOf(rule),
@@ -240,8 +235,8 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
 export interface KbMeta {
   dsVersion: string;
   knowledgeVersion: string;
-  /** Motor léxico: a string da versão (como na 3.1.0). Híbrido/vetorial (3.2.0): bloco com o modelo ou dense:"unavailable". */
-  ranking: string | RankingInfo;
+  /** Versão do motor léxico. */
+  ranking: string;
   vocabulary: string;
   guidance: string;
 }
@@ -295,7 +290,10 @@ function registryChecked(refs: Array<{ ref: string; name: string }>, wcagNames: 
 
 export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, string>, ruleExists: (id: string) => boolean) {
   const budget = input.budget ?? RESPONSE_BUDGET;
-  const units = groupUnits(input.hits);
+  // 3.3.0 (A-12): linhas de tabela (API/anatomia) depois de toda cláusula de prosa da resposta (ordem estável).
+  const grouped = groupUnits(input.hits);
+  const isRow = (u: Unit) => isTableRow(mainHit(u).rule.originalText ?? "");
+  const units = [...grouped.filter((u) => !isRow(u)), ...grouped.filter(isRow)];
   const first = input.position === 0;
   const ctx: CardContext = {
     concept: input.concept,

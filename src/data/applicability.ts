@@ -26,7 +26,7 @@ import {
   type KnowledgeRule,
   type RuleForce,
 } from "./knowledge.js";
-import { cleanText, isTableRow, scoreTerms, type MatchField, type ScoredRule } from "./retrieval.js";
+import { cleanText, isTableRow, scoreTerms, tokenize, tokenizeQuery, type MatchField, type ScoredRule } from "./retrieval.js";
 
 /** Chave nominal: sem acento, sem caixa, sem `br-`/`<>`, sem separadores. "Cookie Bar" → "cookiebar". */
 function nameKey(value: string): string {
@@ -444,7 +444,16 @@ export function retrieveContextCandidates(
   const order = new Map(getKnowledgeBase().rules.map((rule, index) => [rule.id, index]));
   const eligible = base.filter((rule) => rule.force !== "example" && (rule.component === null || observed.has(rule.component)));
   const query = options.query?.trim() ?? "";
-  const perTerm = literal ? [] : context.terms.map((term) => ({ term, scores: scoreTerms([term], eligible, options.vocabulary) }));
+  // 3.3.0 (A-12): termo de várias palavras ("página atual") vale como FRASE — as palavras adjacentes (dobradas)
+  // num campo da regra —, não como qualquer uma delas ("atual" de "família tipográfica atual").
+  const perTerm = literal
+    ? []
+    : context.terms.map((term) => {
+        const scores = scoreTerms([term], eligible, options.vocabulary);
+        const phrase = phraseStems(term);
+        if (phrase.length >= 2) for (const [id, s] of [...scores]) if (!hasPhrase(s.rule, phrase)) scores.delete(id);
+        return { term, scores };
+      });
   const queryScores = !literal && query ? scoreTerms([query], eligible, options.vocabulary) : new Map<string, ScoredRule>();
   const out: ContextCandidate[] = [];
 
@@ -506,6 +515,21 @@ export function retrieveContextCandidates(
   }
 
   return interleaveByGroup(out, order, literal);
+}
+
+/** Radicais das palavras de conteúdo de um termo, em ordem (partes de identificador fora). */
+function phraseStems(term: string): string[] {
+  return tokenizeQuery(term).filter((t) => !t.partOf).map((t) => t.stem);
+}
+
+/** A sequência de radicais aparece contígua (sem contar palavras vazias) em algum campo da regra? */
+function hasPhrase(rule: KnowledgeRule, phrase: string[]): boolean {
+  const section = typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : "";
+  for (const value of [rule.title, rule.originalText, rule.normalizedRule, section, ...rule.conditions, ...rule.exceptions, ...rule.expectedEvidence]) {
+    const stems = tokenize(value ?? "").filter((t) => !t.partOf).map((t) => t.stem);
+    for (let i = 0; i + phrase.length <= stems.length; i++) if (phrase.every((p, k) => stems[i + k] === p)) return true;
+  }
+  return false;
 }
 
 /** 3.3.0 (N-05): rótulos do que casou, separando o que casou só na paráfrase do projeto. */

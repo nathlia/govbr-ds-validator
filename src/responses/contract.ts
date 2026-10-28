@@ -130,8 +130,7 @@ export type ErrorCode =
   | "too-many-ids"
   | "missing-finding-ids"
   | "invalid-argument"
-  | "unknown-parameter"
-  | "dense-unavailable";
+  | "unknown-parameter";
 
 export interface ContractError {
   error: string;
