@@ -620,7 +620,12 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
     const rows = [...data.results, ...next.results].slice(0, 5);
     const groups = rows.map((c: { why: { matched: string[] }; source: unknown; ids: string[] }) =>
       c.why.matched.find((m) => m.startsWith("componente:"))?.slice("componente:".length) ?? "(global)");
-    expect(groups).toEqual(["(global)", "button", "datetimepicker", "input", "upload"]);
+    // 3.3.0 (A-12): linhas de tabela (API/anatomia) vão para depois da prosa; a alternância vale entre as de prosa.
+    expect(groups[0]).toBe("(global)");
+    expect(new Set(groups.slice(1, 3)).size).toBe(2);
+    const isRow = (c: { note?: { code?: string } }) => c.note?.code === "table-row";
+    const firstRow = rows.findIndex(isRow);
+    if (firstRow >= 0) expect(rows.slice(firstRow).every(isRow)).toBe(true);
   });
 
   it("a superseded 3.7.0 id still resolves, flagged as legacy with its replacement", async () => {

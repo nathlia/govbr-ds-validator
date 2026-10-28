@@ -36,7 +36,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Engine version: any change to tokenization, fields, weights or floor is a new version. */
-export const RANKING_VERSION = "govbr-lexical/1.1.0";
+export const RANKING_VERSION = "govbr-lexical/1.2.0";
 
 /**
  * Declared weights. General, not per query: field weights say how much a term occurrence in that
@@ -100,8 +100,13 @@ STOPWORDS.delete("for");
 
 export type TokenKind = "word" | "identifier" | "number";
 export interface Token {
-  /** Folded exact form. */
+  /**
+   * Folded exact form. 1.2.0 (NAT-109, N-04): words are plural-folded HERE, the same function on the
+   * index and on the query, so "campos" and "campo" are one exact key in both directions.
+   */
   key: string;
+  /** The word as written (case/accent folded, plural NOT folded), when it differs from `key`. */
+  surface?: string;
   /** Inflection key (words only; identifiers/numbers stem to themselves). */
   stem: string;
   kind: TokenKind;
@@ -109,9 +114,17 @@ export interface Token {
   partOf?: string;
 }
 
+/**
+ * 1.2.0 (N-14): compatibility forms folded (NFKC: full-width "ｆｏｃｏ" → "foco") and invisible format
+ * characters removed (\p{Cf}: zero-width space/joiner, soft hyphen, bidi marks), so "bo[U+200B]tão" is "botão".
+ */
+export function cleanText(value: string): string {
+  return value.normalize("NFKC").replace(/\p{Cf}/gu, "");
+}
+
 /** Case, accents and markdown markers folded; whitespace collapsed. */
 export function foldText(value: string): string {
-  return value
+  return cleanText(value)
     // Markdown link targets are navigation, not clause text: "[Select](/ds/components/select?tab=designer)" → "[Select]".
     .replace(/\]\([^)\s]*\)/g, "]")
     .normalize("NFD")
@@ -167,17 +180,29 @@ function stemOf(word: string, accented?: string): string {
 /** Folded word → the same word as written (lowercase, accents kept), for the plural fold. */
 function accentedForms(value: string): Map<string, string> {
   const map = new Map<string, string>();
-  for (const w of value.normalize("NFC").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
+  for (const w of cleanText(value).normalize("NFC").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
     const f = w.normalize("NFD").replace(/\p{M}/gu, "");
     if (f !== w && !map.has(f)) map.set(f, w);
   }
   return map;
 }
 
+/**
+ * A word token. Index (and 1.1.0): key = the word as written. Query (1.2.0, N-04, `foldPlural`): key = the
+ * plural-folded form, so a plural question asks exactly what its singular asks ("campos" = "campo", which
+ * already matched both forms through the stem) — singular questions and the index do not move.
+ */
+function wordToken(raw: string, accented?: string, foldPlural = false): Token {
+  if (!foldPlural) return { key: raw, stem: stemOf(raw, accented), kind: "word" };
+  const key = pluralFold(raw, accented);
+  return { key, stem: stemOf(raw, accented), kind: "word", ...(key !== raw ? { surface: raw } : {}) };
+}
+
 const TOKEN_RE = /\d+(?:[.,]\d+)+|[a-z0-9]+(?:-[a-z0-9]+)+|[a-z0-9]+/g;
 
 /** Tokens of a text in order (stopwords and 1-character tokens dropped; identifier parts added). */
-export function tokenize(value: string): Token[] {
+export function tokenize(value: string, options: { foldPlural?: boolean } = {}): Token[] {
+  const fold = options.foldPlural ?? false;
   const out: Token[] = [];
   const accents = /[^\x00-\x7f]/.test(value) ? accentedForms(value) : null;
   for (const raw of foldText(value).match(TOKEN_RE) ?? []) {
@@ -193,15 +218,21 @@ export function tokenize(value: string): Token[] {
       out.push({ key: raw, stem: raw, kind: "identifier" });
       for (const part of raw.split("-")) {
         if (part.length < 2 || STOPWORDS.has(part)) continue;
-        out.push({ key: part, stem: /^\d+$/.test(part) ? part : stemOf(part, accents?.get(part)), kind: /^\d+$/.test(part) ? "number" : "word", partOf: raw });
+        if (/^\d+$/.test(part)) out.push({ key: part, stem: part, kind: "number", partOf: raw });
+        else out.push({ ...wordToken(part, accents?.get(part), fold), partOf: raw });
       }
       continue;
     }
     if (raw.length < 2 || STOPWORDS.has(raw)) continue;
     if (/^\d+$/.test(raw)) out.push({ key: raw, stem: raw, kind: "number" });
-    else out.push({ key: raw, stem: stemOf(raw, accents?.get(raw)), kind: "word" });
+    else out.push(wordToken(raw, accents?.get(raw), fold));
   }
   return out;
+}
+
+/** Query tokens: plural folded to the singular (N-04). */
+export function tokenizeQuery(value: string): Token[] {
+  return tokenize(value, { foldPlural: true });
 }
 
 function codeUnitCompare(a: string, b: string): number {
@@ -279,7 +310,7 @@ function expansions(): Map<string, Array<{ term: string; group: string; obs?: bo
 
 type Field = keyof typeof RANKING_WEIGHTS.fields;
 /** Fields reported in `matched` (the text field is reported by its record field names). */
-export type MatchField = "text" | "references" | "conditions" | "exceptions" | "expectedEvidence" | "component" | "section";
+export type MatchField = "text" | "normalizedRule" | "references" | "conditions" | "exceptions" | "expectedEvidence" | "component" | "section";
 
 interface Doc {
   rule: KnowledgeRule;
@@ -287,6 +318,9 @@ interface Doc {
   /** Per field: exact key → tf and stem key → tf. */
   exact: Map<Field, Map<string, number>>;
   stem: Map<Field, Map<string, number>>;
+  /** 1.2.0 (N-05): text field split — literal (title/originalText) in exact/stem "text", paraphrase here. */
+  paraExact: Map<string, number>;
+  paraStem: Map<string, number>;
   /** Adjacent stem pairs of the rule text ("a b"). */
   pairs: Set<string>;
   /** Distinct keys over all fields (document-frequency input). */
@@ -325,10 +359,10 @@ function counts(tokens: Token[], pick: (t: Token) => string): Map<string, number
   return m;
 }
 
-/** Text field: title/normalizedRule/originalText overlap, so each key counts its max over the three. */
-function textCounts(rule: KnowledgeRule, pick: (t: Token) => string): Map<string, number> {
+/** Text field: title/normalizedRule/originalText overlap, so each key counts its max over the given values. */
+function textCounts(rule: KnowledgeRule, pick: (t: Token) => string, values: Array<string | null | undefined> = [rule.title, rule.normalizedRule, rule.originalText]): Map<string, number> {
   const m = new Map<string, number>();
-  for (const value of [rule.title, rule.normalizedRule, rule.originalText]) {
+  for (const value of values) {
     for (const [k, n] of counts(tokenize(value ?? ""), pick)) m.set(k, Math.max(m.get(k) ?? 0, n));
   }
   return m;
@@ -361,8 +395,11 @@ function buildIndex(kb: KnowledgeBase): Index {
     };
     const exact = new Map<Field, Map<string, number>>();
     const stem = new Map<Field, Map<string, number>>();
-    exact.set("text", textCounts(rule, (t) => t.key));
-    stem.set("text", textCounts(rule, (t) => t.stem));
+    const literal = [rule.title, rule.originalText];
+    exact.set("text", textCounts(rule, (t) => t.key, literal));
+    stem.set("text", textCounts(rule, (t) => t.stem, literal));
+    const paraExact = textCounts(rule, (t) => t.key, [rule.normalizedRule]);
+    const paraStem = textCounts(rule, (t) => t.stem, [rule.normalizedRule]);
     for (const [field, text] of Object.entries(fieldText) as Array<[Exclude<Field, "text">, string]>) {
       const toks = tokenize(text);
       exact.set(field, counts(toks, (t) => t.key));
@@ -374,9 +411,12 @@ function buildIndex(kb: KnowledgeBase): Index {
     const keysExact = new Set<string>(), keysStem = new Set<string>();
     for (const m of exact.values()) for (const k of m.keys()) keysExact.add(k);
     for (const m of stem.values()) for (const k of m.keys()) keysStem.add(k);
-    const len = [...exact.get("text")!.values()].reduce((a, b) => a + b, 0);
+    for (const k of paraExact.keys()) keysExact.add(k);
+    for (const k of paraStem.keys()) keysStem.add(k);
+    // Length over the three text values (as in 1.1.0), so BM25 normalization does not move.
+    const len = [...textCounts(rule, (t) => t.key).values()].reduce((a, b) => a + b, 0);
     const tableRow = isTableRow(rule.originalText ?? "");
-    docs.push({ rule, order, exact, stem, keysExact, keysStem, pairs, folded: foldText(rule.originalText || rule.normalizedRule || ""), len, tableRow });
+    docs.push({ rule, order, exact, stem, paraExact, paraStem, keysExact, keysStem, pairs, folded: foldText(rule.originalText || rule.normalizedRule || ""), len, tableRow });
   });
   return { docs, normative: statsOf(docs.filter((d) => d.rule.force !== "example")), pools: new Map() };
 }
@@ -476,7 +516,7 @@ export function analyzeQuery(
   const useVocab = options.vocabulary ?? vocabularyEnabledByDefault();
   // Order-independent: one concept per key; a key that occurs as a standalone word anywhere in the
   // question keeps full weight even if it also occurs inside an identifier ("aria-label label").
-  const all = tokenize(text);
+  const all = tokenizeQuery(text);
   const standalone = new Set(all.filter((t) => !t.partOf).map((t) => t.key));
   const tokens = [...new Map(all.map((t) => [t.key, standalone.has(t.key) ? { ...t, partOf: undefined } : t])).values()]
     .sort((a, b) => codeUnitCompare(a.key, b.key));
@@ -492,7 +532,8 @@ export function analyzeQuery(
     else if (t.kind === "word") alternatives.push({ key: t.stem, byStem: true, weight: W.exact });
     if (useVocab) {
       // An observation→rule bridge applies only to the exact word ("tabs" is the Tab component, not the key).
-      const ex = expansions().get(t.key) ?? (expansions().get(pluralFold(t.key)) ?? []).filter((e) => !e.obs);
+      const written = t.surface ?? t.key;
+      const ex = expansions().get(written) ?? (expansions().get(t.key) ?? []).filter((e) => !e.obs);
       const used: string[] = [];
       for (const e of ex) {
         for (const et of tokenize(e.term)) {
@@ -589,7 +630,16 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
         // With a hint, naming the component matches every rule of it: the hint already carries that.
         if (field === "component" && hint !== null) continue;
         const tf = maps.get(field)?.get(alt.key) ?? 0;
-        if (tf) {
+        if (field === "text") {
+          // Score as 1.1.0 (max over title/originalText/normalizedRule); only the REPORTED field tells a
+          // match found only in the project's paraphrase (N-05).
+          const ptf = (alt.byStem ? doc.paraStem : doc.paraExact).get(alt.key) ?? 0;
+          const t = Math.max(tf, ptf);
+          if (t) {
+            wtf += weight * t;
+            fields.push(tf ? "text" : "normalizedRule");
+          }
+        } else if (tf) {
           wtf += weight * tf;
           fields.push(field);
         }
@@ -607,7 +657,7 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
     lexical += best * c.weight;
     covered += c.idf * c.weight;
     // 3.1.0: no identifier credit for a table row — an API/anatomy listing repeats identifiers by construction.
-    if (!doc.tableRow && c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("references"))) {
+    if (!doc.tableRow && c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("normalizedRule") || bestFields.includes("references"))) {
       bonus += RANKING_WEIGHTS.identifier * c.idf;
     }
     matched.push({
@@ -630,6 +680,27 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
   const score = (lexical + bonus) * (RANKING_WEIGHTS.coverageBase + coverage) * (own ? 1 + RANKING_WEIGHTS.componentHint : 1) *
     (doc.tableRow ? RANKING_WEIGHTS.tableRow : 1);
   return { rule: doc.rule, score, coverage, matched, ownComponent: own, order: doc.order };
+}
+
+/**
+ * 1.2.0 (N-06): with an explicit component hint, the i-th own-component result (i < HINT_PROMOTED) is
+ * placed no lower than position 2i+1 (1-based: 2nd, 4th), keeping both lists' own order. Globals stay
+ * eligible and keep the top slot when they score higher. Pure, deterministic.
+ */
+export const HINT_PROMOTED = 2;
+export function promoteHinted<T>(list: T[], own: (item: T) => boolean): T[] {
+  const out = [...list];
+  for (let i = 0; i < HINT_PROMOTED; i++) {
+    const ownIdx = out.map((x, k) => (own(x) ? k : -1)).filter((k) => k >= 0);
+    if (ownIdx.length <= i) break;
+    const at = ownIdx[i];
+    const maxIdx = 2 * i + 1;
+    if (at > maxIdx) {
+      const [item] = out.splice(at, 1);
+      out.splice(maxIdx, 0, item);
+    }
+  }
+  return out;
 }
 
 export interface RankInput {
@@ -688,7 +759,10 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   const passes = (s: ScoredRule) => s.coverage >= f.minCoverage && (s.score >= f.minScore || s.coverage >= 1) && s.matched.length >= needTerms;
   // 3.1.0: the relative cut is set by the best PROSE clause; a table row only sets it when no prose passes.
   const top = (scored.find((s) => passes(s) && !indexFor(kb).docs[s.order].tableRow) ?? scored.find(passes))?.score ?? 0;
-  const results = scored.filter((s) => passes(s) && (input.relativeFloor === false || s.score >= f.relativeToTop * top));
+  // 1.2.0 (N-06): an explicit `component` hint boosts ORDER only (promoteHinted); the floor is the 1.1.0 one
+  // (NAT-109 ablation: exempting own rules from the relative cut added noise without recall).
+  const filtered = scored.filter((s) => passes(s) && (input.relativeFloor === false || s.score >= f.relativeToTop * top));
+  const results = hint !== null ? promoteHinted(filtered, (s) => s.ownComponent) : filtered;
   return {
     analysis,
     results,

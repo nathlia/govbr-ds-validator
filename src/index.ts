@@ -4,7 +4,7 @@
  *   claude mcp add govbr-ds-validator -- node <path>/dist/index.js
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer, DenseRequiredError, InvalidRetrievalModeError, startupChecks, UnknownToolProfileError } from "./server.js";
+import { createServer, startupChecks, UnknownToolProfileError } from "./server.js";
 import { closeBrowser } from "./evidence/browser.js";
 
 let server: ReturnType<typeof createServer>;
@@ -12,22 +12,13 @@ try {
   server = createServer();
 } catch (err) {
   // 2.17.1 (NAT-106): perfil desconhecido falha na subida — uma linha no stderr (stdout é só JSON-RPC).
-  if (err instanceof UnknownToolProfileError || err instanceof InvalidRetrievalModeError) {
+  if (err instanceof UnknownToolProfileError) {
     console.error(`[govbr-ds-validator] ${err.message}`);
     process.exit(2);
   }
   throw err;
 }
-try {
-  await startupChecks();
-} catch (err) {
-  // 3.2.0 (NAT-107): GOVBR_RETRIEVAL_REQUIRE_DENSE=1 sem modelo/vetores conferidos → não sobe.
-  if (err instanceof DenseRequiredError) {
-    console.error(`[govbr-ds-validator] ${err.message}`);
-    process.exit(2);
-  }
-  throw err;
-}
+await startupChecks();
 const transport = new StdioServerTransport();
 
 async function shutdown(): Promise<void> {

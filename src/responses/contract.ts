@@ -57,6 +57,8 @@ export const MESSAGES = {
     "Norma resolvida pelo servidor a partir do id do check; o implements do payload não é necessário e, se divergir, é ignorado.",
   "offset-deprecated":
     "offset está obsoleto desde a 3.0.0 e deixa de ser aceito na 4.0.0: continue pelo cursor devolvido em page.cursor. Com cursor, offset é ignorado.",
+  "gap-unmatched-context":
+    "Nenhuma candidata deste contexto (componentes observados e regras globais) contém estes termos nem expansões registradas deles. Isto descreve a base, não a página.",
   "table-row":
     "Linha de tabela da documentação (API ou anatomia): descreve a implementação do componente; leia a unidade por id antes de tratá-la como obrigação de comportamento.",
 } as const;
@@ -154,20 +156,43 @@ export interface ContractError {
   [extra: string]: unknown;
 }
 
+/** 3.3.0 (NAT-109, N-01): teto de um valor da entrada ecoado numa resposta. */
+export const ECHO_MAX = 120;
+
+/** Valor ecoado com teto: acima de `max`, o começo + "…(truncado, N caracteres)". */
+export function clip(value: string, max = ECHO_MAX): string {
+  return value.length <= max ? value : `${value.slice(0, max)}…(truncado, ${value.length} caracteres)`;
+}
+
+/** Cópia com cada string ≤ `max` e cada lista ≤ `items` (o resto contado). Só para respostas de erro. */
+export function clipDeep(value: unknown, max: number, items: number): unknown {
+  if (typeof value === "string") return clip(value, max);
+  if (Array.isArray(value)) {
+    const head = value.slice(0, items).map((v) => clipDeep(v, max, items));
+    return value.length > items ? [...head, `…(+${value.length - items} itens omitidos)`] : head;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[clip(k, max)] = clipDeep(v, max, items);
+    return out;
+  }
+  return value;
+}
+
 /**
  * Erro de aplicação: `isError: true` (B-08: antes, ~70 erros saíam como sucesso), `kind:"error"`,
  * `error` continua string (compatível com a 2.16.1) e sempre ≥ 1 próximo passo exato.
  */
 export function fail(error: ContractError) {
   const { error: message, errorCode, field, next, ...extra } = error;
+  let payload: Record<string, unknown> = { contract: CONTRACT, kind: "error", error: message, errorCode, ...(field ? { field } : {}), ...extra, next };
+  // 3.3.0 (N-01): o eco da entrada também cabe no orçamento. Rede de segurança depois dos clip() de cada
+  // mensagem: strings ≤ 2.000 e listas ≤ 20; se ainda passar do teto, strings ≤ ECHO_MAX e listas ≤ 10.
+  payload = clipDeep(payload, 2_000, 20) as Record<string, unknown>;
+  if (textSize(payload) > RESPONSE_BUDGET) payload = clipDeep(payload, ECHO_MAX, 10) as Record<string, unknown>;
   return {
     isError: true,
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({ contract: CONTRACT, kind: "error", error: message, errorCode, ...(field ? { field } : {}), ...extra, next }),
-      },
-    ],
+    content: [{ type: "text" as const, text: JSON.stringify(payload) }],
   };
 }
 
@@ -232,12 +257,16 @@ export function nearestField(unknown: string, accepted: string[]): string | null
   return best && best.d <= Math.max(2, Math.floor(u.length / 3)) ? best.name : null;
 }
 
+/** 3.3.0 (N-01): quantas chaves desconhecidas uma mensagem lista (o resto é contado). */
+export const UNKNOWN_KEYS_LISTED = 5;
+
 export function unknownFieldsMessage(tool: string, keys: string[], accepted: string[]): string {
-  const parts = keys.map((key) => {
+  const parts = keys.slice(0, UNKNOWN_KEYS_LISTED).map((key) => {
     const near = nearestField(key, accepted);
-    return near ? `'${key}' (você quis dizer '${near}'?)` : `'${key}'`;
+    return near ? `'${clip(key, 60)}' (você quis dizer '${near}'?)` : `'${clip(key, 60)}'`;
   });
-  return `campo desconhecido em ${tool}: ${parts.join(", ")}. Nada foi executado; corrija o nome e repita. Campos aceitos: ${accepted.join(", ")}.`;
+  const more = keys.length > UNKNOWN_KEYS_LISTED ? ` e mais ${keys.length - UNKNOWN_KEYS_LISTED}` : "";
+  return `campo desconhecido em ${tool}: ${parts.join(", ")}${more}. Nada foi executado; corrija o nome e repita. Campos aceitos: ${accepted.join(", ")}.`;
 }
 
 /**
@@ -268,12 +297,18 @@ export function inputFailure(tool: string, args: unknown, error: z.ZodError, acc
   const given = args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {};
   if (issue?.code === "unrecognized_keys") {
     const top = issue.path.length === 0;
-    const field = [...issue.path.map(String), issue.keys[0]].join(".");
-    const didYouMean = top ? Object.fromEntries(issue.keys.map((k) => [k, nearestField(k, accepted)]).filter(([, n]) => n)) : {};
-    const fixable = top && issue.keys.every((k) => didYouMean[k] && !(didYouMean[k] as string in given));
+    const field = clip([...issue.path.map(String), issue.keys[0]].join("."), 60);
+    // 3.3.0 (N-11): Map, não objeto — "constructor"/"toString" não podem achar membros do protótipo.
+    const near = new Map<string, string>();
+    if (top) for (const k of issue.keys.slice(0, UNKNOWN_KEYS_LISTED)) {
+      const n = nearestField(k, accepted);
+      if (n) near.set(k, n);
+    }
+    const fixable = top && issue.keys.length <= UNKNOWN_KEYS_LISTED && issue.keys.every((k) => near.has(k) && !Object.hasOwn(given, near.get(k)!));
     const corrected = fixable
-      ? Object.fromEntries(Object.entries(given).map(([k, v]) => [issue.keys.includes(k) ? (didYouMean[k] as string) : k, v]))
+      ? Object.fromEntries(Object.entries(given).map(([k, v]) => [near.get(k) ?? k, v]))
       : null;
+    const didYouMean = Object.fromEntries([...near].map(([k, n]) => [clip(k, 60), n]));
     return fail({
       error: issue.message,
       errorCode: "unknown-parameter",
@@ -378,4 +413,43 @@ export function installContractInputValidation(server: object): void {
   };
   sdk.executeToolHandler = async (tool, args, extra) =>
     args && typeof args === "object" && INVALID_INPUT in args ? (args as Record<symbol, unknown>)[INVALID_INPUT] : execute(tool, args, extra);
+  installPrototypeKeyGuard(server);
+}
+
+/**
+ * 3.3.0 (N-11): um argumento com a chave própria "constructor" não passa nem do esquema de protocolo do
+ * SDK (z.record recusa o objeto: -32603, fora do contrato). O guarda responde antes, no handler de
+ * tools/call, com o mesmo `unknown-parameter` das outras chaves desconhecidas. Depende dos internos do
+ * SDK 1.29.x (fixado), como o gancho acima; sem eles, não instala (o resto do contrato continua).
+ */
+function installPrototypeKeyGuard(server: object): void {
+  type Handler = (request: unknown, extra: unknown) => unknown;
+  const inner = (server as { server?: { _requestHandlers?: Map<string, Handler> } }).server;
+  const handlers = inner?._requestHandlers;
+  if (!(handlers instanceof Map)) return;
+  const registered = () => (server as { _registeredTools?: Record<string, { inputSchema?: unknown }> })._registeredTools ?? {};
+  const guard = (handler: Handler): Handler => (request, extra) => {
+    const params = (request as { params?: { name?: unknown; arguments?: unknown } } | undefined)?.params;
+    const args = params?.arguments;
+    if (args && typeof args === "object" && !Array.isArray(args) && Object.hasOwn(args, "constructor")) {
+      const name = typeof params?.name === "string" ? params.name : "?";
+      const tools = registered();
+      const schema = Object.hasOwn(tools, name) ? tools[name].inputSchema : undefined;
+      const accepted = schema instanceof z.ZodObject ? Object.keys(schema.shape as object) : [];
+      return Promise.resolve(
+        fail({
+          error: unknownFieldsMessage(name, ["constructor"], accepted),
+          errorCode: "unknown-parameter",
+          field: "constructor",
+          accepted,
+          next: [step("request-detail", "repetir sem o campo desconhecido 'constructor' (inputSchema no tools/list)", name)],
+        }),
+      );
+    }
+    return handler(request, extra);
+  };
+  const current = handlers.get("tools/call");
+  if (current) handlers.set("tools/call", guard(current));
+  const set = handlers.set.bind(handlers);
+  handlers.set = (key: string, value: Handler) => set(key, key === "tools/call" ? guard(value) : value);
 }

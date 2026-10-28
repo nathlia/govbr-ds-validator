@@ -4,12 +4,11 @@
  * do motor (retrieval.ts) ou a do adaptador de contexto (applicability.ts); este módulo só decide o
  * que sai, em que formato e dentro de que orçamento.
  */
-import type { RankingInfo } from "../data/hybrid.js";
 import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
-import { NORMATIVE_FORCES } from "../data/knowledge.js";
-import { normativeUnit, normativeUnitRef, legacyResolution } from "../data/normativeUnits.js";
+import { NORMATIVE_FORCES, getKnowledgeBase } from "../data/knowledge.js";
+import { normativeUnit, normativeUnitRef, legacyResolution, emagUnits } from "../data/normativeUnits.js";
 import { neededStateFor } from "../data/applicability.js";
-import { isTableRow } from "../data/retrieval.js";
+import { isTableRow, rankRules } from "../data/retrieval.js";
 import type { GuidanceConcept } from "../data/guidance.js";
 import { componentProvenance } from "../data/componentProvenance.js";
 import { ABSENCE_NOTE } from "./absence.js";
@@ -32,6 +31,12 @@ export const IDS_MAX_DEFAULT = 10;
 export const IDS_MAX_INDEX = 20;
 export const CARD_TEXT_MAX = 600;
 export const INDEX_TITLE_MAX = 110;
+/** 3.3.0 (A-12): modalidade mostrada no cartão de uma linha de tabela. */
+export const IMPLEMENTATION_PROPERTY = "propriedade da implementação";
+/** 3.3.0 (N-02): o rótulo de page.stop mais longo, usado na prova de orçamento. */
+const LONGEST_STOP = "relevance-floor";
+/** 3.3.0 (N-07): acima disto (JSON dos argumentos), a ambiguidade ecoa os argumentos uma vez só. */
+export const AMBIGUITY_INLINE_ARGS_MAX = 200;
 
 const MODALITY: Record<string, string> = {
   required: "obrigação",
@@ -111,8 +116,8 @@ export interface Hit {
   field: string | null;
   /** Conflito documentado que nomeia a regra pelo título (conflicts.json), quando houver. */
   conflicts?: unknown[];
-  /** 3.2.0: busca híbrida/vetorial — em qual lista a regra apareceu. Ausente na léxica (forma da 3.1.0). */
-  via?: "lexical" | "dense" | "both";
+  /** 3.3.0 (N-05): termos que casaram só na paráfrase do projeto (normalizedRule), não no texto mostrado. */
+  paraphraseOnly?: string[];
 }
 
 interface Unit {
@@ -194,18 +199,13 @@ function requirementOf(rule: KnowledgeRule, ctx: CardContext) {
   return { heading: heading(rule), text, complete, ...(complete ? {} : { code: "text-deferred" as const }) };
 }
 
-/** Via da unidade (3.2.0): a das suas ocorrências; listas diferentes → "both". Sem via (léxica) → nada. */
-function viaOf(unit: Unit): { via?: "lexical" | "dense" | "both" } {
-  const vias = new Set(unit.hits.map((h) => h.via).filter((v): v is NonNullable<Hit["via"]> => v !== undefined));
-  if (!vias.size) return {};
-  return { via: vias.size === 1 ? [...vias][0] : "both" };
-}
-
 /** Cartão completo (§5.2). `why` só existe quando houve busca. */
 function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compact = false) {
   const main = mainHit(unit);
   const rule = main.rule;
   const matched = [...new Set(unit.hits.flatMap((h) => h.matched))];
+  const literal = new Set(matched);
+  const paraphrase = [...new Set(unit.hits.flatMap((h) => h.paraphraseOnly ?? []))].filter((t) => !literal.has(t));
   const table = isTableRow(rule.originalText ?? "");
   if (table) ctx.used.add("table-row");
   return {
@@ -213,10 +213,15 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     ids: unitIds(unit),
     citeAs: rule.id,
     status: "investigate" as const,
-    force: rule.force,
-    modality: MODALITY[rule.force] ?? "indefinido",
+    // 3.3.0 (A-12): linha de tabela de API/anatomia é propriedade da implementação, não obrigação de
+    // comportamento — a força da tabela na base não vai para o cartão (o registro por id a mantém).
+    ...(table
+      ? { kind: "implementation-property" as const, force: null, modality: IMPLEMENTATION_PROPERTY }
+      : { force: rule.force, modality: MODALITY[rule.force] ?? "indefinido" }),
     requirement: requirementOf(rule, ctx),
-    ...(withWhy ? { why: { matched, relation: main.relation, field: main.field, ...viaOf(unit) } } : {}),
+    ...(withWhy
+      ? { why: { matched, ...(paraphrase.length ? { matchedInParaphrase: paraphrase } : {}), relation: main.relation, field: main.field } }
+      : {}),
     toVerify: compact ? toVerifyOf(rule, ctx).slice(0, 1) : toVerifyOf(rule, ctx),
     evidence: compact ? evidenceOf(rule).slice(0, 1) : evidenceOf(rule),
     applicability: "unknown" as const,
@@ -230,8 +235,8 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
 export interface KbMeta {
   dsVersion: string;
   knowledgeVersion: string;
-  /** Motor léxico: a string da versão (como na 3.1.0). Híbrido/vetorial (3.2.0): bloco com o modelo ou dense:"unavailable". */
-  ranking: string | RankingInfo;
+  /** Versão do motor léxico. */
+  ranking: string;
   vocabulary: string;
   guidance: string;
 }
@@ -249,6 +254,8 @@ export interface RetrievalInput {
   query: Record<string, unknown>;
   /** Termos sem nenhuma unidade na base (mecânico, §5.3). */
   unmatchedTerms: string[];
+  /** 3.3.0 (N-17): "context" = sem candidata no contexto (componentes observados + globais); padrão "kb". */
+  unmatchedScope?: "kb" | "context";
   concept: GuidanceConcept | null;
   /** Pista de componente efetiva (null = sem pista): decide ambiguidade e `next` de ausência. */
   componentHint: string | null;
@@ -283,7 +290,10 @@ function registryChecked(refs: Array<{ ref: string; name: string }>, wcagNames: 
 
 export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, string>, ruleExists: (id: string) => boolean) {
   const budget = input.budget ?? RESPONSE_BUDGET;
-  const units = groupUnits(input.hits);
+  // 3.3.0 (A-12): linhas de tabela (API/anatomia) depois de toda cláusula de prosa da resposta (ordem estável).
+  const grouped = groupUnits(input.hits);
+  const isRow = (u: Unit) => isTableRow(mainHit(u).rule.originalText ?? "");
+  const units = [...grouped.filter((u) => !isRow(u)), ...grouped.filter(isRow)];
   const first = input.position === 0;
   const ctx: CardContext = {
     concept: input.concept,
@@ -307,7 +317,11 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   // ── lacunas (mecânicas + auditadas) ──
   const gaps: Array<Record<string, unknown>> = [];
   if (input.unmatchedTerms.length) {
-    gaps.push({ kind: "unmatched-terms", about: input.unmatchedTerms.join(" "), message: MESSAGES["gap-unmatched"] });
+    gaps.push({
+      kind: "unmatched-terms",
+      about: input.unmatchedTerms.join(" "),
+      message: MESSAGES[input.unmatchedScope === "context" ? "gap-unmatched-context" : "gap-unmatched"],
+    });
   }
   const coverage = input.concept?.kbCoverage;
   if (coverage && coverage.status !== "covered") {
@@ -338,16 +352,26 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
     const ordered = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
     const shown = ordered.slice(0, 5);
     const others = ordered.slice(5);
+    // 3.3.0 (N-07): com argumentos longos (a pergunta inteira), a chamada vai UMA vez em baseCall e cada
+    // grupo leva só o componente, com extends:"ambiguity.baseCall" — antes a pergunta se repetia em cada grupo.
+    const long = JSON.stringify(input.args).length > AMBIGUITY_INLINE_ARGS_MAX;
+    const groupNext = (component: string) =>
+      long
+        ? { tool: "get_ds_rules", arguments: { component }, extends: "ambiguity.baseCall" }
+        : { tool: "get_ds_rules", arguments: { ...input.args, component } };
+    const otherMembers = others.map(([g]) => g).sort();
     ambiguity = {
       message: MESSAGES.ambiguous,
+      ...(long ? { baseCall: { tool: "get_ds_rules", arguments: input.args, note: "groups[].next = esta chamada com o component do grupo" } } : {}),
       groups: [
         ...shown.map(([group, list]) => ({
           group,
           matched: list.length,
-          next: { tool: "get_ds_rules", arguments: { ...input.args, component: group } },
+          next: groupNext(group),
         })),
+        // 3.3.0 (N-16): o grupo "outros" também traz a chamada exata (o 1º membro; troque pelo que observou).
         ...(others.length
-          ? [{ group: "outros", matched: others.reduce((n, [, l]) => n + l.length, 0), members: others.map(([g]) => g).sort() }]
+          ? [{ group: "outros", matched: others.reduce((n, [, l]) => n + l.length, 0), members: otherMembers, next: groupNext(otherMembers[0]) }]
           : []),
       ],
     };
@@ -414,6 +438,7 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       ...(first && Object.keys(messages).length ? { messages } : {}),
       ...(first ? { kb: input.kb } : {}),
       ...(first ? { query: input.query } : {}),
+      ...(first && input.unmatchedScope === "context" && input.unmatchedTerms.length ? { unmatchedTerms: input.unmatchedTerms } : {}),
       ...(ambiguity ? { ambiguity } : {}),
       results: list,
       ...(investigation ? { investigation } : {}),
@@ -442,12 +467,13 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
     }
     const used = new Set(ctx.used);
     let candidate = card(unit, input.position + cards.length + 1, ctx, true, compact);
-    let trial = compose([...cards, candidate], "limit", input.position + cards.length + 1);
+    // 3.3.0 (N-02): a prova usa o rótulo de parada mais longo, para a resposta final nunca passar do teto.
+    let trial = compose([...cards, candidate], LONGEST_STOP, input.position + cards.length + 1);
     if (cards.length > 0 && textSize(trial) > budget && !compact && cards.length < floorCards) {
       compact = true;
       cards.splice(0, cards.length, ...rebuild());
       candidate = card(unit, input.position + cards.length + 1, ctx, true, true);
-      trial = compose([...cards, candidate], "limit", input.position + cards.length + 1);
+      trial = compose([...cards, candidate], LONGEST_STOP, input.position + cards.length + 1);
     }
     if (cards.length > 0 && textSize(trial) > budget) {
       ctx.used.clear();
@@ -554,7 +580,7 @@ export function listingResponse(input: ListingInput) {
   for (const rule of input.rules.slice(input.position)) {
     if (items.length >= take) break;
     const item = input.project(rule, input.position + items.length + 1);
-    if (items.length > 0 && textSize(compose([...items, item], "limit")) > budget) {
+    if (items.length > 0 && textSize(compose([...items, item], LONGEST_STOP)) > budget) {
       stop = "budget";
       break;
     }
@@ -573,11 +599,94 @@ export function ruleKind(rule: KnowledgeRule): "historical" | "normative" | "evi
 export function lookupCard(rule: KnowledgeRule, rank: number, used: Set<MessageCode>) {
   const ctx: CardContext = { concept: null, conceptRef: null, used };
   const c = card({ key: unitKey(rule), hits: [{ rule, matched: [], relation: rule.component ? "component" : "global", field: null }] }, rank, ctx, false);
-  return {
-    ...c,
-    kind: ruleKind(rule),
-    ...(rule.legacy ? { legacyResolution: legacyResolution(rule) } : {}),
-  };
+  if (rule.legacy) {
+    // 3.3.0 (N-19): id histórico não é candidata citável — sem citeAs, status "historical", e o ponteiro
+    // para a regra corrente (sucessora auditada ou, sem ela, a de texto mais próximo, dito como tal).
+    return {
+      ...c,
+      citeAs: null,
+      status: "historical" as const,
+      kind: ruleKind(rule),
+      current: currentPointer(rule),
+      absenceNote: ABSENCE_NOTE,
+      legacyResolution: legacyResolution(rule),
+    };
+  }
+  return { ...c, kind: ruleKind(rule) };
+}
+
+/** 1ª cláusula que carrega obrigação (required/prohibited), não título; senão a 1ª de prosa; senão null. */
+function obligationClause(rules: KnowledgeRule[]): KnowledgeRule | null {
+  const prose = rules.filter((r) => !isTitleRecord(r) && !r.legacy && r.force !== "example");
+  return prose.find((r) => r.force === "required" || r.force === "prohibited") ?? prose[0] ?? null;
+}
+
+/** Cláusulas correntes da mesma seção de uma regra (incluída), em ordem da base. */
+function sectionClauses(rule: KnowledgeRule): KnowledgeRule[] {
+  const kb = getKnowledgeBase();
+  return kb.rules.filter((r) => r.source.corpusFile === rule.source.corpusFile && r.source.sectionPath === rule.source.sectionPath && typeof r.source.corpusFile === "string");
+}
+
+export interface CurrentPointer {
+  id: string | null;
+  basis: "legacy-map" | "legacy-map-title→section-obligation" | "closest-text-lexical" | "none";
+  caveat: string;
+  next?: { tool: "get_ds_rules"; arguments: { id: string } };
+  wcagFallback?: string[];
+}
+
+/**
+ * 3.3.0 (B-15, N-15, N-19): para onde apontar um id histórico. (1) sucessora auditada que não é registro-título;
+ * (2) sucessora título → a cláusula que obriga na mesma seção; (3) sem sucessora (dropped) → a regra corrente de
+ * texto mais próximo pelo motor léxico (ponteiro de leitura, não equivalência). WCAG do registro, se houver.
+ */
+export function currentPointer(rule: KnowledgeRule): CurrentPointer {
+  const kb = getKnowledgeBase();
+  const successors = (rule.legacy?.supersededBy ?? []).map((id) => kb.byId.get(id)).filter((r): r is KnowledgeRule => Boolean(r));
+  const wcag = rule.wcagReferences.length ? { wcagFallback: rule.wcagReferences } : {};
+  const pointer = (id: string, basis: CurrentPointer["basis"], caveat: string): CurrentPointer => ({
+    id,
+    basis,
+    caveat,
+    next: { tool: "get_ds_rules", arguments: { id } },
+    ...wcag,
+  });
+  const direct = successors.find((r) => !isTitleRecord(r));
+  if (direct) return pointer(direct.id, "legacy-map", "Sucessora do mapa de ids existente; leia-a por id antes de citar.");
+  const title = successors.find((r) => isTitleRecord(r));
+  if (title) {
+    const clause = obligationClause(sectionClauses(title));
+    if (clause) {
+      return pointer(clause.id, "legacy-map-title→section-obligation", "A sucessora do mapa é o título da seção; esta é a cláusula da mesma seção que carrega a obrigação. Leia a unidade por id antes de citar.");
+    }
+    return pointer(title.id, "legacy-map", "Sucessora do mapa (registro-título); leia a unidade por id antes de citar.");
+  }
+  const text = (rule.originalText || rule.normalizedRule || rule.title || "").slice(0, 400);
+  const top = text ? rankRules({ text }, kb).results.find((s) => !s.rule.legacy && !isTitleRecord(s.rule)) : undefined;
+  if (top) {
+    return pointer(top.rule.id, "closest-text-lexical", "Sem sucessora auditada: esta é a regra corrente de texto mais próximo (motor léxico), só um ponteiro de leitura — não é equivalência. Confira o texto antes de citar.");
+  }
+  return { id: null, basis: "none", caveat: "Sem sucessora auditada nem regra corrente próxima: cite uma referência WCAG/e-MAG que você justifique, ou rule: null.", ...wcag };
+}
+
+/**
+ * 3.3.0 (B-09, N-15): citação do template de validação do e-MAG. O template guarda o id da base anterior
+ * (histórico); a resposta aponta para a cláusula CORRENTE da recomendação que carrega a obrigação
+ * (normativeContext.clauses), e diz de onde veio. Nenhum texto da base é reescrito.
+ */
+export function emagTemplateCitation(recommendation: string, templateRuleId: string, getRule: (id: string) => KnowledgeRule | undefined) {
+  const templateRule = getRule(templateRuleId);
+  if (templateRule && !templateRule.legacy) return { id: templateRule.id, kind: "current" as const, basis: "template" };
+  const unitClause = obligationClause(emagUnits(recommendation).clauses.map((c) => getRule(c.id)).filter((r): r is KnowledgeRule => Boolean(r)));
+  const fromHistorical = templateRule
+    ? { from: { id: templateRuleId, kind: "historical" as const, legacyResolution: legacyResolution(templateRule) } }
+    : { from: { id: templateRuleId, kind: "unresolved" as const } };
+  if (unitClause) return { id: unitClause.id, kind: "current" as const, basis: "emag-unit-obligation", ...fromHistorical };
+  if (templateRule) {
+    const p = currentPointer(templateRule);
+    if (p.id) return { id: p.id, kind: "current" as const, basis: p.basis, caveat: p.caveat, ...fromHistorical };
+  }
+  return { id: null, kind: "unresolved" as const, absenceNote: ABSENCE_NOTE, ...fromHistorical };
 }
 
 export interface LookupInput {

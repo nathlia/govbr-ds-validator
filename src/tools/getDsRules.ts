@@ -21,15 +21,15 @@ import {
   suggestComponentNames,
   type ContextCandidate,
 } from "../data/applicability.js";
-import { rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
+import { analyzeQuery, rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
 import { conceptFor, guidanceLabel } from "../data/guidance.js";
-import { defaultRetrievalMode, rankForQuery, type HybridHit, type RankingInfo, type RetrievalMode } from "../data/hybrid.js";
 import { getComponentSpecs } from "../data/load.js";
 import type { PageRegion } from "../evidence/pageFacts.js";
 import { ABSENCE_NOTE } from "../responses/absence.js";
 import {
   CONTRACT,
   MESSAGES,
+  clip,
   cursorKey,
   decodeCursor,
   fail,
@@ -40,6 +40,7 @@ import {
 } from "../responses/contract.js";
 import {
   IDS_MAX_DEFAULT,
+  currentPointer,
   IDS_MAX_INDEX,
   LISTING_DEFAULT_LIMIT,
   LISTING_MAX_LIMIT,
@@ -75,7 +76,6 @@ export interface DsRulesArgs {
   standard?: string;
   query?: string;
   match?: "relevance" | "literal";
-  retrieval?: RetrievalMode;
   vocabulary?: boolean;
   include_evidence?: boolean;
   detail?: "summary" | "brief" | "full" | "index";
@@ -109,7 +109,7 @@ function knownComponents(): string[] {
 export function unknownComponentFailure(component: string, tool = "get_ds_rules", args: Record<string, unknown> = {}) {
   const didYouMean = suggestComponentNames(component);
   return fail({
-    error: `Componente '${component}' não existe na base (use o id, a classe br-<id> ou o nome da página oficial).`,
+    error: `Componente '${clip(component)}' não existe na base (use o id, a classe br-<id> ou o nome da página oficial).`,
     errorCode: "unknown-component",
     field: "component",
     ...(didYouMean.length ? { didYouMean } : {}),
@@ -163,12 +163,10 @@ function strictFilter(args: DsRulesArgs): Omit<RuleFilter, "query" | "component"
 /** Argumentos da chamada inicial (sem cursor/offset/limit/clauseCursor), base do `next` e do cursor. */
 function initialArgs(args: DsRulesArgs): Record<string, unknown> {
   const { cursor: _c, offset: _o, limit: _l, clauseCursor: _cc, ...rest } = args;
-  // 3.2.0 (D-149): `retrieval` igual ao padrão do servidor não é ecoado (next/cursor iguais aos da 3.1.0).
-  if (rest.retrieval !== undefined && rest.retrieval === defaultRetrievalMode()) delete rest.retrieval;
   return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
 }
 
-function kbMeta(vocabulary: boolean, ranking: string | RankingInfo = RANKING_VERSION): KbMeta {
+function kbMeta(vocabulary: boolean, ranking: string = RANKING_VERSION): KbMeta {
   const kb = getKnowledgeBase();
   return {
     dsVersion: kb.meta.dsVersion,
@@ -201,9 +199,11 @@ function withLimitNote<T extends Record<string, unknown>>(response: T, clamped?:
   return { ...response, page: { ...(page ?? {}), limit: clamped } };
 }
 
-/** 3.2.0: uma regra que entrou só pela busca vetorial diz isso e o cosseno (não há termo casado). */
-const matchedOf = (s: ScoredRule & Partial<HybridHit>) =>
-  s.denseOnly ? [`semelhança-vetorial:${(s.cosine ?? 0).toFixed(3)}`] : s.matched.map((m) => (m.via ? `${m.term}→${m.via}` : m.term));
+const literalMatch = (m: ScoredRule["matched"][number]) => m.fields.some((f) => f !== "normalizedRule");
+const label = (m: ScoredRule["matched"][number]) => (m.via ? `${m.term}→${m.via}` : m.term);
+const matchedOf = (s: ScoredRule) => s.matched.filter(literalMatch).map(label);
+/** 3.3.0 (N-05): termos que casaram só na paráfrase do projeto — fora de why.matched, ditos à parte. */
+const paraphraseOf = (s: ScoredRule) => s.matched.filter((m) => !literalMatch(m)).map(label);
 
 function mainField(s: ScoredRule): string | null {
   const counts = new Map<string, number>();
@@ -213,6 +213,7 @@ function mainField(s: ScoredRule): string | null {
 
 function contextHit(c: ContextCandidate): Hit {
   const matched: string[] = [];
+  const paraphraseOnly: string[] = [];
   let relation: Hit["relation"] = c.rule.component === null ? "global" : "component";
   let field: string | null = null;
   for (const r of c.reasons) {
@@ -221,12 +222,23 @@ function contextHit(c: ContextCandidate): Hit {
     else if (r.kind === "related-component-observed") {
       matched.push(`relacionado:${r.component}`);
       if (c.rule.component === null) relation = "related";
+    } else if (r.labels) {
+      matched.push(...r.labels);
+      paraphraseOnly.push(...(r.paraphraseLabels ?? []));
+      if (r.labels.length) field ??= r.fields.find((f) => f !== "normalizedRule") ?? null;
     } else {
       matched.push(r.term);
       field ??= r.fields[0] ?? null;
     }
   }
-  return { rule: c.rule, matched, relation, field, ...(c.conflicts.length ? { conflicts: c.conflicts } : {}) };
+  return {
+    rule: c.rule,
+    matched,
+    relation,
+    field,
+    ...(paraphraseOnly.length ? { paraphraseOnly } : {}),
+    ...(c.conflicts.length ? { conflicts: c.conflicts } : {}),
+  };
 }
 
 function evidenceBlock(pool: KnowledgeRule[], text: string | null, hint: string | null, vocabulary: boolean, take: number) {
@@ -281,12 +293,6 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
       step("request-detail", "a unidade pelo id, sozinho", "get_ds_rules", { id: args.id }),
     ]);
   }
-  // 3.2.0: retrieval escolhe o motor da busca por query; fora dela não tem efeito, então é erro.
-  if (args.retrieval !== undefined && (args.id || args.ids || args.context || !args.query?.trim())) {
-    return combination("retrieval só vale com query (sem id, ids nem context): escolhe o motor da busca por texto.", "retrieval", [
-      step("request-detail", "repita sem retrieval, ou com query", null),
-    ]);
-  }
   if (args.clauseCursor !== undefined && !args.id) {
     return combination("clauseCursor só vale com id (continuação de uma unidade).", "clauseCursor", [step("request-detail", "repita com o id da unidade", null)]);
   }
@@ -296,7 +302,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     const rule = getRuleById(args.id);
     if (!rule) {
       return fail({
-        error: `Regra '${args.id}' não encontrada no knowledge base.`,
+        error: `Regra '${clip(args.id)}' não encontrada no knowledge base.`,
         errorCode: "unknown-id",
         field: "id",
         absenceNote: ABSENCE_NOTE,
@@ -305,6 +311,10 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
           step("keep-uncertain", "sem regra encontrada, mantenha o fato com a referência que você justifica, ou rule: null"),
         ],
       });
+    }
+    if (rule.legacy && args.clauseCursor === undefined) {
+      // 3.3.0 (B-15): id histórico diz que não é a norma servida e aponta a regra corrente (ou o WCAG do registro).
+      return ok({ ...idResponse(rule, args.clauseCursor), citeAs: null, current: currentPointer(rule), absenceNote: ABSENCE_NOTE });
     }
     return ok(idResponse(rule, args.clauseCursor));
   }
@@ -386,6 +396,21 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
       });
     }
     const normalized = normalizeContext(args.context);
+    // 3.3.0 (B-11): só nomes não reconhecidos, sem regiões nem termos → erro de nome com sugestões
+    // (antes: no-match com "reformule pela propriedade", conselho errado).
+    if (!normalized.components.length && normalized.unresolved.length && !normalized.terms.length && !query) {
+      const name = normalized.unresolved[0];
+      const didYouMean = suggestComponentNames(name);
+      return fail({
+        error: `Componente '${clip(name)}' não existe na base (use o id, a classe br-<id> ou o nome da página oficial).`,
+        errorCode: "unknown-component",
+        field: "context.components",
+        ...(didYouMean.length ? { didYouMean } : {}),
+        next: didYouMean.length
+          ? [step("request-detail", "repita com o componente sugerido", "get_ds_rules", { context: { ...args.context, components: didYouMean.slice(0, 1) } })]
+          : [step("request-detail", "escolha um nome de list_components e repita", null)],
+      });
+    }
     const pool = filterRules(strict);
     const candidates = retrieveContextCandidates(pool, normalized, { ...(query ? { query } : {}), vocabulary });
     const meta = kbMeta(vocabulary);
@@ -396,6 +421,15 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     const terms = [...normalized.terms, ...(query ? tokenize(query).map((t) => t.key) : [])];
     const concept = conceptFor(terms, vocabulary, normalized.components);
     const hint = normalized.components.length === 1 ? normalized.components[0] : null;
+    // 3.3.0 (N-17, B-10): termo do contexto sem nenhuma candidata (nem no componente observado nem nas globais).
+    // Como no query: o termo inteiro sem candidata, ou a parte dele que a base não tem ("aria-current" casa
+    // só por "aria"/"current" — o identificador em si não existe na base).
+    const contextUnmatched = [...new Set(normalized.terms.flatMap((t) =>
+      !candidates.some((c) => c.reasons.some((r) => r.kind === "term" && r.term === t)) ? [t] : analyzeQuery(t, { vocabulary }).unmatchedTerms,
+    ))].sort();
+    const unresolvedHints = normalized.unresolved
+      .map((name) => [clip(name), suggestComponentNames(name)] as const)
+      .filter(([, list]) => list.length);
     const response = retrievalResponse(
       {
         mode: "context",
@@ -409,11 +443,14 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
           components: normalized.components,
           regions: normalized.regions,
           terms: normalized.terms,
-          ...(normalized.unresolved.length ? { unresolved: normalized.unresolved } : {}),
+          ...(normalized.unresolved.length ? { unresolved: normalized.unresolved.map((n) => clip(n)) } : {}),
+          ...(unresolvedHints.length ? { unresolvedDidYouMean: Object.fromEntries(unresolvedHints) } : {}),
+          ...(contextUnmatched.length ? { unmatchedTerms: contextUnmatched } : {}),
           ...(query ? { text: query } : {}),
           globalsAllowed: true,
         },
-        unmatchedTerms: [],
+        unmatchedTerms: contextUnmatched,
+        unmatchedScope: "context",
         concept,
         componentHint: hint,
         ambiguityAllowed: false,
@@ -432,21 +469,19 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
   // ── query: motor de relevância ──
   if (query) {
     const pool = globalOnly ? filterRules(strict).filter((r) => r.component === null) : filterRules(strict);
-    const mode = args.retrieval ?? defaultRetrievalMode();
-    const hybrid = await rankForQuery({ text: query, component, pool, vocabulary }, mode, kb);
-    const ranked = hybrid.lexical;
-    const meta = kbMeta(vocabulary, hybrid.ranking);
+    const ranked = rankRules({ text: query, component, pool, vocabulary }, kb);
+    const meta = kbMeta(vocabulary);
     const key = cursorKey({ tool: "get_ds_rules", mode: "query", args: initialArgs(args), kb: meta });
     const start = startPosition(args, key);
     if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
     const { applied, clamped } = limitOf(args.limit, RETRIEVAL_DEFAULT_LIMIT, RETRIEVAL_MAX_LIMIT);
     const concept = conceptFor(ranked.analysis.terms, vocabulary, component ? [component] : []);
-    const hits: Hit[] = hybrid.results.map((s) => ({
+    const hits: Hit[] = ranked.results.map((s) => ({
       rule: s.rule,
       matched: matchedOf(s),
       relation: s.ownComponent ? "component" : s.rule.component === null ? "global" : "related",
       field: mainField(s),
-      ...((s as HybridHit).via ? { via: (s as HybridHit).via } : {}),
+      ...(paraphraseOf(s).length ? { paraphraseOnly: paraphraseOf(s) } : {}),
     }));
     const response = retrievalResponse(
       {

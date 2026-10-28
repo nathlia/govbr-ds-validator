@@ -127,10 +127,14 @@ describe("get_ds_rules on the literal version", () => {
     expect(candidates.some((c) => c.rule.normalizedRule.includes("ajuda contextual"))).toBe(true);
   });
 
-  it("the page's own component name resolves; the Portuguese gloss in parentheses does not", () => {
+  it("the page's own component name resolves; 3.3.0 (B-11): so does the page's own Portuguese name in parentheses", () => {
     expect(resolveComponentName("Magic Button")).toBe("magicbutton");
     expect(resolveComponentName("Menu de Navegação")).toBe("menu");
-    expect(resolveComponentName("botão")).toBeUndefined();
+    // "Button (Botão)", "Pagination (Paginação)": the official page's name, exact — not a translation.
+    expect(resolveComponentName("botão")).toBe("button");
+    expect(resolveComponentName("Paginação")).toBe("pagination");
+    expect(resolveComponentName("paginacao")).toBe("pagination");
+    expect(resolveComponentName("botãozinho")).toBeUndefined();
   });
 });
 

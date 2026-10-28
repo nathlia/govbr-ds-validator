@@ -108,8 +108,9 @@ describe("get_ds_rules{query} — relevance (2.17.0 engine, 3.0.0 envelope)", ()
     const bad = await raw({ query: "foco", component: "tooltipp" });
     expect(bad.isError).toBe(true);
     expect(JSON.parse(bad.text)).toMatchObject({ errorCode: "unknown-component", didYouMean: ["tooltip"] });
+    // 3.3.0 (B-11): o nome em português da própria página oficial resolve.
     const pt = await call({ query: "foco", component: "Paginação" });
-    expect(pt.didYouMean).toEqual(["pagination"]);
+    expect(pt.query.componentHint).toBe("pagination");
   });
 
   it("component:'global' filters rules without a component", async () => {

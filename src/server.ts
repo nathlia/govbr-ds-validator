@@ -109,6 +109,7 @@ import {
   MESSAGES,
   RESPONSE_BUDGET,
   budgetPage,
+  clip,
   cursorKey,
   decodeCursor,
   encodeCursor,
@@ -122,13 +123,17 @@ import {
   type ContractError,
 } from "./responses/contract.js";
 import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
-import { DenseRequiredError, defaultRetrievalMode, denseRequiredByEnv } from "./data/hybrid.js";
-import { denseState } from "./data/embeddings.js";
-export { DenseRequiredError, InvalidRetrievalModeError } from "./data/hybrid.js";
+import { emagTemplateCitation } from "./responses/retrieval.js";
+
+/** 3.3.0 (B-09): o resumo do e-MAG do projeto não é texto da norma (nada da base é reescrito). */
+const EMAG_PARAPHRASE_NOTE =
+  "description, wcag e meta.note são resumo do projeto (em inglês), não texto do e-MAG: não cite como norma. O texto literal está em normativeContext.clauses (por id) e sourceContext.";
+import { looksLikeColor, parseColor } from "./data/colorValue.js";
+import { serverInstructions } from "./prompts/instructions.js";
 
 /**
- * 3.2.0: verificações assíncronas de subida (hoje: GOVBR_RETRIEVAL_REQUIRE_DENSE). O index.ts espera
- * por elas antes de conectar o transporte; falha → exit 2 com uma linha no stderr.
+ * Verificações assíncronas de subida (hoje nenhuma: a da busca vetorial saiu na 3.3.0, D-152). O index.ts
+ * espera por elas antes de conectar o transporte.
  */
 let startupCheck: Promise<void> = Promise.resolve();
 export function startupChecks(): Promise<void> {
@@ -777,6 +782,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     version: VERSAO,
     // 2.17.1 (NAT-106): perfil efetivo legível pelo runner no initialize (serverInfo), sem tocar o tools/list.
     description: `toolProfile=${toolProfile}`,
+  }, {
+    // 3.3.0 (B-18): procedimento de uso das ferramentas deste perfil, sem conhecimento do DS.
+    instructions: serverInstructions(new Set([
+      ...(hasNorms ? ["get_ds_rules"] : []),
+      ...(hasEvidence ? ["inspect_computed_styles"] : []),
+      ...(hasDeterministic || knowledgeFree ? ["scan_page", "get_finding_details"] : []),
+      ...(hasCombinedGate || knowledgeFree ? ["verify_finding"] : []),
+    ])),
   });
   installContractInputValidation(server);
 
@@ -785,19 +798,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   if (!knowledgeFree) warnOnVersionMismatch();
   // 3.0.0 (revisão): orientação curada sem basis válido não sobe (§15.6b, falha cedo).
   if (hasNorms) getGuidance();
-  // 3.2.0 (NAT-107, D-149): padrão léxico — o modelo nem carrega. Com GOVBR_RETRIEVAL_MODE=hybrid|dense,
-  // vetores + modelo carregam em segundo plano (a 1ª query espera; ausentes → léxica com
-  // ranking.dense:"unavailable"). Modo inválido falha na subida.
-  const startupMode = hasNorms ? defaultRetrievalMode() : "lexical";
-  if (startupMode !== "lexical") void denseState();
-  // GOVBR_RETRIEVAL_REQUIRE_DENSE=1 (runner): só vale com hybrid/dense como padrão; sem modelo + vetores
-  // conferidos, não sobe. O knowledge-free ignora (não tem busca nem base).
-  startupCheck =
-    startupMode !== "lexical" && denseRequiredByEnv()
-      ? denseState().then((s) => {
-          if (s.status !== "ready") throw new DenseRequiredError(`${s.model}: ${s.reason}`);
-        })
-      : Promise.resolve();
+  // 3.3.0 (D-152): a busca híbrida/vetorial da 3.2.0 foi removida; nenhuma checagem de subida assíncrona.
+  startupCheck = Promise.resolve();
 
   // ══════════════════════════════════════════════════════════════════════════
   // Oracle knowledge tools (A1–A4)
@@ -808,7 +810,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
       description:
-        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Com query ou context, devolve até 5 unidades candidatas a investigar (status investigate, aplicabilidade desconhecida), cada uma com o texto da cláusula, o que medir (toVerify) e a evidência a obter; diz o que a base não cobre (gaps) e para no piso de relevância — candidata não é defeito nem conformidade. component é pista (as regras globais continuam elegíveis; 'global' filtra só as sem componente). Sem query, lista o catálogo em ordem da base (títulos). Continue uma resposta cortada pelo cursor que ela devolve, ou pelo id.",
+        "Regras do gov.br DS e e-MAG por query, context, filtro ou id. query/context: até 5 candidatas a investigar (aplicabilidade desconhecida; não é defeito nem conformidade), com texto da cláusula, o que medir (toVerify), evidência, lacunas (gaps) e piso de relevância. component é pista (globais continuam; 'global' = só globais). Sem query: catálogo em ordem da base. Continue pelo cursor devolvido ou pelo id.",
       inputSchema: strictInput("get_ds_rules", {
         context: z
           .object({
@@ -816,7 +818,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               .array(z.string().min(1).max(60))
               .max(36)
               .optional()
-              .describe("Componentes observados (id, classe br-<id> ou nome da página oficial), ex.: coverage.componentsFound do scan_page"),
+              .describe("Componentes observados (id, br-<id> ou nome da página oficial), ex.: coverage.componentsFound"),
             regions: z
               .array(z.enum(PAGE_REGIONS as [PageRegion, ...PageRegion[]]))
               .max(PAGE_REGIONS.length)
@@ -826,26 +828,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
               .array(z.string().min(3).max(60))
               .max(10)
               .optional()
-              .describe("Termos do estado/contexto observado, buscados em condições, exceções, evidência esperada, título e regra"),
+              .describe("Termos do estado observado"),
           })
           .strict()
           .optional()
-          .describe("Contexto observado → regras candidatas (componente/região próprios, relatedComponents, termos). Combina com force/category/validationStrategy/standard/query; não com component/id/ids"),
-        id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
+          .describe("Contexto observado → candidatas. Combina com force/category/validationStrategy/standard/query; não com component/id/ids"),
+        id: z.string().max(200).optional().describe("Id exato (govbr-3.7.0-…): o registro completo"),
         ids: z
-          .array(z.string())
+          .array(z.string().max(200))
           .min(1)
           .max(20)
           .optional()
-          .describe("Até 20 ids exatos em lote; usa detail brief por padrão"),
-        component: z.string().optional().describe("Componente: id, classe br-<id> ou nome da página oficial (ex.: 'button', 'br-modal'); nome desconhecido ou vazio é erro com sugestões"),
+          .describe("Ids exatos em lote (cartões)"),
+        component: z.string().max(60).optional().describe("Componente: id, br-<id> ou nome da página oficial ('button', 'br-modal', 'Paginação'); desconhecido = erro com sugestões"),
         category: z
           .enum(["accessibility", "component", "development", "foundation", "page", "pattern", "template"])
           .optional(),
         force: z
           .enum(["required", "prohibited", "recommended", "discouraged", "permitted", "informative", "unclear"])
           .optional()
-          .describe("Força normativa ('example' não é aceito aqui — use include_evidence)"),
+          .describe("Força normativa (exemplos: include_evidence)"),
         validationStrategy: z
           .enum([
             "dom",
@@ -868,53 +870,50 @@ export function createServer(options: ServerOptions = {}): McpServer {
         standard: z.enum(["gov.br Design System", "eMAG"]).optional(),
         query: z
           .string()
+          .max(2000)
           .optional()
-          .describe("Pergunta ou observação em texto livre (até 500 caracteres): busca por relevância (até 5 unidades acima do piso; limit até 10)"),
+          .describe("Observação em texto livre (até 500 caracteres), busca por relevância"),
         match: z
           .enum(["relevance", "literal"])
           .optional()
-          .describe("'relevance' (padrão) ou 'literal': query como substring exata, sensível a acento, com component como filtro exato (semântica da 2.16.1)"),
+          .describe("'literal': query como substring exata e component como filtro exato (2.16.1)"),
         vocabulary: z
           .boolean()
           .optional()
-          .describe("Expansões de vocabulário versionadas (PT/EN, nomes HTML/ARIA); padrão ligado. false desliga"),
-        retrieval: z
-          .enum(["hybrid", "lexical", "dense"])
-          .optional()
-          .describe("Motor da busca por query: 'lexical' (padrão, por termos), 'hybrid' (léxica + vetorial local, fusão RRF: um pouco mais de acertos, mas menos precisão e mais resultados quando a base não tem resposta) ou 'dense' (só vetorial, para medição)"),
+          .describe("Expansões de vocabulário versionadas (padrão ligado)"),
         include_evidence: z
           .boolean()
           .optional()
-          .describe("Anexar fragmentos canônicos (force=example) no campo separado 'evidence'"),
+          .describe("Anexar fragmentos canônicos (force=example) em 'evidence'"),
         detail: z
           .enum(["summary", "brief", "full", "index"])
           .optional()
-          .describe("Listagem: 'index' (padrão: id, força, título) | 'brief' | 'full', sempre no orçamento com cursor. ids: cartões (padrão), 'index' (até 20 ids) ou 'full' (registro projetado). Sem efeito em query/context (cartões)"),
+          .describe("Listagem: 'index' (padrão) | 'brief' | 'full'. ids: cartões (padrão) | 'index' | 'full'. Sem efeito em query/context"),
         limit: z
           .number()
           .int()
           .min(1)
           .max(200)
           .optional()
-          .describe("Máximo por página: query/context padrão 5, teto 10; listagem padrão 20, teto 50 (acima do teto vale o teto, dito em page.limit). Toda resposta fica em ~8.000 caracteres; o resto vem pelo cursor"),
+          .describe("Por página: query/context 5 (teto 10); listagem 20 (teto 50). Resposta ≤ 8.000 caracteres; o resto pelo cursor"),
         offset: z.number().int().min(0).optional().describe("Obsoleto (aceito até a 4.0.0, com aviso): use cursor"),
-        cursor: z.string().max(40).optional().describe("Continuação opaca devolvida em page.cursor; repita os mesmos parâmetros com ela"),
-        clauseCursor: z.number().int().min(0).optional().describe("Com id: continuação das cláusulas adjacentes de uma unidade grande (devolvida em nextClauseCursor)"),
+        cursor: z.string().max(40).optional().describe("page.cursor devolvido; repita os mesmos parâmetros"),
+        clauseCursor: z.number().int().min(0).optional().describe("Com id: nextClauseCursor devolvido"),
       }),
       annotations: { readOnlyHint: true },
     },
     instrumentTool(telemetry, "get_ds_rules", async (args) => {
       // 3.0.0: o contrato oraculo-resposta/1.0.0. match:"literal" = a superfície da 2.17.1, byte a byte.
       if (args.match !== "literal") return getDsRules(args, { brief: briefRule, full: projectRule });
-      if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index" || args.retrieval !== undefined) {
+      if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index") {
         return fail({
-          error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor, detail:'index' nem retrieval. Pagine com offset.",
+          error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor nem detail:'index'. Pagine com offset.",
           errorCode: "invalid-combination",
           field: "match",
           next: [step("request-detail", "repita sem match:'literal' para o contrato 3.0.0", null)],
         });
       }
-      const { id, ids, context, include_evidence, limit, offset, match, vocabulary, cursor: _cursor, clauseCursor: _clause, retrieval: _retrieval, detail: rawDetail, ...rawFilter } = args;
+      const { id, ids, context, include_evidence, limit, offset, match, vocabulary, cursor: _cursor, clauseCursor: _clause, detail: rawDetail, ...rawFilter } = args;
       const detail = rawDetail as "summary" | "brief" | "full" | undefined;
       const kb = getKnowledgeBase();
       const search: SearchOptions = { match, vocabulary };
@@ -1048,7 +1047,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "Consulta tokens do gov.br DS por nome. Sem filtro, retorna apenas destaques semânticos e o índice reverso de cores.",
       inputSchema: strictInput("get_design_tokens", {
         query: z.string().max(200).optional().describe("Fragmento de nome para filtrar (omitir para destaques semânticos + índice hex)"),
-        hex: z.string().max(20).optional().describe("Cor (#rrggbb, rrggbb): devolve os tokens com esse valor (índice reverso)"),
+        hex: z.string().max(20).optional().describe("Cor medida (#rgb, #rrggbb, rgb()/rgba(…,1)): os tokens com esse valor"),
         cursor: z.string().max(40).optional().describe("Continuação devolvida em page.cursor (mesmos parâmetros)"),
       }),
       annotations: { readOnlyHint: true },
@@ -1056,13 +1055,33 @@ export function createServer(options: ServerOptions = {}): McpServer {
     instrumentTool(telemetry, "get_design_tokens", async ({ query, hex, cursor }) => {
       const registry = getTokenRegistry();
       const args = { ...(query !== undefined ? { query } : {}), ...(hex !== undefined ? { hex } : {}) };
-      if (hex !== undefined) {
-        const key = `#${hex.trim().replace(/^#/, "").toLowerCase()}`;
-        const tokens = registry.hexLookup[key] ?? [];
+      // 3.3.0 (N-03, N-13, N-20, B-02): hex normalizado (#fff, rgb(), rgba(…,1)); o que não é cor é erro.
+      if (hex !== undefined || (query !== undefined && looksLikeColor(query))) {
+        if (hex !== undefined && query !== undefined) {
+          return fail({ error: "Informe hex ou query, não ambos.", errorCode: "invalid-combination", field: "query", next: [step("request-detail", "o valor da cor, sozinho", "get_design_tokens", { hex })] });
+        }
+        if (hex !== undefined && cursor !== undefined) {
+          return fail({ error: "hex não tem continuação: a resposta é uma só.", errorCode: "invalid-combination", field: "cursor", next: [step("request-detail", "o valor da cor, sem cursor", "get_design_tokens", { hex })] });
+        }
+        const given = (hex ?? query)!;
+        const parsed = parseColor(given);
+        if (!parsed.ok) {
+          return fail({
+            error: parsed.reason === "translucent"
+              ? `'${clip(given, 40)}' tem alfa ${parsed.alpha} (< 1): a cor vista depende do fundo; o registro guarda cores opacas.`
+              : `'${clip(given, 40)}' não é uma cor: use #rgb, #rrggbb, rrggbb, rgb(r, g, b) ou rgba(r, g, b, 1).`,
+            errorCode: "invalid-argument",
+            field: hex !== undefined ? "hex" : "query",
+            next: [step("request-detail", "a cor medida (ex.: o valor de getComputedStyle)", "get_design_tokens", { hex: "#1351b4" })],
+          });
+        }
+        const tokens = registry.hexLookup[parsed.hex] ?? [];
         return ok({
           contract: CONTRACT,
           kind: "tokens",
-          hex: key,
+          hex: parsed.hex,
+          ...(parsed.hex !== given.trim().toLowerCase() ? { given: clip(given, 40) } : {}),
+          ...(hex === undefined ? { queryNote: "query é um valor de cor: resolvido como hex (use hex)." } : {}),
           count: tokens.length,
           tokens,
           ...(tokens.length ? {} : { absenceNote: ABSENCE_NOTE, note: "Nenhum token do registro tem este valor; isto descreve o registro, não a página." }),
@@ -1084,7 +1103,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           count: 0,
           tokens: {},
           absenceNote: ABSENCE_NOTE,
-          next: [step("request-detail", "para saber se um valor é token, use hex", "get_design_tokens", {})],
+          next: [step("request-detail", "para saber se um valor é token, use hex com a cor medida", "get_design_tokens", { hex: "#1351b4" })],
         });
       }
       return ok(
@@ -1147,21 +1166,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
         }
         // KB enrichment (Phase 2.6): how to verify this recommendation.
         const template = getEmagValidationTemplate(id);
-        const templateRule = template ? getRuleById(template.ruleId) : undefined;
-        const templateCitation = template ? {
-          id: template.ruleId,
-          kind: templateRule?.legacy ? "historical" : templateRule ? "current" : "unresolved",
-          ...(templateRule ? { legacyResolution: legacyResolution(templateRule) } : { absenceNote: ABSENCE_NOTE }),
-        } : undefined;
+        // 3.3.0 (B-09, N-15): o template aponta para a cláusula corrente que obriga (não o id histórico nem o título).
+        const templateCitation = template ? emagTemplateCitation(id, template.ruleId, getRuleById) : undefined;
         const units = emagUnits(id);
-        const description = id === "3.9" && units.sourceContext ? units.sourceContext.text : rule.description;
+        const literalDescription = id === "3.9" && units.sourceContext;
+        const description = literalDescription ? units.sourceContext!.text : rule.description;
         const response: Record<string, unknown> = {
           contract: CONTRACT,
           kind: "emag-recommendation",
           ...rule,
           description,
+          ...(literalDescription ? {} : { descriptionKind: "project-paraphrase", paraphraseNote: EMAG_PARAPHRASE_NOTE }),
           normativeContext: units,
-          ...(template ? { validationTemplate: { ...template, citation: templateCitation } } : {}),
+          ...(template && templateCitation
+            ? { validationTemplate: { ...template, ruleId: templateCitation.id, ...(templateCitation.id !== template.ruleId ? { historicalRuleId: template.ruleId } : {}), citation: templateCitation } }
+            : {}),
         };
         // Teto do contrato (§7.7): cláusulas que não cabem vão por id, inteiras, no get_ds_rules.
         if (textSize(response) > RESPONSE_BUDGET) {
@@ -1198,6 +1217,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           contract: CONTRACT,
           kind: "emag-section",
           meta: emag.meta,
+          paraphraseNote: EMAG_PARAPHRASE_NOTE,
           section: {
             ...found,
             rules: found.rules.map((rule) => {
@@ -1258,6 +1278,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     instrumentTool(telemetry, "get_page_rules", async ({ category, cursor }) => {
       const pageRules = getPageRules();
+      // 3.3.0 (N-13): cursor sem category não continua nada — erro, não índice em silêncio.
+      if (!category && cursor !== undefined) {
+        return fail({ error: "cursor só vale com category (continuação das seções de uma categoria).", errorCode: "invalid-combination", field: "cursor", next: [step("request-detail", "o índice de categorias", "get_page_rules", {})] });
+      }
       // 2.7.0: as restrições citáveis de página acompanham o índice e as categorias que as sustentam,
       // como as restrições estruturais acompanham get_component_spec (D-29).
       const constraints = pageConstraints();
@@ -2069,7 +2093,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return ok({ contract: CONTRACT, kind: "family-members", scanId, ...members });
         }
         // 3.3.0 (N-10): o mesmo id pedido duas vezes vem uma vez.
-        const { found, missing } = ids ? findingStore.get([...new Set(ids)]) : { found: batch ?? [], missing: [] };
+        const { found, missing: missingAll } = ids ? findingStore.get([...new Set(ids)]) : { found: batch ?? [], missing: [] };
+        // 3.3.0 (N-01): ids ausentes ecoados com teto (≤ 20, cada um ≤ 80). O esquema não muda (o sha do
+        // tools/list do knowledge-free fica fixo); scanId/familyId desconhecidos saem por fail(), que corta o eco.
+        const missing = missingAll.slice(0, 20).map((id) => clip(id, 80));
         const familyView = view as "findings" | "families" | undefined;
         // Revisão da 3.0.0 (M3): o ledger (estado, cobertura) entra na conta do orçamento; na
         // continuação ele não se repete (já veio na 1ª página).
@@ -2080,6 +2107,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(scanId ? { scanId } : {}),
           ...(ledger && !cursor ? { ledger } : {}),
           missing,
+          ...(missingAll.length > missing.length ? { missingOmitted: missingAll.length - missing.length } : {}),
           ...(missing.length
             ? {
                 missingNote:

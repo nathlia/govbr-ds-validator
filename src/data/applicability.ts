@@ -26,7 +26,7 @@ import {
   type KnowledgeRule,
   type RuleForce,
 } from "./knowledge.js";
-import { isTableRow, scoreTerms, type MatchField, type ScoredRule } from "./retrieval.js";
+import { cleanText, isTableRow, scoreTerms, tokenize, tokenizeQuery, type MatchField, type ScoredRule } from "./retrieval.js";
 
 /** Chave nominal: sem acento, sem caixa, sem `br-`/`<>`, sem separadores. "Cookie Bar" → "cookiebar". */
 function nameKey(value: string): string {
@@ -71,7 +71,32 @@ function componentAliases(): Map<string, string> {
 
 /** Resolve uma variante nominal documentada ao id do componente; `undefined` se não houver. */
 export function resolveComponentName(value: string): string | undefined {
-  return componentAliases().get(nameKey(value));
+  const key = nameKey(value);
+  return componentAliases().get(key) ?? officialGlosses().get(key);
+}
+
+let uniqueGlosses: Map<string, string> | undefined;
+/**
+ * 3.3.0 (NAT-109, B-11): o nome em português que a PRÓPRIA página oficial dá ao componente, entre
+ * parênteses no título ("Pagination (Paginação)" → pagination), resolve o argumento quando é exato e
+ * aponta para um componente só. Não é tradução nem apelido: é o nome da página, como diz a mensagem de
+ * erro. Glosa compartilhada por dois componentes não resolve (continua sugestão).
+ */
+function officialGlosses(): Map<string, string> {
+  if (uniqueGlosses) return uniqueGlosses;
+  const owners = new Map<string, Set<string>>();
+  for (const rule of getKnowledgeBase().rules) {
+    const title = rule.source.pageTitle;
+    if (!rule.component || typeof title !== "string") continue;
+    const gloss = /\(([^)]+)\)/.exec(title)?.[1];
+    if (!gloss) continue;
+    const key = nameKey(gloss);
+    if (!key) continue;
+    if (!owners.has(key)) owners.set(key, new Set());
+    owners.get(key)!.add(rule.component);
+  }
+  uniqueGlosses = new Map([...owners].filter(([, s]) => s.size === 1).map(([k, s]) => [k, [...s][0]]));
+  return uniqueGlosses;
 }
 
 let glosses: Map<string, string> | undefined;
@@ -121,7 +146,7 @@ export const NAMED_IN_TEXT_EXCLUDED = new Set([
  * argumento `component`; a busca usa isto só quando a chamada não traz `component`.
  */
 export function componentsNamedIn(text: string): string[] {
-  const words = normalizeText(text).split(/[^a-z0-9-]+/).filter(Boolean);
+  const words = normalizeText(cleanText(text)).split(/[^a-z0-9-]+/).filter(Boolean);
   const out = new Set<string>();
   const resolve = (phrase: string) => {
     const key = nameKey(phrase);
@@ -217,7 +242,7 @@ export function normalizeContext(context: RuleContext): NormalizedContext {
   }
   const regions = [...new Set(context.regions ?? [])].sort();
   for (const region of regions) components.add(regionComponent(region));
-  const terms = [...new Set((context.terms ?? []).map(normalizeText).filter((t) => t.length >= 3))].sort();
+  const terms = [...new Set((context.terms ?? []).map((t) => normalizeText(cleanText(t))).filter((t) => t.length >= 3))].sort();
   return { components: [...components].sort(), regions, terms, unresolved: [...unresolved].sort() };
 }
 
@@ -225,7 +250,15 @@ export type RetrievalReason =
   | { kind: "component-observed"; component: string }
   | { kind: "region-observed"; region: PageRegion; component: string }
   | { kind: "related-component-observed"; component: string; via: "relatedComponents" }
-  | { kind: "term"; term: string; fields: TermField[] };
+  | {
+      kind: "term";
+      term: string;
+      fields: TermField[];
+      /** 3.3.0 (N-05): o que casou, como no query ("termo" ou "termo→expansão"), no texto ou fora da paráfrase. */
+      labels?: string[];
+      /** 3.3.0 (N-05): termos que casaram só na paráfrase do projeto (normalizedRule). */
+      paraphraseLabels?: string[];
+    };
 
 /**
  * Field where a context term matched (2.17.0: reported by the relevance engine; `text` =
@@ -411,7 +444,16 @@ export function retrieveContextCandidates(
   const order = new Map(getKnowledgeBase().rules.map((rule, index) => [rule.id, index]));
   const eligible = base.filter((rule) => rule.force !== "example" && (rule.component === null || observed.has(rule.component)));
   const query = options.query?.trim() ?? "";
-  const perTerm = literal ? [] : context.terms.map((term) => ({ term, scores: scoreTerms([term], eligible, options.vocabulary) }));
+  // 3.3.0 (A-12): termo de várias palavras ("página atual") vale como FRASE — as palavras adjacentes (dobradas)
+  // num campo da regra —, não como qualquer uma delas ("atual" de "família tipográfica atual").
+  const perTerm = literal
+    ? []
+    : context.terms.map((term) => {
+        const scores = scoreTerms([term], eligible, options.vocabulary);
+        const phrase = phraseStems(term);
+        if (phrase.length >= 2) for (const [id, s] of [...scores]) if (!hasPhrase(s.rule, phrase)) scores.delete(id);
+        return { term, scores };
+      });
   const queryScores = !literal && query ? scoreTerms([query], eligible, options.vocabulary) : new Map<string, ScoredRule>();
   const out: ContextCandidate[] = [];
 
@@ -435,12 +477,12 @@ export function retrieveContextCandidates(
         const scored = scores.get(rule.id);
         if (!scored) continue;
         relevance += scored.score;
-        reasons.push({ kind: "term", term, fields: [...new Set(scored.matched.flatMap((m) => m.fields))].sort() });
+        reasons.push({ kind: "term", term, fields: [...new Set(scored.matched.flatMap((m) => m.fields))].sort(), ...matchLabels(scored) });
       }
       const q = queryScores.get(rule.id);
       if (q) {
         relevance += q.score;
-        reasons.push({ kind: "term", term: query, fields: [...new Set(q.matched.flatMap((m) => m.fields))].sort() });
+        reasons.push({ kind: "term", term: query, fields: [...new Set(q.matched.flatMap((m) => m.fields))].sort(), ...matchLabels(q) });
       }
     }
     if (!reasons.length) continue;
@@ -473,6 +515,29 @@ export function retrieveContextCandidates(
   }
 
   return interleaveByGroup(out, order, literal);
+}
+
+/** Radicais das palavras de conteúdo de um termo, em ordem (partes de identificador fora). */
+function phraseStems(term: string): string[] {
+  return tokenizeQuery(term).filter((t) => !t.partOf).map((t) => t.stem);
+}
+
+/** A sequência de radicais aparece contígua (sem contar palavras vazias) em algum campo da regra? */
+function hasPhrase(rule: KnowledgeRule, phrase: string[]): boolean {
+  const section = typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : "";
+  for (const value of [rule.title, rule.originalText, rule.normalizedRule, section, ...rule.conditions, ...rule.exceptions, ...rule.expectedEvidence]) {
+    const stems = tokenize(value ?? "").filter((t) => !t.partOf).map((t) => t.stem);
+    for (let i = 0; i + phrase.length <= stems.length; i++) if (phrase.every((p, k) => stems[i + k] === p)) return true;
+  }
+  return false;
+}
+
+/** 3.3.0 (N-05): rótulos do que casou, separando o que casou só na paráfrase do projeto. */
+function matchLabels(s: ScoredRule): { labels: string[]; paraphraseLabels?: string[] } {
+  const label = (m: ScoredRule["matched"][number]) => (m.via ? `${m.term}→${m.via}` : m.term);
+  const literal = s.matched.filter((m) => m.fields.some((f) => f !== "normalizedRule"));
+  const para = s.matched.filter((m) => m.fields.every((f) => f === "normalizedRule"));
+  return { labels: literal.map(label), ...(para.length ? { paraphraseLabels: para.map(label) } : {}) };
 }
 
 /** Grupo de uma candidata: o componente dono da regra, ou GLOBAL_GROUP (relação documentada/termo). */
@@ -583,4 +648,5 @@ export function pageCategoryPointers(terms: string[]): Array<{ category: string;
 export function resetApplicabilityCache(): void {
   aliases = undefined;
   glosses = undefined;
+  uniqueGlosses = undefined;
 }

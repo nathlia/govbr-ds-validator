@@ -83,117 +83,82 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
-## 3.2.0 (NAT-107, D-147, D-149): busca híbrida opcional — léxica + vetorial local
+## 3.3.0 — busca e contrato (NAT-109, D-151, D-152): defeitos do reteste adversarial da 3.2.0
 
-**Padrão: léxico, como na 3.1.0.** Sem `retrieval` e sem `GOVBR_RETRIEVAL_MODE`, o `get_ds_rules` responde
-byte a byte como a 3.1.0 (respostas, cursores e `next` — conferido contra respostas capturadas da `a08c90e`
-em `test/fixtures/lexical-3.1.0-get-ds-rules.json`) e o modelo **nem carrega** (sem custo de memória nem de
-subida). A busca híbrida é opcional: `retrieval:"hybrid"` na chamada ou `GOVBR_RETRIEVAL_MODE=hybrid` no servidor.
-**Troca medida** (benchmark de desenvolvimento, qrels 1.0.3): a híbrida acerta uma pergunta respondível a mais
-(45/56 vs 44/56) e ordena melhor (nDCG@5 46,1 vs 40,3), mas tem P@5 bem menor (29,5 vs 45,7) e devolve mais
-resultados onde a base não tem resposta (25 vs 11 unidades nas sem-resposta; 9 vs 2 nas fora de escopo).
+Busca híbrida medida e descartada no 3.2.0 (D-149/D-152); ver histórico do git. O único motor é o léxico
+(`govbr-lexical/1.2.0`); o parâmetro `retrieval`, `GOVBR_RETRIEVAL_MODE`/`GOVBR_RETRIEVAL_REQUIRE_DENSE`, o
+modelo, os vetores e a dependência `@huggingface/transformers` (onnxruntime) saíram. `match:"literal"` fica.
 
-**O que a híbrida faz.** Ordena por **duas listas fundidas**: a do motor léxico (`govbr-lexical/1.1.0`, sem
-mudança) e a de um modelo de embeddings local, multilíngue e pequeno, por *Reciprocal Rank Fusion* com o
-parâmetro padrão (k = 60, pesos iguais; Cormack, Clarke e Büttcher, 2009): cada regra soma 1/(60 + posição)
-em cada lista onde aparece (lista vetorial: as 50 de maior cosseno). Sem serviço externo nem rede em execução;
-nenhum texto é gerado — o vetor só ordena regras que já estão na base. Cada cartão diz de onde veio:
-`why.via: "lexical" | "dense" | "both"` (só na híbrida/vetorial; a léxica mantém a forma da 3.1.0).
+**Ranking = o léxico da 3.2.0, salvo o que passou a guarda (D-152).** Guarda, no desenvolvimento (benchmark
+1.0.0, qrels 1.0.4, estrato respondível, léxica; a reserva já foi gasta — D-151): P@5 até 1 ponto abaixo da
+3.2.0 e nem mais enganosas nem mais respostas nos estratos sem resposta. Cada mudança medida uma vez,
+desligando-a sobre as demais:
 
-**Quem entra só pelo vetor.** Uma regra que não passou o piso léxico só entra se (1) a pergunta tem **âncora
-na base** — ao menos um termo de conteúdo, e pelo menos metade deles, existe no vocabulário da própria base
-(chaves e radicais dobrados — caixa, acento, plural — dos campos que o motor léxico indexa, sem palavras vazias
-e sem sinônimos); (2) o cosseno da pergunta **sem** a pista de componente alcança o limiar (o nome do
-componente entra no texto só para ordenar, não para admitir: o limiar foi calibrado sem ele); (3) não é linha
-de tabela. Sem âncora (`"xyzzy quux"`, `"futebol campeonato brasileiro"`, `"xyzzy quux componente"`), nada
-entra pelo vetor: sobra o resultado léxico, e sem ele a ausência normal (`no-match`, `absenceNote`,
-`unmatchedTerms`). Uma unidade só-vetorial diz `why.matched: ["semelhança-vetorial:0.8xx"]`.
+| configuração | hit@5 | P@5 | nDCG@5 | enganosas | resultados sem-resposta/fora/neg. difícil | caracteres (média) |
+|---|---|---|---|---|---|---|
+| 3.2.0 (tudo desligado = 3.2.0 reproduzida) | 78,6 | 45,7 | 39,5 | 9 | 29 | 5.848 |
+| 1ª versão do ramo (plural nos dois lados + pista isenta do piso relativo) | 78,6 | 31,9 | 41,5 | 13 | 44 | 7.199 |
+| — pista sem isenção do piso, plural nos dois lados | 76,8 | 45,1 | 38,3 | 10 | 29 | 5.870 |
+| plural só na consulta + pista só reordena + nomes PT (antes das linhas de tabela) | 78,6 | 44,8 | 38,4 | 9 | 29 | 5.866 |
+| — sem o plural da consulta | 78,6 | 45,7 | 39,4 | 9 | 29 | 5.846 |
+| — sem a pista que reordena | 78,6 | 45,1 | 38,8 | 9 | 29 | 5.862 |
+| — sem os nomes PT da página | 78,6 | 44,8 | 38,4 | 9 | 29 | 5.866 |
+| **final** (+ linhas de tabela depois da prosa) | **78,6** | **45,1** | **38,8** | **9** | **29** | **5.862** |
 
-**Parâmetro `retrieval`** (só com `query`; com `id`, `ids`, `context` ou sem `query` é `invalid-combination`;
-igual ao padrão do servidor, não é ecoado em `next`/cursor):
+Mudanças que ficaram:
+- *Plural da consulta (N-04, alta).* O plural nos dois lados (índice e consulta) aumentava as enganosas; a forma
+  que ficou dobra **só a consulta** (`tokenizeQuery`: `campos` pergunta o mesmo que `campo`, que já casava as
+  duas formas pelo radical). O índice e as perguntas no singular são os da 3.2.0, e o pool de candidatas não cresce.
+- *Pista de componente (N-06).* Só reordena (`promoteHinted`: a 1ª/2ª regra do componente sobem até a 2ª/4ª
+  posição). O piso é o da 3.2.0: isentar as regras do componente do corte relativo era a principal fonte de ruído.
+- *Nome PT da própria página oficial (B-11)* para `component`/`context.components`: efeito nulo na medida.
+- *Paráfrase (N-05).* A pontuação é a da 3.2.0; só o campo **informado** muda: termo achado só no
+  `normalizedRule` sai em `why.matchedInParaphrase`/`field:"normalizedRule"`, fora de `why.matched`.
+- *NFKC + `\p{Cf}` (N-14)*, só para entradas com esses caracteres.
+- *Linhas de tabela de API/anatomia (A-12)* não aparecem mais como obrigação: no cartão vêm como
+  `kind:"implementation-property"`, `force:null`, `modality:"propriedade da implementação"`, mantêm a nota
+  `table-row` e ficam depois de toda cláusula de prosa da resposta (o registro por id mantém a força da base).
+- *`context.terms` com várias palavras (A-12)* casa como frase (palavras adjacentes, dobradas, em um campo da regra):
+  `"página atual"` não traz mais "família tipográfica atual" nem "janela atual". Sem efeito no benchmark
+  (o benchmark não usa `context`).
 
-| valor | o que faz |
-| --- | --- |
-| `lexical` (padrão) | o motor da 3.1.0 byte a byte (`kb.ranking = "govbr-lexical/1.1.0"`) |
-| `hybrid` | léxica + vetorial, fusão RRF; `kb.ranking = {engine:"govbr-hybrid/1.0.0", lexical, dense:"e5-small@761b726", fusion:"rrf-k60-top50", threshold}` |
-| `dense` | só a lista vetorial admitida — para medição |
+**Contrato (sem efeito no ranking).**
+- *Eco da entrada no orçamento (N-01).* Todo valor ecoado num erro tem teto (`clip`, 120 caracteres +
+  `…(truncado, N caracteres)`); `fail()` corta strings e listas se a resposta passar de 8.000; campo
+  desconhecido lista até 5 chaves; `maxLength` em `get_ds_rules.id`/`ids[]` (200), `component` (60), `query`
+  (2.000; acima de 500 continua `query-too-long`). `get_finding_details.missing` ≤ 20 ids de ≤ 80 (esquema
+  igual: o `tools/list` do knowledge-free não muda).
+- *Chave `constructor` (N-11)* → `unknown-parameter` do contrato (antes: -32603 do SDK).
+- *Listagem e busca nunca passam do teto (N-02):* a prova de orçamento usa o rótulo de parada mais longo.
+- *Ambiguidade (N-07, N-16).* Com argumentos longos (> 200 caracteres), a chamada vai uma vez em
+  `ambiguity.baseCall` e cada grupo leva `{arguments:{component}, extends:"ambiguity.baseCall"}`; o grupo
+  "outros" também traz `next` (o 1º membro).
+- *Context (N-17, B-10, B-11).* `unmatchedTerms` (também no topo da resposta) traz o termo sem candidata ou a
+  parte que a base não tem (`aria-current`). Nome não resolvido traz `unresolvedDidYouMean`. Se todos os nomes
+  ficam sem resolver → `unknown-component` com sugestões.
+- *Cor (N-03, N-13, N-20, B-02).* `get_design_tokens.hex` aceita `#rgb`, `#rrggbb`, `rrggbb`, `#rrggbbff`,
+  `rgb()`/`rgba(…, 1)`; o que não é cor → `invalid-argument`; alfa < 1 → `invalid-argument`; `hex`+`query` →
+  `invalid-combination`; `query` com valor de cor é resolvida como `hex`. `get_page_rules{cursor}` sem
+  `category` → `invalid-combination`.
+- *Ids históricos (B-15, N-19).* `get_ds_rules{id}` de um id histórico traz `citeAs:null`, `absenceNote` e
+  `current`, nesta ordem de preferência:
+  - a sucessora auditada que não é título;
+  - se a sucessora é o título, a cláusula da mesma seção que obriga;
+  - sem sucessora (`dropped`), a regra corrente de texto mais próximo (`basis:"closest-text-lexical"`, ponteiro
+    de leitura, não equivalência).
+  `wcagFallback` vem quando o registro tem WCAG. No lote `ids`, o cartão histórico sai `status:"historical"`,
+  `citeAs:null`.
+- *e-MAG (B-09, N-15).* `validationTemplate.ruleId`/`citation` apontam a cláusula **corrente** da recomendação
+  que obriga (`basis:"emag-unit-obligation"`); o id histórico fica em `historicalRuleId`/`citation.from`.
+  `description`/`wcag`/`meta.note` vêm marcados `descriptionKind:"project-paraphrase"` + `paraphraseNote`.
+- *`instructions` do initialize (B-18):* só o procedimento das ferramentas do perfil (sem conhecimento do DS;
+  no knowledge-free, sem ferramenta de conhecimento). Descrições do `get_ds_rules`/`get_design_tokens` mais
+  curtas. Os exemplos de `rule.id` do `verify_finding` agora são ids publicados (`ds-token-color`,
+  `ds-structure-button-tag`, N-12).
 
-`GOVBR_RETRIEVAL_MODE=lexical|hybrid|dense` troca o padrão (inválido: o processo não sobe, uma linha no
-stderr). `match:"literal"` continua o caminho da 2.x e não aceita `retrieval`; o `context` continua léxico.
-**Sem os vetores ou sem o modelo** (arquivo ausente, sha divergente, base de outra versão, falha do runtime
-ONNX), a híbrida responde com a léxica e diz `kb.ranking.dense: "unavailable"` com o motivo em `denseNote` —
-nunca em silêncio; falha transitória do runtime tenta de novo **uma vez** na chamada seguinte e o motivo diz
-`tentativa 1/2; nova tentativa…` / `tentativa 2/2; sem nova tentativa`. Com `GOVBR_RETRIEVAL_REQUIRE_DENSE=1`
-**e** hybrid/dense como padrão do servidor, o processo **não sobe** sem modelo + vetores conferidos (exit 2,
-uma linha no stderr); com o padrão léxico a flag não tem efeito, e o knowledge-free a ignora.
-
-**`tools/list` por perfil** (3.1.0 → 3.2.0): `evaluation` `9b32f185…` → `f1529268…`, `full` `919784c9…` →
-`418d6054…`, `normative` `54cee921…` → `1642af4b…` (parâmetro `retrieval`); `knowledge-free` `8bdb5e35…`,
-`deterministic` `7e3feff3…` e `evidence` `9a7ec0b3…` iguais. O knowledge-free não ganha nada (os vetores
-ficam atrás da trava de conhecimento).
-
-**Modelo.** `Xenova/multilingual-e5-small` (conversão ONNX de `intfloat/multilingual-e5-small`), revisão
-`761b726dd34fb83930e26aab4e9ac3899aa1fa78`, pesos quantizados q8 (`onnx/model_quantized.onnx`, 118 MB;
-135 MB com o tokenizador), 384 dimensões, pooling médio, prefixos `query: `/`passage: ` como pede o cartão.
-**Licença MIT**: os repositórios do modelo declaram `license: mit` e não têm arquivo próprio; o texto vai no
-pacote em `data/models/e5-small.LICENSE` (MIT do repositório de origem `microsoft/unilm`, commit `0e31c7c`;
-sha256 em `models.json`, conferido por `models:fetch`). A MIT permite uso, inclusive comercial, com a nota de
-copyright ao redistribuir; o pacote não redistribui os pesos — o `models:fetch` os baixa do Hugging Face.
-Escolhido entre três candidatos pela regra fixada antes (maior hit@5 respondível no modo híbrido; empate →
-P@5; empate → o menor), no qrels 1.0.2: e5-small 44/56, `paraphrase-multilingual-MiniLM-L12-v2` (Apache-2.0)
-43/56, `granite-embedding-107m-multilingual` (Apache-2.0, conversão ONNX de terceiro) 43/56.
-
-**Limiar** (cosseno mínimo para entrar só pelo vetor): **0,856**, calibrado **só na base**
-(`npm run embeddings:calibrate`, sem perguntas nem julgamentos do benchmark): o título de cada uma das 3.004
-regras normativas, como pergunta, contra (a) a cláusula da própria regra — positivos — e (b) a de uma regra
-sorteada de outro componente (semente 107, 6.008 pares) — negativos. Limiar = percentil 95 dos negativos
-(negativos: mediana 0,827; positivos: p5 0,875, mediana 0,909; 98,9% ≥ 0,856). A 1ª versão usava 0,925 (o 0,75
-do sentence-transformers transposto para a faixa 0,7–1,0 do cartão): nenhuma regra entrava pelo vetor.
-
-**Instalação** (só para usar a híbrida; o padrão léxico não precisa do modelo):
-
-```bash
-npm ci                            # @huggingface/transformers 4.3.2 (onnxruntime-node 1.30.0)
-npm run models:fetch              # baixa o modelo da revisão fixada e confere o sha256 de cada arquivo e da licença
-npm run models:fetch -- --check   # só confere o disco (sem rede); exit 1 se faltar ou divergir
-npm run build
-```
-
-Os pesos ficam em `data/models/<id>/` (fora do git, >50 MB). Com remote models desligado e
-`local_files_only`, o servidor só lê esse diretório; confere tamanho e sha256 do modelo e dos vetores na 1ª
-carga (~1 s). CPU, 1 thread, um texto por chamada, sem arena de memória do ONNX, cosseno arredondado a 6
-casas: o mesmo texto dá o mesmo vetor e a mesma ordem. Os testes do modelo são pulados com o aviso
-`SKIPPED: model files missing` quando os pesos faltam — e **falham** com `GOVBR_RETRIEVAL_REQUIRE_DENSE=1` ou `CI`.
-
-**Reconstruir os vetores** (depois de mudar a base, o modelo ou o texto embutido):
-
-```bash
-npm run embeddings:build            # → data/retrieval/embeddings/e5-small/<versão-da-base>.f32 + .json
-npm run embeddings:build -- --all   # todos os candidatos (exige models:fetch -- --all)
-```
-
-O `.json` guarda modelo, revisão, sha do ONNX, versão da base, hash do texto embutido de cada regra
-(`passage-text/1.0.0`: nome do componente + `sectionPath` + título + cláusula), ids e sha do `.f32`
-(3.038 × 384 × 4 bytes = 4,7 MB, no git só o do modelo padrão). Divergência → `dense: "unavailable"`. A
-reconstrução é determinística (mesmo sha256 duas vezes).
-
-**Números** (benchmark de desenvolvimento `benchmark-1.0.0`, qrels 1.0.3 com os furos rotulados às cegas
-(D-148), avaliador 1.5.0, perguntas respondíveis):
-
-| motor | vocab | hit@5 | P@5 | nDCG@5 | bpref@5 | Hole@5 | enganosas | sem resposta / fora de escopo (unidades) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| lexical (padrão) | on | 44/56 = 78,6% | 45,7% | 40,3% | 26,9% | 0/197 | 9 | 11 / 2 |
-| lexical | off | 39/56 = 69,6% | 41,6% | 34,6% | 22,0% | 11/192 | 8 | 9 / 2 |
-| hybrid | on | 45/56 = 80,4% | 29,5% | 46,1% | 34,0% | 4/275 | 12 | 25 / 9 |
-| hybrid | off | 42/56 = 75,0% | 26,3% | 42,5% | 30,2% | 11/274 | 10 | 25 / 9 |
-| dense | on | 30/56 = 53,6% | 17,0% | 24,6% | 17,3% | 26/270 | 7 | 25 / 9 |
-
-A ordem das 6 configurações por P@5 e por nDCG@5 é a mesma no
-qrels 1.0.2 e no 1.0.3 (τ de Kendall = 1). Metas (90% / 70%) não atingidas. Latência por chamada (híbrida):
-p50 28 ms / p95 54 ms; léxica 18 / 42 ms. Memória: sem vazamento — com `--max-old-space-size=1024` o processo
-híbrido fica em ~1,04 GB por 15 mil chamadas; sem teto o V8 adia a coleta e o RSS sobe até ~1,7 GB. Léxico
-(padrão, sem modelo): ~640 MB. Autorrecuperação por título sem acento (3.004 regras, top 5): 98,2% (léxica),
-98,7% (híbrida).
+**`tools/list` por perfil** (3.2.0 → 3.3.0, sha256): `full` `418d6054…` → `6389df23…` (34.205 → 33.084
+caracteres), `evaluation` `f1529268…` → `c4066eab…`, `normative` `1642af4b…` → `bb51f701…`; `knowledge-free`
+`8bdb5e35…`, `deterministic` `7e3feff3…` e `evidence` `9a7ec0b3…` **iguais**.
 
 ## 3.1.0 (NAT-97, segunda passada da busca + defeitos do roteiro sem modelo)
 
