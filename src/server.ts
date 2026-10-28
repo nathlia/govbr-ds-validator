@@ -59,7 +59,7 @@ import {
   suggestComponentNames,
   type ContextCandidate,
 } from "./data/applicability.js";
-import { rankRules, rankingMeta, vocabularyEnabledByDefault, getVocabulary, tokenize } from "./data/retrieval.js";
+import { rankRules, rankingMeta, vocabularyEnabledByDefault, vocabularyLabel, tokenize } from "./data/retrieval.js";
 import type { PageRegion } from "./evidence/pageFacts.js";
 import { readFileSync } from "node:fs";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
@@ -116,6 +116,7 @@ import {
   staleCursorError,
   step,
   strictInput,
+  installContractInputValidation,
   textSize,
   type ContractError,
 } from "./responses/contract.js";
@@ -610,7 +611,7 @@ function contextResponse(
       knowledgeVersion: kb.meta.knowledgeVersion,
       totalNormative: kb.meta.normativeRules,
       // match:"literal" = the 2.16.1 context path, byte for byte (no ranking block).
-      ...(search.match === "literal" ? {} : { ranking: { engine: rankingMeta("off").engine, vocabulary: vocabulary ? getVocabulary().version : "off", match: "relevance" } }),
+      ...(search.match === "literal" ? {} : { ranking: { engine: rankingMeta("off").engine, vocabulary: vocabulary ? vocabularyLabel() : "off", match: "relevance" } }),
     },
     retrieval: "direct" as const,
     note: CONTEXT_NOTE,
@@ -760,6 +761,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     // 2.17.1 (NAT-106): perfil efetivo legível pelo runner no initialize (serverInfo), sem tocar o tools/list.
     description: `toolProfile=${toolProfile}`,
   });
+  installContractInputValidation(server);
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
   // the same DS release (logs to stderr — stdout is the MCP transport). Sem base no knowledge-free.
@@ -1353,7 +1355,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const ruleNext = (["keyboard-interaction", "accessibility-tree", "semantic"] as const)
         .filter((s) => byStrategy[s])
         .map((validationStrategy) =>
-          step("request-detail", `regras ${validationStrategy} do componente`, "get_ds_rules", { component: spec.name, validationStrategy, limit: 5 }),
+          // 3.1.0: o modo context devolve cartões com citeAs (a listagem por component não traz), então
+          // componente → cláusula citável leva 2 chamadas: get_component_spec → este passo.
+          step("request-detail", `regras ${validationStrategy} do componente`, "get_ds_rules", { context: { components: [spec.name] }, validationStrategy, limit: 5 }),
         );
       const provenance = componentProvenance(spec.name) as {
         staticExample: { note: string };
@@ -1651,6 +1655,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return ok(
           assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
             batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+            { firstScanPage: first },
           ),
         );
       }
@@ -1730,6 +1735,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       return ok(
         assembleScan(head, null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
           batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+          { firstScanPage: !cursor },
         ),
       );
     })

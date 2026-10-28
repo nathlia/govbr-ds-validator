@@ -83,6 +83,46 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.1.0 (NAT-97, segunda passada da busca + defeitos do roteiro sem modelo)
+
+**Busca (`meta.ranking.engine = "govbr-lexical/1.1.0"`, vocabulário `vocab-1.1.0`).** Só correções
+gerais, nenhuma regra por consulta, já com a revisão independente de 28/10: (1) plurais regulares do
+português dobram para o singular (`-res/-zes`, `-ens/-uns`, `-ais/-ois/-uis`, `-veis`, `-eis` → `-il`,
+`-éis` → `-el`, `-eses`/`-íses`; o singular oxítono em -s — mês, país, português — guarda o s, lido da
+forma acentuada) e palavras da consulta com o mesmo radical são um conceito só; três famílias que o
+prefixo de 6 letras juntaria por acaso ficam separadas (`STEM_EXCEPTIONS`: contraste/contrário,
+internet/interno, principal/princípio); casar expansões pelo plural foi medido, custou uma consulta e
+ficou de fora; (2) componente nomeado no texto livre (`componentsNamedIn`, critério estrito: classe
+`br-*`, nome oficial de várias palavras exato, ou nome de uma palavra fora de `NAMED_IN_TEXT_EXCLUDED` —
+botão, item, menu, lista, mensagem, card, etiqueta e outras palavras comuns/elementos HTML) só vale
+quando a chamada não traz `component`, e então dá o peso de pista a esse componente, sem excluir nada;
+com `component`, nada é acrescentado; (3) linha de tabela (API/anatomia) não ganha bônus de
+identificador exato e não fixa o corte relativo (0,6 × topo) da prosa; (4) `tab → aba` virou mão
+única (`aba/abas → tab`): "Tab" numa observação é a tecla; "tabs" não ganha o sentido de tecla;
+(5) grupos **observação → regra** (`origem: "observacao→regra"`, 4 grupos: tecla Tab → teclado/tabulação,
+mouse → teclado, verde → cor, apenas/somente → único), cada um com `clausulas` cujo corpo traz os dois
+termos como palavras inteiras (teste confere). Em `rejeitados`: pontes sem cláusula (clique, vermelho,
+demais, conteúdo → mensagem, diz → anunciar, aponta → âncora, token → cor) e, pela revisão,
+grande → excessivo, selecionado → atual e tabindex → tabulação ("ajustado ao benchmark"). Desligáveis
+à parte da base: `GOVBR_RETRIEVAL_VOCAB_OBS=off` (rótulo `vocab-1.1.0-sem-observacao`). Números do
+benchmark de desenvolvimento: ver o registro da NAT-97; o ganho dos grupos observação → regra é de
+conjunto de desenvolvimento e só conta na reserva.
+
+**Defeitos do roteiro sem modelo da 3.0.0.** `scan_page` com `actions`+`arrival` (+`compareToScanId`)
+passava de 8.000 caracteres (8.126 / 8.565): o cabeçalho agora conta no orçamento e, se preciso, encolhe
+as partes que têm continuação e itens, na ordem (justificativas das observações → `get_finding_details`
+view observations; itens de `investigate` → `investigate.more`; ids do `stateDiff` → view diff), listando
+em `compacted` o que encolheu. Só na 1ª página do `scan_page`, como último recurso, a página de achados
+começa vazia no cursor 0; em continuações, `get_finding_details` e checkers isolados fica sempre ≥ 1
+item (o cursor anda) e a resposta diz `exceedsMaxChars`. Parâmetro desconhecido ou inválido volta no
+formato de erro do contrato (`isError`, `errorCode: "unknown-parameter"` ou `"invalid-argument"`,
+`field`, `didYouMean`, `accepted`, `next` com a chamada corrigida) em vez do texto -32602 do SDK; o
+`tools/list` de todos os perfis fica byte a byte igual. Isso usa a validação interna do `McpServer`:
+o SDK fica fixado em `~1.29.0`, e **toda atualização do `@modelcontextprotocol/sdk` precisa rodar de novo
+`test/integration/input-contract.test.ts`** (o servidor falha na subida se os pontos de gancho sumirem).
+`get_component_spec` → `rules.next` agora é `get_ds_rules{context:{components:[c]}, validationStrategy,
+limit:5}`, que devolve cartões com `citeAs`: componente → cláusula citável em 2 chamadas (eram 3).
+
 ## 3.0.0 (NAT-99): contrato de resposta `oraculo-resposta/1.0.0`
 
 O formato das respostas muda; o motor de busca, os pesos, o piso, os checkers, os predicados e a

@@ -264,3 +264,31 @@ describe("revisão: orientação, fim de resultados, query vazia", () => {
     }
   });
 });
+
+describe("revisão 3.1.0: continuação de achados nunca esvazia a página nem repete o cursor", () => {
+  it("get_finding_details{scanId, view:findings, detail:evidence, maxChars:1000} anda até o fim; ids mode não emite scanId vazio", async () => {
+    const { client, call } = await connect("evaluation");
+    try {
+      const scan = await call("scan_page", { url: `${base}/big`, checks: ["structure"], view: "findings", limit: 1 });
+      const total = (scan.data.totalFindings ?? scan.data.total ?? scan.data.summary?.total) as number;
+      expect(total).toBeGreaterThan(1);
+      const seen = new Set<string>();
+      let cursor: number | undefined = 0;
+      for (let i = 0; i <= total + 2 && cursor !== undefined; i++) {
+        const page = await call("get_finding_details", { scanId: scan.data.scanId, view: "findings", detail: "evidence", maxChars: 1_000, cursor });
+        expect(page.data.findings.length).toBeGreaterThanOrEqual(1);
+        for (const f of page.data.findings) seen.add(f.id);
+        if (page.data.nextCursor !== undefined) expect(page.data.nextCursor).toBeGreaterThan(cursor!);
+        cursor = page.data.nextCursor;
+      }
+      expect(cursor).toBeUndefined();
+      expect(seen.size).toBe(total);
+      const ids = [...seen].slice(0, 2);
+      const byIds = await call("get_finding_details", { ids, detail: "evidence", maxChars: 1_000 });
+      expect(byIds.data.findings.length).toBeGreaterThanOrEqual(1);
+      expect(JSON.stringify(byIds.data)).not.toMatch(/"scanId":""/);
+    } finally {
+      await client.close();
+    }
+  });
+});

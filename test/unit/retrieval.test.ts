@@ -4,10 +4,12 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { filterRules, getEvidence, getKnowledgeBase } from "../../src/data/knowledge.js";
-import { normalizeContext, retrieveContextCandidates } from "../../src/data/applicability.js";
+import { NAMED_IN_TEXT_EXCLUDED, componentsNamedIn, normalizeContext, retrieveContextCandidates } from "../../src/data/applicability.js";
 import {
+  OBSERVATION_ORIGIN,
   RELEVANCE_FLOOR,
   RANKING_VERSION,
+  pluralFold,
   foldText,
   getVocabulary,
   isTableRow,
@@ -158,16 +160,16 @@ describe("regressions: queries that returned nothing in 2.16.1 (diagnóstico tel
 describe("vocabulary (versioned, switchable)", () => {
   it("every group has provenance and only synonym/naming entries", () => {
     const v = getVocabulary();
-    expect(v.version).toBe("vocab-1.0.0");
+    expect(v.version).toBe("vocab-1.1.0");
     for (const g of v.groups) {
       expect(g.provenance.length).toBeGreaterThan(10);
-      expect(Object.keys(g).sort().every((k) => ["from", "id", "origem", "provenance", "terms", "to"].includes(k))).toBe(true);
+      expect(Object.keys(g).sort().every((k) => ["clausulas", "from", "id", "origem", "provenance", "terms", "to"].includes(k))).toBe(true);
     }
   });
 
   it("is reported when used and can be switched off (argument or GOVBR_RETRIEVAL_VOCAB=off)", () => {
     const on = rankRules({ text: "label" });
-    expect(on.vocabulary).toBe("vocab-1.0.0");
+    expect(on.vocabulary).toBe("vocab-1.1.0");
     expect(on.analysis.expansions[0]).toMatchObject({ term: "label", as: expect.arrayContaining(["rotulo"]) });
     const off = rankRules({ text: "label", vocabulary: false });
     expect(off.vocabulary).toBe("off");
@@ -257,5 +259,101 @@ describe("self-retrieval sweep (NAT-103 B-03), deterministic sample", () => {
     expect(rate((r) => strip(r.title))).toBeGreaterThanOrEqual(0.95);
     expect(rate((r) => words4(r.title))).toBeGreaterThanOrEqual(0.9);
     expect(rate((r) => strip(words4(r.title)), true)).toBeGreaterThanOrEqual(0.9);
+  });
+});
+
+describe("3.1.0 (govbr-lexical/1.1.0): general fixes, none per query", () => {
+  const stem = (w: string) => tokenize(w)[0].stem;
+
+  it("folds the regular Portuguese plurals onto the singular", () => {
+    for (const [plural, singular] of [["cores", "cor"], ["valores", "valor"], ["vezes", "vez"], ["imagens", "imagem"], ["itens", "item"], ["comuns", "comum"], ["visuais", "visual"], ["níveis", "nível"], ["botões", "botão"], ["listas", "lista"],
+      ["meses", "mês"], ["países", "país"], ["portugueses", "português"], ["fáceis", "fácil"], ["úteis", "útil"], ["difíceis", "difícil"], ["papéis", "papel"], ["tokens", "token"], ["buttons", "button"], ["classes", "classe"]]) {
+      expect(stem(plural)).toBe(stem(singular));
+    }
+    expect(pluralFold("fáceis".normalize("NFD").replace(/\p{M}/gu, ""))).toBe("facil");
+    expect(stem("mês")).toBe("mes");
+    expect(stem("através")).toBe("atraves".slice(0, 6));
+  });
+
+  it("the 6-letter prefix does not merge unrelated families (documented exceptions)", () => {
+    for (const [a, b] of [["contraste", "contrário"], ["internet", "interno"], ["principal", "princípio"]]) expect(stem(a)).not.toBe(stem(b));
+    expect(stem("contrastes")).toBe(stem("contraste"));
+    expect(stem("principais")).toBe(stem("principal"));
+    expect(stem("interna")).toBe(stem("interno"));
+  });
+
+  it("query words with the same stem are one concept (a rule saying it once is not scored twice)", () => {
+    const two = rankRules({ text: "página paginação", component: "pagination" });
+    expect(two.analysis.concepts.filter((c) => c.stem === "pagina")).toHaveLength(1);
+    expect(two.analysis.terms).toEqual(["pagina", "paginacao"]);
+    expect(two.results.length).toBeGreaterThan(0);
+    for (const s of two.results) expect(s.matched.map((m) => m.term)).toEqual(["pagina"]);
+  });
+
+  it("components named in free text: br-* classes, exact multi-word official names, uncommon single words only", () => {
+    expect(componentsNamedIn("span.br-tag com clique")).toEqual(["tag"]);
+    expect(componentsNamedIn("o skip link aponta para #conteudo")).toEqual(["skiplink"]);
+    expect(componentsNamedIn("a caixa de seleção sem rótulo")).toEqual(["checkbox"]);
+    expect(componentsNamedIn("o tooltip some antes do tempo")).toEqual(["tooltip"]);
+    // Common Portuguese words / generic names are not component mentions (review 28/10).
+    for (const q of ["o botão 'Selecione o arquivo'", "clique no item", "o menu do usuário", "a lista de opções", "mensagem de erro", "um card de crédito", "a etiqueta do campo", "a tabela de preços", "o primeiro Tab", "as tabs"]) {
+      expect(componentsNamedIn(q)).toEqual([]);
+    }
+    for (const w of ["botao", "item", "menu", "lista", "mensagem", "card", "etiqueta"]) expect(NAMED_IN_TEXT_EXCLUDED.has(w)).toBe(true);
+  });
+
+  it("with `component`, text-named components are not added; without it, one strict name is only a weight", () => {
+    const withHint = rankRules({ text: "o tooltip do checkbox sem aria-label", component: "checkbox" }).results;
+    expect(withHint.every((s) => [null, "checkbox"].includes(s.rule.component))).toBe(true);
+    const free = rankRules({ text: "tooltip sem aria-label" }).results;
+    expect(free.some((s) => s.rule.component !== null && s.rule.component !== "tooltip")).toBe(true); // nothing excluded
+    expect(free.filter((s) => s.rule.component === "tooltip").every((s) => s.ownComponent)).toBe(true);
+  });
+
+  it("'tab' alone is the key, not the Tab component; aba/abas still expand to tab; 'tabs' is not the key", () => {
+    const tab = rankRules({ text: "Tab" }).analysis.expansions.find((e) => e.term === "tab");
+    expect(tab?.as ?? []).not.toContain("aba");
+    expect(tab?.as).toContain("teclado");
+    expect(rankRules({ text: "aba" }).analysis.expansions.find((e) => e.term === "aba")?.as).toContain("tab");
+    expect(rankRules({ text: "tabs" }).analysis.expansions.find((e) => e.term === "tabs")?.as ?? []).not.toContain("teclado");
+  });
+
+  it("table rows get no identifier credit and do not set the relative floor for prose", () => {
+    const r = rankRules({ text: "data-current página ativa", component: "pagination" });
+    const prose = r.results.filter((s) => !isTableRow(s.rule.originalText));
+    expect(prose.length).toBeGreaterThan(0);
+    const topProse = prose[0].score;
+    for (const s of r.results) expect(s.score).toBeGreaterThanOrEqual(RELEVANCE_FLOOR.relativeToTop * topProse);
+  });
+
+  it("observation→rule groups cite clauses whose BODY has both terms as whole words, and switch off apart", () => {
+    const kb = getKnowledgeBase();
+    const obs = getVocabulary().groups.filter((g) => g.origem === OBSERVATION_ORIGIN);
+    expect(obs.map((g) => g.id).sort()).toEqual(["obs-apenas-unico", "obs-mouse-teclado", "obs-tecla-tab-teclado", "obs-verde-cor"]);
+    const words = (t: string) => new Set(foldText(t).split(/[^a-z0-9-]+/).filter(Boolean));
+    for (const g of obs) {
+      const ids = (g as { clausulas?: string[] }).clausulas ?? [];
+      expect(ids.length).toBeGreaterThan(0);
+      for (const id of ids) {
+        const rule = kb.byId.get(id)!;
+        expect(rule).toBeDefined();
+        const body = words(rule.originalText);
+        expect((g.from ?? []).some((t) => body.has(t))).toBe(true);
+        expect((g.to ?? []).some((t) => body.has(t))).toBe(true);
+      }
+    }
+    const rejected = (getVocabulary() as unknown as { rejeitados: Array<{ de: string[]; motivo: string }> }).rejeitados;
+    for (const de of [["grande", "grandes"], ["selecionado", "selecionada"], ["tabindex"]]) {
+      expect(rejected.find((r) => r.de.join() === de.join())?.motivo).toBe("ajustado ao benchmark (revisão 28/10)");
+    }
+    process.env.GOVBR_RETRIEVAL_VOCAB_OBS = "off";
+    try {
+      const off = rankRules({ text: "Tab" });
+      expect(off.vocabulary).toBe("vocab-1.1.0-sem-observacao");
+      expect(off.analysis.expansions.find((e) => e.term === "tab")).toBeUndefined();
+      expect(rankRules({ text: "label" }).analysis.expansions[0].as).toContain("rotulo"); // base groups stay on
+    } finally {
+      delete process.env.GOVBR_RETRIEVAL_VOCAB_OBS;
+    }
   });
 });

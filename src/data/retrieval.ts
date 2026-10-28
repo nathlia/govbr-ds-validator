@@ -11,14 +11,24 @@
  * Normalization: case, accents and markdown markers (`* _ \``) are folded; separators split words,
  * but hyphenated identifiers stay whole (`aria-current`, `br-tag`, `e-mag`, also indexed by their
  * parts), and dotted normative numbers stay whole (`3.9`, `1.3.1`). Words get a light Portuguese
- * plural fold (-ões/-ães → -ão, final -s) and a 6-character prefix stem for inflection
+ * plural fold (`pluralFold`) and a 6-character prefix stem for inflection
  * (`associado`/`associe` → `associ`); exact forms score above stem-only matches.
+ *
+ * 1.1.0 (validator 3.1.0, NAT-97 second pass), all general, none per query:
+ *  - plurals -res/-zes, -ens/-uns, -ais/-eis/-ois/-uis fold too (cores → cor, imagens → imagem);
+ *  - query words sharing a stem are one concept (a rule saying "paginação" no longer scores
+ *    "pagina" and "paginacao" twice);
+ *  - without `component`, ONE component named in the text (strict `componentsNamedIn`) gets the hint weight;
+ *  - table rows get no exact-identifier credit and do not set the relative floor for prose;
+ *  - vocabulary 1.1.0: `tab` alone is the key, not the Tab component; observation→rule groups
+ *    (origem "observacao→regra", switch GOVBR_RETRIEVAL_VOCAB_OBS=off).
  *
  * Order: final score desc → force tier (mandatory, advisory, rest) → KB order. Force only breaks
  * ties; it never promotes a rule above a better-matching one. Same input + KB version + ranking
  * version + vocabulary state → same list.
  */
 import { getKnowledgeBase, type KnowledgeBase, type KnowledgeRule, type RuleForce } from "./knowledge.js";
+import { componentsNamedIn } from "./applicability.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +36,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Engine version: any change to tokenization, fields, weights or floor is a new version. */
-export const RANKING_VERSION = "govbr-lexical/1.0.0";
+export const RANKING_VERSION = "govbr-lexical/1.1.0";
 
 /**
  * Declared weights. General, not per query: field weights say how much a term occurrence in that
@@ -112,15 +122,56 @@ export function foldText(value: string): string {
     .trim();
 }
 
-function pluralFold(word: string): string {
-  if (word.length > 4 && /(oes|aes)$/.test(word)) return word.slice(0, -3) + "ao";
-  if (word.length > 3 && word.endsWith("s") && !word.endsWith("ss")) return word.slice(0, -1);
-  return word;
+/**
+ * Light Portuguese plural fold (3.1.0). Applied to index and query alike; exact forms are kept apart.
+ * `accented` is the word as written (lowercase, with accents) when known: it tells the oxytone
+ * singular in -s (mês, país, português, através) — which keeps its s — and the plural of -el/-il
+ * with an accented ending (papéis → papel) from the paroxytone -il (fáceis → fácil, úteis → útil).
+ * -ões/-ães → -ão · -eses → -ês (meses → mês, portugueses → português) · -íses → -ís (países → país) ·
+ * -res/-zes → -r/-z (cores → cor) · -ens/-uns → -em/-um (imagens → imagem) · -veis → -vel ·
+ * -éis → -el · other -eis → -il · -ais/-ois/-uis → -al/-ol/-ul · other final -s dropped. A final -en
+ * is written -em so the English "token"/"tokens" stay one key.
+ * Known misses: singulars in -re ("livre"/"livres") and in -se from -ses with -ês plural ("teses").
+ */
+export function pluralFold(word: string, accented?: string): string {
+  let w = word;
+  const a = accented ?? "";
+  if (w.length > 4 && /(oes|aes)$/.test(w)) w = w.slice(0, -3) + "ao";
+  else if (/[áéêíóôú]s$/.test(a)) w = word; // mês, país, português, através: singular
+  else if (/[íé]ses$/.test(a) || (w.length > 4 && /eses$/.test(w))) w = w.slice(0, -2);
+  else if (w.length > 4 && /(res|zes)$/.test(w)) w = w.slice(0, -2);
+  else if (w.length > 4 && /(ens|uns)$/.test(w)) w = w.slice(0, -2) + "m";
+  else if (w.length > 4 && /veis$/.test(w)) w = w.slice(0, -4) + "vel";
+  else if (/éis$/.test(a)) w = w.slice(0, -3) + "el";
+  else if (w.length > 4 && /eis$/.test(w)) w = w.slice(0, -3) + "il";
+  else if (w.length > 4 && /(ais|ois|uis)$/.test(w)) w = w.slice(0, -2) + "l";
+  else if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) w = w.slice(0, -1);
+  if (w.length > 3 && w.endsWith("en")) w = w.slice(0, -1) + "m";
+  return w;
 }
 
-function stemOf(word: string): string {
-  const w = pluralFold(word);
+/**
+ * Word families that a 6-letter prefix would merge although they are unrelated (3.1.0, review 28/10):
+ * contraste/contrário, internet/interno, principal/princípio. A word starting with one of these
+ * longer prefixes is stemmed to that prefix instead.
+ */
+export const STEM_EXCEPTIONS: ReadonlyArray<string> = ["contrast", "internet", "principa"];
+
+function stemOf(word: string, accented?: string): string {
+  const w = pluralFold(word, accented);
+  const exception = STEM_EXCEPTIONS.find((p) => w.startsWith(p));
+  if (exception) return exception;
   return w.length > 6 ? w.slice(0, 6) : w;
+}
+
+/** Folded word → the same word as written (lowercase, accents kept), for the plural fold. */
+function accentedForms(value: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const w of value.normalize("NFC").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
+    const f = w.normalize("NFD").replace(/\p{M}/gu, "");
+    if (f !== w && !map.has(f)) map.set(f, w);
+  }
+  return map;
 }
 
 const TOKEN_RE = /\d+(?:[.,]\d+)+|[a-z0-9]+(?:-[a-z0-9]+)+|[a-z0-9]+/g;
@@ -128,6 +179,7 @@ const TOKEN_RE = /\d+(?:[.,]\d+)+|[a-z0-9]+(?:-[a-z0-9]+)+|[a-z0-9]+/g;
 /** Tokens of a text in order (stopwords and 1-character tokens dropped; identifier parts added). */
 export function tokenize(value: string): Token[] {
   const out: Token[] = [];
+  const accents = /[^\x00-\x7f]/.test(value) ? accentedForms(value) : null;
   for (const raw of foldText(value).match(TOKEN_RE) ?? []) {
     if (/^\d+(?:[.,]\d+)+$/.test(raw)) {
       // "4,5" (one comma, no dot) is a decimal; "1.3.1,1.4.1" or "1,2,3" is a list of numbers.
@@ -141,13 +193,13 @@ export function tokenize(value: string): Token[] {
       out.push({ key: raw, stem: raw, kind: "identifier" });
       for (const part of raw.split("-")) {
         if (part.length < 2 || STOPWORDS.has(part)) continue;
-        out.push({ key: part, stem: /^\d+$/.test(part) ? part : stemOf(part), kind: /^\d+$/.test(part) ? "number" : "word", partOf: raw });
+        out.push({ key: part, stem: /^\d+$/.test(part) ? part : stemOf(part, accents?.get(part)), kind: /^\d+$/.test(part) ? "number" : "word", partOf: raw });
       }
       continue;
     }
     if (raw.length < 2 || STOPWORDS.has(raw)) continue;
     if (/^\d+$/.test(raw)) out.push({ key: raw, stem: raw, kind: "number" });
-    else out.push({ key: raw, stem: stemOf(raw), kind: "word" });
+    else out.push({ key: raw, stem: stemOf(raw, accents?.get(raw)), kind: "word" });
   }
   return out;
 }
@@ -175,9 +227,9 @@ export interface Vocabulary {
   groups: VocabularyGroup[];
 }
 
-const VOCAB_FILE = join(__dirname, "../../data/retrieval/vocab-1.0.0.json");
+const VOCAB_FILE = join(__dirname, "../../data/retrieval/vocab-1.1.0.json");
 let vocabulary: Vocabulary | undefined;
-let expansionMap: Map<string, Array<{ term: string; group: string }>> | undefined;
+let expansionMap: Map<string, Array<{ term: string; group: string; obs?: boolean }>> | undefined;
 
 export function getVocabulary(): Vocabulary {
   vocabulary ??= JSON.parse(readFileSync(VOCAB_FILE, "utf8")) as Vocabulary;
@@ -189,19 +241,35 @@ export function vocabularyEnabledByDefault(): boolean {
   return (process.env.GOVBR_RETRIEVAL_VOCAB ?? "").trim().toLowerCase() !== "off";
 }
 
-function expansions(): Map<string, Array<{ term: string; group: string }>> {
-  if (expansionMap) return expansionMap;
-  const map = new Map<string, Array<{ term: string; group: string }>>();
-  const add = (from: string, to: string, group: string) => {
+/** Origin of the observation→rule bridges (vocab 1.1.0): switchable apart from the base vocabulary. */
+export const OBSERVATION_ORIGIN = "observacao→regra";
+
+/** Observation→rule groups are ON unless GOVBR_RETRIEVAL_VOCAB_OBS=off (measurement switch). */
+export function observationGroupsEnabled(): boolean {
+  return (process.env.GOVBR_RETRIEVAL_VOCAB_OBS ?? "").trim().toLowerCase() !== "off";
+}
+
+/** Vocabulary label recorded in responses: the version, marked when the observation groups are off. */
+export function vocabularyLabel(): string {
+  return getVocabulary().version + (observationGroupsEnabled() ? "" : "-sem-observacao");
+}
+
+let expansionObs: boolean | undefined;
+function expansions(): Map<string, Array<{ term: string; group: string; obs?: boolean }>> {
+  if (expansionMap && expansionObs === observationGroupsEnabled()) return expansionMap;
+  expansionObs = observationGroupsEnabled();
+  const map = new Map<string, Array<{ term: string; group: string; obs?: boolean }>>();
+  const add = (from: string, to: string, group: string, obs = false) => {
     const f = foldText(from), t = foldText(to);
     if (f === t) return;
     const list = map.get(f) ?? [];
-    if (!list.some((x) => x.term === t)) list.push({ term: t, group });
+    if (!list.some((x) => x.term === t)) list.push({ term: t, group, ...(obs ? { obs } : {}) });
     map.set(f, list);
   };
   for (const g of getVocabulary().groups) {
+    if (!expansionObs && g.origem === OBSERVATION_ORIGIN) continue;
     for (const a of g.terms ?? []) for (const b of g.terms ?? []) add(a, b, g.id);
-    for (const a of g.from ?? []) for (const b of g.to ?? []) add(a, b, g.id);
+    for (const a of g.from ?? []) for (const b of g.to ?? []) add(a, b, g.id, g.origem === OBSERVATION_ORIGIN);
   }
   expansionMap = map;
   return map;
@@ -378,6 +446,8 @@ interface Concept {
   /** Set on the parts of a hyphenated identifier. */
   partOf?: string;
   stem: string;
+  /** Other query words folded into this concept because they share its stem (3.1.0). */
+  merged?: string[];
 }
 
 export interface QueryAnalysis {
@@ -421,7 +491,8 @@ export function analyzeQuery(
     if (t.kind === "word" && t.stem !== t.key) alternatives.push({ key: t.stem, byStem: true, weight: W.stem });
     else if (t.kind === "word") alternatives.push({ key: t.stem, byStem: true, weight: W.exact });
     if (useVocab) {
-      const ex = expansions().get(t.key) ?? expansions().get(pluralFold(t.key)) ?? [];
+      // An observation→rule bridge applies only to the exact word ("tabs" is the Tab component, not the key).
+      const ex = expansions().get(t.key) ?? (expansions().get(pluralFold(t.key)) ?? []).filter((e) => !e.obs);
       const used: string[] = [];
       for (const e of ex) {
         for (const et of tokenize(e.term)) {
@@ -431,9 +502,23 @@ export function analyzeQuery(
         }
         used.push(e.term);
       }
-      if (used.length) expansionsUsed.push({ term: t.key, as: used, source: getVocabulary().version + ":" + [...new Set(ex.map((e) => e.group))].join(",") });
+      if (used.length) expansionsUsed.push({ term: t.key, as: used, source: vocabularyLabel() + ":" + [...new Set(ex.map((e) => e.group))].join(",") });
     }
     const idf = Math.max(0, ...alternatives.map((a) => idfOf((a.byStem ? ix.dfStem : ix.dfExact).get(a.key) ?? 0, n)));
+    // 3.1.0: query words with the same stem are ONE concept ("pagina"/"paginacao", "pesquisa"/"pesquise"):
+    // a rule saying the word once must not score it twice. Alternatives are pooled; the first key
+    // (code-unit order) names the concept, the others stay listed in `terms`.
+    const twin = t.kind === "word" && !t.partOf ? concepts.find((c) => c.kind === "word" && !c.partOf && c.stem === t.stem) : undefined;
+    if (twin) {
+      for (const a of alternatives) {
+        const same = twin.alternatives.find((x) => x.key === a.key && x.byStem === a.byStem);
+        if (!same) twin.alternatives.push(a);
+        else if (a.weight > same.weight) Object.assign(same, a);
+      }
+      twin.idf = Math.max(twin.idf, idf);
+      twin.merged = [...(twin.merged ?? []), t.key];
+      continue;
+    }
     concepts.push({ term: t.key, kind: t.kind, weight: t.partOf ? W.compoundPart : 1, alternatives, idf, stem: t.stem, ...(t.partOf ? { partOf: t.partOf } : {}) });
   }
   // An identifier absent from the served base is searched by its parts at full weight (it stays in
@@ -446,9 +531,9 @@ export function analyzeQuery(
   const pairs: string[] = [];
   for (let i = 0; i < content.length; i++) for (let j = i + 1; j < content.length; j++) if (content[i].stem !== content[j].stem) pairs.push(`${content[i].stem} ${content[j].stem}`);
   return {
-    terms: concepts.map((c) => c.term),
+    terms: concepts.flatMap((c) => [c.term, ...(c.merged ?? [])]).sort(codeUnitCompare),
     expansions: expansionsUsed,
-    unmatchedTerms: concepts.filter((c) => c.idf === 0).map((c) => c.term),
+    unmatchedTerms: concepts.filter((c) => c.idf === 0).flatMap((c) => [c.term, ...(c.merged ?? [])]).sort(codeUnitCompare),
     concepts,
     pairs: [...new Set(pairs)],
     folded: content.map((t) => t.key).join(" "),
@@ -521,7 +606,8 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
     if (!bestAlt) continue;
     lexical += best * c.weight;
     covered += c.idf * c.weight;
-    if (c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("references"))) {
+    // 3.1.0: no identifier credit for a table row — an API/anatomy listing repeats identifiers by construction.
+    if (!doc.tableRow && c.kind !== "word" && !bestAlt.byStem && !bestAlt.via && (bestFields.includes("text") || bestFields.includes("references"))) {
       bonus += RANKING_WEIGHTS.identifier * c.idf;
     }
     matched.push({
@@ -584,10 +670,15 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   const stats = statsFor(ix, allowed ? poolDocs : null);
   const analysis = analyzeQuery(input.text, { vocabulary: useVocab }, kb, stats);
   const hint = input.component ?? null;
+  // 3.1.0 (strict, review 28/10): with `component` given, text-named components are NOT added. Without
+  // it, ONE component named in the text (br-* class, exact multi-word official name, or a single-word
+  // name outside NAMED_IN_TEXT_EXCLUDED) gets the hint weight; nothing is excluded.
+  const named = hint === null && input.text ? componentsNamedIn(input.text) : [];
+  const soft = named.length === 1 ? named[0] : null;
   const scored: ScoredRule[] = [];
   for (const doc of poolDocs) {
     if (hint !== null && doc.rule.component !== null && doc.rule.component !== hint) continue;
-    const s = scoreDoc(doc, analysis, stats, hint);
+    const s = scoreDoc(doc, analysis, stats, hint ?? soft);
     if (s) scored.push(s);
   }
   scored.sort(compareScored);
@@ -595,14 +686,15 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   const knownTerms = analysis.concepts.filter((c) => c.idf > 0 && c.weight === 1).length;
   const needTerms = knownTerms >= f.multiTermQuery ? f.minMatchedTerms : 1;
   const passes = (s: ScoredRule) => s.coverage >= f.minCoverage && (s.score >= f.minScore || s.coverage >= 1) && s.matched.length >= needTerms;
-  const top = scored.find(passes)?.score ?? 0;
+  // 3.1.0: the relative cut is set by the best PROSE clause; a table row only sets it when no prose passes.
+  const top = (scored.find((s) => passes(s) && !indexFor(kb).docs[s.order].tableRow) ?? scored.find(passes))?.score ?? 0;
   const results = scored.filter((s) => passes(s) && (input.relativeFloor === false || s.score >= f.relativeToTop * top));
   return {
     analysis,
     results,
     belowFloor: scored.length - results.length,
     componentHint: hint,
-    vocabulary: useVocab ? getVocabulary().version : "off",
+    vocabulary: useVocab ? vocabularyLabel() : "off",
   };
 }
 

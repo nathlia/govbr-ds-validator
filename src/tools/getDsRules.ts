@@ -21,7 +21,7 @@ import {
   suggestComponentNames,
   type ContextCandidate,
 } from "../data/applicability.js";
-import { rankRules, tokenize, vocabularyEnabledByDefault, getVocabulary, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
+import { rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
 import { conceptFor, guidanceLabel } from "../data/guidance.js";
 import { getComponentSpecs } from "../data/load.js";
 import type { PageRegion } from "../evidence/pageFacts.js";
@@ -170,7 +170,7 @@ function kbMeta(vocabulary: boolean): KbMeta {
     dsVersion: kb.meta.dsVersion,
     knowledgeVersion: kb.meta.knowledgeVersion,
     ranking: RANKING_VERSION,
-    vocabulary: vocabulary ? getVocabulary().version : "off",
+    vocabulary: vocabulary ? vocabularyLabel() : "off",
     guidance: guidanceLabel(vocabulary),
   };
 }

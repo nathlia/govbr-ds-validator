@@ -275,6 +275,12 @@ export function assembleScan(
   scanId: string,
   maxChars: number,
   page: (familyBudget: number) => Record<string, unknown>,
+  /**
+   * 3.1.0: `firstScanPage` = 1ª página de um scan_page (sem cursor). Só ali, como último recurso, a
+   * página de achados pode começar vazia na continuação (cursor 0). Em continuações e em
+   * get_finding_details a página guarda sempre ≥ 1 item (a continuação anda) e diz que passou do teto.
+   */
+  options: { firstScanPage?: boolean } = {},
 ) {
   const build = (obsBudget: number) => {
     const obs = observations ? observationsBlock(observations, scanId, obsBudget) : undefined;
@@ -287,7 +293,90 @@ export function assembleScan(
     }
     return response;
   };
-  const response = build(observations ? Math.max(300, Math.floor(maxChars * 0.1)) : 0);
+  let response = build(observations ? Math.max(300, Math.floor(maxChars * 0.1)) : 0);
   // A 1ª família entra sempre; se ainda passa do teto, as observações ficam só na contagem + continuação.
-  return observations && textSize(response) > maxChars ? build(0) : response;
+  if (observations && textSize(response) > maxChars) response = build(0);
+  if (textSize(response) <= maxChars) return response;
+  // 3.1.0: o cabeçalho também conta (receita, chegada, stateDiff, investigate). Se ainda passa do teto,
+  // encolhe as partes que têm continuação, na ordem, e diz o que encolheu e onde está o resto.
+  // Só entra em `compacted` o que tinha itens e de fato encolheu.
+  const compacted: string[] = [];
+  const shrink = (part: string, transform: (h: Record<string, unknown>) => Record<string, unknown>) => {
+    if (textSize(response) <= maxChars) return;
+    head = transform(head);
+    compacted.push(part);
+    response = { ...build(0), compacted: [...compacted] };
+  };
+  if (observations?.length) {
+    const all = observations;
+    observations = null;
+    shrink("observations.whyNotAFinding → get_finding_details(view:observations)", (h) => ({
+      ...h,
+      observations: minimalObservations(all, scanId),
+    }));
+  }
+  const inv = head.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
+  for (const keep of [3, 1, 0]) {
+    if (!inv?.items || inv.items.length <= keep) continue;
+    shrink(`investigate.items > ${keep} → investigate.more`, (h) => {
+      const items = inv.items!;
+      const moved = items.slice(keep).map((i) => i.component);
+      return {
+        ...h,
+        investigate: {
+          ...inv,
+          items: items.slice(0, keep),
+          more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] },
+        },
+      };
+    });
+  }
+  const diff = head.stateDiff as { findings?: { addedIds?: unknown[]; removedIds?: unknown[] } } | undefined;
+  if (diff?.findings && ((diff.findings.addedIds?.length ?? 0) + (diff.findings.removedIds?.length ?? 0)) > 0) {
+    shrink("stateDiff.findings ids → get_finding_details(view:diff)", (h) => {
+      const { addedIds: _a, removedIds: _r, ...counts } = diff.findings as Record<string, unknown>;
+      return { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
+    });
+  }
+  if (textSize(response) <= maxChars) return response;
+  const p = page(200);
+  const listKey = (["families", "findings"] as const).find((k) => Array.isArray(p[k]));
+  const items = listKey ? (p[listKey] as unknown[]).length : 0;
+  if (options.firstScanPage && scanId && listKey && items > 0) {
+    // Último recurso (1ª página do scan_page): a página de achados começa na continuação (cursor 0).
+    compacted.push(`${listKey} → get_finding_details(scanId, cursor:0)`);
+    return {
+      ...head,
+      ...p,
+      [listKey]: [],
+      count: 0,
+      cursor: 0,
+      nextCursor: 0,
+      next: { tool: "get_finding_details", arguments: { scanId, cursor: 0 } },
+      compacted: [...compacted],
+    };
+  }
+  // Em continuação: ≥ 1 item fica (a continuação anda) e a resposta diz que passou do teto.
+  return {
+    ...response,
+    exceedsMaxChars: {
+      maxChars,
+      note: "Um único item não cabe no orçamento pedido; ele foi devolvido assim mesmo para a continuação andar. Peça detail menor ou maxChars maior.",
+    },
+  };
+}
+
+/** Observações só na contagem, sem as justificativas por tipo: o detalhe está na página de observações. */
+function minimalObservations(observations: Observation[], scanId: string) {
+  const byKind: Record<string, number> = {};
+  for (const o of observations) byKind[o.kind] = (byKind[o.kind] ?? 0) + 1;
+  return {
+    note: "Sinais de revisão fora da pontuação (D-27): o oráculo observa, mas não afirma violação.",
+    total: observations.length,
+    byKind,
+    returned: 0,
+    ...(observations.length
+      ? { nextCursor: 0, next: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: 0 } } }
+      : {}),
+  };
 }

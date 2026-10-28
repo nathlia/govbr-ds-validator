@@ -15,7 +15,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer, type ServerOptions } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
-import { useKnowledgeVersion } from "../../src/data/knowledge.js";
+import { getKnowledgeBase, useKnowledgeVersion } from "../../src/data/knowledge.js";
 import { resetApplicabilityCache } from "../../src/data/applicability.js";
 import { ABSENCE_NOTE } from "../../src/responses/absence.js";
 
@@ -224,10 +224,22 @@ describe("get_ds_rules context — contract", () => {
     expect(spec.rules.retrieval).toBe("automatic");
     const listing = await call(evaluation, "get_ds_rules", { component: "tag" });
     expect(spec.rules.total).toBe(listing.total);
+    // 3.1.0: rules.next is a context call — cards with citeAs at the 2nd call; walking its cursor
+    // covers exactly the component's rules of that strategy.
     for (const n of spec.rules.next) {
-      expect(n.arguments.component).toBe("tag");
-      const page = await call(evaluation, n.tool, n.arguments);
-      expect(page.total).toBe(spec.rules.byStrategy[n.arguments.validationStrategy]);
+      expect(n.arguments.context).toEqual({ components: ["tag"] });
+      let page = await call(evaluation, n.tool, n.arguments);
+      const ids = new Set<string>();
+      for (let i = 0; i < 20; i++) {
+        for (const card of page.results) {
+          expect(typeof card.citeAs).toBe("string");
+          for (const id of card.ids) ids.add(id);
+        }
+        if (!page.page.cursor) break;
+        page = await call(evaluation, n.tool, { ...n.arguments, cursor: page.page.cursor });
+      }
+      const own = [...ids].filter((id) => getKnowledgeBase().byId.get(id)?.component === "tag");
+      expect(own.length).toBe(spec.rules.byStrategy[n.arguments.validationStrategy]);
     }
     // get_component_spec mantém o nome exato da 2.8.0.
     const byVariant = await call(evaluation, "get_component_spec", { component: "br-tag" });

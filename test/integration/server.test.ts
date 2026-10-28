@@ -348,7 +348,7 @@ describe("oracle knowledge tools", () => {
     expect(data.rules.ids).toBeUndefined();
     expect(Object.values(data.rules.byStrategy as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(data.rules.total);
     expect(data.rules.next.length).toBeLessThanOrEqual(3);
-    for (const n of data.rules.next) expect(n).toMatchObject({ action: "request-detail", tool: "get_ds_rules", arguments: { component: "button", limit: 5 } });
+    for (const n of data.rules.next) expect(n).toMatchObject({ action: "request-detail", tool: "get_ds_rules", arguments: { context: { components: ["button"] }, limit: 5 } });
     expect(data.gaps[0]).toMatchObject({ kind: "state-not-covered" });
   });
 

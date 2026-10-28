@@ -127,7 +127,8 @@ export type ErrorCode =
   | "no-content-terms"
   | "too-many-ids"
   | "missing-finding-ids"
-  | "invalid-argument";
+  | "invalid-argument"
+  | "unknown-parameter";
 
 export interface ContractError {
   error: string;
@@ -242,6 +243,44 @@ export function strictInput<T extends z.ZodRawShape>(tool: string, shape: T) {
 }
 
 /**
+ * 3.1.0: entrada recusada no formato de erro do contrato (antes: texto -32602 do SDK, sem errorCode nem
+ * próximo passo). Campo desconhecido → `unknown-parameter` com o nome mais próximo e a chamada corrigida
+ * em `next`; valor inválido → `invalid-argument` com o campo. Nada é executado.
+ */
+export function inputFailure(tool: string, args: unknown, error: z.ZodError, accepted: string[]) {
+  const issue = error.issues.find((i) => i.code === "unrecognized_keys") ?? error.issues[0];
+  const given = args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {};
+  if (issue?.code === "unrecognized_keys") {
+    const top = issue.path.length === 0;
+    const field = [...issue.path.map(String), issue.keys[0]].join(".");
+    const didYouMean = top ? Object.fromEntries(issue.keys.map((k) => [k, nearestField(k, accepted)]).filter(([, n]) => n)) : {};
+    const fixable = top && issue.keys.every((k) => didYouMean[k] && !(didYouMean[k] as string in given));
+    const corrected = fixable
+      ? Object.fromEntries(Object.entries(given).map(([k, v]) => [issue.keys.includes(k) ? (didYouMean[k] as string) : k, v]))
+      : null;
+    return fail({
+      error: issue.message,
+      errorCode: "unknown-parameter",
+      field,
+      ...(Object.keys(didYouMean).length ? { didYouMean } : {}),
+      ...(top ? { accepted } : {}),
+      next: [
+        corrected
+          ? step("request-detail", "repetir com o nome corrigido", tool, corrected)
+          : step("request-detail", `repetir sem o campo desconhecido '${field}' (inputSchema no tools/list)`, tool),
+      ],
+    });
+  }
+  const field = issue ? issue.path.map(String).join(".") : "";
+  return fail({
+    error: `entrada inválida em ${tool}${field ? ` (${field})` : ""}: ${issue?.message ?? "argumentos não conferem com o inputSchema"}. Nada foi executado; corrija e repita.`,
+    errorCode: "invalid-argument",
+    ...(field ? { field } : {}),
+    next: [step("request-detail", `corrigir ${field || "os argumentos"} conforme o inputSchema do tools/list e repetir`, tool)],
+  });
+}
+
+/**
  * Revisão da 3.0.0 (B-01 aninhado): objetos aninhados também recusam campo desconhecido, com o nome
  * mais próximo (`verify_finding{finding:{…, bogus:1}}` era aceito em silêncio). Registros (`z.record`)
  * continuam abertos de propósito (ex.: evidence.data). O JSON Schema publicado não muda.
@@ -292,4 +331,35 @@ export function budgetPage<T>(
     index += 1;
   }
   return compose(page, index < items.length ? index : null);
+}
+
+const INVALID_INPUT = Symbol("invalid-input");
+
+/**
+ * 3.1.0: the SDK keeps validating against the published (strict) schema — tools/list is unchanged —
+ * but a rejected input comes back as the contract error (`inputFailure`) instead of the SDK's plain
+ * -32602 text. Hooks the McpServer's input validation and handler dispatch (SDK 1.29.x, pinned by
+ * the lockfile; test/integration/input-contract.test.ts fails if an SDK upgrade changes them).
+ */
+export function installContractInputValidation(server: object): void {
+  type Tool = { inputSchema?: unknown };
+  const sdk = server as {
+    validateToolInput?: (tool: Tool, args: unknown, name: string) => Promise<unknown>;
+    executeToolHandler?: (tool: Tool, args: unknown, extra: unknown) => Promise<unknown>;
+  };
+  if (typeof sdk.validateToolInput !== "function" || typeof sdk.executeToolHandler !== "function") {
+    throw new Error("installContractInputValidation: McpServer internals changed; update the input-contract hook");
+  }
+  const execute = sdk.executeToolHandler.bind(server);
+  sdk.validateToolInput = async (tool, args, name) => {
+    const raw = tool.inputSchema;
+    if (!raw) return undefined;
+    const schema = raw instanceof z.ZodType ? raw : z.object(raw as z.ZodRawShape);
+    const parsed = await schema.safeParseAsync(args ?? {});
+    if (parsed.success) return parsed.data;
+    const accepted = schema instanceof z.ZodObject ? Object.keys(schema.shape as object) : [];
+    return { [INVALID_INPUT]: inputFailure(name, args, parsed.error, accepted) };
+  };
+  sdk.executeToolHandler = async (tool, args, extra) =>
+    args && typeof args === "object" && INVALID_INPUT in args ? (args as Record<symbol, unknown>)[INVALID_INPUT] : execute(tool, args, extra);
 }

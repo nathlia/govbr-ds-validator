@@ -74,6 +74,84 @@ export function resolveComponentName(value: string): string | undefined {
   return componentAliases().get(nameKey(value));
 }
 
+let glosses: Map<string, string> | undefined;
+
+/** Glosa em português da página oficial ("Table (Tabela)" → "tabela"), só para detectar menção no texto. */
+function componentGlosses(): Map<string, string> {
+  if (glosses) return glosses;
+  const map = new Map<string, string>();
+  for (const rule of getKnowledgeBase().rules) {
+    const title = rule.source.pageTitle;
+    if (!rule.component || typeof title !== "string") continue;
+    const gloss = /\(([^)]+)\)/.exec(title)?.[1];
+    if (!gloss) continue;
+    map.set(nameKey(gloss), rule.component);
+    if (!/\s/.test(gloss.trim())) map.set(singular(nameKey(gloss)), rule.component); // "Abas" → "aba"
+  }
+  glosses = map;
+  return map;
+}
+
+/**
+ * Nomes de UMA palavra que NÃO valem como menção a componente no texto livre (revisão de 28/10):
+ * palavra comum do português ou nome genérico/elemento HTML que numa observação quase sempre fala de
+ * outra coisa. Os sete da revisão: botão, item, menu, lista, mensagem, card, etiqueta.
+ */
+export const NAMED_IN_TEXT_EXCLUDED = new Set([
+  // revisão 28/10 (q028 recebia regras de Button por "botão 'Selecione o arquivo'")
+  "botao", "item", "menu", "lista", "mensagem", "card", "etiqueta",
+  // palavras comuns do português usadas na descrição da tela, não do componente
+  "tabela", "cabecalho", "rodape", "divisor", "notificacao", "assistente", "autenticacao", "aba", "abas",
+  // nomes genéricos em inglês / elementos HTML (`<button>`, `<input>`, `<table>`, `<header>`…)
+  "button", "input", "select", "table", "header", "footer", "list", "message", "modal", "radio", "switch",
+  "step", "steps", "tag", "tab", "loading", "divider", "notification",
+]);
+/*
+ * Ficam (uma palavra, nome próprio do DS, raro como palavra comum numa observação): accordion, avatar,
+ * breadcrumb, carousel/carrossel, checkbox, cookiebar, datetimepicker, magicbutton, pagination/paginação,
+ * scrim, signin, skiplink, textarea, tooltip, upload, wizard — cada um nomeia um único componente e não
+ * tem outro sentido corrente numa descrição de tela.
+ */
+
+/**
+ * Componentes NOMEADOS no texto de uma consulta (3.1.0, NAT-97; critério estrito da revisão):
+ * (a) classe raiz `br-*` (`span.br-tag` → tag); (b) nome oficial de VÁRIAS palavras, exato (nome da
+ * página ou glosa em português: "Skip Link", "Menu de Navegação", "Caixa de Seleção", "Migalhas de
+ * Pão"); (c) nome de uma palavra só se não estiver em `NAMED_IN_TEXT_EXCLUDED`. Nunca resolve o
+ * argumento `component`; a busca usa isto só quando a chamada não traz `component`.
+ */
+export function componentsNamedIn(text: string): string[] {
+  const words = normalizeText(text).split(/[^a-z0-9-]+/).filter(Boolean);
+  const out = new Set<string>();
+  const resolve = (phrase: string) => {
+    const key = nameKey(phrase);
+    if (!key) return undefined;
+    return componentAliases().get(key) ?? componentGlosses().get(key);
+  };
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (/^br-[a-z0-9-]+$/.test(w)) {
+      const name = componentAliases().get(nameKey(w));
+      if (name) out.add(name);
+      continue;
+    }
+    for (let n = 2; n <= 4 && i + n <= words.length; n++) {
+      const name = resolve(words.slice(i, i + n).join(" "));
+      if (name) out.add(name);
+    }
+    const single = [w, singular(w)].find((x) => !NAMED_IN_TEXT_EXCLUDED.has(nameKey(x)) && resolve(x));
+    if (single && !NAMED_IN_TEXT_EXCLUDED.has(nameKey(w))) out.add(resolve(single)!);
+  }
+  return [...out].sort();
+}
+
+/** Plural regular → singular, só para nomes ("tabelas" → "tabela", "botoes" → "botao", "abas" → "aba"). */
+function singular(word: string): string {
+  if (/oes$/.test(word)) return word.slice(0, -3) + "ao";
+  if (/ns$/.test(word)) return word.slice(0, -2) + "m";
+  return word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word;
+}
+
 function editDistance(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
@@ -504,4 +582,5 @@ export function pageCategoryPointers(terms: string[]): Array<{ category: string;
 /** Reset memoized aliases (tests only). */
 export function resetApplicabilityCache(): void {
   aliases = undefined;
+  glosses = undefined;
 }
