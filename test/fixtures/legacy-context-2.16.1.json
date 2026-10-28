@@ -1,0 +1,113 @@
+{
+  "generatedFrom": "bbc9d56 (2.16.1), profile evaluation, KB served by default",
+  "tool": "get_ds_rules",
+  "shapes": [
+    {
+      "args": {
+        "context": {
+          "components": [
+            "pagination"
+          ]
+        }
+      },
+      "sha256": "5393911f0779e0efb6bd8966c7210412254a8e4381ae4a3af32c3a20fa0449b1",
+      "chars": 10906,
+      "total": 48
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "input",
+            "datetimepicker",
+            "upload",
+            "button"
+          ],
+          "terms": [
+            "formulario",
+            "erro",
+            "obrigatorio"
+          ]
+        }
+      },
+      "sha256": "aa21d6d45175ff2d26cdc15740c7d8592a85b94f9140cb7df954fc258c418916",
+      "chars": 11809,
+      "total": 264
+    },
+    {
+      "args": {
+        "context": {
+          "terms": [
+            "foco"
+          ]
+        },
+        "limit": 5
+      },
+      "sha256": "e46f907234c6a30d6de7fec15331ae8b2a29ce2ea6408d3aa7da63ab6129fab3",
+      "chars": 9194,
+      "total": 24
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "modal"
+          ]
+        },
+        "query": "foco",
+        "detail": "brief"
+      },
+      "sha256": "f693379be8d4fd50f41abe214a86f4d2cc1e201d8642f92d809589e5b9d835a0",
+      "chars": 9391,
+      "total": 5
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "input"
+          ],
+          "terms": [
+            "foco"
+          ]
+        },
+        "offset": 20
+      },
+      "sha256": "9f088c0c940a431972b6cac2236589518788a71d78ffbd170c9bbb1b9f1902e1",
+      "chars": 11726,
+      "total": 88
+    },
+    {
+      "args": {
+        "context": {
+          "regions": [
+            "header"
+          ]
+        },
+        "detail": "full",
+        "limit": 3
+      },
+      "sha256": "6ddc864136a3b3ff8eda94326487acf24b2e23365e591ded8e4973c0254367f8",
+      "chars": 8092,
+      "total": 67
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "table",
+            "checkbox"
+          ],
+          "terms": [
+            "rótulo",
+            "cabeçalho"
+          ]
+        },
+        "force": "required"
+      },
+      "sha256": "6329b3463fc5770cb522fc217a2715cadd2bc4745414d7fd991f314afdde2b92",
+      "chars": 11719,
+      "total": 79
+    }
+  ]
+}

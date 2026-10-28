@@ -16,6 +16,7 @@ import {
   retrieveContextCandidates,
   sourcePageNotes,
 } from "../../src/data/applicability.js";
+import { isTableRow } from "../../src/data/retrieval.js";
 
 // 2.12.0: estes casos exercitam o MECANISMO sobre dados conhecidos da versão 3.7.0 (relatedComponents,
 // expectedEvidence, títulos citados por conflicts.json), que a versão literal não publica. Ficam
@@ -183,14 +184,22 @@ describe("retrieveContextCandidates", () => {
     const a = retrieve({ components: ["modal", "button", "input"], terms: ["Erro"] }).map((c) => c.rule.id);
     const b = retrieve({ components: ["br-input", "Button", "<br-modal>", "button"], terms: ["erro", "ERRO"] }).map((c) => c.rule.id);
     expect(a).toEqual(b);
-    // 2.12.0: grupos alternados (global primeiro, depois componentes A→Z); dentro do grupo, obrigação
-    // antes de orientação e motivo mais forte antes de termo.
+    // 2.12.0: grupos alternados (global primeiro, depois componentes A→Z). 2.17.0 (NAT-97): dentro do
+    // grupo, relevância lexical decrescente; a força só desempata entre candidatas de mesma relevância
+    // e mesmo motivo — nunca promove uma candidata menos pertinente.
     const mixed = retrieve({ components: ["input"], terms: ["erro"] });
     const groupsSeen = mixed.slice(0, 2).map((c) => c.rule.component ?? "(global)");
     expect(groupsSeen).toEqual(["(global)", "input"]);
     for (const g of ["(global)", "input"]) {
-      const tiers = mixed.filter((c) => (c.rule.component ?? "(global)") === g).map((c) => forceTier(c.rule.force));
-      expect(tiers).toEqual([...tiers].sort((x, y) => x - y));
+      const group = mixed.filter((c) => (c.rule.component ?? "(global)") === g);
+      const relevance = group.map((c) => c.relevance);
+      expect(relevance).toEqual([...relevance].sort((x, y) => y - x));
+      for (let i = 1; i < group.length; i++) {
+        const [p, c] = [group[i - 1], group[i]];
+        if (p.relevance === c.relevance && p.rank === c.rank && isTableRow(p.rule.originalText) === isTableRow(c.rule.originalText)) {
+          expect(forceTier(p.rule.force)).toBeLessThanOrEqual(forceTier(c.rule.force));
+        }
+      }
     }
   });
 

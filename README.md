@@ -39,6 +39,42 @@ characters; `query: "tabela"` (40 rules): 241,400 → 29,407. Units are memoized
 and rule id (no rereading of the corpus per call); ranking, membership, forces and KB data are
 unchanged.
 
+Desde a **2.17.0 (NAT-97)**, `get_ds_rules{query}` e o modo `context` usam um único motor de
+relevância (`src/data/retrieval.ts`, `meta.ranking.engine = "govbr-lexical/1.0.0"`): pontuação
+lexical determinística (saturação BM25 por campo — texto da cláusula, referências WCAG/e-MAG,
+condições/exceções, evidência esperada, nome documentado do componente, seção), cobertura dos
+termos, identificador/número exato e pares de palavras adjacentes. Normaliza caixa, acentos,
+marcadores markdown e alvos de link, preservando `aria-current`, `for`/`id`/`alt`/`tabindex`,
+`e-MAG 3.9`, `1.3.1`; os termos se combinam (a frase inteira não é exigida). `component` é pista:
+as regras dele ganham peso, as globais continuam elegíveis, as de outros componentes saem; o nome
+passa pelo mesmo resolvedor do `context` (`Modal`, `br-modal`), e nome desconhecido é erro
+`unknown-component` com `didYouMean`/`available`, não "0 regras". Ordem: pontuação → faixa de
+força (só desempate) → ordem da base; linha de tabela de API/anatomia pesa 0,6 e, no `context`, fica
+depois da prosa de mesma relevância. Piso declarado em `meta.ranking.floor` (cobertura ≥ 0,1;
+pontuação ≥ 4 ou todos os termos; ≥ 0,6 da melhor; pergunta com 4+ termos conhecidos exige 2): abaixo
+dele nada entra (`retrieval.stop: "relevance-floor"`), sem completar com ruído; pergunta sem base
+volta vazia com `absenceNote`, `unmatchedTerms` e `next`. A pontuação não depende da ordem das palavras
+(pares de termos contam por adjacência na regra, em qualquer ordem), e as frequências de documento vêm do
+conjunto ordenado (normativas por padrão; a evidência canônica, quando é ela). `query` tem até 500
+caracteres (`query-too-long`) e precisa de palavra de conteúdo (`no-content-terms`); `component` vazio ou
+desconhecido é erro também sem `query`. No `context`, cada termo é uma observação independente: é
+pontuado sozinho pelo mesmo motor (piso absoluto, sem o corte relativo, porque ali os componentes
+observados já definem o escopo) e a relevância da regra é a soma dos termos que ela passa; um termo
+nunca derruba outro. Relevância
+não é aplicabilidade: nada é afirmado como conformidade. `include_evidence` com `query` segue o mesmo
+motor e o `limit`. O vocabulário `data/retrieval/vocab-1.0.0.json` (28 grupos de sinônimos PT/EN e nomes
+HTML/WAI-ARIA, cada um com proveniência) é desligável por `vocabulary:false` ou
+`GOVBR_RETRIEVAL_VOCAB=off`. `match:"literal"` mantém a semântica da 2.16.1 byte a byte, também no `context`
+(substring da frase, sensível a acento, `component` id exato; snapshot de bbc9d56 nos testes). O grupo
+`estado-atual` (atual↔current) e os testes de regressão de paginação vêm do diagnóstico da tela A
+(`origem: "diagnostico-tela-a"` no vocabulário): ganho atribuído a eles é orientação ajustada a uma tela
+de desenvolvimento e deve ser reportado à parte. O formato da resposta é o mesmo da listagem, mais
+`retrieval` e `relevance` por regra; o redesenho em cartões é a NAT-99. O `tools/list` do perfil
+evaluation muda (novos parâmetros `match` e `vocabulary`). Benchmark de desenvolvimento
+`benchmark-1.0.0` (qrels 1.0.2), respondíveis com unidade relevante no top 5: 0% (2.16.1) → 75,0%
+(vocabulário ligado) / 67,9% (desligado); P@5 médio 40,3% / 37,7% — metas de 90% e 70% ainda não
+atingidas. Autorrecuperação por título sem acento: 15,5% → 98,4%.
+
 ## Related repositories
 
 | Repo | Role |

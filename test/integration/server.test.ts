@@ -525,7 +525,13 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context } })));
     const groups = data.candidates.map((c: { reasons: Array<{ component?: string }> }) => c.reasons.find((r) => r.component)?.component ?? "(global)");
     expect(groups[0]).toBe("(global)");
-    expect(new Set(groups)).toEqual(new Set(["(global)", "input", "datetimepicker", "upload", "button"]));
+    // 2.17.0: the 12k page budget is unchanged, but each candidate now carries its relevance and the
+    // engine's term fields (~5% larger: 4 fit instead of 5). The interleave is unchanged: global first,
+    // then each component once, A→Z — the first five positions (across the page boundary) are the five groups.
+    const next = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context, offset: data.count } })));
+    const firstFive = [...data.candidates, ...next.candidates].slice(0, 5).map((c: { reasons: Array<{ component?: string }> }) => c.reasons.find((r) => r.component)?.component ?? "(global)");
+    expect(firstFive).toEqual(["(global)", "button", "datetimepicker", "input", "upload"]);
+    expect(groups.length).toBeGreaterThanOrEqual(4);
     expect(data.groups.items[0]).toMatchObject({
       group: "(global)",
       next: { tool: "get_ds_rules", arguments: { context: { terms: ["erro", "formulario", "obrigatorio"] } } },

@@ -38,8 +38,12 @@ import type { ToolTelemetryEvent } from "../../src/telemetry.js";
  * Mudou de propósito? Atualize aqui E declare a mudança: é diferença de tratamento do braço.
  */
 const KNOWLEDGE_FREE_TOOLS_SHA256 = "72abd54968cbe3173fce5dd3b4bba7aff563b37ca11b8a9ec0f25a91a104d39c";
-/** `tools/list` do perfil evaluation medido na 2.13.0: a 2.14.0 não pode mudá-lo (gate da NAT-86). */
-const EVALUATION_TOOLS_SHA256_2_13_0 = "3d70162f5fed0ec8614d9dcbc18a69a00b4819ad56df1ed1c5bf95213eed0b3b";
+/**
+ * `tools/list` do perfil evaluation. 2.13.0–2.16.1: 3d70162f5fed0ec8614d9dcbc18a69a00b4819ad56df1ed1c5bf95213eed0b3b
+ * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
+ * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
+ */
+const EVALUATION_TOOLS_SHA256_2_17_0 = "e212c68e95268bf768e0b5cfacb2774f8483e7c4ef263170d6a198ff14c0e7ab";
 
 /** Termos do pacote DS + e-MAG que nenhuma descrição/esquema do perfil pode trazer. */
 const FORBIDDEN_IN_SURFACE = [
@@ -187,9 +191,9 @@ describe("superfície do perfil knowledge-free", () => {
     await client.close();
   });
 
-  it("o perfil evaluation continua com o tools/list da 2.13.0", async () => {
+  it("o perfil evaluation tem o tools/list declarado da 2.17.0", async () => {
     const client = await connect("evaluation");
-    expect(sha(JSON.stringify((await client.listTools()).tools))).toBe(EVALUATION_TOOLS_SHA256_2_13_0);
+    expect(sha(JSON.stringify((await client.listTools()).tools))).toBe(EVALUATION_TOOLS_SHA256_2_17_0);
     await client.close();
   });
 });

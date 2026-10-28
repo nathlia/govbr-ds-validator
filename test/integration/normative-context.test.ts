@@ -132,9 +132,17 @@ describe("get_ds_rules context — contract", () => {
     const data = await call(evaluation, "get_ds_rules", { context: { components: ["Br-Button", "Cookie Bar", "carrossel"] } });
     expect(data.context.components).toEqual(["button", "cookiebar"]);
     expect(data.context.unresolved).toEqual(["carrossel"]);
-    // Fora do context, component segue id exato (semântica 2.8.0).
+    // 2.17.0 (B-05): fora do context, component usa o mesmo resolvedor; match:"literal" mantém o id
+    // exato da 2.8.0; nome desconhecido é erro de entrada com sugestões, não "0 regras".
     const byComponent = await call(evaluation, "get_ds_rules", { component: "Button" });
-    expect(byComponent.count).toBe(0);
+    const exact = await call(evaluation, "get_ds_rules", { component: "button" });
+    expect(byComponent.count).toBeGreaterThan(0);
+    expect(byComponent.rules.map((r: { id: string }) => r.id)).toEqual(exact.rules.map((r: { id: string }) => r.id));
+    expect((await call(evaluation, "get_ds_rules", { component: "Button", match: "literal" })).count).toBe(0);
+    const unknown = await call(evaluation, "get_ds_rules", { component: "carrossel", query: "foco" });
+    expect(unknown).toMatchObject({ errorCode: "unknown-component", field: "component", didYouMean: ["carousel"] });
+    expect(unknown.available).toContain("carousel");
+    expect(unknown.absenceNote).toBeUndefined();
   });
 
   it("labels conflicts and example defects; examples never appear as candidates", async () => {
@@ -273,7 +281,10 @@ describe("legacy get_ds_rules call shapes are byte-identical to 2.8.0", () => {
     const shapes = snapshot.shapes.filter((s: { tool?: string }) => !s.tool);
     expect(shapes.length).toBeGreaterThanOrEqual(15);
     for (const shape of shapes) {
-      const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: shape.args }));
+      // 2.17.0 (NAT-97): query e component mudaram de semântica de propósito (relevância, resolvedor de
+      // nomes); a semântica antiga continua disponível, byte a byte, com match:"literal".
+      const legacyArgs = "query" in shape.args || "component" in shape.args ? { ...shape.args, match: "literal" } : shape.args;
+      const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: legacyArgs }));
       // 2.12.0 acrescenta só meta.knowledgeVersion; sem ele, o texto tem de ser o da 2.8.0 byte a byte.
       const parsed = JSON.parse(raw);
       if (parsed.meta) {

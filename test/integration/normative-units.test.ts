@@ -69,7 +69,8 @@ describe("NAT-96 MCP and core execution provenance", () => {
         [{ query: "upload" }, 12_000],
         [{ query: "tabela" }, 30_000],
         [{ component: "pagination" }, 30_000],
-        [{ query: "página atual", component: "pagination" }, 2_000],
+        // 2.17.0: query = relevance, up to 10 brief rules above the floor (2.16.1: substring, 1 rule, ~1.1k); measured 3.1k.
+        [{ query: "página atual", component: "pagination" }, 4_000],
       ];
       for (const [args, cap] of sized) {
         const text = (await client.callTool({ name: "get_ds_rules", arguments: args })).content.map((c: any) => c.text).join("\n");

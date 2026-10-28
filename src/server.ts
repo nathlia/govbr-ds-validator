@@ -55,8 +55,11 @@ import {
   summarizeGroups,
   GLOBAL_GROUP,
   PAGE_REGIONS,
+  resolveComponentName,
+  suggestComponentNames,
   type ContextCandidate,
 } from "./data/applicability.js";
+import { rankRules, rankingMeta, vocabularyEnabledByDefault, getVocabulary, tokenize } from "./data/retrieval.js";
 import type { PageRegion } from "./evidence/pageFacts.js";
 import { readFileSync } from "node:fs";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
@@ -309,6 +312,7 @@ function summarizeCandidate(candidate: ContextCandidate) {
     force: r.force,
     normativeContext: boundedNormativeUnit(r, 800),
     obligation: candidate.obligation,
+    ...(candidate.relevance ? { relevance: candidate.relevance } : {}),
     reasons: candidate.reasons,
     applicability: {
       status: candidate.applicability.status,
@@ -334,6 +338,7 @@ function projectCandidate(candidate: ContextCandidate, detail: CandidateDetail) 
     ...projection,
     normativeContext: boundedNormativeUnit(r, 2500),
     obligation: candidate.obligation,
+    ...(candidate.relevance ? { relevance: candidate.relevance } : {}),
     source: { ...(r.standard ? { standard: r.standard } : {}), url: r.source.url, version: r.standardVersion ?? r.dsVersion },
     reasons: candidate.reasons,
     applicability: {
@@ -410,24 +415,190 @@ function contextPage(
 type ContextInput = { components?: string[]; regions?: PageRegion[]; terms?: string[] };
 
 /** Candidatas para um contexto, sobre a base já estreitada pelos filtros publicados. */
-function contextCandidates(context: ContextInput, filter: RuleFilter) {
+interface SearchOptions {
+  /** "literal" keeps the 2.16.1 substring semantics of `query`; default "relevance" (2.17.0). */
+  match?: "relevance" | "literal";
+  vocabulary?: boolean;
+}
+
+const RELEVANCE_DEFAULT_LIMIT = 10;
+
+/** Teto declarado de uma query de relevância (texto livre). */
+const QUERY_MAX_CHARS = 500;
+
+function queryProblem(query: string) {
+  const text = query.trim();
+  if (text.length > QUERY_MAX_CHARS) {
+    return {
+      error: `query tem ${text.length} caracteres; o máximo é ${QUERY_MAX_CHARS}.`,
+      errorCode: "query-too-long",
+      field: "query",
+      maxChars: QUERY_MAX_CHARS,
+      next: [{ tool: null, note: "Reduza a pergunta ao que foi observado: elemento, atributo, papel, estado (algumas palavras)." }],
+    };
+  }
+  if (!tokenize(text).length) {
+    return {
+      error: "query sem termos de conteúdo: só palavras vazias ou pontuação.",
+      errorCode: "no-content-terms",
+      field: "query",
+      next: [
+        { tool: null, note: "Use palavras do que foi observado (ex.: foco, rótulo, aria-label, contraste)." },
+        { tool: "get_ds_rules", note: "Ou liste por filtro, sem query (component, category, force)." },
+      ],
+    };
+  }
+  return null;
+}
+
+/** Componentes que a base conhece (regras) ou que têm especificação. */
+function knownComponents(): string[] {
+  const names = new Set<string>(Object.keys(getComponentSpecs().components));
+  for (const r of getKnowledgeBase().rules) if (r.component) names.add(r.component);
+  return [...names].sort();
+}
+
+/** B-05: nome de componente que não resolve é erro de entrada, com sugestões — não "0 regras". */
+function unknownComponentError(component: string) {
+  const didYouMean = suggestComponentNames(component);
+  return {
+    error: `Componente '${component}' não existe na base (use o id, a classe br-<id> ou o nome da página oficial).`,
+    errorCode: "unknown-component",
+    field: "component",
+    ...(didYouMean.length ? { didYouMean } : {}),
+    available: knownComponents(),
+    next: didYouMean.length
+      ? [{ tool: "get_ds_rules", note: "Repita com component igual a uma das sugestões em didYouMean." }]
+      : [{ tool: "list_components", arguments: {} }],
+  };
+}
+
+const RELEVANCE_NOTE =
+  "Ordenado por relevância lexical à pergunta (motor e pesos em meta.ranking): é motivo para ler a " +
+  "regra, não aplicabilidade nem conformidade. Só entram regras acima do piso declarado; abaixo dele " +
+  "nada é completado com ruído. Confira condições, exceções e o texto completo antes de citar.";
+
+/**
+ * `get_ds_rules{query}` (2.17.0): o motor único de relevância sobre a base estreitada pelos filtros
+ * estritos (force/category/validationStrategy/standard/...). `component` é pista: as regras dele
+ * ganham peso, as globais continuam elegíveis, as de outros componentes saem. Mesmo formato de
+ * listagem da 2.16.1 (`rules`, `total`, `more`), mais `retrieval` e `relevance` por regra.
+ */
+function relevanceResponse(
+  filter: RuleFilter,
+  paging: { detail?: "summary" | "brief" | "full"; limit?: number; offset?: number; include_evidence?: boolean },
+  vocabulary: boolean | undefined,
+) {
+  const kb = getKnowledgeBase();
+  const { query, component, ...strict } = filter;
+  // component already resolved by the caller (resolveComponentName); null = no hint.
+  const hint = component ?? null;
+  const known = hint !== null;
+  const ranked = rankRules({ text: query ?? "", component: hint, pool: filterRules(strict), vocabulary }, kb);
+  const take = paging.limit ?? RELEVANCE_DEFAULT_LIMIT;
+  const skip = paging.offset ?? 0;
+  const page = ranked.results.slice(skip, skip + take);
+  const project = paging.detail === "full" ? projectRule : briefRule;
+  const end = skip + page.length;
+  const stop = ranked.results.length === 0 ? "no-match" : end < ranked.results.length ? "limit" : "relevance-floor";
+  const response: Record<string, unknown> = {
+    meta: {
+      dsVersion: kb.meta.dsVersion,
+      knowledgeVersion: kb.meta.knowledgeVersion,
+      totalNormative: kb.meta.normativeRules,
+      ranking: rankingMeta(ranked.vocabulary),
+    },
+    retrieval: {
+      mode: "relevance",
+      note: RELEVANCE_NOTE,
+      terms: ranked.analysis.terms,
+      expansions: ranked.analysis.expansions,
+      componentHint: known ? hint : null,
+      globalsAllowed: true,
+      ...(ranked.analysis.unmatchedTerms.length ? { unmatchedTerms: ranked.analysis.unmatchedTerms } : {}),
+      belowFloor: ranked.belowFloor,
+      stop,
+    },
+    total: ranked.results.length,
+    offset: skip,
+    count: page.length,
+    detail: paging.detail === "full" ? "full" : "brief",
+    rules: page.map((s) => ({
+      ...project(s.rule),
+      relevance: { score: Math.round(s.score * 1000) / 1000, matched: s.matched.map((m) => (m.via ? `${m.term}→${m.via}` : m.term)) },
+    })),
+  };
+  if (page.some((s) => normativeUnit(s.rule))) response.normativeContextNote = LIST_CONTEXT_NOTE;
+  // Part of the question absent from the base (e.g. `aria-current`): the fixed note, even with results.
+  if (ranked.analysis.unmatchedTerms.length) response.absenceNote = ABSENCE_NOTE;
+  if (ranked.results.length === 0) {
+    response.absenceNote = ABSENCE_NOTE;
+    response.next = [
+      { tool: null, note: "Reformule pela propriedade medida (atributo, papel, estado, elemento) ou por menos termos." },
+      ...(known ? [{ tool: "get_component_spec", arguments: { component: hint } }] : []),
+      { tool: null, note: "Sem regra encontrada, mantenha o achado como incerto com a referência que você justifica; ausência na base não é conformidade." },
+    ];
+  }
+  if (end < ranked.results.length) {
+    response.more = {
+      remaining: ranked.results.length - end,
+      nextOffset: end,
+      note: "Peça a próxima página com a mesma query/filtros e offset=nextOffset.",
+    };
+  }
+  if (paging.detail !== "full") {
+    response.detailNote =
+      "Projeção mínima. Para evidência esperada, condições, exceções, referências cruzadas e " +
+      "proveniência, peça a regra por id ou repita com detail='full'.";
+  }
+  if (paging.include_evidence) {
+    // B-07: evidence goes through the same engine, component hint and limit as the rules.
+    const evidence = rankRules({ text: query ?? "", component: hint, pool: getEvidence(hint ?? undefined), vocabulary }, kb).results;
+    response.evidence = {
+      note: "Fragmentos canônicos do @govbr-ds/core — evidência de implementação, NÃO normas. Não sobrepõem regras required/prohibited. Ordenados pela mesma relevância, até limit.",
+      total: evidence.length,
+      count: Math.min(evidence.length, take),
+      items: evidence.slice(0, take).map((s) => project(s.rule)),
+    };
+  }
+  return response;
+}
+
+/**
+ * Candidatas para um contexto, sobre a base já estreitada pelos filtros publicados. 2.17.0: `query`
+ * entra no motor de relevância junto com context.terms; com match:"literal", continua o filtro por
+ * substring da 2.16.1 sobre a base.
+ */
+function contextCandidates(context: ContextInput, filter: RuleFilter, search: SearchOptions = {}) {
   const normalized = normalizeContext(context);
-  return { normalized, candidates: retrieveContextCandidates(filterRules(filter), normalized) };
+  if (search.match === "literal" || !filter.query?.trim()) {
+    return { normalized, candidates: retrieveContextCandidates(filterRules(filter), normalized, { vocabulary: search.vocabulary, match: search.match }) };
+  }
+  const { query, ...strict } = filter;
+  return { normalized, candidates: retrieveContextCandidates(filterRules(strict), normalized, { query, vocabulary: search.vocabulary }) };
 }
 
 function contextResponse(
   context: ContextInput,
   filter: RuleFilter,
   paging: { detail: CandidateDetail; limit?: number; offset?: number },
+  search: SearchOptions = {},
 ) {
   const kb = getKnowledgeBase();
-  const { normalized, candidates } = contextCandidates(context, filter);
+  const { normalized, candidates } = contextCandidates(context, filter, search);
+  const vocabulary = search.vocabulary ?? vocabularyEnabledByDefault();
   const firstPage = (paging.offset ?? 0) === 0;
   const warnings = exampleDefectWarnings(normalized.components);
   const pointers = pageCategoryPointers(normalized.terms);
   const pageNotes = sourcePageNotes(candidates);
   const head = {
-    meta: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules },
+    meta: {
+      dsVersion: kb.meta.dsVersion,
+      knowledgeVersion: kb.meta.knowledgeVersion,
+      totalNormative: kb.meta.normativeRules,
+      // match:"literal" = the 2.16.1 context path, byte for byte (no ranking block).
+      ...(search.match === "literal" ? {} : { ranking: { engine: rankingMeta("off").engine, vocabulary: vocabulary ? getVocabulary().version : "off", match: "relevance" } }),
+    },
     retrieval: "direct" as const,
     note: CONTEXT_NOTE,
     context: normalized,
@@ -617,7 +788,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
       description:
-        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Use a projeção breve para triagem e detalhe completo somente para regras candidatas. Com context (componentes/regiões observados, termos de estado), devolve candidatas a investigar com motivo, aplicabilidade desconhecida rotulada e evidência esperada — candidata não é defeito.",
+        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Com query, ordena por relevância (termos combinados, sem acento; component é pista e as regras globais continuam elegíveis) e para no piso de relevância — relevância não é aplicabilidade. Use a projeção breve para triagem e detalhe completo somente para regras candidatas. Com context (componentes/regiões observados, termos de estado), devolve candidatas a investigar com motivo, aplicabilidade desconhecida rotulada e evidência esperada — candidata não é defeito.",
       inputSchema: {
         context: z
           .object({
@@ -646,7 +817,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(20)
           .optional()
           .describe("Até 20 ids exatos em lote; usa detail brief por padrão"),
-        component: z.string().optional().describe("Componente, ex.: 'button', 'card'"),
+        component: z.string().optional().describe("Componente: id, classe br-<id> ou nome da página oficial (ex.: 'button', 'br-modal'); nome desconhecido ou vazio é erro com sugestões"),
         category: z
           .enum(["accessibility", "component", "development", "foundation", "page", "pattern", "template"])
           .optional(),
@@ -674,7 +845,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .enum(["critical", "serious", "moderate", "minor", "informational"])
           .optional(),
         standard: z.enum(["gov.br Design System", "eMAG"]).optional(),
-        query: z.string().optional().describe("Busca textual em título/regra/texto original"),
+        query: z
+          .string()
+          .optional()
+          .describe("Pergunta ou observação em texto livre (até 500 caracteres): busca por relevância (padrão 10 resultados acima do piso)"),
+        match: z
+          .enum(["relevance", "literal"])
+          .optional()
+          .describe("'relevance' (padrão) ou 'literal': query como substring exata, sensível a acento, com component como filtro exato (semântica da 2.16.1)"),
+        vocabulary: z
+          .boolean()
+          .optional()
+          .describe("Expansões de vocabulário versionadas (PT/EN, nomes HTML/ARIA); padrão ligado. false desliga"),
         include_evidence: z
           .boolean()
           .optional()
@@ -694,19 +876,25 @@ export function createServer(options: ServerOptions = {}): McpServer {
       },
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, context, include_evidence, detail, limit, offset, ...rawFilter }) => {
+    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, context, include_evidence, detail, limit, offset, match, vocabulary, ...rawFilter }) => {
       const kb = getKnowledgeBase();
+      const search: SearchOptions = { match, vocabulary };
       if (id && ids) return json({ error: "Informe id ou ids, não ambos." });
       if (context && (id || ids)) return json({ error: "context não se combina com id/ids: peça os ids depois, em lote." });
       if (context && rawFilter.component !== undefined) {
         return json({ error: "context não se combina com component: informe os componentes em context.components." });
       }
-      // Filtros legados exatamente como na 2.8.0; variantes nominais só em context.components.
-      const filter: RuleFilter = rawFilter;
+      // Filtros legados exatamente como na 2.8.0 com match:"literal"; sem ele, variantes nominais em component (2.17.0).
+      const filter: RuleFilter = { ...rawFilter };
+      // 2.17.0: a relevance query is bounded and must carry content words (actionable errors).
+      if (match !== "literal" && filter.query?.trim()) {
+        const problem = queryProblem(filter.query);
+        if (problem) return json(problem);
+      }
       if (context) {
         const hasContext = Boolean(context.components?.length || context.regions?.length || context.terms?.length);
         if (!hasContext) return json({ error: "context vazio: informe components, regions ou terms." });
-        const answer = contextResponse(context, filter, { detail: detail ?? "summary", limit, offset });
+        const answer = contextResponse(context, filter, { detail: detail ?? "summary", limit, offset }, search);
         return json(answer.total === 0 ? { ...answer, absenceNote: ABSENCE_NOTE } : answer);
       }
       if (id) {
@@ -736,6 +924,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(found.some((rule) => normativeUnit(rule)) ? { normativeContextNote: LIST_CONTEXT_NOTE } : {}),
           ...(found.length < ids.length ? { absenceNote: ABSENCE_NOTE } : {}),
         });
+      }
+
+      // 2.17.0 (B-05): `component` goes through the same name resolver as context.components
+      // (id, br-<id>, official page name); an unknown name is an input error with suggestions, not
+      // "0 rules". match:"literal" keeps the 2.16.1 exact-id filter.
+      if (match !== "literal" && filter.component !== undefined) {
+        const resolved = resolveComponentName(filter.component);
+        if (!resolved) return json(unknownComponentError(filter.component));
+        filter.component = resolved;
+      }
+
+      // 2.17.0 (NAT-97): query = relevance (one engine with context). match:"literal" keeps the
+      // 2.16.1 substring path below byte for byte. A whitespace-only query has no terms: listing.
+      if (match !== "literal" && filter.query?.trim()) {
+        return json(relevanceResponse(filter, { detail, limit, offset, include_evidence }, vocabulary));
       }
 
       // 2.9.0: limit/offset explícitos são pedido de listagem. Até a 2.8.0 eles eram retirados do
