@@ -121,6 +121,18 @@ import {
   type ContractError,
 } from "./responses/contract.js";
 import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
+import { DenseRequiredError, defaultRetrievalMode, denseRequiredByEnv } from "./data/hybrid.js";
+import { denseState } from "./data/embeddings.js";
+export { DenseRequiredError, InvalidRetrievalModeError } from "./data/hybrid.js";
+
+/**
+ * 3.2.0: verificações assíncronas de subida (hoje: GOVBR_RETRIEVAL_REQUIRE_DENSE). O index.ts espera
+ * por elas antes de conectar o transporte; falha → exit 2 com uma linha no stderr.
+ */
+let startupCheck: Promise<void> = Promise.resolve();
+export function startupChecks(): Promise<void> {
+  return startupCheck;
+}
 import { getGuidance } from "./data/guidance.js";
 import { assembleScan, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
@@ -768,6 +780,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
   if (!knowledgeFree) warnOnVersionMismatch();
   // 3.0.0 (revisão): orientação curada sem basis válido não sobe (§15.6b, falha cedo).
   if (hasNorms) getGuidance();
+  // 3.2.0 (NAT-107, D-149): padrão léxico — o modelo nem carrega. Com GOVBR_RETRIEVAL_MODE=hybrid|dense,
+  // vetores + modelo carregam em segundo plano (a 1ª query espera; ausentes → léxica com
+  // ranking.dense:"unavailable"). Modo inválido falha na subida.
+  const startupMode = hasNorms ? defaultRetrievalMode() : "lexical";
+  if (startupMode !== "lexical") void denseState();
+  // GOVBR_RETRIEVAL_REQUIRE_DENSE=1 (runner): só vale com hybrid/dense como padrão; sem modelo + vetores
+  // conferidos, não sobe. O knowledge-free ignora (não tem busca nem base).
+  startupCheck =
+    startupMode !== "lexical" && denseRequiredByEnv()
+      ? denseState().then((s) => {
+          if (s.status !== "ready") throw new DenseRequiredError(`${s.model}: ${s.reason}`);
+        })
+      : Promise.resolve();
 
   // ══════════════════════════════════════════════════════════════════════════
   // Oracle knowledge tools (A1–A4)
@@ -848,6 +873,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .boolean()
           .optional()
           .describe("Expansões de vocabulário versionadas (PT/EN, nomes HTML/ARIA); padrão ligado. false desliga"),
+        retrieval: z
+          .enum(["hybrid", "lexical", "dense"])
+          .optional()
+          .describe("Motor da busca por query: 'lexical' (padrão, por termos), 'hybrid' (léxica + vetorial local, fusão RRF: um pouco mais de acertos, mas menos precisão e mais resultados quando a base não tem resposta) ou 'dense' (só vetorial, para medição)"),
         include_evidence: z
           .boolean()
           .optional()
@@ -872,15 +901,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
     instrumentTool(telemetry, "get_ds_rules", async (args) => {
       // 3.0.0: o contrato oraculo-resposta/1.0.0. match:"literal" = a superfície da 2.17.1, byte a byte.
       if (args.match !== "literal") return getDsRules(args, { brief: briefRule, full: projectRule });
-      if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index") {
+      if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index" || args.retrieval !== undefined) {
         return fail({
-          error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor nem detail:'index'. Pagine com offset.",
+          error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor, detail:'index' nem retrieval. Pagine com offset.",
           errorCode: "invalid-combination",
           field: "match",
           next: [step("request-detail", "repita sem match:'literal' para o contrato 3.0.0", null)],
         });
       }
-      const { id, ids, context, include_evidence, limit, offset, match, vocabulary, cursor: _cursor, clauseCursor: _clause, detail: rawDetail, ...rawFilter } = args;
+      const { id, ids, context, include_evidence, limit, offset, match, vocabulary, cursor: _cursor, clauseCursor: _clause, retrieval: _retrieval, detail: rawDetail, ...rawFilter } = args;
       const detail = rawDetail as "summary" | "brief" | "full" | undefined;
       const kb = getKnowledgeBase();
       const search: SearchOptions = { match, vocabulary };

@@ -4,6 +4,7 @@
  * do motor (retrieval.ts) ou a do adaptador de contexto (applicability.ts); este módulo só decide o
  * que sai, em que formato e dentro de que orçamento.
  */
+import type { RankingInfo } from "../data/hybrid.js";
 import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
 import { NORMATIVE_FORCES } from "../data/knowledge.js";
 import { normativeUnit, normativeUnitRef, legacyResolution } from "../data/normativeUnits.js";
@@ -110,6 +111,8 @@ export interface Hit {
   field: string | null;
   /** Conflito documentado que nomeia a regra pelo título (conflicts.json), quando houver. */
   conflicts?: unknown[];
+  /** 3.2.0: busca híbrida/vetorial — em qual lista a regra apareceu. Ausente na léxica (forma da 3.1.0). */
+  via?: "lexical" | "dense" | "both";
 }
 
 interface Unit {
@@ -191,6 +194,13 @@ function requirementOf(rule: KnowledgeRule, ctx: CardContext) {
   return { heading: heading(rule), text, complete, ...(complete ? {} : { code: "text-deferred" as const }) };
 }
 
+/** Via da unidade (3.2.0): a das suas ocorrências; listas diferentes → "both". Sem via (léxica) → nada. */
+function viaOf(unit: Unit): { via?: "lexical" | "dense" | "both" } {
+  const vias = new Set(unit.hits.map((h) => h.via).filter((v): v is NonNullable<Hit["via"]> => v !== undefined));
+  if (!vias.size) return {};
+  return { via: vias.size === 1 ? [...vias][0] : "both" };
+}
+
 /** Cartão completo (§5.2). `why` só existe quando houve busca. */
 function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compact = false) {
   const main = mainHit(unit);
@@ -206,7 +216,7 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     force: rule.force,
     modality: MODALITY[rule.force] ?? "indefinido",
     requirement: requirementOf(rule, ctx),
-    ...(withWhy ? { why: { matched, relation: main.relation, field: main.field } } : {}),
+    ...(withWhy ? { why: { matched, relation: main.relation, field: main.field, ...viaOf(unit) } } : {}),
     toVerify: compact ? toVerifyOf(rule, ctx).slice(0, 1) : toVerifyOf(rule, ctx),
     evidence: compact ? evidenceOf(rule).slice(0, 1) : evidenceOf(rule),
     applicability: "unknown" as const,
@@ -220,7 +230,8 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
 export interface KbMeta {
   dsVersion: string;
   knowledgeVersion: string;
-  ranking: string;
+  /** Motor léxico: a string da versão (como na 3.1.0). Híbrido/vetorial (3.2.0): bloco com o modelo ou dense:"unavailable". */
+  ranking: string | RankingInfo;
   vocabulary: string;
   guidance: string;
 }

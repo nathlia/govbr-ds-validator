@@ -83,6 +83,118 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.2.0 (NAT-107, D-147, D-149): busca híbrida opcional — léxica + vetorial local
+
+**Padrão: léxico, como na 3.1.0.** Sem `retrieval` e sem `GOVBR_RETRIEVAL_MODE`, o `get_ds_rules` responde
+byte a byte como a 3.1.0 (respostas, cursores e `next` — conferido contra respostas capturadas da `a08c90e`
+em `test/fixtures/lexical-3.1.0-get-ds-rules.json`) e o modelo **nem carrega** (sem custo de memória nem de
+subida). A busca híbrida é opcional: `retrieval:"hybrid"` na chamada ou `GOVBR_RETRIEVAL_MODE=hybrid` no servidor.
+**Troca medida** (benchmark de desenvolvimento, qrels 1.0.3): a híbrida acerta uma pergunta respondível a mais
+(45/56 vs 44/56) e ordena melhor (nDCG@5 46,1 vs 40,3), mas tem P@5 bem menor (29,5 vs 45,7) e devolve mais
+resultados onde a base não tem resposta (25 vs 11 unidades nas sem-resposta; 9 vs 2 nas fora de escopo).
+
+**O que a híbrida faz.** Ordena por **duas listas fundidas**: a do motor léxico (`govbr-lexical/1.1.0`, sem
+mudança) e a de um modelo de embeddings local, multilíngue e pequeno, por *Reciprocal Rank Fusion* com o
+parâmetro padrão (k = 60, pesos iguais; Cormack, Clarke e Büttcher, 2009): cada regra soma 1/(60 + posição)
+em cada lista onde aparece (lista vetorial: as 50 de maior cosseno). Sem serviço externo nem rede em execução;
+nenhum texto é gerado — o vetor só ordena regras que já estão na base. Cada cartão diz de onde veio:
+`why.via: "lexical" | "dense" | "both"` (só na híbrida/vetorial; a léxica mantém a forma da 3.1.0).
+
+**Quem entra só pelo vetor.** Uma regra que não passou o piso léxico só entra se (1) a pergunta tem **âncora
+na base** — ao menos um termo de conteúdo, e pelo menos metade deles, existe no vocabulário da própria base
+(chaves e radicais dobrados — caixa, acento, plural — dos campos que o motor léxico indexa, sem palavras vazias
+e sem sinônimos); (2) o cosseno da pergunta **sem** a pista de componente alcança o limiar (o nome do
+componente entra no texto só para ordenar, não para admitir: o limiar foi calibrado sem ele); (3) não é linha
+de tabela. Sem âncora (`"xyzzy quux"`, `"futebol campeonato brasileiro"`, `"xyzzy quux componente"`), nada
+entra pelo vetor: sobra o resultado léxico, e sem ele a ausência normal (`no-match`, `absenceNote`,
+`unmatchedTerms`). Uma unidade só-vetorial diz `why.matched: ["semelhança-vetorial:0.8xx"]`.
+
+**Parâmetro `retrieval`** (só com `query`; com `id`, `ids`, `context` ou sem `query` é `invalid-combination`;
+igual ao padrão do servidor, não é ecoado em `next`/cursor):
+
+| valor | o que faz |
+| --- | --- |
+| `lexical` (padrão) | o motor da 3.1.0 byte a byte (`kb.ranking = "govbr-lexical/1.1.0"`) |
+| `hybrid` | léxica + vetorial, fusão RRF; `kb.ranking = {engine:"govbr-hybrid/1.0.0", lexical, dense:"e5-small@761b726", fusion:"rrf-k60-top50", threshold}` |
+| `dense` | só a lista vetorial admitida — para medição |
+
+`GOVBR_RETRIEVAL_MODE=lexical|hybrid|dense` troca o padrão (inválido: o processo não sobe, uma linha no
+stderr). `match:"literal"` continua o caminho da 2.x e não aceita `retrieval`; o `context` continua léxico.
+**Sem os vetores ou sem o modelo** (arquivo ausente, sha divergente, base de outra versão, falha do runtime
+ONNX), a híbrida responde com a léxica e diz `kb.ranking.dense: "unavailable"` com o motivo em `denseNote` —
+nunca em silêncio; falha transitória do runtime tenta de novo **uma vez** na chamada seguinte e o motivo diz
+`tentativa 1/2; nova tentativa…` / `tentativa 2/2; sem nova tentativa`. Com `GOVBR_RETRIEVAL_REQUIRE_DENSE=1`
+**e** hybrid/dense como padrão do servidor, o processo **não sobe** sem modelo + vetores conferidos (exit 2,
+uma linha no stderr); com o padrão léxico a flag não tem efeito, e o knowledge-free a ignora.
+
+**`tools/list` por perfil** (3.1.0 → 3.2.0): `evaluation` `9b32f185…` → `f1529268…`, `full` `919784c9…` →
+`418d6054…`, `normative` `54cee921…` → `1642af4b…` (parâmetro `retrieval`); `knowledge-free` `8bdb5e35…`,
+`deterministic` `7e3feff3…` e `evidence` `9a7ec0b3…` iguais. O knowledge-free não ganha nada (os vetores
+ficam atrás da trava de conhecimento).
+
+**Modelo.** `Xenova/multilingual-e5-small` (conversão ONNX de `intfloat/multilingual-e5-small`), revisão
+`761b726dd34fb83930e26aab4e9ac3899aa1fa78`, pesos quantizados q8 (`onnx/model_quantized.onnx`, 118 MB;
+135 MB com o tokenizador), 384 dimensões, pooling médio, prefixos `query: `/`passage: ` como pede o cartão.
+**Licença MIT**: os repositórios do modelo declaram `license: mit` e não têm arquivo próprio; o texto vai no
+pacote em `data/models/e5-small.LICENSE` (MIT do repositório de origem `microsoft/unilm`, commit `0e31c7c`;
+sha256 em `models.json`, conferido por `models:fetch`). A MIT permite uso, inclusive comercial, com a nota de
+copyright ao redistribuir; o pacote não redistribui os pesos — o `models:fetch` os baixa do Hugging Face.
+Escolhido entre três candidatos pela regra fixada antes (maior hit@5 respondível no modo híbrido; empate →
+P@5; empate → o menor), no qrels 1.0.2: e5-small 44/56, `paraphrase-multilingual-MiniLM-L12-v2` (Apache-2.0)
+43/56, `granite-embedding-107m-multilingual` (Apache-2.0, conversão ONNX de terceiro) 43/56.
+
+**Limiar** (cosseno mínimo para entrar só pelo vetor): **0,856**, calibrado **só na base**
+(`npm run embeddings:calibrate`, sem perguntas nem julgamentos do benchmark): o título de cada uma das 3.004
+regras normativas, como pergunta, contra (a) a cláusula da própria regra — positivos — e (b) a de uma regra
+sorteada de outro componente (semente 107, 6.008 pares) — negativos. Limiar = percentil 95 dos negativos
+(negativos: mediana 0,827; positivos: p5 0,875, mediana 0,909; 98,9% ≥ 0,856). A 1ª versão usava 0,925 (o 0,75
+do sentence-transformers transposto para a faixa 0,7–1,0 do cartão): nenhuma regra entrava pelo vetor.
+
+**Instalação** (só para usar a híbrida; o padrão léxico não precisa do modelo):
+
+```bash
+npm ci                            # @huggingface/transformers 4.3.2 (onnxruntime-node 1.30.0)
+npm run models:fetch              # baixa o modelo da revisão fixada e confere o sha256 de cada arquivo e da licença
+npm run models:fetch -- --check   # só confere o disco (sem rede); exit 1 se faltar ou divergir
+npm run build
+```
+
+Os pesos ficam em `data/models/<id>/` (fora do git, >50 MB). Com remote models desligado e
+`local_files_only`, o servidor só lê esse diretório; confere tamanho e sha256 do modelo e dos vetores na 1ª
+carga (~1 s). CPU, 1 thread, um texto por chamada, sem arena de memória do ONNX, cosseno arredondado a 6
+casas: o mesmo texto dá o mesmo vetor e a mesma ordem. Os testes do modelo são pulados com o aviso
+`SKIPPED: model files missing` quando os pesos faltam — e **falham** com `GOVBR_RETRIEVAL_REQUIRE_DENSE=1` ou `CI`.
+
+**Reconstruir os vetores** (depois de mudar a base, o modelo ou o texto embutido):
+
+```bash
+npm run embeddings:build            # → data/retrieval/embeddings/e5-small/<versão-da-base>.f32 + .json
+npm run embeddings:build -- --all   # todos os candidatos (exige models:fetch -- --all)
+```
+
+O `.json` guarda modelo, revisão, sha do ONNX, versão da base, hash do texto embutido de cada regra
+(`passage-text/1.0.0`: nome do componente + `sectionPath` + título + cláusula), ids e sha do `.f32`
+(3.038 × 384 × 4 bytes = 4,7 MB, no git só o do modelo padrão). Divergência → `dense: "unavailable"`. A
+reconstrução é determinística (mesmo sha256 duas vezes).
+
+**Números** (benchmark de desenvolvimento `benchmark-1.0.0`, qrels 1.0.3 com os furos rotulados às cegas
+(D-148), avaliador 1.5.0, perguntas respondíveis):
+
+| motor | vocab | hit@5 | P@5 | nDCG@5 | bpref@5 | Hole@5 | enganosas | sem resposta / fora de escopo (unidades) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| lexical (padrão) | on | 44/56 = 78,6% | 45,7% | 40,3% | 26,9% | 0/197 | 9 | 11 / 2 |
+| lexical | off | 39/56 = 69,6% | 41,6% | 34,6% | 22,0% | 11/192 | 8 | 9 / 2 |
+| hybrid | on | 45/56 = 80,4% | 29,5% | 46,1% | 34,0% | 4/275 | 12 | 25 / 9 |
+| hybrid | off | 42/56 = 75,0% | 26,3% | 42,5% | 30,2% | 11/274 | 10 | 25 / 9 |
+| dense | on | 30/56 = 53,6% | 17,0% | 24,6% | 17,3% | 26/270 | 7 | 25 / 9 |
+
+A ordem das 6 configurações por P@5 e por nDCG@5 é a mesma no
+qrels 1.0.2 e no 1.0.3 (τ de Kendall = 1). Metas (90% / 70%) não atingidas. Latência por chamada (híbrida):
+p50 28 ms / p95 54 ms; léxica 18 / 42 ms. Memória: sem vazamento — com `--max-old-space-size=1024` o processo
+híbrido fica em ~1,04 GB por 15 mil chamadas; sem teto o V8 adia a coleta e o RSS sobe até ~1,7 GB. Léxico
+(padrão, sem modelo): ~640 MB. Autorrecuperação por título sem acento (3.004 regras, top 5): 98,2% (léxica),
+98,7% (híbrida).
+
 ## 3.1.0 (NAT-97, segunda passada da busca + defeitos do roteiro sem modelo)
 
 **Busca (`meta.ranking.engine = "govbr-lexical/1.1.0"`, vocabulário `vocab-1.1.0`).** Só correções

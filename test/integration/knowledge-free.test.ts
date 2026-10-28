@@ -47,7 +47,9 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "8bdb5e35ed3346a91b227b45034d64c849f1d21baeb
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "9b32f185cd7d2c436fb7c3c59800b5a87e6b7c3c59db00715c1f3532044d20bc";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "f15292681d18f1f516373e741e3e03911b32acc207ba6813cde046a1d33ebf60";
+// 3.0.0–3.1.0: 9b32f185cd7d2c436fb7c3c59800b5a87e6b7c3c59db00715c1f3532044d20bc. 3.2.0 (NAT-107) muda de propósito
+// o get_ds_rules: novo parâmetro opcional retrieval (lexical padrão | hybrid | dense, D-149). O perfil knowledge-free não muda.
 // 2.17.0–2.17.1: e212c68e95268bf768e0b5cfacb2774f8483e7c4ef263170d6a198ff14c0e7ab. 3.0.0 (NAT-99): get_ds_rules
 // (descrição, cursor, clauseCursor, detail 'index', limit/offset), get_component_spec (example), scan_page
 // (descrição, maxChars), get_finding_details (view 'observations'/'diff', maxChars), get_emag_rules (section

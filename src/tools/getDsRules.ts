@@ -23,6 +23,7 @@ import {
 } from "../data/applicability.js";
 import { rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
 import { conceptFor, guidanceLabel } from "../data/guidance.js";
+import { defaultRetrievalMode, rankForQuery, type HybridHit, type RankingInfo, type RetrievalMode } from "../data/hybrid.js";
 import { getComponentSpecs } from "../data/load.js";
 import type { PageRegion } from "../evidence/pageFacts.js";
 import { ABSENCE_NOTE } from "../responses/absence.js";
@@ -74,6 +75,7 @@ export interface DsRulesArgs {
   standard?: string;
   query?: string;
   match?: "relevance" | "literal";
+  retrieval?: RetrievalMode;
   vocabulary?: boolean;
   include_evidence?: boolean;
   detail?: "summary" | "brief" | "full" | "index";
@@ -161,15 +163,17 @@ function strictFilter(args: DsRulesArgs): Omit<RuleFilter, "query" | "component"
 /** Argumentos da chamada inicial (sem cursor/offset/limit/clauseCursor), base do `next` e do cursor. */
 function initialArgs(args: DsRulesArgs): Record<string, unknown> {
   const { cursor: _c, offset: _o, limit: _l, clauseCursor: _cc, ...rest } = args;
+  // 3.2.0 (D-149): `retrieval` igual ao padrão do servidor não é ecoado (next/cursor iguais aos da 3.1.0).
+  if (rest.retrieval !== undefined && rest.retrieval === defaultRetrievalMode()) delete rest.retrieval;
   return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
 }
 
-function kbMeta(vocabulary: boolean): KbMeta {
+function kbMeta(vocabulary: boolean, ranking: string | RankingInfo = RANKING_VERSION): KbMeta {
   const kb = getKnowledgeBase();
   return {
     dsVersion: kb.meta.dsVersion,
     knowledgeVersion: kb.meta.knowledgeVersion,
-    ranking: RANKING_VERSION,
+    ranking,
     vocabulary: vocabulary ? vocabularyLabel() : "off",
     guidance: guidanceLabel(vocabulary),
   };
@@ -197,7 +201,9 @@ function withLimitNote<T extends Record<string, unknown>>(response: T, clamped?:
   return { ...response, page: { ...(page ?? {}), limit: clamped } };
 }
 
-const matchedOf = (s: ScoredRule) => s.matched.map((m) => (m.via ? `${m.term}→${m.via}` : m.term));
+/** 3.2.0: uma regra que entrou só pela busca vetorial diz isso e o cosseno (não há termo casado). */
+const matchedOf = (s: ScoredRule & Partial<HybridHit>) =>
+  s.denseOnly ? [`semelhança-vetorial:${(s.cosine ?? 0).toFixed(3)}`] : s.matched.map((m) => (m.via ? `${m.term}→${m.via}` : m.term));
 
 function mainField(s: ScoredRule): string | null {
   const counts = new Map<string, number>();
@@ -251,7 +257,7 @@ function contextWarnings(components: string[], candidates: ContextCandidate[]) {
   };
 }
 
-export function getDsRules(args: DsRulesArgs, projections: DsRulesProjections) {
+export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjections) {
   const kb = getKnowledgeBase();
   const vocabulary = args.vocabulary ?? vocabularyEnabledByDefault();
   const hasFilter = ["component", "category", "force", "validationStrategy", "automatable", "automationConfidence", "severitySuggestion", "standard", "query"].some(
@@ -273,6 +279,12 @@ export function getDsRules(args: DsRulesArgs, projections: DsRulesProjections) {
   if (args.id && (hasFilter || args.include_evidence || args.cursor || args.limit !== undefined || args.offset !== undefined)) {
     return combination("id é consulta exata: não se combina com filtros, query, include_evidence, limit, offset ou cursor.", "id", [
       step("request-detail", "a unidade pelo id, sozinho", "get_ds_rules", { id: args.id }),
+    ]);
+  }
+  // 3.2.0: retrieval escolhe o motor da busca por query; fora dela não tem efeito, então é erro.
+  if (args.retrieval !== undefined && (args.id || args.ids || args.context || !args.query?.trim())) {
+    return combination("retrieval só vale com query (sem id, ids nem context): escolhe o motor da busca por texto.", "retrieval", [
+      step("request-detail", "repita sem retrieval, ou com query", null),
     ]);
   }
   if (args.clauseCursor !== undefined && !args.id) {
@@ -420,18 +432,21 @@ export function getDsRules(args: DsRulesArgs, projections: DsRulesProjections) {
   // ── query: motor de relevância ──
   if (query) {
     const pool = globalOnly ? filterRules(strict).filter((r) => r.component === null) : filterRules(strict);
-    const ranked = rankRules({ text: query, component, pool, vocabulary }, kb);
-    const meta = kbMeta(vocabulary);
+    const mode = args.retrieval ?? defaultRetrievalMode();
+    const hybrid = await rankForQuery({ text: query, component, pool, vocabulary }, mode, kb);
+    const ranked = hybrid.lexical;
+    const meta = kbMeta(vocabulary, hybrid.ranking);
     const key = cursorKey({ tool: "get_ds_rules", mode: "query", args: initialArgs(args), kb: meta });
     const start = startPosition(args, key);
     if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
     const { applied, clamped } = limitOf(args.limit, RETRIEVAL_DEFAULT_LIMIT, RETRIEVAL_MAX_LIMIT);
     const concept = conceptFor(ranked.analysis.terms, vocabulary, component ? [component] : []);
-    const hits: Hit[] = ranked.results.map((s) => ({
+    const hits: Hit[] = hybrid.results.map((s) => ({
       rule: s.rule,
       matched: matchedOf(s),
       relation: s.ownComponent ? "component" : s.rule.component === null ? "global" : "related",
       field: mainField(s),
+      ...((s as HybridHit).via ? { via: (s as HybridHit).via } : {}),
     }));
     const response = retrievalResponse(
       {

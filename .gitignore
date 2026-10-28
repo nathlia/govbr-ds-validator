@@ -4,3 +4,8 @@ dist/
 .claude/
 .idea/
 .playwright-mcp/
+# NAT-107: arquivos dos modelos de embeddings (>50 MB) — npm run models:fetch baixa e confere o sha256
+/data/models/*/
+# vetores só do modelo padrão vão para o git; os de candidatos se reconstroem (npm run embeddings:build -- <modelo>)
+/data/retrieval/embeddings/*/
+!/data/retrieval/embeddings/e5-small/
