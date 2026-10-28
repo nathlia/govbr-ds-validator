@@ -391,7 +391,11 @@ export async function verifyFinding({
         // 3.4.0 (B5): as cores dos lados pintados da borda também contam (B-15: `hr` com só border-top).
         const without = evidence.elements.filter(
           (element) =>
-            ![...COLOR_PROPERTIES.map((property) => element.computed[property]), ...paintedBorderSides(element).map((s) => s.raw)]
+            ![
+              ...COLOR_PROPERTIES.filter((property) => property !== "borderColor" || !element.borderSides || paintedBorderSides(element).length > 0)
+                .map((property) => element.computed[property]),
+              ...paintedBorderSides(element).map((s) => s.raw),
+            ]
               .filter((value): value is string => typeof value === "string")
               .map((value) => normalizeColor(value))
               .includes(observedHex)
@@ -419,7 +423,7 @@ export async function verifyFinding({
       if (selection.predicate?.needsFocusIndicator) {
         const measured = await measureFocusIndicators(page, evidence.elements.map((element) => element.locator));
         evidence.elements.forEach((element, i) => {
-          element.focusIndicator = { focused: measured[i]?.focused ?? false, changed: measured[i]?.changed ?? [] };
+          element.focusIndicator = { focused: measured[i]?.focused ?? false, changed: measured[i]?.changed ?? [], complete: measured[i]?.complete ?? false };
         });
       }
 

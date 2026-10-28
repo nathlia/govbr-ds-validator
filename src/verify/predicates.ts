@@ -19,7 +19,7 @@ import type { Finding } from "../schema/finding.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import type { StyleProperty } from "../evidence/inspect.js";
 import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
-import { checkComponentStructure } from "../checkers/structure.js";
+import { checkComponentStructure, scriptDependentAnchor } from "../checkers/structure.js";
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
@@ -84,8 +84,9 @@ const isBorderColor = (property: unknown) => typeof property === "string" && /^b
 function liveColorHexes(element: ElementEvidence, property: string): string[] {
   if (property === "background-color") return [normalizeColor(element.computed.backgroundColor ?? "")].filter((h): h is string => !!h);
   if (property === "color") return [normalizeColor(element.computed.color ?? "")].filter((h): h is string => !!h);
-  const uniform = normalizeColor(element.computed.borderColor ?? "");
   const sides = paintedBorderSides(element);
+  // 3.4.1: cor uniforme só conta com algum lado pintado (ou com evidência sem os lados medidos).
+  const uniform = element.borderSides && sides.length === 0 ? null : normalizeColor(element.computed.borderColor ?? "");
   if (property === "border-color") {
     return [...(uniform ? [uniform] : []), ...sides.map((s) => normalizeColor(s.raw)).filter((h): h is string => !!h)];
   }
@@ -179,6 +180,14 @@ const focusIndicatorPredicate: Predicate = {
       };
     }
     const marked = elements.filter((element) => (element.focusIndicator?.changed.length ?? 0) > 0);
+    // 3.4.1: sem mudança vista, mas a medição não cobriu tudo (subárvore acima do teto): sem decisão.
+    const partial = elements.filter((element) => (element.focusIndicator?.changed.length ?? 0) === 0 && element.focusIndicator?.complete !== true);
+    if (marked.length === 0 && partial.length > 0) {
+      return {
+        status: "undetermined",
+        detail: `${partial.length} de ${elements.length} elemento(s) sem mudança vista, mas a medição não cobriu todos os descendentes (teto): uma marca de foco não pode ser descartada.`,
+      };
+    }
     if (marked.length > 0) {
       return {
         status: "contradicted",
@@ -317,12 +326,22 @@ export function selectPredicate(finding: Finding): PredicateSelection {
               ? null
               : `${element.locator}: tag viva é <${element.tagName}>, não <${observedTag}>`
           ),
-        evaluate: (elements, url) =>
-          onEveryElement(elements, `tag raiz de ${spec.rootClass}`, (element) =>
+        evaluate: (elements, url) => {
+          // 3.4.1 (revisão, B3): `<a class="br-button" href="#">` com onclick pode ser ação ou link — o
+          // comportamento depende de script, não medido aqui: sem decisão, nunca contraprova.
+          const dependent = elements.filter((element) => scriptDependentAnchor(element, spec));
+          if (dependent.length > 0) {
+            return {
+              status: "undetermined",
+              detail: `${dependent.length} de ${elements.length} elemento(s) é <a> com href "#", vazio ou javascript: — se navega ou age depende de script, que o oráculo não mede.`,
+            };
+          }
+          return onEveryElement(elements, `tag raiz de ${spec.rootClass}`, (element) =>
             checkComponentStructure({ url }, [element], spec).some((f) => f.rule.id === id)
               ? null
               : `${element.locator} (<${element.tagName}>) não viola neste estado`
-          ),
+          );
+        },
       },
     };
   }

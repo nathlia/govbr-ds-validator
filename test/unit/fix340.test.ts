@@ -9,7 +9,7 @@ import { analyzeQuery, editDistance, isMarkupQuestion, rankRules, getVocabulary 
 import { routeSteps } from "../../src/responses/routing.js";
 import { listingBand, listingOrder } from "../../src/responses/retrieval.js";
 
-const FILE = new URL("../../data/knowledge/relations/kb-relations-1.0.0.json", import.meta.url);
+const FILE = new URL("../../data/knowledge/relations/kb-relations-1.1.0.json", import.meta.url);
 const P = "govbr-3.7.0-";
 
 afterEach(() => {
@@ -17,10 +17,10 @@ afterEach(() => {
   resetRelationsCache();
 });
 
-describe("kb-relations-1.0.0 (A12): cada ligação com cláusula literal da base", () => {
+describe("kb-relations-1.1.0 (A12): cada ligação com cláusula literal da base", () => {
   it("valida na carga: regra e cláusulas existem e cada trecho está no texto", () => {
     const relations = getRelations()!;
-    expect(relations.version).toBe("kb-relations-1.0.0");
+    expect(relations.version).toBe("kb-relations-1.1.0");
     expect(relations.knowledgeVersion).toBe(getKnowledgeBase().meta.knowledgeVersion);
     for (const link of relations.links) expect(link.basis.length).toBeGreaterThan(0);
   });
@@ -81,7 +81,7 @@ describe("govbr-lexical/1.3.0", () => {
   });
 });
 
-describe("routing-1.0.0 (A4)", () => {
+describe("routing-1.0.1 (A4)", () => {
   it("tabela fixa: cor, marcação, posição; nunca mais de 2 passos; respeita o perfil", () => {
     expect(routeSteps("texto em #334333", null).map((s) => s.tool)).toEqual(["get_design_tokens", "check_token_compliance"]);
     expect(routeSteps("texto em rgb(51, 67, 51)", null)[0].arguments).toEqual({ hex: "rgb(51, 67, 51)" });
@@ -89,7 +89,22 @@ describe("routing-1.0.0 (A4)", () => {
     expect(routeSteps("<div role=\"button\">", null).map((s) => s.tool)).toEqual(["get_ds_rules", "get_component_spec"]);
     expect(routeSteps("o ícone está à direita", null)[0]).toMatchObject({ tool: null, action: "measure-condition" });
     expect(routeSteps("foco visível no botão", "button")).toEqual([]);
-    for (const s of routeSteps("#fff aria-label à esquerda", "button")) expect(String(s.origin)).toMatch(/^routing-1\.0\.0:/);
+    for (const s of routeSteps("#fff aria-label à esquerda", "button")) expect(String(s.origin)).toMatch(/^routing-1.0.1:/);
+  });
+});
+
+describe("routing-1.0.1 (revisão 3.4.0)", () => {
+  it("#add/#menu são id, não cor; hex com algarismo, de 6/8 dígitos ou com palavra de cor é cor", () => {
+    expect(routeSteps("o botão #add não abre", null).some((s) => s.tool === "get_design_tokens")).toBe(false);
+    expect(routeSteps("link href=\"#c0ffee\"", null).some((s) => s.tool === "get_design_tokens")).toBe(false);
+    expect(routeSteps("texto #3a3 no rodapé", null)[0]?.arguments).toEqual({ hex: "#3a3" });
+    expect(routeSteps("cor de fundo #fff", null)[0]?.arguments).toEqual({ hex: "#fff" });
+    expect(routeSteps("borda #c0ffee80", null)[0]?.arguments).toEqual({ hex: "#c0ffee80" });
+  });
+  it("\"antes de\" não roteia para geometria; <a> vira link/âncora na busca global", () => {
+    expect(routeSteps("o erro aparece antes de enviar", null)).toEqual([]);
+    const q = routeSteps("<a> com aparência de botão", null).find((s) => s.tool === "get_ds_rules");
+    expect(q?.arguments).toEqual({ component: "global", query: "link âncora" });
   });
 });
 

@@ -46,6 +46,18 @@ const PAGES: Record<string, string> = {
   "/b9": page(`<a id="ruim" class="sem-foco" href="/a">Sem foco</a> <a id="bom" class="ds-like" href="/b">Com foco</a>
     <span class="check"><input id="aceito" type="checkbox"><label for="aceito">Aceito</label></span>
     <button id="entrar" class="ds-like" type="button">Entrar</button>`, "document.getElementById('entrar').addEventListener('click', () => {});"),
+  // 3.4.1 (revisão): indicador no descendente, por transformação, subárvore acima do teto; <a href="#"> com onclick; borda não pintada
+  "/r1": `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>r1</title><style>
+    .focochild{outline:none} .focochild:focus-visible .dentro{outline:2px solid #c2850c}
+    .anel:focus{outline:none} .anel:focus-visible{transform:scale(1.05)}
+    .grande{outline:none} .caixa{color:#123456} .semborda2{border:none}
+  </style></head><body><header>h</header><main>
+    <button class="focochild" id="b1" type="button"><span class="dentro">Ação</span></button>
+    <button class="anel" id="b2" type="button">Escala</button>
+    <button class="grande" id="b3" type="button">${"<span>x</span>".repeat(80)}</button>
+    <a class="br-button primary" href="#" id="a1" onclick="return false">Excluir registro</a>
+    <div class="caixa"><span class="semborda2" id="s1">span</span></div>
+  </main><footer>f</footer></body></html>`,
   "/app": SPA_SHELL,
   // B1: muitos achados de token antes dos de página
   "/b1": `<!doctype html><html lang="pt-BR"><head><title>b1</title></head><body><main>${Array.from({ length: 8 }, (_, i) => `<button class="br-button" style="color:#${(0x123400 + i * 7).toString(16)}">b${i}</button>`).join("")}</main></body></html>`,
@@ -221,5 +233,38 @@ describe("B9 — foco visível", () => {
     expect(r.text).not.toContain("emag-4.4");
     expect(r.text).not.toContain("bc492500708d");
     await client.close();
+  });
+});
+
+describe("3.4.1 — revisão independente da 3.4.0", () => {
+  it("HIGH 1: indicador no descendente ou por transform não é achado; subárvore acima do teto não acusa e o verify não decide", async () => {
+    const r = await scan("/r1", { checks: ["structure"] });
+    expect(r.findings.filter((f) => f.rule.id === "emag-4.4").map((f) => f.element.locator)).toEqual([]);
+    const rule = { id: "emag-4.4", source: "emag" as const, description: "foco" };
+    const data = { expectedCondition: FOCUS_INDICATOR_CONDITION };
+    expect((await verifyFinding({ finding: claim("/r1", "#b1", rule, data), live: true })).verdict).toBe("rejected");
+    expect((await verifyFinding({ finding: claim("/r1", "#b2", rule, data), live: true })).verdict).toBe("rejected");
+    expect((await verifyFinding({ finding: claim("/r1", "#b3", rule, data), live: true })).verdict).toBe("unverifiable");
+  });
+
+  it("HIGH 2: <a class=br-button href=\"#\" onclick> não é achado e o verify fica sem decisão (nunca rejected)", async () => {
+    const r = await scan("/r1", { checks: ["structure"] });
+    expect(r.findings.filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+    const v = await verifyFinding({
+      finding: claim("/r1", "#a1", { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "tag" }, { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag }),
+      live: true,
+    });
+    expect(v.verdict).toBe("unverifiable");
+    expect(v.detail).toContain("depende de script");
+  });
+
+  it("MEDIUM 3: borda sem lado pintado não vira ds-token-color nem confirma", async () => {
+    const r = await scan("/r1", { checks: ["tokens"] });
+    expect(r.findings.filter((f) => f.element.locator === "#s1" && String(f.evidence.data?.property).startsWith("border"))).toEqual([]);
+    const v = await verifyFinding({
+      finding: claim("/r1", "#s1", { id: "ds-token-color", source: "govbr-ds-token", description: "cor" }, { property: "border-color", observedHex: "#123456", expectedCondition: EXPECTED_CONDITIONS.tokenColor }),
+      live: true,
+    });
+    expect(v.verdict).not.toBe("confirmed");
   });
 });

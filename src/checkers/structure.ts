@@ -28,9 +28,31 @@ function isSemanticDividerException(el: ElementEvidence, spec: ComponentSpec): b
  * href que não é endereço (`javascript:`, vazio, ausente) mostram a âncora fazendo papel de botão.
  */
 function navigates(el: ElementEvidence): boolean {
-  const href = el.attributes.href?.trim();
-  if (el.attributes.role?.trim().toLowerCase() === "button") return false;
-  return !!href && !/^javascript:/i.test(href);
+  return anchorUse(el) === "link";
+}
+
+/**
+ * 3.4.1 (revisão): o uso de um `<a>` pela marcação.
+ *   link              href que é endereço — o DS publica `<a class="br-button">` assim;
+ *   action            papel de ação declarado (`role="button"`) ou âncora sem href (não é link);
+ *   script-dependent  `href="#"`, vazio ou `javascript:` — se navega ou age depende de script, que o
+ *                     verificador estrutural não mede: nem achado (F4-06-C é conforme) nem contraprova
+ *                     (`onclick` que exclui um registro é ação), e o predicado fica sem decisão.
+ */
+export function anchorUse(el: ElementEvidence): "link" | "action" | "script-dependent" {
+  if (el.attributes.role?.trim().toLowerCase() === "button") return "action";
+  const href = el.attributes.href;
+  if (href === null || href === undefined) return "action";
+  const h = href.trim();
+  if (h === "" || h === "#" || /^javascript:/i.test(h)) return "script-dependent";
+  return "link";
+}
+
+/** 3.4.1: `<a>` emprestado pelo componente cujo uso depende de script (sem achado e sem contraprova). */
+export function scriptDependentAnchor(el: ElementEvidence, spec: ComponentSpec): boolean {
+  const { own, borrowed } = ownAndBorrowedTags(spec);
+  const tag = el.tagName.toLowerCase();
+  return tag === "a" && !own.includes(tag) && borrowed.includes(tag) && anchorUse(el) === "script-dependent";
 }
 
 /**
@@ -69,7 +91,7 @@ export function checkComponentStructure(
     // 1. Root element tag must match the canonical examples
     const { own, borrowed } = ownAndBorrowedTags(spec);
     const expectedTags = own.length > 0 ? own : spec.tags;
-    if (spec.tags.length > 0 && !tagAccepted(el, spec) && !isSemanticDividerException(el, spec)) {
+    if (spec.tags.length > 0 && !tagAccepted(el, spec) && !isSemanticDividerException(el, spec) && !scriptDependentAnchor(el, spec)) {
       findings.push({
         id: nextFindingId(),
         rule: {

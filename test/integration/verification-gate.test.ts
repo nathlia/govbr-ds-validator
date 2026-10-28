@@ -42,7 +42,7 @@ const FIXTURE_HTML = `<!DOCTYPE html>
     <button id="padding-13" class="br-button primary" type="button">Espaçamento</button>
     <button class="br-button primary par" type="button">Par 1</button>
     <button class="br-button primary par conforme" type="button">Par 2</button>
-    <a id="link-botao" class="br-button primary" href="javascript:void(0)">Link</a>
+    <a id="link-botao" class="br-button primary" href="#" role="button">Link</a>
     <button id="abrir" type="button">Abrir</button>
     <div id="destino"></div>
   </main>
@@ -330,7 +330,7 @@ describe("verify_finding — page constraints (2.7.0)", () => {
       claim({
         rule: { id: "ds-page-skip-link", source: "govbr-ds-page", description: "Salto para o conteúdo" },
         element: { locator: "html" },
-        evidence: { observed: 'primeiro link href="javascript:void(0)"', expected: "âncora interna com alvo", data: { region: "skip-link", firstLinkHref: "javascript:void(0)", expectedCondition: EXPECTED_CONDITIONS.skipLink } },
+        evidence: { observed: 'primeiro link href="#"', expected: "âncora interna com alvo", data: { region: "skip-link", firstLinkHref: "#", expectedCondition: EXPECTED_CONDITIONS.skipLink } },
       })
     );
     expect(res.verification.verdict).toBe("confirmed");

@@ -16,7 +16,10 @@ import { fileURLToPath } from "node:url";
 import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "./knowledge.js";
 import { foldText } from "./retrieval.js";
 
-const FILE = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/relations/kb-relations-1.0.0.json");
+const FILE = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/relations/kb-relations-1.1.0.json");
+
+/** 3.4.1 (revisão): nota fixa de uma ligação do projeto, que a cláusula citada não declara. */
+export const INFERRED_RELATION_NOTE = "ligação inferida pelo projeto; a cláusula não declara a ligação";
 
 export interface RelationBasis {
   id: string;
@@ -28,6 +31,8 @@ export interface RelationLink {
   relatedComponents?: string[];
   topics?: string[];
   markupOnly?: boolean;
+  /** 1.1.0: `documented` — a cláusula citada nomeia o alvo; `inferred` — ligação do projeto. */
+  kind: "documented" | "inferred";
   why: string;
   basis: RelationBasis[];
   evidence?: string;
@@ -72,6 +77,7 @@ export function validateRelations(relations: KbRelations): void {
   for (const link of relations.links) {
     if (!current(link.rule)) problems.push(`${link.id}: regra inexistente ${link.rule}`);
     if (!link.basis.length) problems.push(`${link.id}: sem cláusula de apoio`);
+    if (link.kind !== "documented" && link.kind !== "inferred") problems.push(`${link.id}: kind deve ser documented ou inferred`);
     if (!link.relatedComponents?.length && !link.topics?.length) problems.push(`${link.id}: sem relatedComponents nem topics`);
     for (const b of link.basis) {
       const rule = current(b.id);
@@ -130,6 +136,9 @@ export interface RelatedItem {
   title: string;
   force: string;
   relation: string;
+  kind: "documented" | "inferred";
+  /** Só em ligação `inferred`: INFERRED_RELATION_NOTE. */
+  note?: string;
   why: string;
   basis: RelationBasis[];
   next: { tool: "get_ds_rules"; arguments: { id: string } };
@@ -142,6 +151,8 @@ function item(link: RelationLink): RelatedItem {
     title: rule.title.length > 110 ? `${rule.title.slice(0, 109)}…` : rule.title,
     force: rule.force,
     relation: link.id,
+    kind: link.kind,
+    ...(link.kind === "inferred" ? { note: INFERRED_RELATION_NOTE } : {}),
     why: link.why,
     basis: link.basis,
     next: { tool: "get_ds_rules", arguments: { id: rule.id } },

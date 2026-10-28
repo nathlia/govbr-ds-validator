@@ -116,7 +116,7 @@ export interface ElementEvidence {
    */
   origin?: "flatpickr";
   /** 3.4.0 (B9): medição de foco visível, preenchida só pelo portão para o predicado focus-indicator. */
-  focusIndicator?: { focused: boolean; changed: string[] };
+  focusIndicator?: { focused: boolean; changed: string[]; complete?: boolean };
 }
 
 export interface PageEvidence {

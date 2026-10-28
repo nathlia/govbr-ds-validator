@@ -1,5 +1,5 @@
 {
-  "note": "get_ds_rules da 3.4.0 (D-153, govbr-lexical/1.3.0, vocab-1.2.0, kb-relations-1.0.0, routing-1.0.0), perfil evaluation, via MCP: sha256 do texto de cada resposta; mesmas consultas da fixture 3.3.0. Mudanças de propósito (lista única A1–A12): índice do sucessor com o título do registro histórico, fallback por distância de edição, diretrizes de codificação HTML com peso menor quando há componente em escopo e a consulta não fala de marcação, gênero mínimo/máxima no vocabulário; blocos related (kb-relations), roteamento em next, lacuna só-permissão, registryRefs para aria-*/role sem correspondência; listagem em faixas (prosa que obriga → outra prosa → linhas de tabela).",
+  "note": "get_ds_rules da 3.4.0 (D-153, govbr-lexical/1.3.0, vocab-1.2.0, kb-relations-1.1.0, routing-1.0.1), perfil evaluation, via MCP: sha256 do texto de cada resposta; mesmas consultas da fixture 3.3.0. Mudanças de propósito (lista única A1–A12): índice do sucessor com o título do registro histórico, fallback por distância de edição, diretrizes de codificação HTML com peso menor quando há componente em escopo e a consulta não fala de marcação, gênero mínimo/máxima no vocabulário; blocos related (kb-relations), roteamento em next, lacuna só-permissão, registryRefs para aria-*/role sem correspondência; listagem em faixas (prosa que obriga → outra prosa → linhas de tabela). 3.4.1 (revisão independente): kb-relations-1.1.0 (kind documented/inferred, nota nas inferidas, trecho do Button com a alternativa <a>) e routing-1.0.1 (#id não é cor, 'antes de' não é posição, <a> → 'link âncora').",
   "source": "nat109-busca",
   "steps": [
     {
@@ -66,7 +66,7 @@
       },
       "isError": false,
       "chars": 6764,
-      "sha256": "8627a4726d58f99941482c0089f9141a04d5b8d5bdedcd883abaa701a4e63310"
+      "sha256": "453536255ab5cd62a37e257d317e413bf5ec392641bfb48bd22c57c082533d6c"
     },
     {
       "args": {
@@ -75,7 +75,7 @@
       },
       "isError": false,
       "chars": 6565,
-      "sha256": "411c5fba43b4f9616fb8946ce68bcf2cef77dc4483a1c66a6d81abb79c40be0e"
+      "sha256": "8934aac5afd267f2d43febb0584da91f3f4f6427d4932d8803a5e6d351332686"
     },
     {
       "args": {
@@ -101,7 +101,7 @@
       },
       "isError": false,
       "chars": 5931,
-      "sha256": "0f33180bfc1baff10bc304c1cfd9cb5146cf372ff79d0f5c6e8175013973f4af"
+      "sha256": "32e4bd0679fc410efbe2934f7da1259a1b19fea25d68e37ac35224157572a796"
     },
     {
       "args": {
@@ -110,7 +110,7 @@
       },
       "isError": false,
       "chars": 6259,
-      "sha256": "4a4d1c4c64f821db372cc4f3db2939c84366a543f6dad8fbe1effd3e8f7fb355"
+      "sha256": "75a13738d8cce59bd258071e916d7825354d41433df25f5353d2a12f14b040ff"
     },
     {
       "args": {
@@ -178,7 +178,7 @@
       },
       "isError": false,
       "chars": 5575,
-      "sha256": "82cd68805d13e56400af61f4d20dd18f39be9f8250b3d31f0f84991ac56229ff"
+      "sha256": "fc4c5680dd258f204d529985711eccb853c0b5b2cfcb4321a37ea6a7baa7c0fa"
     },
     {
       "args": {
@@ -245,7 +245,7 @@
       },
       "isError": false,
       "chars": 2204,
-      "sha256": "357709c9d0cd56de93515f544cdd5530df9dc354fb46596de151269aaa31ab56"
+      "sha256": "ea1d258ca362acb5aa73953d1139bd686c4152912ebe72a47960acf3619f2942"
     },
     {
       "args": {
@@ -256,7 +256,7 @@
       },
       "isError": false,
       "chars": 3671,
-      "sha256": "41718dac04f67024f4bb682df1ecee7d9e40316a0f93eac1fbf6de09248f7fd8"
+      "sha256": "68c2f36279945117168f43de70bb39d4b3211e075b8129028365a10f4770b139"
     },
     {
       "args": {},

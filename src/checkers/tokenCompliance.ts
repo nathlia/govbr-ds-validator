@@ -52,6 +52,9 @@ export function colorReadings(el: ElementEvidence): ColorReading[] {
   for (const { prop, label } of COLOR_PROPS) {
     const raw = el.computed[prop];
     if (!raw) continue;
+    // 3.4.1 (revisão): borda sem nenhum lado pintado não mostra cor — a cor herdada de um `<span style="border:none">`
+    // não é escolha visível da página. Vale com os lados medidos (borderSides); evidência antiga segue como antes.
+    if (prop === "borderColor" && el.borderSides && paintedBorderSides(el).length === 0) continue;
     if (prop === "borderColor" && normalizeColor(raw) === null && el.borderSides) {
       const byHex = new Map<string, { raw: string; sides: string[] }>();
       for (const { side, raw: sideRaw } of paintedBorderSides(el)) {

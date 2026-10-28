@@ -604,7 +604,7 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form } } })));
     // 3.4.0 (A12): kb-relations liga a e-MAG 1.2 (global) ao Button → a global relacionada abre a alternância.
     const firstGroups = new Set(data.results.slice(0, 5).map((c: { why: { matched: string[] } }) => c.why.matched[0]));
-    expect([...firstGroups].sort()).toEqual([...form.map((c) => `componente:${c}`), "relacionado:button@kb-relations-1.0.0"].sort());
+    expect([...firstGroups].sort()).toEqual([...form.map((c) => `componente:${c}`), "relacionado:button@kb-relations-1.1.0"].sort());
     expect(data.groups).toBeUndefined();
     expect(data.page.cursor).toMatch(/^c1\./);
     const page2 = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form }, cursor: data.page.cursor } })));

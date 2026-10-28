@@ -5,7 +5,9 @@
  * O foco é dado por script (`element.focus()`) depois de uma tecla Shift (modalidade de teclado), e no Chromium casa `:focus` e `:focus-visible`
  * (medido na 3.4.0: sem interação de ponteiro anterior e depois dela). O indicador pode estar no próprio
  * elemento, nos pseudo-elementos dele, no rótulo irmão (o checkbox/radio do DS desenha o foco em
- * `input:focus-visible + label::before`), no `<label>` associado ou no pai (`:focus-within`). Qualquer
+ * `input:focus-visible + label::before`), no `<label>` associado, no pai (`:focus-within`) ou num descendente
+ * (3.4.1). Contorno, sombra, borda, fundo, cor, sublinhado, opacidade, transformação, sombra de texto e filtro
+ * são comparados. Qualquer
  * diferença em qualquer um desses conta como indicador — a medição é generosa de propósito: só a
  * AUSÊNCIA de qualquer mudança vira achado.
  *
@@ -20,9 +22,18 @@ export interface FocusIndicatorFact {
   locator: string;
   /** O foco chegou ao elemento (document.activeElement, atravessando shadow roots). */
   focused: boolean;
-  /** Propriedades que mudaram com o foco, prefixadas pelo alvo (`self`, `self::before`, `label`, `parent`, …). */
+  /** Propriedades que mudaram com o foco, prefixadas pelo alvo (`self`, `self::before`, `label`, `parent`, `desc[n]`, …). */
   changed: string[];
+  /**
+   * 3.4.1: a comparação cobriu tudo o que poderia desenhar o indicador (o elemento, pseudo-elementos,
+   * pai, irmão, rótulo e TODOS os descendentes, até FOCUS_DESCENDANT_LIMIT). `false` = uma mudança não
+   * pôde ser descartada (subárvore grande demais, shadow root fechado): nunca vira achado.
+   */
+  complete: boolean;
 }
+
+/** 3.4.1: teto de descendentes comparados por elemento; acima disso a medição não é completa. */
+export const FOCUS_DESCENDANT_LIMIT = 60;
 
 /** Elementos focáveis pelo Tab cuja indicação de foco o scan mede. */
 export const FOCUSABLE_SELECTOR =
@@ -33,6 +44,8 @@ export const FOCUS_COMPARED_PROPERTIES = [
   "border-top-color", "border-right-color", "border-bottom-color", "border-left-color",
   "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
   "background-color", "color", "text-decoration-line", "text-decoration-color", "opacity",
+  // 3.4.1 (revisão): indicador por transformação, sombra de texto ou filtro (`:focus-visible{transform:scale(1.05)}`).
+  "transform", "scale", "translate", "rotate", "text-shadow", "filter", "background-image", "visibility",
 ] as const;
 
 /** Mede os elementos dos localizadores (formato do inspect: saltos de shadow root com ` >>> `). */
@@ -43,7 +56,7 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
   // a mesma de quem navega com Tab —, sem efeito de edição (Ctrl/Alt não servem: o Chromium os ignora).
   await page.keyboard.press("Shift").catch(() => undefined);
   return page.evaluate(
-    ({ locators, step, props }) => {
+    ({ locators, step, props, descendantLimit }) => {
       const resolve = (locator: string): Element[] => {
         const hops = locator.split(` ${step} `).map((s) => s.trim()).filter(Boolean);
         let roots: Array<Document | ShadowRoot> = [document];
@@ -98,15 +111,42 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
           ["label::after", label, "::after"],
         ];
       };
-      const snapshot = (el: Element) => targets(el).map(([name, node, pseudo]) => [name, read(node, pseudo)] as const);
+      // 3.4.1 (revisão): o indicador pode estar num descendente (`button:focus-visible .dentro{outline}`, que o
+      // próprio DS usa em `.step-progress-btn:focus-visible .step-alert`). Descendentes no DOM claro e em shadow
+      // roots abertos, com os pseudo-elementos; acima do teto, a medição fica incompleta.
+      const descendants = (el: Element): { nodes: Element[]; complete: boolean } => {
+        const nodes: Element[] = [];
+        let complete = true;
+        const walk = (root: Element | ShadowRoot) => {
+          for (const child of Array.from(root.querySelectorAll("*"))) {
+            if (nodes.length >= descendantLimit) { complete = false; return; }
+            nodes.push(child);
+            if (child.shadowRoot) walk(child.shadowRoot);
+          }
+        };
+        if (el.shadowRoot) walk(el.shadowRoot);
+        walk(el);
+        return { nodes, complete };
+      };
+      const allTargets = (el: Element, desc: Element[]): Array<[string, Element | null, string | null]> => [
+        ...targets(el),
+        ...desc.flatMap((node, i): Array<[string, Element | null, string | null]> => [
+          [`desc[${i}]`, node, null],
+          [`desc[${i}]::before`, node, "::before"],
+          [`desc[${i}]::after`, node, "::after"],
+        ]),
+      ];
+      const snapshot = (list: Array<[string, Element | null, string | null]>) => list.map(([name, node, pseudo]) => [name, read(node, pseudo)] as const);
       const original = deepActive() as HTMLElement | null;
       const out = locators.map((locator) => {
         const found = resolve(locator);
-        if (found.length !== 1) return { locator, focused: false, changed: [] as string[] };
+        if (found.length !== 1) return { locator, focused: false, changed: [] as string[], complete: false };
         const el = found[0] as HTMLElement;
         // Já focado (o clique da receita, por exemplo): o estado "sem foco" é lido depois de tirar o foco.
         if (deepActive() === el) el.blur();
-        const before = snapshot(el);
+        const desc = descendants(el);
+        const list = allTargets(el, desc.nodes);
+        const before = snapshot(list);
         el.focus({ preventScroll: true });
         const focused = deepActive() === el;
         // Transições CSS começam no valor antigo: termina-as antes de ler, senão um indicador animado
@@ -117,7 +157,7 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
             try { animation.finish(); } catch { /* animação infinita: fica como está */ }
           }
         }
-        const after = focused ? snapshot(el) : before;
+        const after = focused ? snapshot(list) : before;
         el.blur();
         const changed: string[] = [];
         before.forEach(([name, styles], i) => {
@@ -125,11 +165,11 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
           if (!styles || !next) return;
           for (const p of props) if (styles[p] !== next[p]) changed.push(`${name}:${p}`);
         });
-        return { locator, focused, changed };
+        return { locator, focused, changed, complete: desc.complete };
       });
       if (original && typeof original.focus === "function") original.focus({ preventScroll: true });
       return out;
     },
-    { locators, step: SHADOW_STEP, props: [...FOCUS_COMPARED_PROPERTIES] as string[] },
+    { locators, step: SHADOW_STEP, props: [...FOCUS_COMPARED_PROPERTIES] as string[], descendantLimit: FOCUS_DESCENDANT_LIMIT },
   );
 }

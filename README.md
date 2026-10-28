@@ -126,7 +126,7 @@ Os caracteres sobem pelos blocos novos (abaixo), não pelo ranking.
   componente na mesma ordem (citáveis, cortadas em 240). Para caber com o exemplo: `tokensUsed` é adiado
   (contagem + `next`), as cláusulas caem para 3 e, se o exemplo implícito (`include_examples`) ainda não
   couber, vem o primeiro que cabe (`exampleChoice`); só então o exemplo é adiado, como antes.
-- *A4*: `routing-1.0.0` (`src/responses/routing.ts`): tabela fixa de padrões do texto → até 2 passos no
+- *A4*: `routing-1.0.1` (`src/responses/routing.ts`): tabela fixa de padrões do texto → até 2 passos no
   início de `next`, com `origin`: cor em hex/rgb/hsl → `get_design_tokens{hex}` + `check_token_compliance`
   (ou `scan_page`, conforme o perfil); `aria-*`/`role=`/`<tag>`/atributo HTML → `get_ds_rules{component:"global",
   query}` + `get_component_spec`; posição/esquerda/direita → medir pela geometria. Só diz qual chamada mede
@@ -136,14 +136,14 @@ Os caracteres sobem pelos blocos novos (abaixo), não pelo ranking.
 - *A6*: termo `aria-*`/`role` sem correspondência → a lacuna `unmatched-terms` traz `registryRefs` (WCAG 2.2
   4.1.2, 1.3.1), com o aviso fixo "texto não servido", na busca e no `context`.
 
-**Camada `kb-relations-1.0.0` (A12, NAT-104)** — `data/knowledge/relations/kb-relations-1.0.0.json`,
+**Camada `kb-relations-1.1.0` (A12, NAT-104)** — `data/knowledge/relations/kb-relations-1.1.0.json`,
 `src/data/relations.ts`. Ligações curadas entre regras já servidas, para a base `3.7.0-literal-2026-10-15`;
 `rules.jsonl` não muda. Cada ligação cita as cláusulas da base que a sustentam com trecho literal, conferido na
 carga (trecho ausente = o servidor não sobe). R-01 paginação → estados WAI-ARIA (`5817ddd685a6`, apoio:
 "Página ativa" de `ea455e768955`); R-02 button → e-MAG 1.2 HTML semântico; R-03 consulta de marcação sobre
 botão → "utilizar a tag `<button>`" (`d8448a18814b`); R-04 consulta sobre cor → "devem utilizar sempre as
 cores pré-definidas" (`21b1a2733f7b`). `relatedComponents` derivado entra no `context` como relação
-(`relacionado:<c>@kb-relations-1.0.0`) e as ligações vêm no bloco `related` (busca com resultados, listagem por
+(`relacionado:<c>@kb-relations-1.1.0`) e as ligações vêm no bloco `related` (busca com resultados, listagem por
 componente, `get_component_spec.rules.related`), que nunca tira um cartão: entra inteiro, compacto ou não
 entra. `registryRoutes` alimenta o A6. Desligável: `GOVBR_KB_RELATIONS=off`.
 
@@ -813,7 +813,7 @@ gov.br/ds and the e-MAG page, accessed 2026-10-15):
 | `reports/` | `regras-antigas.md` (what happened to each of the 186), normalization summary/coverage/id maps, the independent audit and its corrections; `conflicts.json`/`official-package-audit.json` inherited from 3.7.0 |
 | `manifest.json` | the honest account: `complete: false`; component tabs 106/108 (accordion and scrim have no accessibility tab at the source); sources are core = tag v3.7.0 + 11 doc commits, design = tag v3.6.1 + 10 link-fix commits — cite as "text published at gov.br/ds (DS 3.7.0)", not "the 3.7.0 tag" |
 
-- **Relations layer (3.4.0):** `data/knowledge/relations/kb-relations-1.0.0.json` (written for
+- **Relations layer (3.4.0):** `data/knowledge/relations/kb-relations-1.1.0.json` (written for
   `3.7.0-literal-2026-10-15`, served only on that version; `GOVBR_KB_RELATIONS=off` turns it off) adds
   curated links between served rules, each backed by a literal quote of a KB clause checked at load. The
   KB files are not rewritten; `relatedComponents` is extended only in the loaded copy. See the 3.4.0 section.

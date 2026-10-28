@@ -183,7 +183,20 @@ describe("3.4.0 (B5, B-15): cor de borda por lado", () => {
   });
 
   it("borda uniforme continua saindo como border-color", () => {
-    const el = hr([], "rgb(187, 187, 187)");
+    const el = hr([["top", "rgb(187, 187, 187)", "1px"], ["right", "rgb(187, 187, 187)", "1px"], ["bottom", "rgb(187, 187, 187)", "1px"], ["left", "rgb(187, 187, 187)", "1px"]], "rgb(187, 187, 187)");
     expect(checkTokenCompliance(page, [el], registry, ["color"]).map((f) => f.evidence.data?.property)).toEqual(["border-color"]);
+  });
+});
+
+describe("3.4.1 (revisão): borda sem lado pintado", () => {
+  it("cor uniforme herdada sem nenhum lado pintado não é achado", () => {
+    const el = makeElement({
+      locator: "#s1",
+      tagName: "span",
+      classes: [],
+      computed: { borderColor: "rgb(18, 52, 86)" } as never,
+      borderSides: (["top", "right", "bottom", "left"] as const).map((side) => ({ side, color: "rgb(18, 52, 86)", width: "0px", style: "none" })),
+    });
+    expect(checkTokenCompliance(page, [el], registry, ["color"]).filter((f) => String(f.evidence.data?.property).startsWith("border"))).toEqual([]);
   });
 });

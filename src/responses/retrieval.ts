@@ -526,8 +526,10 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   if (nextPosition === null && stop !== "no-match") stop = "relevance-floor";
   if (first && cards.length && input.related?.items.length) {
     const full = input.related;
-    const compact = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation, title: i.title, next: i.next })) };
-    const minimal = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation })) };
+    // 3.4.1: a ligação inferida leva o kind em todas as formas, para nunca parecer declarada pela cláusula.
+    const kindOf = (i: RelatedItem) => (i.kind === "inferred" ? { kind: i.kind } : {});
+    const compact = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation, ...kindOf(i), title: i.title, next: i.next })) };
+    const minimal = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation, ...kindOf(i) })) };
     for (const candidate of [full, compact, minimal]) {
       related = candidate as RetrievalInput["related"];
       if (textSize(compose(cards, stop, nextPosition)) <= budget) break;

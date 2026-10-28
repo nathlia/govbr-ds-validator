@@ -30,7 +30,8 @@ export function checkFocusIndicators(
 ): Finding[] {
   const emag = findEmagRule("4.4");
   return facts
-    .filter((fact) => fact.focused && fact.changed.length === 0)
+    // 3.4.1: só a ausência COMPROVADA de mudança vira achado — medição incompleta não acusa.
+    .filter((fact) => fact.focused && fact.complete && fact.changed.length === 0)
     .map((fact) => ({
       id: nextFindingId(),
       rule: {

@@ -62,7 +62,7 @@ describe("A2 — a regra de paleta 21b1a2733f7b entra quando a consulta trata de
     expect(r.results.length).toBe(5);
     const item = r.related.items.find((i: { id: string }) => i.id === `${P}foundation-global-21b1a2733f7b`);
     expect(item).toMatchObject({ relation: "R-04", next: { tool: "get_ds_rules", arguments: { id: `${P}foundation-global-21b1a2733f7b` } } });
-    expect(r.related.version).toBe("kb-relations-1.0.0");
+    expect(r.related.version).toBe("kb-relations-1.1.0");
     expect(r.messages["kb-relation"]).toBe(MESSAGES["kb-relation"]);
   });
 });
@@ -81,7 +81,7 @@ describe("A3 — 'título' traz o sucessor da WCAG 2.4.2 (B-25)", () => {
 describe("A4 — roteamento pela intenção, em next, sem afirmar norma", () => {
   it("hex → get_design_tokens{hex}; no perfil evaluation, scan_page (sem check_token_compliance)", async () => {
     const r = await call("get_ds_rules", { query: "cor #334333 fora da paleta do DS no texto do diálogo" });
-    expect(r.next[0]).toMatchObject({ tool: "get_design_tokens", arguments: { hex: "#334333" }, origin: "routing-1.0.0:cor" });
+    expect(r.next[0]).toMatchObject({ tool: "get_design_tokens", arguments: { hex: "#334333" }, origin: "routing-1.0.1:cor" });
     expect(r.next.some((n: { tool: string }) => n.tool === "check_token_compliance")).toBe(false);
     expect(r.messages.routing).toBe(MESSAGES.routing);
   });
@@ -92,12 +92,12 @@ describe("A4 — roteamento pela intenção, em next, sem afirmar norma", () => 
   });
   it("posição/esquerda/direita → medir pela geometria (passo fora do oráculo)", async () => {
     const r = await call("get_ds_rules", { query: "na mensagem de retorno o botão fechar aparece à esquerda e o ícone à direita, ordem trocada", component: "message" });
-    expect(r.next[0]).toMatchObject({ action: "measure-condition", tool: null, origin: "routing-1.0.0:posicao" });
+    expect(r.next[0]).toMatchObject({ action: "measure-condition", tool: null, origin: "routing-1.0.1:posicao" });
     expect(cited(r)).toContain(`${P}component-message-4bfd5a220fb8`);
   });
   it("tabindex (atributo HTML) → regras globais com o atributo, que trazem a ordem de tabulação (A8)", async () => {
     const r = await call("get_ds_rules", { query: "tabindex positivo altera a ordem de foco do teclado" });
-    const route = r.next.find((n: { origin?: string }) => n.origin === "routing-1.0.0:marcacao");
+    const route = r.next.find((n: { origin?: string }) => n.origin === "routing-1.0.1:marcacao");
     expect(route).toMatchObject({ tool: "get_ds_rules", arguments: { component: "global", query: "tabindex" } });
     const followed = await call("get_ds_rules", route.arguments);
     expect(cited(followed)).toEqual(expect.arrayContaining([`${P}accessibility-global-742fd4c4f54b`]));
@@ -249,7 +249,7 @@ describe("A12 — ligações kb-relations (paginação → estados WAI-ARIA; bot
   it("context{pagination}: a regra WAI-ARIA entra como relação da camada, não do registro", async () => {
     const r = await call("get_ds_rules", { context: { components: ["pagination"] } });
     const card = r.results.find((c: { citeAs: string }) => c.citeAs === `${P}accessibility-global-5817ddd685a6`);
-    expect(card.why.matched).toContain("relacionado:pagination@kb-relations-1.0.0");
+    expect(card.why.matched).toContain("relacionado:pagination@kb-relations-1.1.0");
     expect(card.why.relation).toBe("related");
   });
   it("spec do button traz R-02 (e-MAG 1.2, HTML semântico)", async () => {

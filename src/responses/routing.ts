@@ -11,9 +11,34 @@ import { resolveComponentName } from "../data/applicability.js";
 import { foldText } from "../data/retrieval.js";
 import { step, type NextStep } from "./contract.js";
 
-export const ROUTING_VERSION = "routing-1.0.0";
+export const ROUTING_VERSION = "routing-1.0.1";
 
-const HEX = /#(?:[0-9a-f]{6}|[0-9a-f]{3})(?![0-9a-z])/i;
+/**
+ * 1.0.1 (revisão 3.4.0): hex de 3/4/6/8 dígitos. 6/8 dígitos valem sempre; 3/4 só com um algarismo ou com
+ * palavra de cor logo antes (`#add`, `#bad` sozinhos são id/fragmento, não cor). Nunca em contexto de id
+ * ou fragmento (`href="#…"`, `id=`, seletor, âncora).
+ */
+const HEX_ANY = /#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{3})(?![0-9a-z_-])/gi;
+const COLOR_WORD_BEFORE = /(?:cor|cores|color|colour|fundo|background|texto|borda|border|fill|stroke|:)\s*(?:(?:de|do|da)\s+|=\s*)?["']?$/i;
+const ID_CONTEXT_BEFORE = /(?:href|id|for|aria-[a-z]+|seletor|selector|âncora|ancora|fragmento|url)\s*[=:]?\s*["']?$/i;
+
+function hexColor(raw: string): string | undefined {
+  for (const m of raw.matchAll(HEX_ANY)) {
+    const before = raw.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
+    if (ID_CONTEXT_BEFORE.test(before)) continue;
+    const digits = m[1];
+    if (digits.length >= 6 || /[0-9]/.test(digits) || COLOR_WORD_BEFORE.test(before)) return m[0];
+  }
+  return undefined;
+}
+
+/** 1.0.1: nome do elemento na busca global no lugar da tag (`<a>` não vira a consulta "a"). */
+const TAG_NAMES: Record<string, string> = {
+  a: "link âncora", p: "parágrafo", img: "imagem", ul: "lista", ol: "lista", li: "lista", dl: "lista",
+  table: "tabela", th: "tabela", td: "tabela", tr: "tabela", nav: "navegação", hr: "separador",
+  h1: "título", h2: "título", h3: "título", h4: "título", h5: "título", h6: "título",
+};
+const tagTerm = (tag: string): string | null => TAG_NAMES[tag] ?? (tag.length > 1 ? tag : null);
 const FUNC_COLOR = /\b(?:rgba?|hsla?)\(\s*[0-9.,%\s/]+\)/i;
 const ARIA = /\baria-[a-z]+/g;
 const ROLE = /\brole\s*=\s*["']?([a-z]+)/g;
@@ -21,14 +46,15 @@ const TAG = /<\s*\/?\s*([a-z][a-z0-9]*)/g;
 /** Atributos HTML que a base cita pelo nome (tabindex, alt, lang, for…) — nome do atributo, não norma. */
 const HTML_ATTRS = /\b(tabindex|accesskey|autocomplete|alt|lang|scope|headers|for|title|placeholder|hidden|disabled|required)\s*=/g;
 const HTML_ATTR_WORDS = /\b(tabindex|accesskey|autocomplete)\b/g;
-const POSITION = /\b(posicao|posicionad[oa]s?|posicionamento|esquerda|direita|topo|acima|abaixo|ao lado|antes de|depois de|ordem visual)\b/;
+const POSITION = /\b(posicao|posicionad[oa]s?|posicionamento|esquerda|direita|topo|acima|abaixo|ao lado|ordem visual)\b/;
+// 1.0.1: "antes de"/"depois de" saíram — são tempo ou ordem de texto; só palavras espaciais roteiam para geometria.
 
 /** Passos de roteamento para o texto (máx. 2, ordem fixa: cor → marcação → posição). `component` = componente em escopo. */
 export function routeSteps(text: string, component: string | null, available: (tool: string) => boolean = () => true): NextStep[] {
   const out: NextStep[] = [];
   const raw = text.slice(0, 500);
   const folded = foldText(raw);
-  const color = HEX.exec(raw)?.[0] ?? FUNC_COLOR.exec(raw)?.[0];
+  const color = hexColor(raw) ?? FUNC_COLOR.exec(raw)?.[0];
   if (color) {
     if (available("get_design_tokens")) {
       out.push(step("measure-condition", "o valor de cor citado contra os tokens do DS (token exato ou o mais próximo); não decide a norma", "get_design_tokens", { hex: color }, { origin: `${ROUTING_VERSION}:cor` }));
@@ -51,7 +77,7 @@ export function routeSteps(text: string, component: string | null, available: (t
   for (const m of raw.toLowerCase().matchAll(HTML_ATTRS)) terms.add(m[1]);
   for (const m of folded.matchAll(HTML_ATTR_WORDS)) terms.add(m[1]);
   if (terms.size || tags.length) {
-    const query = [...terms, ...tags].slice(0, 6).join(" ");
+    const query = [...new Set([...terms, ...tags.map(tagTerm).filter((t): t is string => Boolean(t))])].slice(0, 6).join(" ");
     if (available("get_ds_rules")) {
       out.push(step("request-detail", "regras globais (WAI-ARIA, semântica HTML) que citam o atributo, papel ou elemento da consulta", "get_ds_rules", { component: "global", query }, { origin: `${ROUTING_VERSION}:marcacao` }));
     }

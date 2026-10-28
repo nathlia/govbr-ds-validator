@@ -35,12 +35,19 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
   });
 
-  it("still flags an anchor doing a button's job (javascript:, empty href, no href, role=button)", () => {
-    const cases: Array<[string | null, string | null]> = [["javascript: void(0)", null], ["", null], [null, null], ["#", "button"], ["/x", "button"]];
+  it("still flags an anchor doing a button's job (no href, role=button)", () => {
+    const cases: Array<[string | null, string | null]> = [[null, null], ["#", "button"], ["/x", "button"]];
     for (const [href, role] of cases) {
       const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href, role }, outerHTML: `<a class="br-button primary">Excluir</a>` });
       const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "ds-structure-button-tag");
       expect(finding?.evidence.expected).toBe("Elemento <button>");
+    }
+  });
+
+  it("3.4.1: href '#', empty or javascript: depends on script — no structural finding", () => {
+    for (const href of ["#", "", "javascript: void(0)"]) {
+      const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href }, outerHTML: '<a class="br-button primary">Excluir</a>' });
+      expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
     }
   });
 

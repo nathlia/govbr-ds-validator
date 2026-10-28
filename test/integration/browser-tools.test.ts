@@ -52,7 +52,7 @@ const FIXTURE_HTML = `<!DOCTYPE html>
     <button id="btn-arbitrary-color" class="br-button primary" type="button">Cor arbitrária</button>
     <button id="btn-wrong-font" class="br-button primary" type="button">Fonte errada</button>
     <button id="btn-bad-radius" class="br-button secondary" type="button">Raio errado</button>
-    <a id="link-as-button" class="br-button primary" href="javascript:void(0)">Sou um link</a>
+    <a id="link-as-button" class="br-button primary" href="#" role="button">Sou um link</a>
     <button id="btn-icon-only" class="br-button circle primary" type="button"><svg width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg></button>
     <button id="state-toggle" type="button" aria-expanded="false">Alternar estado</button>
   </main>
