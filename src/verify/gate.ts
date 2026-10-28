@@ -21,6 +21,8 @@ import type { CheckStatus, Finding, Verdict, Verification, ViolationStatus } fro
 import { findEmagRule, getPageRules, getTokenRegistry } from "../data/load.js";
 import { getRuleById } from "../data/knowledge.js";
 import { normalizeColor } from "../checkers/color.js";
+import { paintedBorderSides } from "../checkers/tokenCompliance.js";
+import { measureFocusIndicators } from "../evidence/focusIndicator.js";
 import { BrowserToolError, POLICY_OR_DEADLINE, sanitizeErrorMessage, withPage } from "../evidence/browser.js";
 import { runAxeRuleOnLocator as axeRuleOnLocator } from "../checkers/axe.js";
 import { inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
@@ -122,7 +124,11 @@ export type GateIssue =
   | "locator-no-elements" // o localizador não achou nada no estado reproduzido
   | "locator-ambiguous" // o localizador resolveu elementos com valores diferentes do alegado
   | "invalid-locator" // o navegador recusou o seletor (XPath, text=, sintaxe)
-  | "page-http-error"; // a página reaberta respondeu com status HTTP de erro
+  | "page-http-error" // a página reaberta respondeu com status HTTP de erro
+  // 3.4.0 (B2): o predicado rodou e a condição da regra não vale neste estado (inaplicável), ou o
+  // sujeito não é o que a condição mede (o invocador no lugar do diálogo). Nunca contradição medida.
+  | "rule-not-applicable"
+  | "subject-not-a-dialog";
 
 /** Próximo passo fixo para verificação do oráculo sem norma nomeada (D-27, 2.15.0). */
 export const UNGROUNDED_NEXT =
@@ -382,9 +388,10 @@ export async function verifyFinding({
       }
 
       if (observedHex) {
+        // 3.4.0 (B5): as cores dos lados pintados da borda também contam (B-15: `hr` com só border-top).
         const without = evidence.elements.filter(
           (element) =>
-            !COLOR_PROPERTIES.map((property) => element.computed[property])
+            ![...COLOR_PROPERTIES.map((property) => element.computed[property]), ...paintedBorderSides(element).map((s) => s.raw)]
               .filter((value): value is string => typeof value === "string")
               .map((value) => normalizeColor(value))
               .includes(observedHex)
@@ -406,6 +413,14 @@ export async function verifyFinding({
           );
           return;
         }
+      }
+
+      // 3.4.0 (B9): foco visível — medido em cada elemento resolvido, no estado reproduzido.
+      if (selection.predicate?.needsFocusIndicator) {
+        const measured = await measureFocusIndicators(page, evidence.elements.map((element) => element.locator));
+        evidence.elements.forEach((element, i) => {
+          element.focusIndicator = { focused: measured[i]?.focused ?? false, changed: measured[i]?.changed ?? [] };
+        });
       }
 
       // 2.7.0: predicado de página decide sobre o documento, não sobre o elemento localizado.
@@ -436,6 +451,7 @@ export async function verifyFinding({
         checks.violation = outcome.status;
         verifiedBy = `predicate:${selection.predicate.id}`;
         notes.push(outcome.detail);
+        if (outcome.status === "undetermined" && outcome.code) issue = outcome.code;
       } else {
         notes.push(`O localizador resolveu ${evidence.count} elemento(s); localizar não confirma a alegação.`);
       }

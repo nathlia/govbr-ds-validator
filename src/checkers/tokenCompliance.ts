@@ -25,6 +25,52 @@ const COLOR_PROPS: { prop: keyof ElementEvidence["computed"]; label: string }[] 
   { prop: "borderColor", label: "border-color" },
 ];
 
+/**
+ * 3.4.0 (B5, B-15): as leituras de cor de um elemento, com o rótulo da propriedade. A borda com os
+ * quatro lados na mesma cor sai como `border-color` (como antes); com lados diferentes — o `border-color`
+ * computado vem com quatro valores e não era lido —, sai uma leitura por cor de lado PINTADO (largura
+ * > 0 e estilo visível), rotulada pelo primeiro lado que a usa (`border-top-color`, …).
+ */
+export interface ColorReading {
+  prop: keyof ElementEvidence["computed"];
+  label: string;
+  raw: string;
+  /** Só nas leituras por lado: os lados pintados com essa cor. */
+  sides?: string[];
+}
+
+export const BORDER_SIDE_PROPERTIES = ["border-top-color", "border-right-color", "border-bottom-color", "border-left-color"] as const;
+
+export function paintedBorderSides(el: ElementEvidence): Array<{ side: string; raw: string }> {
+  return (el.borderSides ?? [])
+    .filter((s) => (parsePx(s.width) ?? 0) > 0 && s.style !== "none" && s.style !== "hidden" && s.style !== "")
+    .map((s) => ({ side: s.side, raw: s.color }));
+}
+
+export function colorReadings(el: ElementEvidence): ColorReading[] {
+  const out: ColorReading[] = [];
+  for (const { prop, label } of COLOR_PROPS) {
+    const raw = el.computed[prop];
+    if (!raw) continue;
+    if (prop === "borderColor" && normalizeColor(raw) === null && el.borderSides) {
+      const byHex = new Map<string, { raw: string; sides: string[] }>();
+      for (const { side, raw: sideRaw } of paintedBorderSides(el)) {
+        const hex = normalizeColor(sideRaw);
+        if (!hex) continue;
+        const entry = byHex.get(hex) ?? { raw: sideRaw, sides: [] };
+        entry.sides.push(side);
+        byHex.set(hex, entry);
+      }
+      for (const { raw: sideRaw, sides } of byHex.values()) {
+        out.push({ prop, label: `border-${sides[0]}-color`, raw: sideRaw, sides });
+      }
+      continue;
+    }
+    out.push({ prop, label, raw });
+  }
+  return out;
+}
+
 /** DS font families (Rawline for text, Raleway as fallback/headings). */
 const DS_FONT = /rawline|raleway/i;
 
@@ -125,9 +171,7 @@ export function checkTokenCompliance(
     };
 
     if (checks.includes("color")) {
-      for (const { prop, label } of COLOR_PROPS) {
-        const raw = el.computed[prop];
-        if (!raw) continue;
+      for (const { prop, label, raw, sides } of colorReadings(el)) {
         const declarations = authored(el, prop);
         if (declarations?.length === 0) continue;
         const hex = normalizeColor(raw);
@@ -157,6 +201,7 @@ export function checkTokenCompliance(
               nearestHex: nearest?.hex ?? null,
               rgbDistance: nearest?.distance ?? null,
               authoredDeclarations: declarations ?? null,
+              ...(sides ? { sides } : {}),
             },
           },
           severity: "moderate",

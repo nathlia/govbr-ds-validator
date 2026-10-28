@@ -26,7 +26,7 @@ export const AUTHORED_CSS_NAMES: Record<keyof ComputedStyleEvidence, string[]> =
   fontWeight: ["font-weight", "font"],
   lineHeight: ["line-height", "font"],
   borderRadius: ["border-radius", "border"],
-  borderColor: ["border-color", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border"],
+  borderColor: ["border-color", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border", "border-top", "border-right", "border-bottom", "border-left"],
   border: ["border", "border-top", "border-right", "border-bottom", "border-left"],
   padding: ["padding", "padding-top", "padding-right", "padding-bottom", "padding-left"],
   margin: ["margin", "margin-top", "margin-right", "margin-bottom", "margin-left"],

@@ -34,9 +34,18 @@ import { getDsInputErrorState, type DsErrorStateMapping } from "../data/dsCompon
 
 export type ContextOutcomeStatus = "verified" | "contradicted" | "undetermined";
 
+/**
+ * 3.4.0 (B2): por que um `undetermined` não decide, quando o motivo tem próximo passo próprio.
+ *   rule-not-applicable   a condição da regra não vale neste estado (modal sem invocador, sem botão
+ *                         fechar, janela de outro tipo) — inaplicabilidade não é contradição medida;
+ *   subject-not-a-dialog  o localizador não é a janela modal (ex.: o invocador): o sujeito de P3 é o diálogo.
+ */
+export type ContextOutcomeCode = "rule-not-applicable" | "subject-not-a-dialog";
+
 export interface ContextOutcome {
   status: ContextOutcomeStatus;
   detail: string;
+  code?: ContextOutcomeCode;
 }
 
 export interface ContextEvidence {
@@ -247,7 +256,13 @@ function combine(outcomes: ContextOutcome[], label: string): ContextOutcome {
     return { status: "contradicted", detail: `${contradicted.length} de ${outcomes.length} sujeito(s) não sustentam a alegação (${label}). ${summary}` };
   }
   if (undetermined.length > 0) {
-    return { status: "undetermined", detail: `${undetermined.length} de ${outcomes.length} sujeito(s) sem decisão possível (${label}). ${summary}` };
+    const codes = new Set(undetermined.map((o) => o.code));
+    const code = codes.size === 1 ? [...codes][0] : undefined;
+    return {
+      status: "undetermined",
+      detail: `${undetermined.length} de ${outcomes.length} sujeito(s) sem decisão possível (${label}). ${summary}`,
+      ...(code ? { code } : {}),
+    };
   }
   return { status: "verified", detail: `Violação recalculada em ${outcomes.length} de ${outcomes.length} sujeito(s): ${label}. ${summary}` };
 }
@@ -510,8 +525,18 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
       if (ax.description.trim()) return { status: "contradicted", detail: `a descrição calculada do campo ("${ax.description}") contém a mensagem.` };
     }
     if (contains(ax.name, messageText)) return { status: "contradicted", detail: `o nome calculado do campo ("${ax.name}") contém a mensagem.` };
-    if (normalizeText(ax.name).length >= 3 && contains(messageText, ax.name)) {
-      return { status: "contradicted", detail: `a mensagem nomeia o campo ("${ax.name}") em texto.` };
+    // 3.4.0 (B4, V-03a): citar o nome do campo no texto da mensagem NÃO é associação programática.
+    // Até a 3.3.0 isso contradizia a alegação e o agente retirava um defeito real. Agora a associação
+    // medida (invalid, descrição, nome) é o que contradiz; sem ela, a citação textual deixa sem decisão
+    // (a WCAG admite identificação só textual, e o oráculo não decide se ela basta) — nunca `rejected`.
+    const namesField = normalizeText(ax.name).length >= 3 && contains(messageText, ax.name);
+    if (namesField) {
+      return {
+        status: "undetermined",
+        detail: `a mensagem cita o campo ("${ax.name}") só em texto; associação programática medida: invalid=false, descrição ${
+          ax.description ? `"${ax.description}"` : "vazia"
+        }, o nome não contém a mensagem.${danglingDetail(facts)} Citar o nome não é associação programática e não desmente a alegação; se a identificação só textual basta para o critério, o oráculo não decide.`,
+      };
     }
     const read = errorSignals(pre, subject, true, options);
     if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
@@ -703,19 +728,30 @@ function forEachSubject(evidence: ContextEvidence, label: string, decide: (t: Su
 
 function focusRestored(evidence: ContextEvidence): ContextOutcome {
   return forEachSubject(evidence, "foco não volta ao invocador ao fechar a modal", (t) => {
+    // 3.4.0 (B2, A-01): o sujeito é a janela, não o invocador. Até a 3.3.0 um localizador do botão
+    // que abre a modal (visível ao carregar, nada focado) saía "a modal já estava aberta ao carregar"
+    // como contradição — sobre um sujeito que nem era modal.
+    if (!t.points.some((p) => p.snap?.modal)) {
+      return {
+        status: "undetermined",
+        code: "subject-not-a-dialog",
+        detail:
+          "o sujeito não é uma janela modal (.br-modal, role=dialog/alertdialog, <dialog>, aria-modal) em nenhum passo: em focus-returns-to-invoker-on-close, element.locator é o diálogo, não o invocador.",
+      };
+    }
     const first = t.points[0];
     if (first && shownAt(first)) {
       return first.obs.active === null
-        ? { status: "contradicted", detail: "a modal já estava aberta ao carregar e nada tinha foco: não há 'último elemento focado' (a regra não se aplica)." }
+        ? { status: "undetermined", code: "rule-not-applicable", detail: "a modal já estava aberta ao carregar e nada tinha foco: não há 'último elemento focado' — a regra não se aplica a este estado (não é contradição)." }
         : { status: "undetermined", detail: "a modal já estava aberta ao carregar: a abertura não foi observada." };
     }
     const k = openingIndex(t);
     if (k < 0) return { status: "undetermined", detail: "a abertura da modal não foi observada na receita." };
-    if (!t.points[k].snap?.modal) return { status: "undetermined", detail: "o sujeito não é uma janela modal (.br-modal, role=dialog/alertdialog, <dialog>, aria-modal)." };
+    if (!t.points[k].snap?.modal) return { status: "undetermined", code: "subject-not-a-dialog", detail: "o sujeito não é uma janela modal (.br-modal, role=dialog/alertdialog, <dialog>, aria-modal)." };
     const before = t.points[k - 1].obs;
     const invoker = before.nextTarget ?? before.active;
     if (invoker === null) {
-      return { status: "contradicted", detail: "nada tinha foco antes de abrir: não há 'último elemento focado' (a regra não se aplica)." };
+      return { status: "undetermined", code: "rule-not-applicable", detail: "nada tinha foco antes de abrir: não há 'último elemento focado' — a regra não se aplica a este estado (não é contradição)." };
     }
     let j = -1;
     for (let m = k + 1; m < t.points.length; m += 1) if (!shownAt(t.points[m])) { j = m; break; }
@@ -743,13 +779,14 @@ function initialFocus(evidence: ContextEvidence, finding: Finding): ContextOutco
     if (k < 0) return { status: "undetermined", detail: "a abertura da modal não foi observada na receita." };
     const { obs, snap } = t.points[k];
     if (obs.focusStable === false) return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois de abrir: só o valor estável decide." };
-    if (!snap?.modal) return { status: "undetermined", detail: "o sujeito não é uma janela modal." };
+    if (!snap?.modal) return { status: "undetermined", code: "subject-not-a-dialog", detail: "o sujeito não é uma janela modal: element.locator deve ser o diálogo, não o invocador." };
     const active = obs.active;
     const outside = active === null || !snap.focusInside;
     const where = obs.activeDescription ?? "o documento (body)";
     if (informative) {
-      if (snap.formFieldRefs.length > 0) return { status: "contradicted", detail: "a modal tem campo de formulário: é janela de ação, não 'apenas com conteúdo informativo'." };
-      if (snap.closeRefs.length === 0) return { status: "contradicted", detail: "a modal não tem botão fechar: a regra do foco no fechar não se aplica." };
+      // 3.4.0 (B2, V-025): inaplicabilidade não é contradição medida — fica sem decisão, com o motivo.
+      if (snap.formFieldRefs.length > 0) return { status: "undetermined", code: "rule-not-applicable", detail: "a modal tem campo de formulário: é janela de ação, não 'apenas com conteúdo informativo' — a regra da modal informativa não se aplica (cite a da modal com ação)." };
+      if (snap.closeRefs.length === 0) return { status: "undetermined", code: "rule-not-applicable", detail: "a modal não tem botão fechar: a regra do foco no fechar não se aplica a ela (não é contradição)." };
       if (active !== null && snap.closeRefs.includes(active)) return { status: "contradicted", detail: "o foco inicial está no botão fechar." };
       if (outside) return { status: "verified", detail: `ao abrir, o foco ficou fora da modal (${where}) — fora de qualquer alvo que a regra admita.` };
       return { status: "undetermined", detail: `o foco inicial está dentro da modal (${where}), fora do fechar; o tipo da janela não é decidível pelo DOM.` };
@@ -813,7 +850,7 @@ function focusOnClose(evidence: ContextEvidence, finding: Finding): ContextOutco
     const { obs, snap } = t.points[k];
     if (obs.focusStable === false) return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois de abrir: só o valor estável decide." };
     if (!snap || !snap.classes.includes(`br-${component}`)) return { status: "undetermined", detail: `o sujeito não é raiz .br-${component}.` };
-    if (snap.closeRefs.length === 0) return { status: "contradicted", detail: "o componente não tem botão fechar: a regra vale 'quando houver'/'se houver'." };
+    if (snap.closeRefs.length === 0) return { status: "undetermined", code: "rule-not-applicable", detail: "o componente não tem botão fechar: a regra vale 'quando houver'/'se houver' e não se aplica aqui (não é contradição)." };
     if (obs.active !== null && snap.closeRefs.includes(obs.active)) return { status: "contradicted", detail: "ao exibir, o foco está no botão fechar." };
     return { status: "verified", detail: `ao exibir (passo ${obs.step}), o foco está em ${obs.activeDescription ?? "o documento (body)"}, não no botão fechar.` };
   });

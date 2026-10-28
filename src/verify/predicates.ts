@@ -18,8 +18,9 @@
 import type { Finding } from "../schema/finding.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import type { StyleProperty } from "../evidence/inspect.js";
-import { checkTokenCompliance, type TokenCheck } from "../checkers/tokenCompliance.js";
+import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure } from "../checkers/structure.js";
+import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
@@ -42,6 +43,8 @@ export interface PredicateOutcome {
   /** 2.13.0: `undetermined` — o predicado rodou no estado reproduzido e os dados não decidem. */
   status: "verified" | "contradicted" | "undetermined";
   detail: string;
+  /** 3.4.0 (B2): motivo tipado de um `undetermined` com próximo passo próprio (contextual.ts). */
+  code?: "rule-not-applicable" | "subject-not-a-dialog";
 }
 
 export interface ClaimOutcome {
@@ -55,6 +58,8 @@ export interface Predicate {
   properties: StyleProperty[];
   /** 2.7.0: o predicado decide sobre o documento e precisa dos fatos de página no estado reproduzido. */
   needsPageFacts?: boolean;
+  /** 3.4.0 (B9): o portão mede o foco de cada elemento (evidence/focusIndicator.ts) antes de decidir. */
+  needsFocusIndicator?: boolean;
   /**
    * 2.13.0 (NAT-85): fatos de contexto que o portão coleta no estado reproduzido — traço de foco e
    * visibilidade por passo, árvore de acessibilidade, anatomia. Predicados com contexto tratam alvo
@@ -71,7 +76,23 @@ export type PredicateSelection =
   | { predicate: Predicate; reason?: undefined; claimStatus?: undefined }
   | { predicate: null; reason: string; claimStatus?: "missing" | "contradicted" };
 
-const COLOR_PROPERTIES = new Set(["background-color", "color", "border-color"]);
+// 3.4.0 (B5): a cor de borda por lado também é alegável (B-15: `hr` com só `border-top`).
+const COLOR_PROPERTIES = new Set(["background-color", "color", "border-color", ...BORDER_SIDE_PROPERTIES]);
+const isBorderColor = (property: unknown) => typeof property === "string" && /^border(?:-(?:top|right|bottom|left))?-color$/.test(property);
+
+/** O valor vivo da propriedade de cor alegada: lados pintados para a borda, o computado para o resto. */
+function liveColorHexes(element: ElementEvidence, property: string): string[] {
+  if (property === "background-color") return [normalizeColor(element.computed.backgroundColor ?? "")].filter((h): h is string => !!h);
+  if (property === "color") return [normalizeColor(element.computed.color ?? "")].filter((h): h is string => !!h);
+  const uniform = normalizeColor(element.computed.borderColor ?? "");
+  const sides = paintedBorderSides(element);
+  if (property === "border-color") {
+    return [...(uniform ? [uniform] : []), ...sides.map((s) => normalizeColor(s.raw)).filter((h): h is string => !!h)];
+  }
+  const side = property.replace(/^border-|-color$/g, "");
+  const painted = sides.find((s) => s.side === side);
+  return painted ? [normalizeColor(painted.raw)].filter((h): h is string => !!h) : [];
+}
 const SPACING_PROPERTIES = new Set(["padding", "margin"]);
 
 function onEveryElement(elements: ElementEvidence[], label: string, failure: (element: ElementEvidence) => string | null): PredicateOutcome {
@@ -133,6 +154,47 @@ function tokenPredicate(
   };
 }
 
+/** 3.4.0 (B9): normas que o predicado de foco visível decide (e-MAG 4.4, a frase obrigatória dela, WCAG 2.4.7). */
+function focusIndicatorRule(finding: Finding): boolean {
+  const { source, id } = finding.rule;
+  if (source === "emag") return id.trim().replace(/^emag[-:.]?/i, "") === "4.4";
+  if (source === "wcag") return id.trim().replace(/^wcag[-:.]?/i, "") === "2.4.7";
+  return source === "govbr-ds-kb" && FOCUS_INDICATOR_GROUNDING.implements.includes(id);
+}
+
+const focusIndicatorPredicate: Predicate = {
+  id: "focus-indicator",
+  properties: [],
+  needsFocusIndicator: true,
+  verifyClaim: (elements) => ({
+    status: "consistent",
+    detail: `Condição '${FOCUS_INDICATOR_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.`,
+  }),
+  evaluate: (elements) => {
+    const unmeasured = elements.filter((element) => !element.focusIndicator?.focused);
+    if (unmeasured.length > 0) {
+      return {
+        status: "undetermined",
+        detail: `${unmeasured.length} de ${elements.length} elemento(s) não recebeu(ram) o foco por script (não focável, desabilitado ou o foco foi movido): o indicador não foi medido.`,
+      };
+    }
+    const marked = elements.filter((element) => (element.focusIndicator?.changed.length ?? 0) > 0);
+    if (marked.length > 0) {
+      return {
+        status: "contradicted",
+        detail: `${marked.length} de ${elements.length} elemento(s) muda(m) de estilo ao receber foco: ${marked
+          .slice(0, 3)
+          .map((e) => `${e.locator} (${e.focusIndicator!.changed.slice(0, 4).join(", ")})`)
+          .join("; ")}.`,
+      };
+    }
+    return {
+      status: "verified",
+      detail: `Em ${elements.length} de ${elements.length} elemento(s), nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou com o foco.`,
+    };
+  },
+};
+
 export function selectPredicate(finding: Finding): PredicateSelection {
   const { source, id } = finding.rule;
   const data = (finding.evidence.data ?? {}) as Record<string, unknown>;
@@ -140,6 +202,12 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   const generic =
     `Nenhum predicado implementado para ${source} '${id}': a regra existe, mas o oráculo não decide ` +
     "mecanicamente a violação alegada. Localizar o elemento não confirma a alegação.";
+
+  // 3.4.0 (B9): foco visível (A-04, V-05) — só com a condição estruturada exata.
+  if (focusIndicatorRule(finding)) {
+    if (data.expectedCondition === FOCUS_INDICATOR_CONDITION) return { predicate: focusIndicatorPredicate };
+    return none(`${generic} Para foco visível, envie evidence.data.expectedCondition='${FOCUS_INDICATOR_CONDITION}'.`);
+  }
 
   // 2.13.0 (NAT-85): condições contextuais. Só a regra listada na condição e a condição exata
   // selecionam o predicado; regra genérica ou condição de outra regra ficam sem predicado.
@@ -151,24 +219,22 @@ export function selectPredicate(finding: Finding): PredicateSelection {
     switch (id) {
       case "ds-token-color": {
         if (data.property === undefined || data.observedHex === undefined || data.expectedCondition === undefined) {
-          return none("ds-token-color só é verificável com evidence.data.property (background-color, color ou border-color), observedHex e expectedCondition.", "missing");
+          return none("ds-token-color só é verificável com evidence.data.property (background-color, color, border-color ou border-{top,right,bottom,left}-color), observedHex e expectedCondition.", "missing");
         }
         const observedHex = typeof data.observedHex === "string" ? normalizeColor(data.observedHex) : null;
         if (!property || !COLOR_PROPERTIES.has(property) || !observedHex || data.expectedCondition !== EXPECTED_CONDITIONS.tokenColor) {
           return none(`Dados estruturados contraditórios para ds-token-color: property/observedHex devem ser suportados e expectedCondition deve ser '${EXPECTED_CONDITIONS.tokenColor}'.`, "contradicted");
         }
-        const computedProperty = ({
-          "background-color": "backgroundColor",
-          color: "color",
-          "border-color": "borderColor",
-        } as const)[property as "background-color" | "color" | "border-color"];
         return {
           predicate: tokenPredicate("token-color", "color", ["backgroundColor", "color", "borderColor"],
             `${property} ${observedHex} fora do registro de tokens`,
-            (element) => normalizeColor(element.computed[computedProperty] ?? "") === observedHex
+            (element) => liveColorHexes(element, property).includes(observedHex)
               ? null
-              : `${element.locator}: ${property} vivo é ${element.computed[computedProperty] ?? "(ausente)"}, não ${observedHex}`,
-            (f) => f.evidence.data?.property === property && f.evidence.data?.observedHex === observedHex),
+              : `${element.locator}: ${property} vivo é ${liveColorHexes(element, property).join("/") || "(ausente ou lado sem borda)"}, não ${observedHex}`,
+            (f) => f.evidence.data?.observedHex === observedHex &&
+              (f.evidence.data?.property === property ||
+                (property === "border-color" && isBorderColor(f.evidence.data?.property)) ||
+                (isBorderColor(property) && Array.isArray(f.evidence.data?.sides) && (f.evidence.data.sides as string[]).includes(property.replace(/^border-|-color$/g, ""))))),
         };
       }
       case "ds-token-font-family": {

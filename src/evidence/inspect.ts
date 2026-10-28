@@ -65,12 +65,24 @@ export async function inspectComputedStyles(
   return withPage(url, (page) => inspectPageComputedStyles(page, url, selector, properties));
 }
 
+/** 3.4.0 (B8): teto de elementos quando o escopo inclui os descendentes dos seletores. */
+export const DESCENDANT_SCOPE_LIMIT = 2_000;
+
+export interface InspectOptions {
+  /**
+   * 3.4.0 (B8): inspecionar também os descendentes de cada elemento casado (DOM claro e shadow roots
+   * abertos), até DESCENDANT_SCOPE_LIMIT. `scan_page{selectors}` usa: o escopo é a região, não só a raiz.
+   */
+  descendants?: boolean;
+}
+
 /** Collect evidence from an already-loaded page so aggregate scans share one exact DOM state. */
 export async function inspectPageComputedStyles(
   page: Page,
   url: string,
   selector?: string | string[],
-  properties: StyleProperty[] = [...STYLE_PROPERTIES]
+  properties: StyleProperty[] = [...STYLE_PROPERTIES],
+  options: InspectOptions = {}
 ): Promise<PageEvidence> {
   const selectors = normalizeSelectors(selector);
   const target = selectors.join(", ");
@@ -87,7 +99,7 @@ export async function inspectPageComputedStyles(
   let elements;
   let chromiumNames: (string | null)[] | null;
   try {
-  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey }) => {
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -182,6 +194,24 @@ export async function inspectPageComputedStyles(
           }
         }
       }
+      if (descendants) {
+        const roots = [...matched];
+        const add = (el: Element) => {
+          if (matched.length >= descendantLimit || seen.has(el)) return;
+          seen.add(el);
+          matched.push(el);
+        };
+        const walk = (root: Element | ShadowRoot) => {
+          for (const child of Array.from(root.querySelectorAll("*"))) {
+            add(child);
+            if (child.shadowRoot) walk(child.shadowRoot);
+          }
+        };
+        for (const root of roots) {
+          if (root.shadowRoot) walk(root.shadowRoot);
+          walk(root);
+        }
+      }
 
       // 2.8.0: elementos interativos apenas com ícone ficam numa lista temporária no window, para
       // que o nome acessível seja lido do próprio Chromium depois desta passagem (ver accessibleName.ts).
@@ -211,6 +241,17 @@ export async function inspectPageComputedStyles(
         const snapshot = Object.fromEntries(
           computedProps.map((property) => [property, allComputed[property as keyof typeof allComputed]])
         );
+        // 3.4.0 (B5, B-15): a cor de borda por lado. Com lados diferentes, `border-color` computado vem
+        // com quatro valores e o verificador não o lia — o `hr` com só `border-top` passava calado.
+        const borderSides = computedProps.includes("borderColor")
+          ? (["top", "right", "bottom", "left"] as const).map((side) => ({
+              side,
+              color: computed.getPropertyValue(`border-${side}-color`),
+              width: computed.getPropertyValue(`border-${side}-width`),
+              style: computed.getPropertyValue(`border-${side}-style`),
+            }))
+          : undefined;
+        const rendered = el.getClientRects().length > 0 && computed.visibility !== "hidden" && computed.visibility !== "collapse";
 
         // getComputedStyle mistura origens que o verificador não pode confundir: CSS da página,
         // CSS do próprio DS, valores resolvidos pelo layout (por exemplo margin:auto) e defaults do
@@ -332,6 +373,10 @@ export async function inspectPageComputedStyles(
           focused,
           outerHTML: el.outerHTML.slice(0, 500),
           inShadowDom: el.getRootNode() instanceof ShadowRoot,
+          ...(borderSides ? { borderSides } : {}),
+          rendered,
+          // 3.4.0 (B10): elemento injetado pelo flatpickr, a biblioteca que o datetimepicker do core usa.
+          ...(el.closest(".flatpickr-calendar") ? { origin: "flatpickr" } : {}),
         };
       });
     }, {
@@ -342,6 +387,8 @@ export async function inspectPageComputedStyles(
       cssNames: AUTHORED_CSS_NAMES as Record<string, string[]>,
       interactiveTags: [...INTERACTIVE_TAGS] as string[],
       probeKey: NAME_PROBE_KEY,
+      descendants: options.descendants === true,
+      descendantLimit: DESCENDANT_SCOPE_LIMIT,
     });
 
   const probed = elements.filter((element) => element.nameProbeIndex !== null).length;

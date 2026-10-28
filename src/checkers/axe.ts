@@ -137,6 +137,30 @@ export async function runAxeScan(url: string, selector?: string): Promise<AxeSca
   return withPage(url, (page) => runAxeScanOnPage(page, url, selector));
 }
 
+const SEVERITY_RANK: Record<string, number> = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+
+/**
+ * 3.4.0 (B10, A F-031/F-032): duas regras do axe que reprovam o MESMO elemento pela MESMA recomendação
+ * e-MAG (ex.: `label` e `label-title-only`, ambas 6.2) são a mesma falha vista duas vezes. Fica uma — a
+ * de maior severidade, depois a primeira —, e as demais regras ficam em `evidence.data.alsoReportedBy`.
+ */
+export function mergeSameEmagOnElement(findings: Finding[]): Finding[] {
+  const kept = new Map<string, Finding>();
+  const order: Finding[] = [];
+  for (const finding of findings) {
+    const emagId = finding.evidence.data?.emagId;
+    if (typeof emagId !== "string") { order.push(finding); continue; }
+    const key = `${finding.element.locator}${emagId}`;
+    const previous = kept.get(key);
+    if (!previous) { kept.set(key, finding); order.push(finding); continue; }
+    const [winner, loser] = (SEVERITY_RANK[finding.severity] ?? 9) < (SEVERITY_RANK[previous.severity] ?? 9) ? [finding, previous] : [previous, finding];
+    const also = [...((winner.evidence.data?.alsoReportedBy as string[] | undefined) ?? []), loser.rule.id, ...((loser.evidence.data?.alsoReportedBy as string[] | undefined) ?? [])];
+    winner.evidence.data = { ...winner.evidence.data, alsoReportedBy: [...new Set(also)] };
+    if (winner !== previous) { order[order.indexOf(previous)] = winner; kept.set(key, winner); }
+  }
+  return order;
+}
+
 export interface AxeScanOptions {
   /**
    * 2.14.0 (NAT-61): anotar o achado com a recomendação e-MAG (sufixo em `rule.description` e
@@ -201,7 +225,7 @@ export async function runAxeScanOnPage(
   }
 
   return {
-    findings,
+    findings: withEmag ? mergeSameEmagOnElement(findings) : findings,
     engine: axeResults.testEngine,
     passeCount: axeResults.passes.length,
     incompleteCount: axeResults.incomplete.length,

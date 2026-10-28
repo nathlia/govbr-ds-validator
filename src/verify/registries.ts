@@ -188,7 +188,11 @@ export function groundingForCheckId(source: string, id: string): string[] | null
 // 2.14.3 (NAT-61, revisão Codex 4d66c40e): contextual-1.3.0 / knowledge-free contextual-1.2.0 — P1
 // item-identified exige o vínculo ESTA mensagem ↔ ESTE campo (IDREF exato do campo ou contêiner só do
 // campo, estável); seletor de várias mensagens, mensagem global/de outro campo = undetermined.
-export const CONTEXT_CONDITIONS_VERSION = "contextual-1.3.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) · catalogo-controles-1.0.0";
+// 3.4.0 (D-153, B2/B4/B9): contextual-1.4.0 / knowledge-free contextual-1.3.0 — inaplicabilidade (modal sem
+// invocador, sem fechar, de outro tipo) e sujeito que não é diálogo ficam `undetermined` com código, nunca
+// `contradicted`; mensagem que só cita o campo em texto não desmente 3.3.1 (fica sem decisão). Fora das
+// condições contextuais, o predicado de foco visível (emag-4.4 / WCAG 2.4.7, `focus-indicator-visible`).
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.4.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) + foco visível · catalogo-controles-1.0.0";
 
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {
@@ -205,7 +209,7 @@ export function registryVersions(): Record<string, string> {
 }
 
 /** 2.14.0 (NAT-61): o registro de condições do perfil knowledge-free — só P1 pela fonte WCAG. */
-export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.2.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
+export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.3.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
 
 /** Versões do perfil knowledge-free: só registros públicos (WCAG 2.2) e o registro de condições P1. */
 export function registryVersionsKnowledgeFree(): Record<string, string> {

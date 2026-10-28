@@ -165,3 +165,25 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     expect(checkTokenCompliance(page, [el], registry, ["color"])).toEqual([]);
   });
 });
+
+describe("3.4.0 (B5, B-15): cor de borda por lado", () => {
+  const hr = (sides: Array<[string, string, string]>, borderColor = "rgb(187, 187, 187) rgb(51, 51, 51) rgb(51, 51, 51) rgb(51, 51, 51)") =>
+    makeElement({
+      locator: "#sep",
+      tagName: "hr",
+      classes: [],
+      computed: { borderColor } as never,
+      borderSides: sides.map(([side, color, width]) => ({ side: side as "top", color, width, style: width === "0px" ? "none" : "solid" })),
+    });
+
+  it("lados diferentes: uma leitura por cor de lado pintado; lado sem largura não conta", () => {
+    const el = hr([["top", "rgb(187, 187, 187)", "1px"], ["right", "rgb(51, 51, 51)", "0px"], ["bottom", "rgb(51, 51, 51)", "0px"], ["left", "rgb(51, 51, 51)", "0px"]]);
+    const findings = checkTokenCompliance(page, [el], registry, ["color"]);
+    expect(findings.map((f) => [f.evidence.data?.property, f.evidence.data?.observedHex, f.evidence.data?.sides])).toEqual([["border-top-color", "#bbbbbb", ["top"]]]);
+  });
+
+  it("borda uniforme continua saindo como border-color", () => {
+    const el = hr([], "rgb(187, 187, 187)");
+    expect(checkTokenCompliance(page, [el], registry, ["color"]).map((f) => f.evidence.data?.property)).toEqual(["border-color"]);
+  });
+});

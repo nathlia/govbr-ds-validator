@@ -37,7 +37,10 @@ import type { ToolTelemetryEvent } from "../../src/telemetry.js";
  * sha256 do `tools/list` do perfil, fixado (plano §5.3). O runner confere o mesmo valor na ponte.
  * Mudou de propósito? Atualize aqui E declare a mudança: é diferença de tratamento do braço.
  */
-const KNOWLEDGE_FREE_TOOLS_SHA256 = "8bdb5e35ed3346a91b227b45034d64c849f1d21baeb6d5affc995a4ea02c7dee";
+const KNOWLEDGE_FREE_TOOLS_SHA256 = "f358152ab77b8b6930687c1b12206f3821170600d52c0fda0a3dde8d0774bf44";
+// 3.3.0: 8bdb5e35ed3346a91b227b45034d64c849f1d21baeb6d5affc995a4ea02c7dee. 3.4.0 (B7) muda de propósito: a ação
+// `navigate` (pushState + popstate, caminho da mesma origem) no esquema de actions do scan_page e do verify_finding.
+// Nada do pacote DS/e-MAG.
 // 2.14.0–2.17.1: 72abd54968cbe3173fce5dd3b4bba7aff563b37ca11b8a9ec0f25a91a104d39c. 3.0.0 (NAT-99) muda de
 // propósito: scan_page (descrição: checksRun, resposta de ~8.000; maxChars = orçamento da resposta inteira,
 // texto deste perfil, sem investigate) e get_finding_details (view 'diff', maxChars da resposta inteira).
@@ -47,7 +50,8 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "8bdb5e35ed3346a91b227b45034d64c849f1d21baeb
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "c4066eab839eb59d092e68b55c3b75337e7a117d9014aa7b054314ad46b7e297";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "adc4266162781cb6239ee4e84ae852889ceeb209556bf7270c267b015884c6b2";
+// 3.3.0: c4066eab839eb59d092e68b55c3b75337e7a117d9014aa7b054314ad46b7e297. 3.4.0 (B7): ação `navigate` em scan_page/verify_finding.
 // 3.2.0: f15292681d18f1f516373e741e3e03911b32acc207ba6813cde046a1d33ebf60. 3.3.0 (NAT-109) muda de propósito o
 // get_ds_rules (sem o parâmetro retrieval, D-152; descrições mais curtas; maxLength em id/ids/component/query) e o get_design_tokens (hex aceita
 // #rgb/rgb()). O perfil knowledge-free não muda; as instructions do initialize são novas (só procedimento).

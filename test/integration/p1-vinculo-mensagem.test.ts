@@ -95,10 +95,10 @@ const both = async (path: string, message: string) => ({
 });
 
 describe("P1 2.14.3: a mensagem alegada tem de pertencer ao campo (revisão Codex 4d66c40e)", () => {
-  it("par do Codex: a mensagem certa nomeia o campo → rejected; a mensagem do outro campo → nunca confirmed (os dois perfis)", async () => {
+  it("par do Codex: a mensagem certa nomeia o campo → unverifiable (B4: citar não é associação, nem a desmente); a do outro campo → nunca confirmed (os dois perfis)", async () => {
     const right = await both("/par", "#right");
-    expect(right.evaluation.verdict).toBe("rejected");
-    expect(right.knowledgeFree.verdict).toBe("rejected");
+    expect(right.evaluation.verdict).toBe("unverifiable");
+    expect(right.knowledgeFree.verdict).toBe("unverifiable");
     const wrong = await both("/par", "#wrong");
     expect(wrong.evaluation.verdict).toBe("unverifiable");
     expect(wrong.knowledgeFree.verdict).toBe("unverifiable");

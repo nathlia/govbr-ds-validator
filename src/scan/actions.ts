@@ -12,6 +12,9 @@
 import { z } from "zod";
 import type { Page } from "playwright";
 
+/** Caminho da mesma origem: uma barra inicial (não duas), sem barra invertida nem espaço. */
+const SAME_ORIGIN_PATH = /^\/(?![/\\])[^\\\s]*$/;
+
 export const PageActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("click"), selector: z.string() }),
   z.object({ action: z.literal("fill"), selector: z.string(), value: z.string().max(2_000) }),
@@ -20,6 +23,17 @@ export const PageActionSchema = z.discriminatedUnion("action", [
     action: z.literal("wait"),
     selector: z.string().optional(),
     ms: z.number().int().min(0).max(5_000).optional(),
+  }),
+  // 3.4.0 (B7): navegação dentro da SPA já carregada (history.pushState + popstate), sem nova requisição.
+  // Só caminho da mesma origem: começa com uma única barra, sem esquema, sem barra invertida nem espaço.
+  z.object({
+    action: z.literal("navigate"),
+    path: z
+      .string()
+      .min(1)
+      .max(2_000)
+      .regex(SAME_ORIGIN_PATH, "path é um caminho da mesma origem (ex.: '/app/lista?x=1'), começando com uma única barra")
+      .describe("Caminho da mesma origem entregue ao roteador da SPA (pushState + popstate): alcança rota profunda servida sem fallback"),
   }),
 ]);
 
@@ -73,6 +87,8 @@ export interface ReplayStep {
   key?: string;
   /** Valor do fill, preservado: sem ele a receita não é reaplicável. */
   value?: string;
+  /** 3.4.0: caminho do navigate. */
+  path?: string;
   ms?: number;
   /** Elementos que o seletor resolveu no momento do passo (null quando o passo não tem seletor). */
   matched: number | null;
@@ -93,6 +109,8 @@ export type ReplayResult =
 
 /** Tempo para o alvo aparecer depois do passo anterior (renderização assíncrona), antes de contar. */
 const ATTACH_TIMEOUT_MS = 5_000;
+/** 3.4.0 (B7): espera pela rede ociosa antes do navigate (a SPA terminar a carga e o redirecionamento inicial). */
+const NAVIGATE_IDLE_MS = 5_000;
 /** Tempo para a ação em si (o elemento ficar visível, habilitado, estável). */
 const ACTION_TIMEOUT_MS = 10_000;
 
@@ -136,6 +154,7 @@ function stepOf(index: number, action: PageAction, matched: number | null): Repl
     ...(action.action === "press" ? { key: action.key } : {}),
     ...(action.action === "fill" ? { value: action.value } : {}),
     ...(action.action === "wait" && action.ms !== undefined ? { ms: action.ms } : {}),
+    ...(action.action === "navigate" ? { path: action.path } : {}),
     matched,
   };
 }
@@ -198,6 +217,23 @@ export async function applyActions(page: Page, actions: PageAction[], observe?: 
 
     if (action.action === "wait" && !action.selector) {
       await page.waitForTimeout(Math.min(action.ms ?? 0, 5_000));
+      steps.push(stepOf(index, action, null));
+      await observed(index);
+      continue;
+    }
+    if (action.action === "navigate") {
+      // O roteador da SPA precisa ter terminado a carga inicial (inclusive o redirecionamento de
+      // entrada): senão o próprio app sobrescreve a rota pedida logo depois do pushState.
+      await page.waitForLoadState("networkidle", { timeout: NAVIGATE_IDLE_MS }).catch(() => undefined);
+      try {
+        await page.evaluate((path) => {
+          history.pushState(history.state, "", path);
+          window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+        }, action.path);
+      } catch (error) {
+        if (isPageChangedError(error)) return fail("page-changed", null, `navigate '${action.path}': a página mudou durante o passo: ${message(error)}`);
+        return fail("action-failed", null, `navigate '${action.path}' falhou: ${message(error)}`);
+      }
       steps.push(stepOf(index, action, null));
       await observed(index);
       continue;

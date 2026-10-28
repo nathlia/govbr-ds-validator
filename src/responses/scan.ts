@@ -11,7 +11,7 @@ export const OBSERVATION_PAGE_MAX_CHARS = 8_000;
 
 const CHECK_OMISSION_WHY = {
   tokens: "cores, fonte, raio e espaçamento fora do registro de tokens do DS não foram medidos neste estado.",
-  structure: "a tag raiz e o nome acessível dos componentes br-* não foram conferidos neste estado.",
+  structure: "a tag raiz e o nome acessível dos componentes br-* e o indicador de foco visível não foram conferidos neste estado.",
   axe: "as regras do axe-core (WCAG) não rodaram neste estado.",
   page: "as regiões obrigatórias do Template Base (cabeçalho, rodapé) e o salto para o conteúdo não foram conferidos neste estado.",
 } as const;
@@ -94,7 +94,7 @@ export function checksRunFor(
   if (active.includes("structure") && recipe.components?.length) {
     omitted.push({
       check: "structure.components",
-      why: `a estrutura só foi conferida para ${[...recipe.components].sort().join(", ")}; os demais componentes br-* não foram conferidos neste estado.`,
+      why: `a estrutura só foi conferida para ${[...recipe.components].sort().join(", ")}; os demais componentes br-* e o indicador de foco visível não foram conferidos neste estado.`,
     });
   }
   // A chamada exata com SÓ o que faltou, na mesma receita (url, seletores, ações, chegada).
@@ -362,7 +362,102 @@ export function assembleScan(
   page: (familyBudget: number) => Record<string, unknown>,
   options: { firstScanPage?: boolean } = {},
 ) {
-  return enforceCeiling(assembleScanPage(head, observations, scanId, maxChars, page, options), maxChars, scanId);
+  let response = assembleScanPage(head, observations, scanId, maxChars, page, options);
+  if (options.firstScanPage) response = ensureFirstPageFamilies(response, head, observations, scanId, maxChars, page);
+  return enforceCeiling(response, maxChars, scanId);
+}
+
+/** 3.4.0 (B6): meta de famílias na 1ª página do scan (ou todas, se houver menos). */
+export const FIRST_PAGE_MIN_FAMILIES = 3;
+
+const listedItems = (r: Record<string, unknown>) =>
+  Array.isArray(r.families) ? r.families.length : Array.isArray(r.findings) ? r.findings.length : 0;
+
+/**
+ * 3.4.0 (B6, N-05): na 1ª página o cabeçalho cedia o orçamento e voltava 1 de 5 famílias (tela A),
+ * 1 de 6 (fluxo), 1 de 15 (tela B). Enquanto a página traz menos de FIRST_PAGE_MIN_FAMILIES e há mais,
+ * o cabeçalho encolhe por etapas — só o que tem continuação ou é constante —, e para na primeira que
+ * atinge a meta. O que encolheu fica em `compacted`; o inteiro continua no ledger (get_finding_details).
+ */
+function ensureFirstPageFamilies(
+  response: Record<string, unknown>,
+  head: Record<string, unknown>,
+  observations: Observation[] | null,
+  scanId: string,
+  maxChars: number,
+  page: (familyBudget: number) => Record<string, unknown>,
+): Record<string, unknown> {
+  const total = Number(response.totalFamilies ?? response.total ?? 0);
+  const want = Math.min(FIRST_PAGE_MIN_FAMILIES, total);
+  if (response.nextCursor === undefined || listedItems(response) >= want) return response;
+  const constants = (p: Record<string, unknown>) => {
+    const { familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, ...rest } = p;
+    return { ...rest, familyHint: "Mais famílias: get_finding_details(scanId, cursor=nextCursor); membros: get_finding_details(scanId, familyId, cursor=nextMemberCursor)." };
+  };
+  let h = head;
+  let obs = observations;
+  let pager = page;
+  const done: string[] = [];
+  const stages: Array<[string, () => boolean]> = [
+    ["observations → contagem + get_finding_details(view:observations)", () => {
+      if (!obs?.length) return false;
+      h = { ...h, observations: minimalObservations(obs, scanId) };
+      obs = null;
+      return true;
+    }],
+    ["investigate.items > 1 → investigate.more", () => {
+      const inv = h.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
+      if (!inv?.items || inv.items.length <= 1) return false;
+      const moved = inv.items.slice(1).map((i) => i.component);
+      h = { ...h, investigate: { ...inv, items: inv.items.slice(0, 1), more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] } } };
+      return true;
+    }],
+    ["familyKey/evidenceSignatureKey → removidos (constantes)", () => {
+      pager = (b) => constants(page(b));
+      return true;
+    }],
+    ["coverage → contagens (inteira no ledger)", () => {
+      const c = h.coverage as Record<string, unknown> | undefined;
+      if (!c) return false;
+      const count = (k: string) => (Array.isArray(c[k]) ? (c[k] as unknown[]).length : undefined);
+      const { componentsRequested: _r, evidenceSelectors: _e, ...rest } = c;
+      h = { ...h, coverage: { ...rest, componentsRequested: count("componentsRequested"), evidenceSelectors: count("evidenceSelectors") } };
+      return true;
+    }],
+    ["state → essencial (inteiro no ledger)", () => {
+      const st = h.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown } } | undefined;
+      if (!st) return false;
+      const o = st.observed ?? {};
+      h = {
+        ...h,
+        state: {
+          reached: st.reached,
+          replay: st.replay?.status,
+          settled: st.settle?.settled,
+          observed: { url: o.url, path: o.path, viewport: o.viewport, ...(o.httpStatus ? { httpStatus: o.httpStatus } : {}) },
+          full: { tool: "get_finding_details", arguments: { scanId } },
+        },
+      };
+      return true;
+    }],
+    ["investigate.items → investigate.more", () => {
+      const inv = h.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
+      if (!inv?.items?.length) return false;
+      const moved = inv.items.map((i) => i.component);
+      h = { ...h, investigate: { ...inv, items: [], more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] } } };
+      return true;
+    }],
+  ];
+  let best = response;
+  for (const [label, apply] of stages) {
+    if (!apply()) continue;
+    done.push(label);
+    const trial = assembleScanPage(h, obs, scanId, maxChars, pager, { firstScanPage: true });
+    if (textSize(trial) > maxChars || listedItems(trial) <= listedItems(best)) continue;
+    best = { ...trial, compacted: [...done, ...((trial.compacted as string[] | undefined) ?? [])] };
+    if (listedItems(best) >= want) break;
+  }
+  return best;
 }
 
 function assembleScanPage(

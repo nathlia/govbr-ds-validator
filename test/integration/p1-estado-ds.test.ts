@@ -106,9 +106,9 @@ describe("P1 2.14.2: S5 — estado de erro declarado pelo componente DS", () => 
     expect(knowledgeLockAttempts().attempts).toBe(before);
   });
 
-  it("contraprova de identificação textual continua: mensagem que nomeia o campo rejeita, mesmo com S5", async () => {
+  it("3.4.0 (B4): mensagem que só nomeia o campo não decide, mesmo com S5 — nunca rejected nem confirmed", async () => {
     const v = await evaluation(claim("/ds-erro-nomeia", "wcag", "3.3.1", ITEM));
-    expect(v.verdict).toBe("rejected");
+    expect(v.verdict).toBe("unverifiable");
   });
 
   const NEGATIVOS: Array<[string, string | null]> = [

@@ -35,12 +35,23 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
   });
 
-  it("still flags an anchor doing a button's job (href='#' or javascript:)", () => {
-    for (const href of ["#", "javascript: void(0)", ""]) {
-      const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href }, outerHTML: `<a class="br-button primary" href="${href}">Excluir</a>` });
+  it("still flags an anchor doing a button's job (javascript:, empty href, no href, role=button)", () => {
+    const cases: Array<[string | null, string | null]> = [["javascript: void(0)", null], ["", null], [null, null], ["#", "button"], ["/x", "button"]];
+    for (const [href, role] of cases) {
+      const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href, role }, outerHTML: `<a class="br-button primary">Excluir</a>` });
       const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "ds-structure-button-tag");
       expect(finding?.evidence.expected).toBe("Elemento <button>");
     }
+  });
+
+  it("3.4.0 (B3, F4-06-C): <a class='br-button' href='#'> is a link (exposed as link), not a finding", () => {
+    const el = makeElement({
+      tagName: "a",
+      classes: ["br-button", "secondary"],
+      attributes: { ...makeElement().attributes, href: "#" },
+      outerHTML: '<a class="br-button secondary" href="#">Voltar</a>',
+    });
+    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
   });
 
   it("flags br-button on a <div role=button>", () => {
@@ -192,5 +203,31 @@ describe("checkComponentStructure (against the real button spec)", () => {
   it("ignores elements that do not carry the root class", () => {
     const el = makeElement({ classes: ["outra-coisa"] });
     expect(checkComponentStructure(page, [el], buttonSpec)).toEqual([]);
+  });
+});
+
+describe("3.4.0 (B10): origem flatpickr e axe duplicado no mesmo elemento", () => {
+  it("o botão só com ícone injetado pelo flatpickr do datetimepicker sai marcado com a origem", () => {
+    const el = makeElement({ origin: "flatpickr", content: { textContent: "", hasVisibleText: false, hasIconOnly: true }, accessibleName: { name: "", source: "chromium" } });
+    const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "emag-2.2");
+    expect(finding?.evidence.observed).toContain("flatpickr");
+    expect(finding?.evidence.data?.origin).toEqual({ kind: "ds-third-party", library: "flatpickr", component: "datetimepicker" });
+  });
+
+  it("label e label-title-only no mesmo elemento (e-MAG 6.2) viram um achado, com a outra regra registrada", async () => {
+    const { mergeSameEmagOnElement } = await import("../../src/checkers/axe.js");
+    const mk = (id: string, severity: "critical" | "serious", locator = "#forma-presencial") => ({
+      id: `F-${id}`,
+      rule: { id, source: "axe-core" as const, description: id },
+      element: { locator, snippet: "", page: page.url },
+      evidence: { observed: id, expected: id, data: { emagId: "6.2" } },
+      severity,
+      nature: "syntactic" as const,
+      mode: "display" as const,
+      pathway: "deterministic" as const,
+    });
+    const merged = mergeSameEmagOnElement([mk("label-title-only", "serious"), mk("label", "critical"), mk("label", "critical", "#outro")]);
+    expect(merged.map((f) => [f.rule.id, f.element.locator])).toEqual([["label", "#forma-presencial"], ["label", "#outro"]]);
+    expect(merged[0].evidence.data?.alsoReportedBy).toEqual(["label-title-only"]);
   });
 });

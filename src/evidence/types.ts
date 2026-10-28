@@ -106,6 +106,17 @@ export interface ElementEvidence {
    * component's author, not to the page that used it, and the two are different findings.
    */
   inShadowDom: boolean;
+  /** 3.4.0 (B5): cor, largura e estilo de cada lado da borda — só quando borderColor foi pedido. */
+  borderSides?: Array<{ side: "top" | "right" | "bottom" | "left"; color: string; width: string; style: string }>;
+  /** 3.4.0: o elemento tem caixa na página e não está com visibility hidden. Ausente antes da 3.4.0. */
+  rendered?: boolean;
+  /**
+   * 3.4.0 (B10): origem conhecida do elemento quando não é marcação da página — `flatpickr` = injetado
+   * pela biblioteca de calendário que o datetimepicker do @govbr-ds/core usa.
+   */
+  origin?: "flatpickr";
+  /** 3.4.0 (B9): medição de foco visível, preenchida só pelo portão para o predicado focus-indicator. */
+  focusIndicator?: { focused: boolean; changed: string[] };
 }
 
 export interface PageEvidence {

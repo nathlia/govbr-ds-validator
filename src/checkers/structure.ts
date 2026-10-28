@@ -18,18 +18,28 @@ function isSemanticDividerException(el: ElementEvidence, spec: ComponentSpec): b
   return spec.name === "divider" && el.tagName.toLowerCase() === "hr";
 }
 
-/** Um `<a>` que leva a algum lugar: href presente e que não seja `#`, vazio nem `javascript:`. */
+/**
+ * Um `<a>` que é link: href presente e não vazio, que não seja `javascript:`, e sem `role="button"`.
+ *
+ * 3.4.0 (B3, F4-06-C): `href="#"` passou a contar como link. O controle conforme do catálogo é
+ * exatamente `<a class="br-button secondary" href="#">Voltar</a>` — o navegador o expõe como link
+ * (papel `link`, focável, Enter navega), e o verificador estrutural não tem como saber, pela tag, se
+ * um script transforma esse link em ação. Só a declaração explícita de ação (`role="button"`) ou um
+ * href que não é endereço (`javascript:`, vazio, ausente) mostram a âncora fazendo papel de botão.
+ */
 function navigates(el: ElementEvidence): boolean {
   const href = el.attributes.href?.trim();
-  return !!href && href !== "#" && !/^javascript:/i.test(href);
+  if (el.attributes.role?.trim().toLowerCase() === "button") return false;
+  return !!href && !/^javascript:/i.test(href);
 }
 
 /**
  * A tag é aceita quando está nos exemplos do próprio componente, ou quando está nos exemplos de
  * OUTRO componente e o uso é o mesmo de lá. O único caso emprestado hoje é `<a class="br-button">`:
  * o DS o publica como link com aparência de botão (breadcrumb, footer, menu), então vale quando o
- * link navega — e continua acusado quando é uma âncora fazendo papel de ação (`href="#"`). Antes
- * do D-51 o verificador lia só a pasta do botão e recusava a marcação oficial do breadcrumb.
+ * link navega — e continua acusado quando é uma âncora fazendo papel de ação (`javascript:`, sem href,
+ * `role="button"`). Antes do D-51 o verificador lia só a pasta do botão e recusava a marcação oficial
+ * do breadcrumb.
  */
 function tagAccepted(el: ElementEvidence, spec: ComponentSpec): boolean {
   const tag = el.tagName.toLowerCase();
@@ -107,7 +117,9 @@ export function checkComponentStructure(
           },
           ...base,
           evidence: {
-            observed: `Elemento interativo apenas com ícone, sem nome acessível (${spec.rootClass})`,
+            observed: `Elemento interativo apenas com ícone, sem nome acessível (${spec.rootClass})${
+              el.origin === "flatpickr" ? " — injetado pelo flatpickr, o calendário do datetimepicker do próprio DS (core), não marcação da página" : ""
+            }`,
             expected: "Nome acessível não vazio — por conteúdo, aria-labelledby, aria-label ou title",
             data: {
               component: spec.name,
@@ -115,6 +127,8 @@ export function checkComponentStructure(
               accessibleName: "",
               accessibleNameSource: accessibleName.source,
               ariaLabel: el.attributes.ariaLabel ?? null,
+              // 3.4.0 (B10): origem do elemento quando ele vem de componente de terceiros que o DS embute.
+              ...(el.origin === "flatpickr" ? { origin: { kind: "ds-third-party", library: "flatpickr", component: "datetimepicker" } } : {}),
             },
           },
           severity: "serious",

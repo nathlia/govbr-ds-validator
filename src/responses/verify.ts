@@ -104,6 +104,13 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
     case "page-http-error":
       reasons.push({ object: "state", code: "page-http-error", detail, status: "not-evaluated" });
       break;
+    // 3.4.0 (B2): inaplicabilidade e sujeito errado não desmentem o fato — ficam sem decisão, com passo próprio.
+    case "rule-not-applicable":
+      reasons.push({ object: "applicability", code: "rule-not-applicable", detail, status: "not-contradicted" });
+      break;
+    case "subject-not-a-dialog":
+      reasons.push({ object: "evidence", code: "subject-not-a-dialog", detail, status: "not-evaluated" });
+      break;
     default:
       break;
   }
@@ -208,6 +215,12 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
       case "locator-ambiguous":
       case "invalid-locator":
         add(step("fix-locator", r.code === "invalid-locator" ? "Use um seletor CSS válido (sem XPath nem text=) e repita." : "Restrinja element.locator ao elemento do defeito (o localizador resolveu elementos com valores diferentes) e repita.", "verify_finding", undefined, { keep: ["evidence", ...(scanId ? ["scanId"] : [])] }));
+        break;
+      case "rule-not-applicable":
+        add(step("keep-uncertain", "A condição desta regra não vale no estado medido (o detail diz por quê): isto não desmente o fato. Cite a regra que se aplica a este caso, ou mantenha o fato medido com rule: null."));
+        break;
+      case "subject-not-a-dialog":
+        add(step("fix-locator", "Use em element.locator o próprio diálogo (role=dialog/alertdialog, .br-modal, <dialog>), não o botão que o abre, e repita com as mesmas actions.", "verify_finding", undefined, { keep: ["evidence", ...(scanId ? ["scanId"] : [])] }));
         break;
       case "page-http-error":
         add(step("reproduce-state", "A página reaberta é uma página de erro HTTP: cite a URL da página validada (element.page) e repita."));

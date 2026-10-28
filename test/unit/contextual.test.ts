@@ -317,8 +317,8 @@ describe("P1 2.14.2: S5 — estado de erro declarado pelo componente DS (revisã
   });
 
   it("S5 é só a precondição: as contraprovas de identificação textual e de descrição continuam valendo", () => {
-    // a mensagem nomeia o campo: identificado em texto → contradicted, mesmo com S5
-    expect(run(trace([wrap([])], [wrap(["danger"])], "Número do cartão: use 8 dígitos.")).status).toBe("contradicted");
+    // 3.4.0 (B4): a mensagem nomeia o campo só em texto → undetermined (nunca contradicted), mesmo com S5
+    expect(run(trace([wrap([])], [wrap(["danger"])], "Número do cartão: use 8 dígitos.")).status).toBe("undetermined");
     // descrição: texto novo que o oráculo não descarta → undetermined, nunca verified
     const t = trace([wrap([])], [wrap(["danger"])]);
     t[1].visibleText = ["Cartão", "Valor inválido."];
@@ -391,9 +391,9 @@ describe("P1 2.14.3: vínculo ESTA mensagem ↔ ESTE campo (revisão Codex 4d66c
     expect(r.detail).toContain("casa 2 elementos");
   });
 
-  it("o vínculo não é prova automática: a mensagem certa que nomeia o campo contradiz; invalid exposto contradiz", () => {
+  it("o vínculo não é prova automática: a mensagem certa que nomeia o campo não decide (B4); invalid exposto contradiz", () => {
     const bound = { binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) };
-    expect(run(trace(bound, { text: "Telefone inválido." })).status).toBe("contradicted");
+    expect(run(trace(bound, { text: "Telefone inválido." })).status).toBe("undetermined");
     const t = trace(bound);
     expect(evaluateContext(cond, f, { actions, trace: t, accessibility: [{ ...ax, ax: { ...ax.ax, invalid: true } }] }).status).toBe("contradicted");
   });

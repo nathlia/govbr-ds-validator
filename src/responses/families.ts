@@ -298,7 +298,7 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
       evidenceSignature: evidenceSignature(first),
       value: valueOf(first),
       // 3.3.0 (N-05): o exemplo não repete o que a família já diz (página, severidade, natureza, modo, via).
-      example: slimExample(projectFinding(first, "summary") as Record<string, unknown>),
+      example: slimExample(projectFinding(first, "summary") as Record<string, unknown>, valueOf(first)),
       gate: gateTally(members, options.verificationFor),
       memberIds: listed,
       membersReturned: listed.length,
@@ -430,8 +430,10 @@ export function familyIndex(findings: Finding[], stateFingerprint: string | null
   };
 }
 
-function slimExample(example: Record<string, unknown>) {
+function slimExample(example: Record<string, unknown>, value?: string) {
   const { page: _page, ...element } = (example.element ?? {}) as Record<string, unknown>;
   const { severity: _s, nature: _n, mode: _m, pathway: _p, ...rest } = example;
+  // 3.4.0 (B6): `observed` igual ao `value` da família não se repete no exemplo.
+  if (value !== undefined && rest.observed === value) delete rest.observed;
   return { ...rest, element };
 }

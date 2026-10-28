@@ -164,6 +164,13 @@ Object.assign(PAGES, {
   "/p3-foco-primaria-tarde": modalPage({ initial: "primary", delayed: true }),
   "/p3-invocador-removido": modalPage({ restore: false, removeInvoker: true }),
   "/p3-ao-carregar": modalPage({ restore: false, openOnLoad: true }),
+  // 3.4.0 (B2, tela B): diálogo criado só ao abrir (estilo SweetAlert) e removido ao fechar; foco vai ao body.
+  "/p3-criado": page(
+    `<button id="exportar" class="br-button primary">Exportar</button>`,
+    `document.getElementById('exportar').addEventListener('click', () => { const d = document.createElement('div'); d.className = 'popup'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+       d.innerHTML = '<p>Exportar dados</p><button class="cancelar">Cancelar</button>'; document.body.appendChild(d); d.querySelector('.cancelar').focus();
+       d.addEventListener('keydown', (e) => { if (e.key === 'Escape') d.remove(); }); });`
+  ),
   "/p3-foco-fora": modalPage({ initial: "none" }),
   "/p3-foco-primaria": modalPage({ initial: "primary" }),
   "/p3-foco-secundaria": modalPage({ initial: "secondary" }),
@@ -283,9 +290,10 @@ describe("P1 — associação controle↔erro (WCAG 3.3.1 / e-MAG 6.6)", () => {
     expect(v.detail).toContain("aria-describedby→codigo-msgs");
   });
 
-  it("alternativa válida: mensagem que nomeia o campo, sem ARIA nenhum, é conforme", async () => {
+  it("3.4.0 (B4): mensagem que só nomeia o campo, sem ARIA nenhum, não decide (nunca rejected)", async () => {
     const v = await verdict(claim("/p1-nomeia-campo", "#codigo", WCAG331, identified()), SUBMIT);
-    expect(v.verdict).toBe("rejected");
+    expect(v.verdict).toBe("unverifiable");
+    expect(v.detail).toContain("não é associação programática");
   });
 
   it("shadow root aberto: IDREF que não atravessa a fronteira não vincula (2.14.3); contêiner só do campo confirma; mensagem na mesma raiz rejeita", async () => {
@@ -470,6 +478,22 @@ describe("P3 — foco em transições", () => {
     expect(removido.detail).toContain("invocador saiu do documento");
   });
 
+  it("3.4.0 (B2, A-01): invocador como sujeito → unverifiable subject-not-a-dialog (nunca rejected); o diálogo como sujeito confirma", async () => {
+    const CLICK_CLOSE: PageAction[] = [{ action: "click", selector: "#abrir" }, { action: "wait", ms: 50 }, { action: "press", key: "Escape" }, { action: "wait", ms: 50 }];
+    const invoker = await verdict(claim("/p3-nao-restaura", "#abrir", RESTORE, { expectedCondition: C.focusRestored }), CLICK_CLOSE);
+    expect(invoker.verdict).toBe("unverifiable");
+    expect(invoker.issue).toBe("subject-not-a-dialog");
+    expect(invoker.detail).not.toContain("já estava aberta ao carregar");
+    expect((await verdict(claim("/p3-nao-restaura", "#janela", RESTORE, { expectedCondition: C.focusRestored }), CLICK_CLOSE)).verdict).toBe("confirmed");
+    // aberta ao carregar e nada focado: a regra não se aplica — inaplicável, não contradição
+    const aoCarregar = await verdict(claim("/p3-ao-carregar", "#janela", RESTORE, { expectedCondition: C.focusRestored }), [{ action: "press", selector: "#janela .close", key: "Escape" }]);
+    expect(aoCarregar.verdict).toBe("unverifiable");
+    // diálogo criado na abertura (SweetAlert): o invocador é sujeito errado; o diálogo confirma
+    const OPEN_SWAL: PageAction[] = [{ action: "click", selector: "#exportar" }, { action: "wait", ms: 50 }, { action: "press", key: "Escape" }, { action: "wait", ms: 50 }];
+    expect((await verdict(claim("/p3-criado", "#exportar", RESTORE, { expectedCondition: C.focusRestored }), OPEN_SWAL)).issue).toBe("subject-not-a-dialog");
+    expect((await verdict(claim("/p3-criado", "[role=dialog]", RESTORE, { expectedCondition: C.focusRestored }), OPEN_SWAL)).verdict).toBe("confirmed");
+  });
+
   it("dado faltante e estado diferente: sem abertura no traço, ou fingerprint de outro estado → unverifiable", async () => {
     expect((await verdict(claim("/p3-nao-restaura", "#janela", RESTORE, { expectedCondition: C.focusRestored }), [{ action: "press", key: "Escape" }])).verdict).toBe("unverifiable");
     // outro estado: a modal aberta (abrir e fechar volta ao DOM inicial, que é o mesmo estado)
@@ -499,7 +523,10 @@ describe("P3 — foco em transições", () => {
     const data = { expectedCondition: C.initialFocus };
     expect((await verdict(claim("/p3-restaura", "#janela", INFO, data), OPEN)).verdict).toBe("rejected");
     expect((await verdict(claim("/p3-foco-fora", "#janela", INFO, data), OPEN)).verdict).toBe("confirmed");
-    expect((await verdict(claim("/p3-foco-campo", "#janela", INFO, data), OPEN)).verdict).toBe("rejected");
+    // 3.4.0 (B2): com campo a regra da modal informativa não se aplica — inaplicável, não contradição
+    const campo = await verdict(claim("/p3-foco-campo", "#janela", INFO, data), OPEN);
+    expect(campo.verdict).toBe("unverifiable");
+    expect(campo.issue).toBe("rule-not-applicable");
   });
 
   it("confinamento do Tab: sai da modal confirma; laço a partir do último rejeita", async () => {
@@ -516,7 +543,7 @@ describe("P3 — foco em transições", () => {
     const salvar: PageAction[] = [{ action: "click", selector: "#salvar" }];
     expect((await verdict(claim("/p3-message", "#aviso", msg, data), salvar)).verdict).toBe("confirmed");
     expect((await verdict(claim("/p3-message-ok", "#aviso", msg, data), salvar)).verdict).toBe("rejected");
-    expect((await verdict(claim("/p3-message-sem-fechar", "#aviso", msg, data), salvar)).verdict).toBe("rejected");
+    expect((await verdict(claim("/p3-message-sem-fechar", "#aviso", msg, data), salvar)).verdict).toBe("unverifiable");
     const menu = { id: KB("accessibility-menu-a3be6788bdea"), source: "govbr-ds-kb" as const };
     expect((await verdict(claim("/p3-menu", "#menu", menu, data), [{ action: "click", selector: "#abrir-menu" }])).verdict).toBe("confirmed");
   });

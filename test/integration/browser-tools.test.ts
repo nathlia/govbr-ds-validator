@@ -52,7 +52,7 @@ const FIXTURE_HTML = `<!DOCTYPE html>
     <button id="btn-arbitrary-color" class="br-button primary" type="button">Cor arbitrária</button>
     <button id="btn-wrong-font" class="br-button primary" type="button">Fonte errada</button>
     <button id="btn-bad-radius" class="br-button secondary" type="button">Raio errado</button>
-    <a id="link-as-button" class="br-button primary" href="#">Sou um link</a>
+    <a id="link-as-button" class="br-button primary" href="javascript:void(0)">Sou um link</a>
     <button id="btn-icon-only" class="br-button circle primary" type="button"><svg width="16" height="16"><rect width="16" height="16" fill="currentColor"/></svg></button>
     <button id="state-toggle" type="button" aria-expanded="false">Alternar estado</button>
   </main>
@@ -269,11 +269,13 @@ describe("scan_page aggregate fast path", () => {
     expect(first.cacheHit).toBe(false);
     expect(first.cacheMissReason).toBe("no-exact-fingerprint-and-scope-match");
     expect(first.stateFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
+    // 3.4.0 (B8): com seletores, os descendentes das 7 raízes .br-button também são inspecionados.
     expect(first.coverage).toEqual(expect.objectContaining({
       checks: ["axe", "structure", "tokens"],
-      elementsInspected: 7,
+      selectorScope: "matched-and-descendants",
       componentsRequested: ["button"],
     }));
+    expect(first.coverage.elementsInspected).toBeGreaterThan(7);
     expect(first.coverage.axe.engine.name).toBe("axe-core");
     const ruleIds = first.findings.map((finding: { rule: { id: string } }) => finding.rule.id);
     expect(ruleIds).toContain("ds-token-color");
@@ -331,7 +333,8 @@ describe("scan_page aggregate fast path", () => {
     expect(expanded.stateDiff).toEqual(expect.objectContaining({
       previousScanId: idle.scanId,
       stateChanged: true,
-      elementsInspectedDelta: 0,
+      // 3.4.0 (B8): o ícone que a interação põe dentro do botão é descendente do escopo e conta.
+      elementsInspectedDelta: expect.any(Number),
     }));
     // Revisão da 3.0.0: contagens + poucos ids no cabeçalho; o diff completo por view:"diff".
     expect(expanded.stateDiff.findings).toMatchObject({ added: 1, removed: 0, removedIds: [] });

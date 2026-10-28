@@ -6,6 +6,8 @@ import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type 
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
+import { checkFocusIndicators } from "../checkers/focusIndicator.js";
+import { FOCUSABLE_SELECTOR, measureFocusIndicators } from "../evidence/focusIndicator.js";
 import { ANATOMY_ROOT_SELECTOR, checkAnatomy } from "../checkers/anatomy.js";
 import { collectAnatomy } from "../evidence/context.js";
 import { inspectPageStructure } from "../evidence/pageFacts.js";
@@ -27,6 +29,10 @@ import {
 } from "./state.js";
 
 export type PageScanCheck = "tokens" | "structure" | "axe" | "page";
+
+/** 3.4.0 (B5): elementos de texto e separadores cuja cor o scan confere além de DEFAULT_SELECTOR. */
+export const TEXT_COLOR_SELECTOR =
+  "p, span, label, li, dt, dd, h1, h2, h3, h4, h5, h6, small, strong, em, b, td, th, caption, legend, figcaption, blockquote, hr";
 export type PageScanAction = PageAction;
 
 export interface PageScanRequest {
@@ -85,6 +91,8 @@ export interface PageScanResult {
     checks: PageScanCheck[];
     /** Explicit selectors from the request; empty means each checker uses its documented default. */
     selectors: string[];
+    /** 3.4.0 (B8): com seletores, tokens/estrutura inspecionam os elementos casados E os descendentes deles. */
+    selectorScope?: "matched-and-descendants";
     /** Ausente no perfil knowledge-free (2.14.0): só o axe roda, sem seletores de evidência. */
     evidenceSelectors?: string[];
     axeScope: string | null;
@@ -94,7 +102,7 @@ export interface PageScanResult {
     /** Ausente no perfil knowledge-free (2.14.0). */
     componentsFound?: string[];
     axe?: { engine: { name: string; version: string }; passes: number; incomplete: number };
-    actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string }>;
+    actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string; path?: string }>;
   };
   deduplication: {
     input: number;
@@ -114,7 +122,7 @@ export interface PageScanUnreached {
   url: string;
   stateFingerprint: null;
   state: StateAttestation;
-  limitation: { kind: "action-error" | "arrival-not-met"; detail: string };
+  limitation: { kind: "action-error" | "arrival-not-met"; detail: string; httpStatus?: number };
 }
 
 export type PageScanOutcome = PageScanResult | PageScanUnreached;
@@ -199,17 +207,53 @@ export async function reproduceState(
   };
 }
 
+/**
+ * 3.4.0 (B1, P-01/P-02): achados de nível de página (cabeçalho, rodapé, salto — e os do axe sobre o
+ * documento inteiro) vêm primeiro, na ordem estável, para caberem na 1ª página do scan. Só a ordem
+ * muda: ids, contagens e conteúdo dos achados são os mesmos.
+ */
+export function pageLevelFirst(findings: Finding[]): Finding[] {
+  const rank = (f: Finding) => (f.rule.source === "govbr-ds-page" ? 0 : f.element.locator === "html" ? 1 : 2);
+  return findings.map((f, i) => ({ f, i })).sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i).map(({ f }) => f);
+}
+
+/** 3.4.0 (B9): teto de elementos focáveis medidos por scan. */
+export const FOCUS_INDICATOR_LIMIT = 300;
+
+async function focusIndicatorFindings(page: Page, url: string, selectors: string[]): Promise<Finding[]> {
+  const focusable = await inspectPageComputedStyles(page, url, FOCUSABLE_SELECTOR, []);
+  let candidates = focusable.elements.filter(
+    (element) => element.rendered !== false && !element.attributes.disabled && element.attributes.ariaDisabled !== "true" && element.origin === undefined
+  );
+  if (selectors.length) {
+    const scoped = await inspectPageComputedStyles(page, url, selectors, [], { descendants: true });
+    const inScope = new Set(scoped.elements.map((element) => element.locator));
+    candidates = candidates.filter((element) => inScope.has(element.locator));
+  }
+  candidates = candidates.slice(0, FOCUS_INDICATOR_LIMIT);
+  const facts = await measureFocusIndicators(page, candidates.map((element) => element.locator));
+  const snippetOf = new Map(candidates.map((element) => [element.locator, element.outerHTML.slice(0, 300)]));
+  return checkFocusIndicators({ url }, facts.map((fact) => ({ ...fact, snippet: snippetOf.get(fact.locator) ?? "" })));
+}
+
 export function unreachedLimitation(state: StateAttestation): PageScanUnreached["limitation"] {
+  // 3.4.0 (B7): uma página de erro HTTP por trás do estado não alcançado fica dita na limitação —
+  // na tela B, o 404 de uma rota de SPA sem fallback aparecia só como "visible não satisfeito".
+  const http = state.observed.httpStatus;
+  const httpNote = http !== undefined
+    ? ` A página carregada respondeu HTTP ${http}: o estado medido é uma página de erro. Numa SPA servida sem fallback de rota, carregue a raiz do app e use a ação navigate com o caminho.`
+    : "";
   if (state.replay.status === "failed") {
     const f = state.replay.failure;
-    return { kind: "action-error", detail: `Passo ${f.index} (${f.action}) da receita falhou: ${f.reason}. ${f.detail}` };
+    return { kind: "action-error", detail: `Passo ${f.index} (${f.action}) da receita falhou: ${f.reason}. ${f.detail}${httpNote}`, ...(http !== undefined ? { httpStatus: http } : {}) };
   }
   const failed = state.arrival.conditions.filter((c) => !c.satisfied);
   return {
     kind: "arrival-not-met",
     detail: `Condição(ões) de chegada não satisfeita(s): ${failed
       .map((c) => `${c.condition} (esperado ${JSON.stringify(c.expected)}, observado ${JSON.stringify(c.observed)}${c.detail ? `: ${c.detail}` : ""})`)
-      .join("; ")}.`,
+      .join("; ")}.${httpNote}`,
+    ...(http !== undefined ? { httpStatus: http } : {}),
   };
 }
 
@@ -274,7 +318,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
 
     if (checks.includes("tokens") || checks.includes("structure")) {
       const properties = checks.includes("tokens") ? tokenProperties(activeTokenChecks) : [];
-      const evidence = await inspectPageComputedStyles(page, request.url, selectors, properties);
+      // 3.4.0 (B8): com seletores explícitos o escopo é a região — a raiz e os seus descendentes.
+      const evidence = await inspectPageComputedStyles(page, request.url, selectors, properties, { descendants: normalized.selectors.length > 0 });
       elementsInspected = evidence.count;
       componentsFound = [
         ...new Set(
@@ -289,6 +334,16 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         );
         if (activeTokenChecks.includes("font")) {
           observations.push(...collectTokenObservations({ url: request.url }, evidence.elements, getTokenRegistry()));
+        }
+        // 3.4.0 (B5, V-09): texto autoral fora dos controles (`p`, `span`, títulos, células, `hr`) também
+        // tem a cor conferida — só a cor, só elementos exibidos, e com a mesma exigência de autoria (cor
+        // herdada ou da folha do DS não conta). Com seletores explícitos, os descendentes já entram (B8).
+        if (activeTokenChecks.includes("color") && normalized.selectors.length === 0) {
+          const text = await inspectPageComputedStyles(page, request.url, TEXT_COLOR_SELECTOR, ["backgroundColor", "color", "borderColor"]);
+          const known = new Set(evidence.elements.map((element) => element.locator));
+          const authoredText = text.elements.filter((element) => element.rendered !== false && !known.has(element.locator));
+          elementsInspected += authoredText.length;
+          rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
         }
       }
       if (checks.includes("structure")) {
@@ -338,16 +393,24 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       };
     }
 
+    // 3.4.0 (B9): foco visível — por último, porque dar foco pode disparar reações da página (abrir um
+    // calendário, um menu) e nenhum outro check pode ler o estado depois disso. Não é verificação de
+    // componente: com `components` restrito, não roda (e checksRun diz isso).
+    if (checks.includes("structure") && normalized.components.length === 0) {
+      rawFindings.push(...(await focusIndicatorFindings(page, request.url, normalized.selectors)));
+    }
+
     const deduplicated = deduplicateFindings(rawFindings);
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
       stateFingerprint,
-      findings: deduplicated.findings,
+      findings: pageLevelFirst(deduplicated.findings),
       observations,
       coverage: {
         checks,
         selectors: normalized.selectors,
+        ...(normalized.selectors.length ? { selectorScope: "matched-and-descendants" as const } : {}),
         evidenceSelectors: checks.includes("tokens") || checks.includes("structure") ? selectors : [],
         axeScope: checks.includes("axe")
           ? (normalized.selectors.length ? normalized.selectors.join(", ") : "document")
@@ -357,7 +420,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         componentsFound,
         actionsApplied: (request.actions ?? []).map((action) => ({
           action: action.action,
-          ...(action.selector ? { selector: action.selector } : {}),
+          ...("selector" in action && action.selector ? { selector: action.selector } : {}),
+          ...(action.action === "navigate" ? { path: action.path } : {}),
           ...(action.action === "press" ? { key: action.key } : {}),
         })),
         ...(axe ? { axe } : {}),
@@ -406,7 +470,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
       status: "scanned",
       url: request.url,
       stateFingerprint,
-      findings: deduplicated.findings,
+      findings: pageLevelFirst(deduplicated.findings),
       observations: [],
       coverage: {
         checks,
@@ -415,7 +479,8 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
         elementsInspected: 0,
         actionsApplied: (request.actions ?? []).map((action) => ({
           action: action.action,
-          ...(action.selector ? { selector: action.selector } : {}),
+          ...("selector" in action && action.selector ? { selector: action.selector } : {}),
+          ...(action.action === "navigate" ? { path: action.path } : {}),
           ...(action.action === "press" ? { key: action.key } : {}),
         })),
         axe: { engine: result.engine, passes: result.passeCount, incomplete: result.incompleteCount },
