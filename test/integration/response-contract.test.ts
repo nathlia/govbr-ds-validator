@@ -166,7 +166,11 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
       expect(g.next).toEqual({ tool: "get_ds_rules", arguments: { query: "fechar", component: g.group } });
     }
     const outros = groups.find((x: { group: string }) => x.group === "outros");
-    if (outros) expect(Object.keys(outros)).toEqual(["group", "matched", "members"]);
+    // 3.3.0 (N-16): o grupo "outros" também traz a chamada exata (o 1º membro).
+    if (outros) {
+      expect(Object.keys(outros)).toEqual(["group", "matched", "members", "next"]);
+      expect(outros.next).toEqual({ tool: "get_ds_rules", arguments: { query: "fechar", component: outros.members[0] } });
+    }
     // Revisão NAT-99: ambiguidade não troca o conjunto de resultados.
     expect(r.results.length).toBe(5);
     r.results.forEach(expectCard);

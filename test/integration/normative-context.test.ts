@@ -135,9 +135,14 @@ describe("get_ds_rules context — contract", () => {
   });
 
   it("documented name variants resolve; undocumented ones are reported, never guessed", async () => {
-    const data = await call(evaluation, "get_ds_rules", { context: { components: ["Br-Button", "Cookie Bar", "carrossel"] } });
+    const data = await call(evaluation, "get_ds_rules", { context: { components: ["Br-Button", "Cookie Bar", "carrosel"] } });
     expect(data.query.components).toEqual(["button", "cookiebar"]);
-    expect(data.query.unresolved).toEqual(["carrossel"]);
+    expect(data.query.unresolved).toEqual(["carrosel"]);
+    // 3.3.0 (B-11): não resolvido traz sugestões; só nomes não resolvidos = erro de nome (a glosa PT que
+    // resolve é testada na base literal, knowledgeLiteral.test.ts).
+    expect(data.query.unresolvedDidYouMean).toEqual({ carrosel: ["carousel"] });
+    const onlyUnknown = await call(evaluation, "get_ds_rules", { context: { components: ["carrosel"] } });
+    expect(onlyUnknown).toMatchObject({ errorCode: "unknown-component", field: "context.components", didYouMean: ["carousel"] });
     // 2.17.0 (B-05): fora do context, component usa o mesmo resolvedor; match:"literal" mantém o id
     // exato da 2.8.0; nome desconhecido é erro de entrada com sugestões, não "0 regras".
     const byComponent = await call(evaluation, "get_ds_rules", { component: "Button" });
@@ -145,7 +150,7 @@ describe("get_ds_rules context — contract", () => {
     expect(byComponent.items.length).toBeGreaterThan(0);
     expect(byComponent.items.map((r: { id: string }) => r.id)).toEqual(exact.items.map((r: { id: string }) => r.id));
     expect((await call(evaluation, "get_ds_rules", { component: "Button", match: "literal" })).count).toBe(0);
-    const unknown = await call(evaluation, "get_ds_rules", { component: "carrossel", query: "foco" });
+    const unknown = await call(evaluation, "get_ds_rules", { component: "carrosel", query: "foco" });
     expect(unknown).toMatchObject({ errorCode: "unknown-component", field: "component", didYouMean: ["carousel"] });
     expect(unknown.available).toContain("carousel");
     expect(unknown.absenceNote).toBeUndefined();

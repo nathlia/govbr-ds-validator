@@ -19,8 +19,13 @@ describe("NAT-96 MCP and core execution provenance", () => {
       expect(emag.contract).toBe("oraculo-resposta/1.0.0");
       expect(emag.description).toContain("tabelas extensas");
       expect(emag.normativeContext.contextCompleteness).toContain("não exaustivos");
-      expect(emag.validationTemplate.citation).toMatchObject({ kind: "historical", legacyResolution: { status: "mapped" } });
-      expect((await call("get_ds_rules", { id: emag.validationTemplate.ruleId })).kind).toBe("historical");
+      // 3.3.0 (B-09): o template aponta a cláusula CORRENTE que obriga; o id histórico fica em from/historicalRuleId.
+      expect(emag.validationTemplate.citation).toMatchObject({ kind: "current", basis: "emag-unit-obligation", from: { kind: "historical", legacyResolution: { status: "mapped" } } });
+      expect(emag.validationTemplate.ruleId).toBe(emag.validationTemplate.citation.id);
+      expect(emag.normativeContext.clauses.map((c: any) => c.id)).toContain(emag.validationTemplate.ruleId);
+      expect(["required", "prohibited"]).toContain(emag.normativeContext.clauses.find((c: any) => c.id === emag.validationTemplate.ruleId).force);
+      expect((await call("get_ds_rules", { id: emag.validationTemplate.historicalRuleId })).kind).toBe("historical");
+      expect((await call("get_ds_rules", { id: emag.validationTemplate.ruleId })).kind).toBe("normative");
       const section = await call("get_emag_rules", { section: 3 });
       expect(section.section.rules.find((r: any) => r.id === "3.9").description).toBe(emag.description);
       // 3.0.0 (§8): a listagem da seção leva `more` (contagem + chamada por id), não o ponteiro normativeContext.

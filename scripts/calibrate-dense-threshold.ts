@@ -8,7 +8,9 @@
  * vazio ou igual à cláusula), embutido como pergunta ("query: "), contra o vetor guardado da própria regra.
  * Negativos: o mesmo título contra o vetor guardado de uma regra sorteada de OUTRO componente (global é
  * um grupo), semente fixa (mulberry32, 107), duas voltas sobre as regras (≥ 5.000 pares).
- * Limiar = percentil 95 dos negativos, arredondado a 3 casas. Imprime JSON.
+ * Limiar = percentil 95 dos negativos, arredondado a 3 casas. 3.3.0 (NAT-109, N-08): limiar estrito =
+ * percentil 99 dos MESMOS negativos — vale para uma cláusula só-vetorial que não divide nenhum termo de
+ * conteúdo com a pergunta. Imprime JSON.
  */
 import { activeKnowledgeVersion, getKnowledgeBase } from "../src/data/knowledge.js";
 import { activeModelKey, cosine, denseState, embedText } from "../src/data/embeddings.js";
@@ -54,7 +56,8 @@ const pct = (xs: number[], p: number) => {
   return s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)];
 };
 const threshold = Math.round(pct(neg, 95) * 1000) / 1000;
-const dist = (xs: number[]) => Object.fromEntries([5, 25, 50, 75, 95].map((p) => [`p${p}`, pct(xs, p)]));
+const strictThreshold = Math.round(pct(neg, 99) * 1000) / 1000;
+const dist = (xs: number[]) => Object.fromEntries([5, 25, 50, 75, 95, 99].map((p) => [`p${p}`, pct(xs, p)]));
 console.log(
   JSON.stringify(
     {
@@ -64,6 +67,8 @@ console.log(
       negative: dist(neg),
       positive: dist(pos),
       threshold,
+      strictThreshold,
+      positivesAtOrAboveStrict: +(pos.filter((x) => x >= strictThreshold).length / pos.length).toFixed(4),
       positivesAtOrAbove: +(pos.filter((x) => x >= threshold).length / pos.length).toFixed(4),
     },
     null,

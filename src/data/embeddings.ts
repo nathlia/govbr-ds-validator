@@ -45,6 +45,9 @@ export interface ModelEntry {
   /** Cosseno mínimo para uma regra entrar só pela busca vetorial (fixado antes de medir). */
   threshold: number;
   thresholdSource: string;
+  /** 3.3.0 (N-08): cosseno mínimo para uma cláusula só-vetorial SEM termo de conteúdo em comum com a pergunta (p99 dos negativos). Ausente: essa entrada não existe. */
+  strictThreshold?: number;
+  strictThresholdSource?: string;
   files: Array<{ path: string; size: number; sha256: string }>;
 }
 export interface ModelsManifest {

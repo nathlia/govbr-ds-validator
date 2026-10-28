@@ -17,6 +17,8 @@
       },
       "dim": 384,
       "threshold": 0.856,
+      "strictThreshold": 0.87,
+      "strictThresholdSource": "3.3.0 (NAT-109, N-08): percentil 99 dos MESMOS 6.008 pares negativos do threshold (scripts/calibrate-dense-threshold.ts, semente 107, só a base) = 0,870; 96,5% dos positivos ficam >= 0,870. Vale só para uma cláusula só-vetorial que não divide nenhum termo de conteúdo com a pergunta. Fixado antes de medir.",
       "thresholdSource": "Calibrado só na base (scripts/calibrate-dense-threshold.ts, sem perguntas nem julgamentos do benchmark): percentil 95 dos cossenos de 6.008 pares negativos (título de uma regra como \"query: \" × cláusula guardada de uma regra de OUTRO componente, semente 107) = 0,856; os 3.004 pares positivos (título × a própria cláusula) têm mediana 0,909 e 98,9% ficam ≥ 0,856. Substitui o 0,925 da 1ª versão (transposição arbitrária do 0,75 do sentence-transformers para a faixa 0,7–1,0 do cartão do e5), que não deixava entrar nenhuma regra só pelo vetor.",
       "files": [
         {

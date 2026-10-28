@@ -67,7 +67,7 @@ export const RuleRefSchema = z.object({
   id: z
     .string()
     .describe(
-      "Rule identifier, e.g. 'govbr-3.7.0-…' (KB id — preferred when the rule came from get_ds_rules), 'emag-3.5', 'token-color', 'br-button-structure', 'color-contrast' (axe)"
+      "Rule identifier, e.g. 'govbr-3.7.0-…' (KB id — preferred when the rule came from get_ds_rules), 'emag-3.5', 'ds-token-color', 'ds-structure-button-tag', 'color-contrast' (axe)"
     ),
   source: RuleSourceSchema,
   description: z.string().describe("What the rule requires, quoted or paraphrased from the source"),

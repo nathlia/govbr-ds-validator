@@ -76,9 +76,11 @@ describe("modelo presente quando exigido", () => {
   });
 });
 
-describe("padrão léxico (D-149) = 3.1.0 byte a byte", () => {
-  it("sem retrieval nem GOVBR_RETRIEVAL_MODE: cada resposta igual à da 3.1.0 (fixture a08c90e), cursores incluídos", async () => {
-    const fixture = JSON.parse(readFileSync(new URL("../fixtures/lexical-3.1.0-get-ds-rules.json", import.meta.url), "utf8")) as {
+// 3.3.0 (NAT-109, D-151): o motor léxico muda de propósito (govbr-lexical/1.2.0); a fixture da 3.1.0 fica como
+// registro e a guarda passa a ser a fixture 3.3.0 (mesmas consultas).
+describe("padrão léxico (D-149) = fixture 3.3.0 byte a byte", () => {
+  it("sem retrieval nem GOVBR_RETRIEVAL_MODE: cada resposta igual à fixture 3.3.0, cursores incluídos", async () => {
+    const fixture = JSON.parse(readFileSync(new URL("../fixtures/lexical-3.3.0-get-ds-rules.json", import.meta.url), "utf8")) as {
       steps: Array<{ args: Record<string, unknown>; cursorFrom?: number; isError: boolean; sha256: string }>;
     };
     const texts: string[] = [];
@@ -153,11 +155,13 @@ describe("RRF (pura)", () => {
 });
 
 describe("âncora na base", () => {
-  it("≥ 1 e ≥ metade dos termos de conteúdo na base", () => {
+  it("≥ 1 e MAIS da metade dos termos de conteúdo na base (3.3.0, N-09: maioria estrita)", () => {
     expect(kbAnchor("xyzzy quux")).toMatchObject({ inKb: 0, anchored: false });
     expect(kbAnchor("xyzzy quux componente")).toMatchObject({ terms: 3, inKb: 1, anchored: false });
     expect(kbAnchor("futebol campeonato brasileiro").anchored).toBe(false);
-    expect(kbAnchor("xyzzy foco")).toMatchObject({ terms: 2, inKb: 1, anchored: true });
+    expect(kbAnchor("xyzzy foco")).toMatchObject({ terms: 2, inKb: 1, anchored: false });
+    expect(kbAnchor("futebol botão")).toMatchObject({ terms: 2, inKb: 1, anchored: false });
+    expect(kbAnchor("xyzzy foco modal")).toMatchObject({ terms: 3, inKb: 2, anchored: true });
     expect(kbAnchor("leitor de tela não anuncia o erro").anchored).toBe(true);
   });
 });
@@ -187,7 +191,7 @@ describe.skipIf(!ready)("vetores locais e fusão", () => {
     const a = await rankForQuery(input, "hybrid");
     const b = await rankForQuery(input, "hybrid");
     expect(a.results.map((s) => [s.rule.id, s.score, s.via])).toEqual(b.results.map((s) => [s.rule.id, s.score, s.via]));
-    expect(a.ranking).toMatchObject({ engine: "govbr-hybrid/1.0.0", dense: expect.stringMatching(new RegExp(`^${key}@`)), fusion: `rrf-k${RRF_K}-top50` });
+    expect(a.ranking).toMatchObject({ engine: "govbr-hybrid/1.1.0", dense: expect.stringMatching(new RegExp(`^${key}@`)), fusion: `rrf-k${RRF_K}-top50` });
     const lex = new Set(a.lexical.results.map((s) => s.rule.id));
     const qAdmit = await embedText(key, input.text, "query");
     const state = await denseState();
@@ -214,7 +218,9 @@ describe.skipIf(!ready)("vetores locais e fusão", () => {
       for (const c of r.data.results) expect(c.why.via, JSON.stringify(args)).not.toBe("dense");
       // Sem só-vetoriais, a resposta é a do motor léxico (mesmas unidades); dense = ausência.
       const lexical = await call(client, args);
-      expect(r.data.results.map((c: { citeAs: string }) => c.citeAs)).toEqual(mode === "dense" ? [] : lexical.data.results.map((c: { citeAs: string }) => c.citeAs));
+      // (a fusão pode reordenar; as unidades são as mesmas)
+      const ids = (d: Record<string, any>) => d.results.map((c: { citeAs: string }) => c.citeAs).sort();
+      expect(ids(r.data)).toEqual(mode === "dense" ? [] : ids(lexical.data));
     }
     for (const mode of ["hybrid", "dense"]) {
       const none = await call(client, { query: "xyzzy quux", component: "modal", retrieval: mode });
@@ -242,8 +248,13 @@ describe("fallback: vetores indisponíveis → léxica, declarado", () => {
     try {
       const input = { text: "rótulo do campo de texto", component: "input" };
       const r = await rankForQuery(input, "hybrid");
-      expect(r.ranking).toMatchObject({ engine: "govbr-hybrid/1.0.0", dense: "unavailable", denseNote: expect.stringContaining("vetores ausentes") });
+      // 3.3.0 (N-18): engine = o motor que de fato rodou (léxico).
+      expect(r.ranking).toMatchObject({ engine: RANKING_VERSION, retrieval: "hybrid", dense: "unavailable", denseNote: expect.stringContaining("vetores ausentes") });
       expect(r.results.map((s) => s.rule.id)).toEqual(rankRules(input).results.map((s) => s.rule.id));
+      // dense sem vetores: nenhum resultado, e a ferramenta responde com erro (dense-unavailable).
+      const d = await rankForQuery(input, "dense");
+      expect(d.results).toEqual([]);
+      expect(d.denseUnavailable).toContain("vetores ausentes");
     } finally {
       useKnowledgeVersion(undefined);
       resetDenseCache();

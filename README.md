@@ -83,6 +83,77 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.3.0 — busca e contrato (NAT-109, D-151): defeitos do reteste adversarial da 3.2.0
+
+Correções de busca e de contrato achadas no reteste da 3.2.0 (`achados-3.2.0.md`, N-01…N-27 e B-09/B-15/B-18).
+**As mudanças de ranking são medidas só no conjunto de desenvolvimento** (D-151: a reserva já foi gasta na 3.2.0);
+não há estimativa independente delas até a avaliação completa. Motores: `govbr-lexical/1.2.0`,
+`govbr-hybrid/1.1.0`, `govbr-dense/1.1.0`. O padrão continua léxico.
+
+**Motor léxico 1.2.0.**
+- *Plural nos dois sentidos (N-04).* A chave exata de uma palavra já é a forma dobrada (`pluralFold`, a mesma
+  função no índice e na consulta): `campos` = `campo`, `botões` = `botão`, `imagens` = `imagem`, `papéis` =
+  `papel`, `capitães` = `capitão`; antes só o índice dobrava e a pergunta no plural perdia as cláusulas no
+  singular (`campos` trazia 0 das 93 só com "campo"). `query.terms` mostra a forma dobrada. As pontes
+  observação→regra do vocabulário continuam valendo só para a palavra como escrita (`tabs` ≠ `tab`).
+  Falhas conhecidas: `-ons` (`tons`), `-re`/`-se`.
+- *Unicode (N-14).* NFKC e remoção de `\p{Cf}` antes de tokenizar (largura total, espaço de largura zero).
+- *Pista de componente promove, nunca rebaixa (N-06).* Com `component`, as regras do componente acima do piso
+  absoluto ficam fora do corte relativo, e a 1ª/2ª delas ficam no máximo na 2ª/4ª posição (`promoteHinted`;
+  globais continuam elegíveis e podem liderar). Vale para léxica, híbrida e vetorial.
+- *Paráfrase do projeto (N-05).* Termo que só aparece no `normalizedRule` (paráfrase, não texto do DS) conta
+  `0,5` e é dito à parte: `why.matchedInParaphrase`, `field:"normalizedRule"`; `why.matched` só lista o que está
+  no texto mostrado (ou `termo→expansão` declarada). No `context`, `why.matched` passa a listar os termos
+  casados como no `query` (com a expansão).
+
+**Admissão só-vetorial (N-08, N-09) — regra fixada antes de medir.** Uma regra fora da lista léxica só entra
+pelo vetor (híbrida e vetorial) se: (1) a pergunta tem âncora na base por **maioria estrita** dos termos de
+conteúdo (`futebol botão`, 1 de 2, não abre); (2) não é linha de tabela; (3) o cosseno sem a pista ≥ limiar
+(0,856); (4) **a cláusula tem ≥ 4 termos de conteúdo distintos** ("Seu uso é opcional." nunca entra só pelo
+vetor) **e** (5) **divide ≥ 1 termo de conteúdo (chave ou radical) com a pergunta, ou tem cosseno ≥ 0,870** —
+o percentil 99 dos mesmos 6.008 pares negativos da calibração (`npm run embeddings:calibrate`, só a base;
+96,5% dos positivos ficam acima). `kb.ranking.strictThreshold` diz o valor.
+
+**`retrieval:"dense"` sem modelo (N-18)** é erro `dense-unavailable` (nada é buscado); a híbrida sem modelo
+responde com a léxica e `kb.ranking.engine` = o motor léxico (o que de fato rodou), `dense:"unavailable"`.
+
+**Contrato.**
+- *Eco da entrada no orçamento (N-01).* Todo valor ecoado num erro tem teto (`clip`, 120 caracteres +
+  `…(truncado, N caracteres)`); `fail()` corta strings e listas se a resposta passar de 8.000; campo
+  desconhecido lista até 5 chaves; `maxLength` em `get_ds_rules.id`/`ids[]` (200), `component` (60), `query`
+  (2.000; acima de 500 continua `query-too-long`). `get_finding_details.missing` ≤ 20 ids de ≤ 80 (esquema
+  igual: o `tools/list` do knowledge-free não muda).
+- *Chave `constructor` (N-11)* → `unknown-parameter` do contrato (antes: -32603 do SDK).
+- *Listagem e busca nunca passam do teto (N-02):* a prova de orçamento usa o rótulo de parada mais longo.
+- *Ambiguidade (N-07, N-16).* Com argumentos longos (> 200 caracteres), a chamada vai uma vez em
+  `ambiguity.baseCall` e cada grupo leva `{arguments:{component}, extends:"ambiguity.baseCall"}`; o grupo
+  "outros" também traz `next` (o 1º membro).
+- *Context (N-17, B-10, B-11).* `unmatchedTerms` (também no topo da resposta) com o termo sem candidata ou a
+  parte que a base não tem (`aria-current`); nome não resolvido traz `unresolvedDidYouMean`; só nomes não
+  resolvidos → `unknown-component` com sugestões. O nome em português **da própria página oficial**, entre
+  parênteses no título ("Pagination (Paginação)"), resolve quando é exato e de um componente só.
+- *Cor (N-03, N-13, N-20, B-02).* `get_design_tokens.hex` aceita `#rgb`, `#rrggbb`, `rrggbb`, `#rrggbbff`,
+  `rgb()`/`rgba(…, 1)`; o que não é cor → `invalid-argument`; alfa < 1 → `invalid-argument` (a cor vista depende
+  do fundo); `hex`+`query` → `invalid-combination`; `query` com valor de cor é resolvida como `hex`.
+  `get_page_rules{cursor}` sem `category` → `invalid-combination`.
+- *Ids históricos (B-15, N-19).* `get_ds_rules{id}` de um id histórico traz `citeAs:null`, `absenceNote` e
+  `current`: a sucessora auditada que não é título; se a sucessora é o título, a cláusula da mesma seção que
+  obriga; sem sucessora (`dropped`), a regra corrente de texto mais próximo pelo motor léxico
+  (`basis:"closest-text-lexical"`, ponteiro de leitura, não equivalência); `wcagFallback` quando o registro tem
+  WCAG. No lote `ids`, o cartão de id histórico sai `status:"historical"`, `citeAs:null`, com o mesmo `current`.
+- *e-MAG (B-09, N-15).* `validationTemplate.ruleId`/`citation` apontam a cláusula **corrente** da recomendação
+  que obriga (`basis:"emag-unit-obligation"`, required/prohibited, não o registro-título); o id histórico fica em
+  `historicalRuleId` e `citation.from`. `description`/`wcag`/`meta.note` são marcados `descriptionKind:
+  "project-paraphrase"` + `paraphraseNote` (resumo do projeto em inglês; nenhum texto da base é reescrito).
+- *`instructions` do initialize (B-18):* só o procedimento das ferramentas do perfil (sem conhecimento do DS;
+  no knowledge-free, sem ferramenta de conhecimento). Descrições do `get_ds_rules`/`get_design_tokens` mais
+  curtas, mesmo sentido; exemplos de `rule.id` do `verify_finding` trocados pelos ids publicados
+  (`ds-token-color`, `ds-structure-button-tag`, N-12).
+
+**`tools/list` por perfil** (3.2.0 → 3.3.0, sha256): `full` `418d6054…` → `dc2b8391…` (34.205 → 33.313
+caracteres), `evaluation` `f1529268…` → `25132bc6…`, `normative` `1642af4b…` → `24f9256e…`; `knowledge-free`
+`8bdb5e35…`, `deterministic` `7e3feff3…` e `evidence` `9a7ec0b3…` **iguais**.
+
 ## 3.2.0 (NAT-107, D-147, D-149): busca híbrida opcional — léxica + vetorial local
 
 **Padrão: léxico, como na 3.1.0.** Sem `retrieval` e sem `GOVBR_RETRIEVAL_MODE`, o `get_ds_rules` responde
