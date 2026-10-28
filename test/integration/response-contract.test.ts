@@ -113,7 +113,7 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
       const r = JSON.parse(text);
       // 3.1.0: `messages` só aparece quando um cartão usa um código; a busca 1.1.0 devolve aqui um único
       // cartão (a cláusula de cores de estado da paginação), que não usa nenhum.
-      expect(Object.keys(r).filter((k) => k !== "messages")).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "investigation", "gaps", "page", "next", "absenceNote"]);
+      expect(Object.keys(r).filter((k) => k !== "messages")).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "related", "investigation", "gaps", "page", "next", "absenceNote"]);
       expect(r).toMatchObject({ contract: CONTRACT, kind: "retrieval", status: "partial-match", reading: MESSAGES.reading, absenceNote: ABSENCE_NOTE });
       expect(Object.keys(r.kb)).toEqual(["dsVersion", "knowledgeVersion", "ranking", "vocabulary", "guidance"]);
       expect(Object.keys(r.query)).toEqual(expect.arrayContaining(["terms", "expansions", "componentHint", "globalsAllowed"]));

@@ -1,0 +1,482 @@
+{
+  "version": "vocab-1.2.0",
+  "note": "Expansões de recuperação (NAT-97, contrato §15.6a): sinônimos PT/EN e nomes HTML/WAI-ARIA, nada além. Uma expansão faz a busca LER uma regra; não diz que a regra se aplica, não cria regra e não é afirmação normativa. Cada grupo tem proveniência: uma cláusula da base que usa os dois termos juntos, ou o nome padronizado (HTML/WAI-ARIA/teclas). Nenhum grupo foi escrito para uma consulta específica do benchmark. Desligável: GOVBR_RETRIEVAL_VOCAB=off ou get_ds_rules{vocabulary:false}. 1.1.0 (NAT-97, segunda passada): aba→tab só num sentido (Tab sozinho é a tecla); grupos de origem 'observacao→regra': a observação usa a palavra do que se vê (Tab, mouse, verde, apenas) e a norma a palavra da regra (teclado, tabulação, cor, único). Cada grupo cita em `clausulas` as cláusulas da base que usam os dois termos; nenhum grupo se justifica só por uma consulta do benchmark. Desligáveis à parte da base: GOVBR_RETRIEVAL_VOCAB_OBS=off. `rejeitados`: pontes sugeridas pela análise de falhas sem cláusula da base — ficaram fora. Revisão de 28/10: grande→excessivo, selecionado→atual e tabindex→tabulação saíram (ajustados ao benchmark: cada um se sustentava numa consulta ou só num título de seção); os que ficam têm cláusula com os dois termos como palavras inteiras no corpo. 1.2.0 (validator 3.4.0, lista única A9): dois grupos novos, origem 'auditoria-com-agente-2026-10-28' (reportados à parte), só flexão de gênero que o radical de 6 letras separa: mínimo/mínima e máximo/máxima (a base escreve 'área mínima de toque' e 'no mínimo 24x24px' para o mesmo conceito). tabindex→tabulação e ordem→ordenar continuam fora (revisão de 28/10: na base servida, só um título de seção ou o corpus da fonte os junta); o caso tabindex (A8) vai pelo roteamento de next (routing-1.0.0: atributo HTML → regras globais com o atributo).",
+  "groups": [
+    {
+      "id": "rotulo-label",
+      "terms": [
+        "rotulo",
+        "label",
+        "etiqueta"
+      ],
+      "provenance": "KB glosa os termos juntos: govbr-3.7.0-accessibility-input-930107a6d68e ('rótulos (labels)'), govbr-3.7.0-accessibility-global-25887e6e360f ('etiquetas de texto (elemento LABEL)')"
+    },
+    {
+      "id": "botao-button",
+      "terms": [
+        "botao",
+        "button"
+      ],
+      "provenance": "Nome do componente na página oficial: 'Button (Botão)'; elemento HTML button"
+    },
+    {
+      "id": "tabela-table",
+      "terms": [
+        "tabela",
+        "table"
+      ],
+      "provenance": "Nome do componente na página oficial: 'Table (Tabela)'; elemento HTML table"
+    },
+    {
+      "id": "aba-tab",
+      "from": [
+        "aba",
+        "abas"
+      ],
+      "to": [
+        "tab"
+      ],
+      "provenance": "Nome do componente na página oficial: 'Tab (Abas)'; papel WAI-ARIA tab. 1.1.0: só no sentido aba → tab. 'Tab' sozinho numa observação é a TECLA (Tab, Shift+Tab, 'primeiro Tab', 'Tab x8'), não o componente: a expansão tab → aba de 1.0.0 levava a busca às regras do componente Tab (análise de falhas NAT-97). O componente continua alcançável pelo nome (br-tab, 'aba'/'abas', argumento component)."
+    },
+    {
+      "id": "lista-list",
+      "terms": [
+        "lista",
+        "list"
+      ],
+      "provenance": "Nome do componente na página oficial: 'List (Lista)'; papel WAI-ARIA list"
+    },
+    {
+      "id": "lista-elementos",
+      "from": [
+        "ul",
+        "ol",
+        "li",
+        "dl"
+      ],
+      "to": [
+        "lista"
+      ],
+      "provenance": "HTML: ul/ol/dl são elementos de lista; KB govbr-3.7.0-accessibility-global-01554d3d9446 ('as listas (ul, ol e dl)')"
+    },
+    {
+      "id": "cabecalho-header",
+      "terms": [
+        "cabecalho",
+        "header"
+      ],
+      "provenance": "Nome do componente na página oficial: 'Header (Cabeçalho)'"
+    },
+    {
+      "id": "cabecalho-elementos",
+      "from": [
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "th",
+        "thead"
+      ],
+      "to": [
+        "cabecalho"
+      ],
+      "provenance": "HTML: h1–h6 são cabeçalhos de seção, th/thead cabeçalhos de tabela; KB govbr-3.7.0-accessibility-global-01554d3d9446 ('os cabeçalhos (h1, h2, h3)'), govbr-3.7.0-accessibility-global-00290bc67eb5 (THEAD)"
+    },
+    {
+      "id": "rodape-footer",
+      "terms": [
+        "rodape",
+        "footer"
+      ],
+      "provenance": "Nome do componente na página oficial: 'Footer (Rodapé)'"
+    },
+    {
+      "id": "titulo-caption",
+      "from": [
+        "caption"
+      ],
+      "to": [
+        "titulo"
+      ],
+      "provenance": "KB govbr-3.7.0-accessibility-global-29bd6bf04fc5 ('O título da tabela deve ser definido pelo elemento CAPTION'); só no sentido caption → título"
+    },
+    {
+      "id": "agrupamento-fieldset",
+      "from": [
+        "fieldset",
+        "legend"
+      ],
+      "to": [
+        "agrupamento",
+        "agrupar"
+      ],
+      "provenance": "HTML: fieldset/legend agrupam campos; KB govbr-3.7.0-accessibility-global-9bd945ab49ae ('agrupadas utilizando o elemento FIELDSET')"
+    },
+    {
+      "id": "idioma-lang",
+      "terms": [
+        "idioma",
+        "lang"
+      ],
+      "provenance": "HTML: atributo lang identifica o idioma; KB govbr-3.7.0-accessibility-global-9751560f0ae6"
+    },
+    {
+      "id": "alt-alternativo",
+      "from": [
+        "alt"
+      ],
+      "to": [
+        "alternativo",
+        "alternativa"
+      ],
+      "provenance": "HTML: atributo alt = texto alternativo; KB govbr-3.7.0-accessibility-avatar-0cbf57559070 ('texto alternativo ... atributo alt')"
+    },
+    {
+      "id": "imagem-img",
+      "terms": [
+        "imagem",
+        "img",
+        "image"
+      ],
+      "provenance": "HTML: elemento img (image)"
+    },
+    {
+      "id": "obrigatorio-required",
+      "terms": [
+        "obrigatorio",
+        "required"
+      ],
+      "provenance": "HTML: atributo required; KB govbr-3.7.0-accessibility-radio-23dfdb95e558 ('seleção obrigatória, utilize o atributo required')"
+    },
+    {
+      "id": "foco-focus",
+      "terms": [
+        "foco",
+        "focus"
+      ],
+      "provenance": "CSS/HTML: :focus, estado de foco; KB govbr-3.7.0-foundation-global-83cd10e6ce81 ('mouseover/focus')"
+    },
+    {
+      "id": "teclado-keyboard",
+      "terms": [
+        "teclado",
+        "keyboard"
+      ],
+      "provenance": "Tradução PT/EN direta"
+    },
+    {
+      "id": "esc-escape",
+      "terms": [
+        "esc",
+        "escape"
+      ],
+      "provenance": "Nome da tecla: Esc = Escape"
+    },
+    {
+      "id": "mouse-hover",
+      "terms": [
+        "hover",
+        "mouseover"
+      ],
+      "from": [
+        "mouse"
+      ],
+      "to": [
+        "hover",
+        "mouseover"
+      ],
+      "provenance": "CSS :hover = ponteiro sobre o elemento; KB govbr-3.7.0-foundation-global-83cd10e6ce81 ('mouseover/focus')"
+    },
+    {
+      "id": "erro-error",
+      "terms": [
+        "erro",
+        "error"
+      ],
+      "provenance": "Tradução PT/EN direta"
+    },
+    {
+      "id": "dialogo-modal",
+      "terms": [
+        "dialogo",
+        "dialog"
+      ],
+      "from": [
+        "dialogo",
+        "dialog"
+      ],
+      "to": [
+        "modal"
+      ],
+      "provenance": "WAI-ARIA role=dialog; KB govbr-3.7.0-accessibility-modal-645b2d486281 ('janela modal ou de diálogo')"
+    },
+    {
+      "id": "estado-atual",
+      "terms": [
+        "atual",
+        "current"
+      ],
+      "origem": "diagnostico-tela-a",
+      "provenance": "WAI-ARIA: aria-current = item atual. Origem: diagnóstico da tela A (2026-10-22, A-12: consultas current/atual/aria-current na paginação) — ajustado a uma tela de desenvolvimento, reportar à parte. Recuperação apenas: 'página atual' não equivale a exigir aria-current (plano §3)"
+    },
+    {
+      "id": "estado-ativo",
+      "terms": [
+        "ativo",
+        "ativa",
+        "active"
+      ],
+      "provenance": "Tradução PT/EN direta (classe/estado active)"
+    },
+    {
+      "id": "estado-selecionado",
+      "terms": [
+        "selecionado",
+        "selecionada",
+        "selected"
+      ],
+      "provenance": "WAI-ARIA aria-selected; KB govbr-3.7.0-accessibility-tab-86e80cffa071"
+    },
+    {
+      "id": "estado-expandido",
+      "terms": [
+        "expandido",
+        "expandida",
+        "expanded"
+      ],
+      "provenance": "WAI-ARIA aria-expanded"
+    },
+    {
+      "id": "estado-oculto",
+      "terms": [
+        "oculto",
+        "oculta",
+        "escondido",
+        "hidden"
+      ],
+      "provenance": "WAI-ARIA aria-hidden / atributo HTML hidden"
+    },
+    {
+      "id": "estado-desabilitado",
+      "terms": [
+        "desabilitado",
+        "desabilitada",
+        "disabled"
+      ],
+      "provenance": "HTML disabled / WAI-ARIA aria-disabled; KB govbr-3.7.0-development-card-ebd82099858e"
+    },
+    {
+      "id": "cor-color",
+      "terms": [
+        "cor",
+        "color"
+      ],
+      "provenance": "CSS: propriedade color"
+    },
+    {
+      "id": "obs-tecla-tab-teclado",
+      "from": [
+        "tab"
+      ],
+      "to": [
+        "teclado",
+        "tabulacao"
+      ],
+      "origem": "observacao→regra",
+      "clausulas": [
+        "govbr-3.7.0-accessibility-button-faf440b1b93e",
+        "govbr-3.7.0-accessibility-checkbox-364a3d387f68",
+        "govbr-3.7.0-accessibility-datetimepicker-a567d166623e"
+      ],
+      "provenance": "A KB diz a tecla e a navegação juntas: 'acessados via navegação por teclado através da tecla `Tab`' (button-faf440b1b93e), 'navegáveis pelo teclado através da tecla `Tab`' (checkbox-364a3d387f68), 'por meio da tecla `Tab`, seguindo uma ordem de tabulação' (datetimepicker-a567d166623e). A observação fala da tecla (Tab); a norma, de teclado/tabulação."
+    },
+    {
+      "id": "obs-mouse-teclado",
+      "from": [
+        "mouse"
+      ],
+      "to": [
+        "teclado"
+      ],
+      "origem": "observacao→regra",
+      "clausulas": [
+        "govbr-3.7.0-accessibility-datetimepicker-5b6782ef2361",
+        "govbr-3.7.0-accessibility-header-2113b3c5538a",
+        "govbr-3.7.0-accessibility-global-22b263110326"
+      ],
+      "provenance": "A KB contrasta os dois meios na mesma cláusula: 'operável com teclado ... sem precisar usar o mouse' (datetimepicker-5b6782ef2361), 'navegar ... usando apenas o teclado, sem o uso do mouse' (header-2113b3c5538a), 'funcione tanto pelo mouse como pelo teclado' (global-22b263110326)."
+    },
+    {
+      "id": "obs-verde-cor",
+      "from": [
+        "verde"
+      ],
+      "to": [
+        "cor"
+      ],
+      "origem": "observacao→regra",
+      "clausulas": [
+        "govbr-3.7.0-component-cookiebar-4855b39c099a"
+      ],
+      "provenance": "KB component-cookiebar-4855b39c099a ('na cor verde'): o nome da cor dito como cor. Só 'verde' tem cláusula; 'vermelho/vermelha' não aparece na base e ficou de fora (ver rejeitados)."
+    },
+    {
+      "id": "obs-apenas-unico",
+      "from": [
+        "apenas",
+        "somente"
+      ],
+      "to": [
+        "unico",
+        "unica"
+      ],
+      "origem": "observacao→regra",
+      "clausulas": [
+        "govbr-3.7.0-component-checkbox-aa3b26c843f3",
+        "govbr-3.7.0-component-upload-600760f31d74"
+      ],
+      "provenance": "KB usa os dois juntos no mesmo sentido: 'a seleção de apenas um único item' (component-checkbox-aa3b26c843f3), 'o envio de apenas um único arquivo' (component-upload-600760f31d74). 'só' continua palavra vazia e não entra."
+    },
+    {
+      "id": "genero-minimo",
+      "terms": [
+        "minimo",
+        "minima"
+      ],
+      "origem": "auditoria-com-agente-2026-10-28",
+      "provenance": "Flexão de gênero do português. KB usa as duas formas para o mesmo conceito: govbr-3.7.0-accessibility-button-71dbb0dda766 ('área mínima de toque') e govbr-3.7.0-foundation-global-5f213b4dbcb5 ('no mínimo 24x24px'). Evidência: auditoria tela B, B-28 (2026-10-28).",
+      "clausulas": [
+        "govbr-3.7.0-accessibility-button-71dbb0dda766",
+        "govbr-3.7.0-foundation-global-5f213b4dbcb5"
+      ]
+    },
+    {
+      "id": "genero-maximo",
+      "terms": [
+        "maximo",
+        "maxima"
+      ],
+      "origem": "auditoria-com-agente-2026-10-28",
+      "provenance": "Flexão de gênero do português (mesmo critério de genero-minimo)."
+    }
+  ],
+  "rejeitados": [
+    {
+      "de": [
+        "clique",
+        "clicar"
+      ],
+      "para": [
+        "teclado"
+      ],
+      "motivo": "nenhuma cláusula da base usa clique/clicar com teclado ou mouse"
+    },
+    {
+      "de": [
+        "vermelho",
+        "vermelha",
+        "borda"
+      ],
+      "para": [
+        "cor"
+      ],
+      "motivo": "'vermelho' não aparece na base; borda → cor seria inferência"
+    },
+    {
+      "de": [
+        "demais"
+      ],
+      "para": [
+        "excessivo"
+      ],
+      "motivo": "'demais' só aparece na base no sentido 'os demais'"
+    },
+    {
+      "de": [
+        "content",
+        "conteudo"
+      ],
+      "para": [
+        "mensagem"
+      ],
+      "motivo": "a base não equipara conteúdo a mensagem"
+    },
+    {
+      "de": [
+        "diz",
+        "dizer",
+        "le",
+        "ler"
+      ],
+      "para": [
+        "anunciar"
+      ],
+      "motivo": "nenhuma cláusula usa os dois"
+    },
+    {
+      "de": [
+        "aponta",
+        "apontar",
+        "destino"
+      ],
+      "para": [
+        "ancora",
+        "dirigir"
+      ],
+      "motivo": "nenhuma cláusula usa os dois"
+    },
+    {
+      "de": [
+        "token",
+        "hex"
+      ],
+      "para": [
+        "cores pre-definidas"
+      ],
+      "motivo": "nenhuma cláusula usa os dois"
+    },
+    {
+      "de": [
+        "tabindex"
+      ],
+      "para": [
+        "tabulacao"
+      ],
+      "motivo": "ajustado ao benchmark (revisão 28/10)",
+      "clausulas": [
+        "govbr-3.7.0-accessibility-global-2cb680cc4632"
+      ]
+    },
+    {
+      "de": [
+        "grande",
+        "grandes"
+      ],
+      "para": [
+        "excessivo",
+        "excessiva",
+        "excessivamente"
+      ],
+      "motivo": "ajustado ao benchmark (revisão 28/10)",
+      "clausulas": [
+        "govbr-3.7.0-component-card-7ab2781859f4"
+      ]
+    },
+    {
+      "de": [
+        "selecionado",
+        "selecionada"
+      ],
+      "para": [
+        "atual"
+      ],
+      "motivo": "ajustado ao benchmark (revisão 28/10)",
+      "clausulas": [
+        "govbr-3.7.0-accessibility-switch-04dba4330e7d",
+        "govbr-3.7.0-accessibility-switch-98c995a6b199"
+      ]
+    }
+  ]
+}

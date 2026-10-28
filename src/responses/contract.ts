@@ -19,7 +19,7 @@ export const MESSAGES = {
   reading:
     "Candidatas a investigar, não veredito. Nenhum resultado afirma conformidade ou violação; a aplicabilidade é desconhecida até você medir as condições.",
   "listing-reading":
-    "Listagem de catálogo, não busca: ordem da base, sem relevância. Títulos, não requisitos em contexto; leia a unidade por id antes de julgar.",
+    "Listagem de catálogo, não busca: sem relevância. Ordem fixa: cláusulas de prosa que obrigam ou proíbem, depois as demais de prosa, depois linhas de tabela (propriedades da implementação); em cada faixa, a ordem da base. Títulos, não requisitos em contexto; leia a unidade por id antes de julgar.",
   "no-declared-condition":
     "A cláusula não declara condição nem exceção na base. Verifique se o fato observado é o que ela descreve.",
   "gap-no-clause":
@@ -59,6 +59,18 @@ export const MESSAGES = {
     "offset está obsoleto desde a 3.0.0 e deixa de ser aceito na 4.0.0: continue pelo cursor devolvido em page.cursor. Com cursor, offset é ignorado.",
   "gap-unmatched-context":
     "Nenhuma candidata deste contexto (componentes observados e regras globais) contém estes termos nem expansões registradas deles. Isto descreve a base, não a página.",
+  /** 3.4.0 (A5): a 1ª página só traz permissão ou regra de outro componente. */
+  "gap-only-permission":
+    "Só há permissão ou regra de outro componente nesta resposta; nenhuma regra deste caso foi encontrada. Uma permissão (ou a regra de outro componente) não autoriza nem proíbe o caso observado.",
+  /** 3.4.0 (A12): bloco related, da camada kb-relations. */
+  "kb-relation":
+    "Ligação curada (camada kb-relations, não texto da base): cada item cita as cláusulas da base que sustentam a ligação. É leitura sugerida: não diz que a regra se aplica; leia-a por id antes de citar.",
+  /** 3.4.0 (A4): passos de next escolhidos por padrão da consulta. */
+  routing:
+    "Passos sugeridos por padrão fixo da consulta (cor em hex/rgb, atributo/papel/tag, posição): dizem qual chamada mede melhor; não afirmam norma nem aplicabilidade.",
+  /** 3.4.0 (A7): termo casado só por aproximação. */
+  approximate:
+    "Termo sem correspondência na base, casado pela palavra indexada mais próxima (distância de edição); confira se é o que você quis dizer.",
   "table-row":
     "Linha de tabela da documentação (API ou anatomia): descreve a implementação do componente; leia a unidade por id antes de tratá-la como obrigação de comportamento.",
 } as const;

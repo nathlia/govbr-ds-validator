@@ -1,0 +1,286 @@
+{
+  "note": "get_ds_rules da 3.4.0 (D-153, govbr-lexical/1.3.0, vocab-1.2.0, kb-relations-1.0.0, routing-1.0.0), perfil evaluation, via MCP: sha256 do texto de cada resposta; mesmas consultas da fixture 3.3.0. Mudanças de propósito (lista única A1–A12): índice do sucessor com o título do registro histórico, fallback por distância de edição, diretrizes de codificação HTML com peso menor quando há componente em escopo e a consulta não fala de marcação, gênero mínimo/máxima no vocabulário; blocos related (kb-relations), roteamento em next, lacuna só-permissão, registryRefs para aria-*/role sem correspondência; listagem em faixas (prosa que obriga → outra prosa → linhas de tabela).",
+  "source": "nat109-busca",
+  "steps": [
+    {
+      "args": {
+        "query": "foco visível ao navegar pelo teclado"
+      },
+      "isError": false,
+      "chars": 2383,
+      "sha256": "f5109ebfa870616bef78146fcf395b885bc7198e83774a65ec0234b6821f5960"
+    },
+    {
+      "args": {
+        "query": "foco",
+        "component": "modal",
+        "limit": 4
+      },
+      "isError": false,
+      "chars": 5067,
+      "sha256": "410bba5912f555e39c3e8b598f8ee74ab96639cbf5a373e63eb4b7d66e1b0d6f"
+    },
+    {
+      "args": {
+        "query": "foco",
+        "component": "modal",
+        "limit": 4
+      },
+      "cursorFrom": 1,
+      "isError": false,
+      "chars": 4374,
+      "sha256": "aca274d268df6e40c186c90284ea9914ee9cfe9686ce090675f7e43348069baa"
+    },
+    {
+      "args": {
+        "query": "contraste do texto sobre fundo colorido",
+        "limit": 10
+      },
+      "isError": false,
+      "chars": 7634,
+      "sha256": "0b66190a57ed28345333bf5cb892acb6fc8f53c89c5c73a0ffc9f2c97928bd13"
+    },
+    {
+      "args": {
+        "query": "rótulo do campo",
+        "component": "input",
+        "include_evidence": true
+      },
+      "isError": false,
+      "chars": 6526,
+      "sha256": "6741ad64f124e863c4c091dbe8104f51a9e79bec37b3fec598ba90161ba6313b"
+    },
+    {
+      "args": {
+        "query": "rotulo do campo",
+        "component": "br-input",
+        "vocabulary": false
+      },
+      "isError": false,
+      "chars": 6236,
+      "sha256": "fa33362f8eee991bab2c4cc8656f26f0b1f3bfff69d4066fd2c790c2654bf841"
+    },
+    {
+      "args": {
+        "query": "aria-current na página ativa"
+      },
+      "isError": false,
+      "chars": 6764,
+      "sha256": "8627a4726d58f99941482c0089f9141a04d5b8d5bdedcd883abaa701a4e63310"
+    },
+    {
+      "args": {
+        "query": "aria-label",
+        "component": "global"
+      },
+      "isError": false,
+      "chars": 6565,
+      "sha256": "411c5fba43b4f9616fb8946ce68bcf2cef77dc4483a1c66a6d81abb79c40be0e"
+    },
+    {
+      "args": {
+        "query": "WCAG 1.4.3"
+      },
+      "isError": false,
+      "chars": 5301,
+      "sha256": "bec7e319360c2b6097615a9bd99fc9f3402895f831a89a9d81971ac72d0f9334"
+    },
+    {
+      "args": {
+        "query": "tabela com cabeçalho de coluna",
+        "component": "table"
+      },
+      "isError": false,
+      "chars": 6368,
+      "sha256": "872eb89b001b0998bb8cda1fb6181fac7da9676bf8c68e53e786b6c8f25bd0ff"
+    },
+    {
+      "args": {
+        "query": "botão primário único por tela",
+        "component": "button"
+      },
+      "isError": false,
+      "chars": 5931,
+      "sha256": "0f33180bfc1baff10bc304c1cfd9cb5146cf372ff79d0f5c6e8175013973f4af"
+    },
+    {
+      "args": {
+        "query": "mensagem de erro abaixo do campo",
+        "component": "message"
+      },
+      "isError": false,
+      "chars": 6259,
+      "sha256": "4a4d1c4c64f821db372cc4f3db2939c84366a543f6dad8fbe1effd3e8f7fb355"
+    },
+    {
+      "args": {
+        "query": "menu lateral recolhido no celular"
+      },
+      "isError": false,
+      "chars": 3179,
+      "sha256": "0a2331f933148217e15ca8766871114d0c3317dd9fe845accc76d2266f703deb"
+    },
+    {
+      "args": {
+        "query": "imagens sem texto alternativo"
+      },
+      "isError": false,
+      "chars": 5906,
+      "sha256": "2f7fbff0ef19b069e460cbb8e6d7cdfcc1febbc5a8331527a59eb558aa15b59a"
+    },
+    {
+      "args": {
+        "query": "xyzzy quux",
+        "component": "modal"
+      },
+      "isError": false,
+      "chars": 1650,
+      "sha256": "343bfb425e410a85001cfd277f9e08567ed1029f9c656c9671d994074cecce39"
+    },
+    {
+      "args": {
+        "query": "xyzzy plugh"
+      },
+      "isError": false,
+      "chars": 1466,
+      "sha256": "720f5df47e14dedccb761732ee5e834fa14a0ccb2d9fce330394a74604f29cf8"
+    },
+    {
+      "args": {
+        "query": "futebol campeonato brasileiro",
+        "component": "header"
+      },
+      "isError": false,
+      "chars": 2615,
+      "sha256": "6b053e891a42e05a8c8086ac5dc57dd591639d9a87c073f0a541bb2ec5586d8b"
+    },
+    {
+      "args": {
+        "query": "a"
+      },
+      "isError": true,
+      "chars": 466,
+      "sha256": "8e3f203d1ee8ec79e0f98b921d4fc3eac36f0bd74b668f5a5edce310bc775606"
+    },
+    {
+      "args": {
+        "query": "foco",
+        "offset": 2
+      },
+      "isError": false,
+      "chars": 5447,
+      "sha256": "144c69c1291b51fb9b8c7f31ac52b3b6e4240ce9c203297678eb150f43a3b040"
+    },
+    {
+      "args": {
+        "query": "cor",
+        "limit": 3
+      },
+      "isError": false,
+      "chars": 5575,
+      "sha256": "82cd68805d13e56400af61f4d20dd18f39be9f8250b3d31f0f84991ac56229ff"
+    },
+    {
+      "args": {
+        "query": "cor",
+        "limit": 3
+      },
+      "cursorFrom": 19,
+      "isError": false,
+      "chars": 3552,
+      "sha256": "62d03e3d702143b056406d8656885dbf52d69eb98926b8cb061edb46cca7fcd6"
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "button"
+          ],
+          "terms": [
+            "foco"
+          ]
+        }
+      },
+      "isError": false,
+      "chars": 6036,
+      "sha256": "d79e977e9b3f924bf0a4ac369be220e3dac16b6fffed6d75f31184fbccf8adb7"
+    },
+    {
+      "args": {
+        "context": {
+          "components": [
+            "breadcrumb",
+            "header"
+          ]
+        },
+        "query": "link"
+      },
+      "isError": false,
+      "chars": 6513,
+      "sha256": "601a49632012abff359c6c9ed74eddd6bd7331809cf1d0aac764403971500b6a"
+    },
+    {
+      "args": {
+        "id": "govbr-3.7.0-accessibility-modal-f36c91d7073c"
+      },
+      "isError": false,
+      "chars": 5885,
+      "sha256": "2bf3c9fda9a83e95931999e5a13b2e9118fe6862f1a320f261bd7b6fde48bd7e"
+    },
+    {
+      "args": {
+        "ids": [
+          "govbr-3.7.0-accessibility-modal-f36c91d7073c",
+          "nao-existe"
+        ]
+      },
+      "isError": false,
+      "chars": 1577,
+      "sha256": "7225bf9968f8dd1cf81708595fb5ea702a3cd8c31b28388ed55b1c78c790fe07"
+    },
+    {
+      "args": {
+        "component": "button",
+        "limit": 5
+      },
+      "isError": false,
+      "chars": 2204,
+      "sha256": "357709c9d0cd56de93515f544cdd5530df9dc354fb46596de151269aaa31ab56"
+    },
+    {
+      "args": {
+        "component": "button",
+        "force": "required",
+        "detail": "brief",
+        "limit": 5
+      },
+      "isError": false,
+      "chars": 3671,
+      "sha256": "41718dac04f67024f4bb682df1ecee7d9e40316a0f93eac1fbf6de09248f7fd8"
+    },
+    {
+      "args": {},
+      "isError": false,
+      "chars": 1505,
+      "sha256": "8c7301892dff5a90e5764caf7a5ff1cf2ab20c18304aad8d6853773580baccc3"
+    },
+    {
+      "args": {
+        "query": "foco",
+        "match": "literal"
+      },
+      "isError": false,
+      "chars": 31438,
+      "sha256": "cb6436cba7ee065b0da359666afe5c964e4dee9dc27d88c4e06281996586fb1e"
+    },
+    {
+      "args": {
+        "query": "teclado",
+        "component": "nao-existe"
+      },
+      "isError": true,
+      "chars": 573,
+      "sha256": "ca5dc8a96a8a8a1e56429aa837d5dce43eaa2bac044d4e35601e48dc50dfcbae"
+    }
+  ]
+}

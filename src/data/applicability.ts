@@ -9,8 +9,9 @@
  *  - A seleção usa apenas dimensões publicadas da base: `component`, `relatedComponents`,
  *    `conditions`/`exceptions`/`expectedEvidence`/título/regra normalizada para termos, e as
  *    variantes nominais documentadas de cada componente (id, classe raiz `br-<id>`, nome da página
- *    oficial). Não há mapa inventado componente → regra global: a base não publica essa relação
- *    além de `relatedComponents`, e uma tabela feita à mão seria uma norma que a fonte não declara.
+ *    oficial). Não há mapa inventado componente → regra global: além de `relatedComponents` da base,
+ *    só entram as ligações da camada versionada kb-relations (3.4.0, A12), cada uma com a cláusula da
+ *    base que a sustenta citada literalmente (relations.ts) — leitura sugerida, não norma nova.
  *  - Regra de componente não observado não é devolvida (fora do contexto não é inventada).
  *  - `force:"example"` nunca entra: exemplo canônico é evidência de implementação, não norma (D-10).
  *  - A ordem é função só da entrada normalizada e da ordem da base — nada de braço, modelo,
@@ -26,6 +27,7 @@ import {
   type KnowledgeRule,
   type RuleForce,
 } from "./knowledge.js";
+import { isDerivedRelation, relatedComponentsOf, relationsLabel } from "./relations.js";
 import { cleanText, isTableRow, scoreTerms, tokenize, tokenizeQuery, type MatchField, type ScoredRule } from "./retrieval.js";
 
 /** Chave nominal: sem acento, sem caixa, sem `br-`/`<>`, sem separadores. "Cookie Bar" → "cookiebar". */
@@ -249,7 +251,7 @@ export function normalizeContext(context: RuleContext): NormalizedContext {
 export type RetrievalReason =
   | { kind: "component-observed"; component: string }
   | { kind: "region-observed"; region: PageRegion; component: string }
-  | { kind: "related-component-observed"; component: string; via: "relatedComponents" }
+  | { kind: "related-component-observed"; component: string; via: "relatedComponents" | string }
   | {
       kind: "term";
       term: string;
@@ -449,12 +451,12 @@ export function retrieveContextCandidates(
   const perTerm = literal
     ? []
     : context.terms.map((term) => {
-        const scores = scoreTerms([term], eligible, options.vocabulary);
+        const scores = scoreTerms([term], eligible, options.vocabulary, undefined, observed.size > 0);
         const phrase = phraseStems(term);
         if (phrase.length >= 2) for (const [id, s] of [...scores]) if (!hasPhrase(s.rule, phrase)) scores.delete(id);
         return { term, scores };
       });
-  const queryScores = !literal && query ? scoreTerms([query], eligible, options.vocabulary) : new Map<string, ScoredRule>();
+  const queryScores = !literal && query ? scoreTerms([query], eligible, options.vocabulary, undefined, observed.size > 0) : new Map<string, ScoredRule>();
   const out: ContextCandidate[] = [];
 
   for (const rule of eligible) {
@@ -463,8 +465,10 @@ export function retrieveContextCandidates(
       const region = regionOf.get(rule.component);
       reasons.push(region ? { kind: "region-observed", region, component: rule.component } : { kind: "component-observed", component: rule.component });
     }
-    for (const related of rule.relatedComponents) {
-      if (observed.has(related)) reasons.push({ kind: "related-component-observed", component: related, via: "relatedComponents" });
+    for (const related of literal ? rule.relatedComponents : relatedComponentsOf(rule)) {
+      if (observed.has(related)) {
+        reasons.push({ kind: "related-component-observed", component: related, via: isDerivedRelation(rule, related) ? relationsLabel() : "relatedComponents" });
+      }
     }
     let relevance = 0;
     if (literal) {
@@ -491,7 +495,7 @@ export function retrieveContextCandidates(
     if (rule.conditions.length) unevaluated.push("conditions");
     if (rule.exceptions.length) unevaluated.push("exceptions");
     const unknowns: string[] = [];
-    for (const related of rule.relatedComponents) {
+    for (const related of literal ? rule.relatedComponents : relatedComponentsOf(rule)) {
       if (!observed.has(related)) unknowns.push(`Relação documentada com '${related}' (relatedComponents), que não foi informado como observado.`);
     }
     if (rule.component === null) {
@@ -570,8 +574,12 @@ function interleaveByGroup(candidates: ContextCandidate[], order: Map<string, nu
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(c);
   }
+  // 3.4.0 (A8): with relevance, the group whose best candidate is MORE relevant opens the alternation (a term
+  // that matches the observed component better than a global coding guideline puts the component first);
+  // equal best relevance (e.g. components only, no terms) keeps the old order: global first, then A→Z.
+  const best = (k: string) => (literal ? 0 : Math.max(...groups.get(k)!.map((c) => c.relevance)));
   const keys = [...groups.keys()].sort((a, b) =>
-    a === GLOBAL_GROUP ? -1 : b === GLOBAL_GROUP ? 1 : codeUnitCompare(a, b),
+    best(b) - best(a) || (a === GLOBAL_GROUP ? -1 : b === GLOBAL_GROUP ? 1 : codeUnitCompare(a, b)),
   );
   const byOrder = (a: ContextCandidate, b: ContextCandidate) => (order.get(a.rule.id) ?? 0) - (order.get(b.rule.id) ?? 0);
   const compare = literal

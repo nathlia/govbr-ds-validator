@@ -22,9 +22,9 @@ beforeAll(async () => {
 });
 afterAll(async () => client.close());
 
-describe("get_ds_rules léxico = fixture 3.3.0 byte a byte", () => {
+describe("get_ds_rules léxico = fixture 3.4.0 byte a byte", () => {
   it("cada resposta igual à fixture, cursores incluídos", async () => {
-    const fixture = JSON.parse(readFileSync(new URL("../fixtures/lexical-3.3.0-get-ds-rules.json", import.meta.url), "utf8")) as {
+    const fixture = JSON.parse(readFileSync(new URL("../fixtures/lexical-3.4.0-get-ds-rules.json", import.meta.url), "utf8")) as {
       steps: Array<{ args: Record<string, unknown>; cursorFrom?: number; isError: boolean; sha256: string }>;
     };
     const texts: string[] = [];

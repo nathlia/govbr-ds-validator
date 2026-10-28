@@ -160,7 +160,7 @@ describe("regressions: queries that returned nothing in 2.16.1 (diagnóstico tel
 describe("vocabulary (versioned, switchable)", () => {
   it("every group has provenance and only synonym/naming entries", () => {
     const v = getVocabulary();
-    expect(v.version).toBe("vocab-1.1.0");
+    expect(v.version).toBe("vocab-1.2.0");
     for (const g of v.groups) {
       expect(g.provenance.length).toBeGreaterThan(10);
       expect(Object.keys(g).sort().every((k) => ["clausulas", "from", "id", "origem", "provenance", "terms", "to"].includes(k))).toBe(true);
@@ -169,7 +169,7 @@ describe("vocabulary (versioned, switchable)", () => {
 
   it("is reported when used and can be switched off (argument or GOVBR_RETRIEVAL_VOCAB=off)", () => {
     const on = rankRules({ text: "label" });
-    expect(on.vocabulary).toBe("vocab-1.1.0");
+    expect(on.vocabulary).toBe("vocab-1.2.0");
     expect(on.analysis.expansions[0]).toMatchObject({ term: "label", as: expect.arrayContaining(["rotulo"]) });
     const off = rankRules({ text: "label", vocabulary: false });
     expect(off.vocabulary).toBe("off");
@@ -349,7 +349,7 @@ describe("3.1.0 (govbr-lexical/1.1.0): general fixes, none per query", () => {
     process.env.GOVBR_RETRIEVAL_VOCAB_OBS = "off";
     try {
       const off = rankRules({ text: "Tab" });
-      expect(off.vocabulary).toBe("vocab-1.1.0-sem-observacao");
+      expect(off.vocabulary).toBe("vocab-1.2.0-sem-observacao");
       expect(off.analysis.expansions.find((e) => e.term === "tab")).toBeUndefined();
       expect(rankRules({ text: "label" }).analysis.expansions[0].as).toContain("rotulo"); // base groups stay on
     } finally {

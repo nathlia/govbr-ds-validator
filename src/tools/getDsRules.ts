@@ -21,7 +21,10 @@ import {
   suggestComponentNames,
   type ContextCandidate,
 } from "../data/applicability.js";
-import { analyzeQuery, rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
+import { analyzeQuery, isMarkupQuestion, rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
+import { componentsNamedIn } from "../data/applicability.js";
+import { registryRefsFor, relatedFor, relationsLabel } from "../data/relations.js";
+import { routeSteps } from "../responses/routing.js";
 import { conceptFor, guidanceLabel } from "../data/guidance.js";
 import { getComponentSpecs } from "../data/load.js";
 import type { PageRegion } from "../evidence/pageFacts.js";
@@ -29,6 +32,7 @@ import { ABSENCE_NOTE } from "../responses/absence.js";
 import {
   CONTRACT,
   MESSAGES,
+  RESPONSE_BUDGET,
   clip,
   cursorKey,
   decodeCursor,
@@ -46,8 +50,10 @@ import {
   LISTING_MAX_LIMIT,
   RETRIEVAL_DEFAULT_LIMIT,
   RETRIEVAL_MAX_LIMIT,
+  asImplementationProperty,
   idResponse,
   indexItem,
+  listingOrder,
   listingResponse,
   lookupCard,
   lookupResponse,
@@ -88,6 +94,14 @@ export interface DsRulesArgs {
 export interface DsRulesProjections {
   brief: (rule: KnowledgeRule) => unknown;
   full: (rule: KnowledgeRule) => unknown;
+  /** 3.4.0 (A4): ferramentas registradas neste perfil (o roteamento só sugere as que existem). */
+  tools?: ReadonlySet<string>;
+}
+
+/** 3.4.0 (A12): bloco related para a resposta, ou nada. */
+function relatedBlock(opts: Parameters<typeof relatedFor>[0]) {
+  const items = relatedFor(opts);
+  return items.length ? { related: { version: relationsLabel(), items } } : {};
 }
 
 let wcagNames: Map<string, string> | undefined;
@@ -193,13 +207,19 @@ function limitOf(requested: number | undefined, fallback: number, ceiling: numbe
   return { applied, ...(requested !== undefined && requested > ceiling ? { clamped: { requested, applied, ceiling } } : {}) };
 }
 
+/** 3.4.0: o aviso page.limit (withLimitNote) entra depois — o orçamento da página já desconta o tamanho dele. */
+function budgetFor(clamped?: { requested: number; applied: number; ceiling: number }): number {
+  return RESPONSE_BUDGET - (clamped ? JSON.stringify({ limit: clamped }).length + 1 : 0);
+}
+
 function withLimitNote<T extends Record<string, unknown>>(response: T, clamped?: { requested: number; applied: number; ceiling: number }): T {
   if (!clamped) return response;
   const page = response.page as Record<string, unknown> | undefined;
   return { ...response, page: { ...(page ?? {}), limit: clamped } };
 }
 
-const literalMatch = (m: ScoredRule["matched"][number]) => m.fields.some((f) => f !== "normalizedRule");
+/** 3.4.0: casou no texto mostrado (não só na paráfrase do projeto nem só no registro histórico sucedido). */
+const literalMatch = (m: ScoredRule["matched"][number]) => m.fields.some((f) => f !== "normalizedRule" && f !== "legacy");
 const label = (m: ScoredRule["matched"][number]) => (m.via ? `${m.term}→${m.via}` : m.term);
 const matchedOf = (s: ScoredRule) => s.matched.filter(literalMatch).map(label);
 /** 3.3.0 (N-05): termos que casaram só na paráfrase do projeto — fora de why.matched, ditos à parte. */
@@ -220,7 +240,7 @@ function contextHit(c: ContextCandidate): Hit {
     if (r.kind === "component-observed") matched.push(`componente:${r.component}`);
     else if (r.kind === "region-observed") matched.push(`região:${r.region}`);
     else if (r.kind === "related-component-observed") {
-      matched.push(`relacionado:${r.component}`);
+      matched.push(r.via === "relatedComponents" ? `relacionado:${r.component}` : `relacionado:${r.component}@${r.via}`);
       if (c.rule.component === null) relation = "related";
     } else if (r.labels) {
       matched.push(...r.labels);
@@ -344,7 +364,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
       detail === "index"
         ? (rule: KnowledgeRule, n: number) => ({ ...indexItem(rule, n), kind: ruleKind(rule) })
         : detail === "full"
-          ? (rule: KnowledgeRule) => ({ kind: ruleKind(rule), ...(projections.full(rule) as Record<string, unknown>) })
+          ? (rule: KnowledgeRule) => asImplementationProperty(rule, { kind: ruleKind(rule), ...(projections.full(rule) as Record<string, unknown>) })
           : (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => lookupCard(rule, n, used);
     return ok({
       ...lookupResponse({
@@ -413,6 +433,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     }
     const pool = filterRules(strict);
     const candidates = retrieveContextCandidates(pool, normalized, { ...(query ? { query } : {}), vocabulary });
+    const available = (tool: string) => projections.tools?.has(tool) ?? true;
     const meta = kbMeta(vocabulary);
     const key = cursorKey({ tool: "get_ds_rules", mode: "context", args: initialArgs(args), kb: meta });
     const start = startPosition(args, key);
@@ -451,6 +472,13 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         },
         unmatchedTerms: contextUnmatched,
         unmatchedScope: "context",
+        unmatchedRegistry: registryRefsFor(contextUnmatched).map((r) => r.num),
+        routing: routeSteps([...normalized.terms, query ?? ""].join(" "), hint, available),
+        ...relatedBlock({
+          terms,
+          markup: isMarkupQuestion([...normalized.terms, query ?? ""].join(" ")),
+          exclude: new Set(candidates.slice(0, applied).map((c) => c.rule.id)),
+        }),
         concept,
         componentHint: hint,
         ambiguityAllowed: false,
@@ -459,6 +487,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
           ? { evidence: evidenceBlock(normalized.components.flatMap((c) => getEvidence(c)), query ?? null, null, vocabulary, Math.min(applied, 3)) }
           : {}),
         ...contextWarnings(normalized.components, candidates),
+        budget: budgetFor(clamped),
       },
       wcagRegistry(),
       (id) => Boolean(getRuleById(id)),
@@ -476,6 +505,9 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
     const { applied, clamped } = limitOf(args.limit, RETRIEVAL_DEFAULT_LIMIT, RETRIEVAL_MAX_LIMIT);
     const concept = conceptFor(ranked.analysis.terms, vocabulary, component ? [component] : []);
+    const named = component === null && !globalOnly ? componentsNamedIn(query) : [];
+    const scope = component ?? (named.length === 1 ? named[0] : null);
+    const available = (tool: string) => projections.tools?.has(tool) ?? true;
     const hits: Hit[] = ranked.results.map((s) => ({
       rule: s.rule,
       matched: matchedOf(s),
@@ -499,8 +531,19 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
           globalsAllowed: true,
           ...(globalOnly ? { componentFilter: "global" } : {}),
           ...(ranked.analysis.unmatchedTerms.length ? { unmatchedTerms: ranked.analysis.unmatchedTerms } : {}),
+          ...(ranked.analysis.approximations.length ? { approximated: ranked.analysis.approximations } : {}),
         },
         unmatchedTerms: ranked.analysis.unmatchedTerms,
+        unmatchedRegistry: registryRefsFor(ranked.analysis.unmatchedTerms).map((r) => r.num),
+        approximations: ranked.analysis.approximations,
+        routing: routeSteps(query, scope, available),
+        scopeComponent: scope,
+        ...relatedBlock({
+          components: scope ? [scope] : [],
+          terms: ranked.analysis.terms,
+          markup: isMarkupQuestion(query),
+          exclude: new Set(ranked.results.slice(0, applied).map((s) => s.rule.id)),
+        }),
         concept,
         componentHint: component,
         ambiguityAllowed: component === null && !globalOnly,
@@ -508,6 +551,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         ...(args.include_evidence
           ? { evidence: evidenceBlock(getEvidence(component ?? undefined), query, component, vocabulary, Math.min(applied, 3)) }
           : {}),
+        budget: budgetFor(clamped),
       },
       wcagRegistry(),
       (id) => Boolean(getRuleById(id)),
@@ -518,8 +562,9 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
   // ── sem filtro nenhum: índice de facetas ──
   const filter: RuleFilter = { ...strict, ...(component ? { component } : {}) };
   const noFilter = !hasFilter && args.limit === undefined && args.offset === undefined && args.cursor === undefined;
-  const base = globalOnly ? filterRules(strict).filter((r) => r.component === null) : filterRules(filter);
+  const filtered = globalOnly ? filterRules(strict).filter((r) => r.component === null) : filterRules(filter);
   if (noFilter) {
+    const base = filtered;
     const count = (pick: (r: KnowledgeRule) => string) => {
       const out: Record<string, number> = {};
       for (const r of base) out[pick(r)] = (out[pick(r)] ?? 0) + 1;
@@ -543,13 +588,19 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
   }
 
   // ── listagem de catálogo ──
+  // 3.4.0 (A1): prosa que obriga/proíbe → outra prosa → linhas de tabela; ordem da base em cada faixa.
+  const base = listingOrder(filtered);
   const detail = args.detail === "brief" || args.detail === "full" ? args.detail : "index";
   const key = cursorKey({ tool: "get_ds_rules", mode: "listing", args: initialArgs(args), kv: kb.meta.knowledgeVersion });
   const start = startPosition(args, key);
   if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
   const { applied, clamped } = limitOf(args.limit, LISTING_DEFAULT_LIMIT, LISTING_MAX_LIMIT);
   const project =
-    detail === "index" ? indexItem : detail === "full" ? (r: KnowledgeRule) => projections.full(r) : (r: KnowledgeRule) => projections.brief(r);
+    detail === "index"
+      ? indexItem
+      : detail === "full"
+        ? (r: KnowledgeRule) => asImplementationProperty(r, projections.full(r) as Record<string, unknown>)
+        : (r: KnowledgeRule) => asImplementationProperty(r, projections.brief(r) as Record<string, unknown>);
   const response = listingResponse({
     rules: base,
     position: start.position,
@@ -562,6 +613,8 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     detail,
     deprecation: start.deprecation,
     ...(args.include_evidence ? { evidence: evidenceBlock(getEvidence(component ?? undefined), null, null, vocabulary, 10) } : {}),
+    ...(component ? relatedBlock({ components: [component] }) : {}),
+    budget: budgetFor(clamped),
   });
   return ok(withLimitNote(response, clamped));
 }

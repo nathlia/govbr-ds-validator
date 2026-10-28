@@ -123,6 +123,7 @@ import {
   type ContractError,
 } from "./responses/contract.js";
 import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
+import { fitComponentSpec, specClauses, specRelated } from "./tools/componentSpec.js";
 import { emagTemplateCitation } from "./responses/retrieval.js";
 
 /** 3.3.0 (B-09): o resumo do e-MAG do projeto não é texto da norma (nada da base é reescrito). */
@@ -904,7 +905,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     },
     instrumentTool(telemetry, "get_ds_rules", async (args) => {
       // 3.0.0: o contrato oraculo-resposta/1.0.0. match:"literal" = a superfície da 2.17.1, byte a byte.
-      if (args.match !== "literal") return getDsRules(args, { brief: briefRule, full: projectRule });
+      if (args.match !== "literal") return getDsRules(args, { brief: briefRule, full: projectRule, tools: profileTools });
       if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index") {
         return fail({
           error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor nem detail:'index'. Pagine com offset.",
@@ -1463,6 +1464,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           total: own.length,
           byStrategy,
           note: "Regras do componente, candidatas e não defeitos.",
+          // 3.4.0 (A1/A10): texto das cláusulas de prosa do componente; A12: ligações kb-relations.
+          clauses: specClauses(spec.name),
+          ...specRelated(spec.name),
           next: ruleNext.slice(0, 3),
         },
         ...(runtimeNote ? { runtime: { text: runtimeNote, code: "implementation", message: MESSAGES.implementation, state: "after-interaction" } } : {}),
@@ -1486,15 +1490,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // não lista (ex.: ARIA escrito em tempo de execução) não é prova de conformidade.
         absenceNote: ABSENCE_NOTE,
       };
-      if (chosen && textSize(response) > RESPONSE_BUDGET) {
-        response.example = {
-          name: chosen.name,
-          status: "deferred",
-          note: "O exemplo não coube junto com a especificação; peça-o sozinho pelo nome.",
-          next: { tool: "get_component_spec", arguments: { component: spec.name, example: chosen.name } },
-        };
-      }
-      return ok(response);
+      return ok(fitComponentSpec(response, { component: spec.name, chosen, implicit: example === undefined, examples }));
     })
   );
 
