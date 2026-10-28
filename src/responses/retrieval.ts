@@ -12,6 +12,7 @@ import { isTableRow, rankRules } from "../data/retrieval.js";
 import type { GuidanceConcept } from "../data/guidance.js";
 import { componentProvenance } from "../data/componentProvenance.js";
 import { ABSENCE_NOTE } from "./absence.js";
+import type { RelatedItem } from "../data/relations.js";
 import {
   CONTRACT,
   MESSAGES,
@@ -267,6 +268,16 @@ export interface RetrievalInput {
   /** Avisos fixos da 1ª página (defeitos dos exemplos, conflitos de página-fonte). */
   warnings?: Record<string, unknown>;
   budget?: number;
+  /** 3.4.0 (A12): ligações da camada kb-relations (1ª página), com a versão da camada. */
+  related?: { version: string; items: RelatedItem[] };
+  /** 3.4.0 (A6): números WCAG do registro para termos sem correspondência (registryRoutes). */
+  unmatchedRegistry?: string[];
+  /** 3.4.0 (A4): passos de roteamento pela intenção (vão primeiro em next, 1ª página). */
+  routing?: NextStep[];
+  /** 3.4.0 (A5): componente em escopo (component, ou o único nomeado no texto); null = nenhum. */
+  scopeComponent?: string | null;
+  /** 3.4.0 (A7): termos casados só por aproximação. */
+  approximations?: Array<{ term: string; as: string; distance: number }>;
 }
 
 function groupOf(unit: Unit): string {
@@ -317,10 +328,13 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   // ── lacunas (mecânicas + auditadas) ──
   const gaps: Array<Record<string, unknown>> = [];
   if (input.unmatchedTerms.length) {
+    // 3.4.0 (A6): termo aria-*/role sem correspondência → números do registro WCAG (texto não servido).
+    const refs = registryChecked((input.unmatchedRegistry ?? []).map((num) => ({ ref: `wcag:${num}`, name: "" })), wcagNames);
     gaps.push({
       kind: "unmatched-terms",
       about: input.unmatchedTerms.join(" "),
       message: MESSAGES[input.unmatchedScope === "context" ? "gap-unmatched-context" : "gap-unmatched"],
+      ...(refs.length ? { registryRefs: refs, registryNote: MESSAGES["registry-only"] } : {}),
     });
   }
   const coverage = input.concept?.kbCoverage;
@@ -336,7 +350,21 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       origin: ctx.conceptRef,
     });
   }
-  const hasNoClause = gaps.some((g) => g.kind === "no-clause-in-kb");
+  // 3.4.0 (A5): a 1ª página só tem permissão ou regra de outro componente → dito, com nota de ausência.
+  if (first && input.mode === "query") {
+    const page = units.slice(0, Math.min(input.limit, RETRIEVAL_MAX_LIMIT)).map(mainHit);
+    const scope = input.scopeComponent ?? null;
+    const weak = (h: Hit) => h.rule.force === "permitted" || (scope !== null && h.rule.component !== null && h.rule.component !== scope);
+    if (page.length && page.every(weak)) {
+      gaps.push({
+        kind: "only-permission-or-other-component",
+        about: page.map((h) => h.rule.id).join(" "),
+        message: MESSAGES["gap-only-permission"],
+        ...(scope ? { scope } : {}),
+      });
+    }
+  }
+  const hasNoClause = gaps.some((g) => g.kind === "no-clause-in-kb" || g.kind === "only-permission-or-other-component");
 
   // ── ambígua (§5.1, revisão NAT-99): sinal + orientação, NÃO outro conjunto de resultados. Os
   // cartões seguem as mesmas unidades e a mesma ordem do ranking; ambiguity.groups dá a chamada exata
@@ -390,12 +418,20 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
         }
       : undefined;
 
+  // 3.4.0 (A12): o bloco related nunca tira um cartão — entra no fim, inteiro, compacto (título + next), mínimo (id + ligação) ou não entra.
+  let related: RetrievalInput["related"] | undefined;
   const compose = (list: ReturnType<typeof card>[], stop: string, nextPosition: number | null) => {
     const matched = units.length;
     const status = matched === 0 ? "no-match" : ambiguity ? "ambiguous" : gaps.length ? "partial-match" : "candidates";
     const cursor = nextPosition !== null ? encodeCursor(nextPosition, input.cursorKey) : null;
-    const messages = Object.fromEntries([...ctx.used].map((code) => [code, MESSAGES[code]]));
     const nextSteps: NextStep[] = [];
+    // 3.4.0 (A4): roteamento pela intenção primeiro (1ª página).
+    if (first && input.routing?.length) {
+      ctx.used.add("routing");
+      nextSteps.push(...input.routing);
+    }
+    if (first && related?.items.length) ctx.used.add("kb-relation");
+    if (first && input.approximations?.length) ctx.used.add("approximate");
     if (ambiguity && matched > 0) {
       nextSteps.push(
         step("request-detail", "repita com o componente observado (ambiguity.groups[].next) ou acrescente o estado: abrir, exibir, foco, posição"),
@@ -429,6 +465,7 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
         nextSteps.push(step("measure-condition", "meça as condições em toVerify de cada candidata, no estado em que a regra se aplica, antes de citar"));
       }
     }
+    const messages = Object.fromEntries([...ctx.used].map((code) => [code, MESSAGES[code]]));
     const noteCode: MessageCode = cursor ? "continuation" : matched === 0 ? "no-match-floor" : "relevance-floor";
     return {
       contract: CONTRACT,
@@ -441,6 +478,7 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       ...(first && input.unmatchedScope === "context" && input.unmatchedTerms.length ? { unmatchedTerms: input.unmatchedTerms } : {}),
       ...(ambiguity ? { ambiguity } : {}),
       results: list,
+      ...(first && related?.items.length ? { related } : {}),
       ...(investigation ? { investigation } : {}),
       ...(first ? { gaps } : {}),
       page: { returned: list.length, matched, cursor, stop, note: MESSAGES[noteCode] },
@@ -486,6 +524,16 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   }
   const nextPosition = input.position + consumed < units.length ? input.position + consumed : null;
   if (nextPosition === null && stop !== "no-match") stop = "relevance-floor";
+  if (first && cards.length && input.related?.items.length) {
+    const full = input.related;
+    const compact = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation, title: i.title, next: i.next })) };
+    const minimal = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation })) };
+    for (const candidate of [full, compact, minimal]) {
+      related = candidate as RetrievalInput["related"];
+      if (textSize(compose(cards, stop, nextPosition)) <= budget) break;
+      related = undefined;
+    }
+  }
   return compose(cards, stop, nextPosition);
 }
 
@@ -510,7 +558,29 @@ function implementationFor(component: string | null) {
 export function indexItem(rule: KnowledgeRule, n: number) {
   const { text, complete } = cut(plain(rule.title), INDEX_TITLE_MAX);
   // Títulos da base já podem vir cortados ("…"): completo só se nem a base nem este corte cortaram.
-  return { n, id: rule.id, force: rule.force, title: text, titleComplete: complete && !rule.title.trimEnd().endsWith("…"), category: rule.category };
+  const item = { n, id: rule.id, force: rule.force as RuleForce | null, title: text, titleComplete: complete && !rule.title.trimEnd().endsWith("…"), category: rule.category };
+  return asImplementationProperty(rule, item);
+}
+
+/**
+ * 3.4.0 (A11): a MESMA projeção do cartão (3.3.0, A-12) em toda listagem e lote: linha de tabela de API/anatomia
+ * sai como propriedade da implementação, sem a força da tabela (o registro por id a mantém).
+ */
+export function asImplementationProperty<T extends Record<string, unknown>>(rule: KnowledgeRule, item: T): T {
+  if (!isTableRow(rule.originalText ?? "")) return item;
+  return { ...item, kind: "implementation-property", force: null, modality: IMPLEMENTATION_PROPERTY };
+}
+
+/**
+ * 3.4.0 (A1): ordem fixa da listagem de catálogo — prosa que obriga/proíbe, depois a outra prosa, depois linhas
+ * de tabela; em cada faixa, a ordem da base. Sem relevância: só a forma e a força do registro.
+ */
+export function listingBand(rule: KnowledgeRule): number {
+  if (isTableRow(rule.originalText ?? "")) return 2;
+  return rule.force === "required" || rule.force === "prohibited" ? 0 : 1;
+}
+export function listingOrder(rules: KnowledgeRule[]): KnowledgeRule[] {
+  return rules.map((rule, i) => ({ rule, i })).sort((a, b) => listingBand(a.rule) - listingBand(b.rule) || a.i - b.i).map((x) => x.rule);
 }
 
 export interface ListingInput {
@@ -526,6 +596,8 @@ export interface ListingInput {
   deprecation?: string;
   evidence?: unknown;
   budget?: number;
+  /** 3.4.0 (A12): ligações da camada kb-relations do componente listado (1ª página). */
+  related?: { version: string; items: RelatedItem[] };
 }
 
 export function listingResponse(input: ListingInput) {
@@ -551,11 +623,17 @@ export function listingResponse(input: ListingInput) {
         ),
       );
     }
+    const tableRows = items.some((i) => (i as { kind?: string } | null)?.kind === "implementation-property");
+    const messages = {
+      ...(first && tableRows ? { "table-row": MESSAGES["table-row"] } : {}),
+      ...(first && input.related?.items.length ? { "kb-relation": MESSAGES["kb-relation"] } : {}),
+    };
     return {
       contract: CONTRACT,
       kind: "listing",
       status: total === 0 ? "no-match" : "listed",
       ...(first ? { reading: MESSAGES["listing-reading"], kb: input.kb } : {}),
+      ...(Object.keys(messages).length ? { messages } : {}),
       filter: input.filter,
       total,
       ...(first ? { facets: { force } } : {}),
@@ -570,6 +648,7 @@ export function listingResponse(input: ListingInput) {
         note: cursor ? MESSAGES.continuation : MESSAGES["listing-end"],
       },
       next: next.slice(0, 3),
+      ...(first && input.related?.items.length ? { related: input.related } : {}),
       ...(input.evidence && first ? { evidence: input.evidence } : {}),
       ...(total === 0 ? { absenceNote: ABSENCE_NOTE } : {}),
       ...(input.deprecation ? { deprecation: input.deprecation } : {}),

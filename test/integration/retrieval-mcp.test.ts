@@ -41,7 +41,7 @@ describe("get_ds_rules{query} — relevance (2.17.0 engine, 3.0.0 envelope)", ()
     expect(r.results.length).toBeGreaterThan(0);
     expect(r.results.length).toBeLessThanOrEqual(3);
     expect(r.results[0]).toEqual(expect.objectContaining({ ids: expect.any(Array), citeAs: expect.any(String), force: expect.any(String), status: "investigate", applicability: "unknown" }));
-    expect(r.kb).toMatchObject({ ranking: RANKING_VERSION, vocabulary: "vocab-1.1.0" });
+    expect(r.kb).toMatchObject({ ranking: RANKING_VERSION, vocabulary: "vocab-1.2.0" });
     expect(r.query).toMatchObject({ componentHint: "modal", globalsAllowed: true });
     expect(r.page.matched).toBeGreaterThanOrEqual(r.page.returned);
     expect(JSON.stringify(r)).not.toMatch(/"(applicable|verified|conforme|violation)"/);

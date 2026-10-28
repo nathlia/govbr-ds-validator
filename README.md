@@ -83,6 +83,72 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.4.0 — lista única, lado A (D-153): busca, conhecimento e orientação
+
+Fonte: `thesis-workspace/planejamento/atual/lista-unica-correcoes-3.4.0-2026-10-28.md` (A1–A12), com as
+reexecuções das chamadas reais e os auditores com agente. Nada chama modelo; nenhum texto da base muda.
+
+**Ranking `govbr-lexical/1.3.0`, vocabulário `vocab-1.2.0`.** Gerais, nenhuma por consulta:
+- *A3*: o sucessor auditado de um id histórico (`legacy-ids.json`) é indexado também com o título e as
+  referências WCAG/e-MAG do registro histórico (campo `legacy`, peso 0,4); o termo que só casou ali não
+  entra em `why.matched`. "título" volta a trazer a e-MAG 3.3 (WCAG 2.4.2 no registro antigo).
+- *A7*: palavra (≥ 5 letras) que não casa nada, nem por radical nem por vocabulário, ganha UMA alternativa
+  por distância de edição (≤ 1 até 7 letras, ≤ 2 a partir de 8, com transposição), peso 0,6, dita em
+  `query.approximated` e em `why.matched` como `rotlo→≈rotulo`.
+- *A8*: com componente em escopo (`component`, o único nomeado no texto, ou os observados no `context`) e
+  sem palavra de marcação na consulta (tag, html, atributo, identificador, `<`, `=`), diretriz global de
+  codificação HTML (categoria `development`) pesa 0,5: "fechar" da mensagem não é "fechar tags". No
+  `context`, o grupo cuja melhor candidata é mais relevante abre a alternância (empate: global primeiro,
+  como antes); `match:"literal"` não muda.
+- *A9*: `vocab-1.2.0` = 1.1.0 + flexão de gênero mínimo/mínima e máximo/máxima (origem
+  `auditoria-com-agente-2026-10-28`, reportada à parte). tabindex→tabulação continua rejeitado (revisão de
+  28/10); o caso tabindex vai pelo roteamento.
+
+Guarda D-152 (benchmark 1.0.0, qrels 1.0.4, estrato respondível, léxica), cada mudança desligada sobre as demais:
+
+| configuração | hit@5 | P@5 | nDCG@5 | enganosas | resultados sem-resposta/fora/neg. difícil | sem julgamento (Hole@5) | caracteres (média) |
+|---|---|---|---|---|---|---|---|
+| 3.3.0 | 78,6 | 45,1 | 38,8 | 9 | 29 | 0 | 5.862 |
+| **3.4.0** | **78,6** | **45,7** | **39,2** | **9** | **28** | **0** | 6.293 |
+| sem `legacy` (A3) | 78,6 | 45,7 | 38,7 | 9 | 29 | 0 | 6.311 |
+| sem aproximação (A7) | 78,6 | 45,1 | 39,4 | 9 | 28 | 0 | 6.299 |
+| sem peso menor de codificação (A8) | 78,6 | 45,7 | 39,2 | 9 | 28 | 0 | 6.293 |
+| `vocab-1.1.0` (A9) | 78,6 | 45,7 | 39,2 | 9 | 28 | 0 | 6.293 |
+
+Os caracteres sobem pelos blocos novos (abaixo), não pelo ranking.
+
+**Orientação na resposta (não muda o ranking):**
+- *A1/A11*: listagem de catálogo em faixas fixas — prosa que obriga/proíbe, depois a outra prosa, depois
+  linhas de tabela; ordem da base em cada faixa (`listing-reading` diz isso). Linha de tabela sai como
+  `kind:"implementation-property"`, `force:null` em toda listagem (index/brief/full) e no lote `ids`; o
+  registro por id mantém a força. `{component:"message"}` traz as regras de posição ícone/fechar na 1ª página.
+- *A1/A10*: `get_component_spec.rules.clauses` = texto literal das 5 primeiras cláusulas de prosa do
+  componente na mesma ordem (citáveis, cortadas em 240). Para caber com o exemplo: `tokensUsed` é adiado
+  (contagem + `next`), as cláusulas caem para 3 e, se o exemplo implícito (`include_examples`) ainda não
+  couber, vem o primeiro que cabe (`exampleChoice`); só então o exemplo é adiado, como antes.
+- *A4*: `routing-1.0.0` (`src/responses/routing.ts`): tabela fixa de padrões do texto → até 2 passos no
+  início de `next`, com `origin`: cor em hex/rgb/hsl → `get_design_tokens{hex}` + `check_token_compliance`
+  (ou `scan_page`, conforme o perfil); `aria-*`/`role=`/`<tag>`/atributo HTML → `get_ds_rules{component:"global",
+  query}` + `get_component_spec`; posição/esquerda/direita → medir pela geometria. Só diz qual chamada mede
+  melhor; nunca afirma norma. Só sugere ferramentas registradas no perfil.
+- *A5*: 1ª página só com permissão ou regra de outro componente (quando há componente em escopo) → lacuna
+  `only-permission-or-other-component` + `absenceNote`.
+- *A6*: termo `aria-*`/`role` sem correspondência → a lacuna `unmatched-terms` traz `registryRefs` (WCAG 2.2
+  4.1.2, 1.3.1), com o aviso fixo "texto não servido", na busca e no `context`.
+
+**Camada `kb-relations-1.0.0` (A12, NAT-104)** — `data/knowledge/relations/kb-relations-1.0.0.json`,
+`src/data/relations.ts`. Ligações curadas entre regras já servidas, para a base `3.7.0-literal-2026-10-15`;
+`rules.jsonl` não muda. Cada ligação cita as cláusulas da base que a sustentam com trecho literal, conferido na
+carga (trecho ausente = o servidor não sobe). R-01 paginação → estados WAI-ARIA (`5817ddd685a6`, apoio:
+"Página ativa" de `ea455e768955`); R-02 button → e-MAG 1.2 HTML semântico; R-03 consulta de marcação sobre
+botão → "utilizar a tag `<button>`" (`d8448a18814b`); R-04 consulta sobre cor → "devem utilizar sempre as
+cores pré-definidas" (`21b1a2733f7b`). `relatedComponents` derivado entra no `context` como relação
+(`relacionado:<c>@kb-relations-1.0.0`) e as ligações vêm no bloco `related` (busca com resultados, listagem por
+componente, `get_component_spec.rules.related`), que nunca tira um cartão: entra inteiro, compacto ou não
+entra. `registryRoutes` alimenta o A6. Desligável: `GOVBR_KB_RELATIONS=off`.
+
+Fixture byte a byte: `test/fixtures/lexical-3.4.0-get-ds-rules.json` (24 das 30 respostas mudaram).
+
 ## 3.3.0 — busca e contrato (NAT-109, D-151, D-152): defeitos do reteste adversarial da 3.2.0
 
 Busca híbrida medida e descartada no 3.2.0 (D-149/D-152); ver histórico do git. O único motor é o léxico
@@ -747,6 +813,10 @@ gov.br/ds and the e-MAG page, accessed 2026-10-15):
 | `reports/` | `regras-antigas.md` (what happened to each of the 186), normalization summary/coverage/id maps, the independent audit and its corrections; `conflicts.json`/`official-package-audit.json` inherited from 3.7.0 |
 | `manifest.json` | the honest account: `complete: false`; component tabs 106/108 (accordion and scrim have no accessibility tab at the source); sources are core = tag v3.7.0 + 11 doc commits, design = tag v3.6.1 + 10 link-fix commits — cite as "text published at gov.br/ds (DS 3.7.0)", not "the 3.7.0 tag" |
 
+- **Relations layer (3.4.0):** `data/knowledge/relations/kb-relations-1.0.0.json` (written for
+  `3.7.0-literal-2026-10-15`, served only on that version; `GOVBR_KB_RELATIONS=off` turns it off) adds
+  curated links between served rules, each backed by a literal quote of a KB clause checked at load. The
+  KB files are not rewritten; `relatedComponents` is extended only in the loaded copy. See the 3.4.0 section.
 - **Which version is served** is explicit: `activeVersion` in `data/knowledge/manifest.json`
   (`GOVBR_KB_VERSION=3.7.0` serves the old one again, e.g. to reproduce a past campaign). The
   old lexicographic pick is gone — adding a folder no longer changes the oracle.

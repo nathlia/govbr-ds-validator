@@ -36,7 +36,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Engine version: any change to tokenization, fields, weights or floor is a new version. */
-export const RANKING_VERSION = "govbr-lexical/1.2.0";
+export const RANKING_VERSION = "govbr-lexical/1.3.0";
 
 /**
  * Declared weights. General, not per query: field weights say how much a term occurrence in that
@@ -58,8 +58,15 @@ export const RANKING_WEIGHTS = {
     component: 0.6,
     /** source.sectionPath: the heading the clause sits under (gives title/body context). */
     section: 0.4,
+    /**
+     * 1.3.0 (3.4.0, B-25/A3): title and WCAG/e-MAG references of the HISTORICAL records
+     * (legacy-ids.json) that this rule succeeds. The KB text is not rewritten: the old record only lends its
+     * words to the index of its audited successor, so a question worded as the old rule finds the current one.
+     */
+    legacy: 0.4,
   },
-  match: { exact: 1.0, stem: 0.8, vocabulary: 0.7, compoundPart: 0.5 },
+  /** fuzzy (1.3.0, A7): an alternative found only by edit distance, for a term that matches nothing at all. */
+  match: { exact: 1.0, stem: 0.8, vocabulary: 0.7, compoundPart: 0.5, fuzzy: 0.6 },
   /** Extra credit for an identifier/number token matched exactly in the rule text or references. */
   identifier: 1.0,
   /** Extra credit per adjacent query word pair found adjacent in the rule text. */
@@ -69,7 +76,23 @@ export const RANKING_WEIGHTS = {
   componentHint: 0.3,
   /** Multiplier for a markdown table row (API/anatomy listing) — reference, not a prose clause. */
   tableRow: 0.6,
+  /**
+   * 1.3.0 (3.4.0, A8): with a component in scope (`component`, or one named in the text) and no markup word in
+   * the question (MARKUP_TERMS, an identifier, `<`, `=`), a GLOBAL rule of category `development` (HTML coding
+   * guideline) is multiplied by this — "fechar" of a message close button is not "fechar tags".
+   */
+  offTopicCoding: 0.5,
 } as const;
+
+/** 1.3.0 (A8): words that make a question about markup/code, where HTML coding guidelines keep full weight. */
+export const MARKUP_TERMS: ReadonlySet<string> = new Set(["tag", "tags", "html", "codigo", "marcacao", "elemento", "elementos", "atributo", "atributos", "css", "dom", "markup", "codificacao"]);
+
+/**
+ * 1.3.0 (A7): edit-distance fallback for a query WORD that matches nothing in the base (not even by stem or
+ * vocabulary): words of >= `minLength` letters, distance <= 1 up to 7 letters and <= 2 from 8; the closest
+ * indexed word wins (distance, then document frequency, then code order). Reported in `why` as term→≈key.
+ */
+export const FUZZY = { minLength: 5, maxDistanceShort: 1, longFrom: 8, maxDistanceLong: 2 } as const;
 
 /**
  * Declared relevance floor. A rule is returned only if (a) it matches at least `minCoverage` of the
@@ -258,7 +281,7 @@ export interface Vocabulary {
   groups: VocabularyGroup[];
 }
 
-const VOCAB_FILE = join(__dirname, "../../data/retrieval/vocab-1.1.0.json");
+const VOCAB_FILE = join(__dirname, "../../data/retrieval/vocab-1.2.0.json");
 let vocabulary: Vocabulary | undefined;
 let expansionMap: Map<string, Array<{ term: string; group: string; obs?: boolean }>> | undefined;
 
@@ -310,7 +333,7 @@ function expansions(): Map<string, Array<{ term: string; group: string; obs?: bo
 
 type Field = keyof typeof RANKING_WEIGHTS.fields;
 /** Fields reported in `matched` (the text field is reported by its record field names). */
-export type MatchField = "text" | "normalizedRule" | "references" | "conditions" | "exceptions" | "expectedEvidence" | "component" | "section";
+export type MatchField = "text" | "normalizedRule" | "references" | "conditions" | "exceptions" | "expectedEvidence" | "component" | "section" | "legacy";
 
 interface Doc {
   rule: KnowledgeRule;
@@ -381,8 +404,21 @@ function componentNames(kb: KnowledgeBase): Map<string, string> {
   return new Map([...names].map(([c, s]) => [c, [...s].join(" ")]));
 }
 
+/** 1.3.0 (A3): current id → the historical records that name it as audited successor (legacy-ids.json). */
+function legacyBySuccessor(kb: KnowledgeBase): Map<string, KnowledgeRule[]> {
+  const out = new Map<string, KnowledgeRule[]>();
+  for (const old of kb.legacyById?.values() ?? []) {
+    for (const id of old.legacy?.supersededBy ?? []) {
+      if (!kb.byId.has(id)) continue;
+      out.set(id, [...(out.get(id) ?? []), old]);
+    }
+  }
+  return out;
+}
+
 function buildIndex(kb: KnowledgeBase): Index {
   const names = componentNames(kb);
+  const predecessors = legacyBySuccessor(kb);
   const docs: Doc[] = [];
   kb.rules.forEach((rule, order) => {
     const fieldText: Record<Exclude<Field, "text">, string> = {
@@ -392,6 +428,9 @@ function buildIndex(kb: KnowledgeBase): Index {
       expectedEvidence: rule.expectedEvidence.join(" "),
       component: rule.component ? names.get(rule.component) ?? rule.component : "",
       section: typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : String(rule.source.section ?? ""),
+      legacy: (predecessors.get(rule.id) ?? [])
+        .flatMap((old) => [old.title, ...old.wcagReferences, ...old.emagReferences])
+        .join(" "),
     };
     const exact = new Map<Field, Map<string, number>>();
     const stem = new Map<Field, Map<string, number>>();
@@ -493,8 +532,10 @@ interface Concept {
 export interface QueryAnalysis {
   terms: string[];
   expansions: Array<{ term: string; as: string[]; source: string }>;
-  /** Terms with no occurrence in the served base, even after expansion. */
+  /** Terms with no occurrence in the served base, even after expansion (an approximated term is not listed). */
   unmatchedTerms: string[];
+  /** 1.3.0 (A7): words matched only by edit distance (FUZZY), with the indexed word used. */
+  approximations: Array<{ term: string; as: string; distance: number }>;
   concepts: Concept[];
   /** Unordered stem pairs of distinct query content words ("a b", a < b). */
   pairs: string[];
@@ -562,6 +603,16 @@ export function analyzeQuery(
     }
     concepts.push({ term: t.key, kind: t.kind, weight: t.partOf ? W.compoundPart : 1, alternatives, idf, stem: t.stem, ...(t.partOf ? { partOf: t.partOf } : {}) });
   }
+  // 1.3.0 (A7): a word that matches nothing at all gets ONE approximate alternative (closest indexed word).
+  const approximations: QueryAnalysis["approximations"] = [];
+  for (const c of concepts) {
+    if (c.idf > 0 || c.kind !== "word" || c.partOf || c.term.length < FUZZY.minLength) continue;
+    const near = nearestWord(c.term, stats);
+    if (!near) continue;
+    c.alternatives.push({ key: near.key, byStem: false, weight: W.fuzzy, via: "≈" + near.key });
+    c.idf = idfOf(stats.dfExact.get(near.key) ?? 0, n);
+    approximations.push({ term: c.term, as: near.key, distance: near.distance });
+  }
   // An identifier absent from the served base is searched by its parts at full weight (it stays in
   // unmatchedTerms: "aria-current" is not in the base, "aria" and "current" may be).
   const absent = new Set(concepts.filter((c) => c.kind === "identifier" && c.idf === 0).map((c) => c.term));
@@ -575,10 +626,42 @@ export function analyzeQuery(
     terms: concepts.flatMap((c) => [c.term, ...(c.merged ?? [])]).sort(codeUnitCompare),
     expansions: expansionsUsed,
     unmatchedTerms: concepts.filter((c) => c.idf === 0).flatMap((c) => [c.term, ...(c.merged ?? [])]).sort(codeUnitCompare),
+    approximations,
     concepts,
     pairs: [...new Set(pairs)],
     folded: content.map((t) => t.key).join(" "),
   };
+}
+
+/** Optimal string alignment distance (Levenshtein + adjacent transposition), capped: > cap → cap + 1. */
+export function editDistance(a: string, b: string, cap: number): number {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array<number>(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    let rowMin = Infinity;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      rowMin = Math.min(rowMin, d[i][j]);
+    }
+    if (rowMin > cap) return cap + 1;
+  }
+  return d[a.length][b.length];
+}
+
+/** 1.3.0 (A7): the closest indexed WORD key (letters only) within FUZZY distance, or null. */
+function nearestWord(term: string, stats: Stats): { key: string; distance: number } | null {
+  const cap = term.length >= FUZZY.longFrom ? FUZZY.maxDistanceLong : FUZZY.maxDistanceShort;
+  let best: { key: string; distance: number; df: number } | null = null;
+  for (const [key, df] of stats.dfExact) {
+    if (!/^[a-z]+$/.test(key) || key.length < FUZZY.minLength - 1) continue;
+    const distance = editDistance(term, key, cap);
+    if (distance > cap) continue;
+    if (!best || distance < best.distance || (distance === best.distance && (df > best.df || (df === best.df && key < best.key)))) best = { key, distance, df };
+  }
+  return best ? { key: best.key, distance: best.distance } : null;
 }
 
 // ── Scoring ──────────────────────────────────────────────────────────────────────────────────
@@ -610,7 +693,7 @@ export function compareScored(a: ScoredRule, b: ScoredRule): number {
 }
 
 /** Score one rule against an analysed query. Returns null when nothing matches. */
-function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): ScoredRule | null {
+function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null, codingDown = false): ScoredRule | null {
   const n = ix.n;
   const { k1, b } = RANKING_WEIGHTS;
   const fw = RANKING_WEIGHTS.fields;
@@ -678,7 +761,8 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null): S
   const coverage = known > 0 ? covered / known : 0;
   const own = hint !== null && doc.rule.component === hint;
   const score = (lexical + bonus) * (RANKING_WEIGHTS.coverageBase + coverage) * (own ? 1 + RANKING_WEIGHTS.componentHint : 1) *
-    (doc.tableRow ? RANKING_WEIGHTS.tableRow : 1);
+    (doc.tableRow ? RANKING_WEIGHTS.tableRow : 1) *
+    (codingDown && doc.rule.component === null && doc.rule.category === "development" ? RANKING_WEIGHTS.offTopicCoding : 1);
   return { rule: doc.rule, score, coverage, matched, ownComponent: own, order: doc.order };
 }
 
@@ -703,6 +787,12 @@ export function promoteHinted<T>(list: T[], own: (item: T) => boolean): T[] {
   return out;
 }
 
+/** 1.3.0 (A8): the question talks about markup — a MARKUP_TERMS word, an identifier (aria-*, br-*), `<` or `=`. */
+export function isMarkupQuestion(text: string): boolean {
+  if (/[<=]/.test(text)) return true;
+  return tokenize(text).some((t) => t.kind === "identifier" || MARKUP_TERMS.has(t.key));
+}
+
 export interface RankInput {
   /** Free text (query) — terms are combined, never required as a whole phrase. */
   text: string;
@@ -717,6 +807,8 @@ export interface RankInput {
    * observation term above the absolute floor stays a candidate.
    */
   relativeFloor?: boolean;
+  /** 1.3.0 (A8): a component is in scope although no hint is passed (the context adapter's observed components). */
+  componentInScope?: boolean;
 }
 
 export interface RankResult {
@@ -746,10 +838,12 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   // name outside NAMED_IN_TEXT_EXCLUDED) gets the hint weight; nothing is excluded.
   const named = hint === null && input.text ? componentsNamedIn(input.text) : [];
   const soft = named.length === 1 ? named[0] : null;
+  // 1.3.0 (A8): a component in scope and no markup word → HTML coding guidelines (global, development) weigh less.
+  const codingDown = ((hint ?? soft) !== null || input.componentInScope === true) && !isMarkupQuestion(input.text);
   const scored: ScoredRule[] = [];
   for (const doc of poolDocs) {
     if (hint !== null && doc.rule.component !== null && doc.rule.component !== hint) continue;
-    const s = scoreDoc(doc, analysis, stats, hint ?? soft);
+    const s = scoreDoc(doc, analysis, stats, hint ?? soft, codingDown);
     if (s) scored.push(s);
   }
   scored.sort(compareScored);
@@ -777,9 +871,15 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
  * fields, weights and absolute floor as `rankRules` (no relative cut), without a component hint (the observed components
  * are handled by the caller). Returns scores above the floor only.
  */
-export function scoreTerms(terms: string[], pool: KnowledgeRule[], vocabulary?: boolean, kb: KnowledgeBase = getKnowledgeBase()): Map<string, ScoredRule> {
+export function scoreTerms(
+  terms: string[],
+  pool: KnowledgeRule[],
+  vocabulary?: boolean,
+  kb: KnowledgeBase = getKnowledgeBase(),
+  componentInScope = false,
+): Map<string, ScoredRule> {
   if (!terms.length) return new Map();
-  const ranked = rankRules({ text: terms.join(" "), pool, vocabulary, relativeFloor: false }, kb);
+  const ranked = rankRules({ text: terms.join(" "), pool, vocabulary, relativeFloor: false, componentInScope }, kb);
   return new Map(ranked.results.map((s) => [s.rule.id, s]));
 }
 
