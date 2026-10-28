@@ -83,6 +83,126 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.0.0 (NAT-99): contrato de resposta `oraculo-resposta/1.0.0`
+
+O formato das respostas muda; o motor de busca, os pesos, o piso, os checkers, os predicados e a
+lógica do portão **não** mudam (scan de regressão fluxo/A/B: 9/6/58 achados, assinatura igual à
+2.17.x). Fonte: `thesis-workspace/planejamento/atual/contrato-resposta-oraculo-RASCUNHO-2026-10-28.md`
+(com as decisões do §15) e os achados B-01, B-04, B-08, S-03, S-09 e S-15 do teste adversarial de 28/10.
+
+### Mudanças incompatíveis
+
+- **JSON compacto** em todas as ferramentas (sem indentação) e `contract: "oraculo-resposta/1.0.0"`
+  em toda resposta. O caminho `get_ds_rules{match:"literal"}` continua o da 2.17.1, byte a byte
+  (indentado, formato antigo).
+- **Orçamento de 8.000 caracteres** no texto de toda resposta inicial (`content[0].text.length`).
+  O que não cabe vai por continuação explícita: `page.cursor` (busca, listagem, lote), `clauseCursor`
+  (unidade por id), `get_finding_details` (famílias e observações do scan).
+- **`get_ds_rules{query|context}`**: envelope `kind:"retrieval"` com `status`
+  (`candidates|partial-match|no-match|ambiguous`), `reading`, `messages`, `kb`, `query`, `results`
+  (cartões), `investigation?`, `gaps`, `page {returned, matched, cursor, stop, note}`, `next` (≤ 3) e
+  `absenceNote` quando há lacuna. Antes: `rules`/`candidates`, `total`, `more.nextOffset`, `retrieval`,
+  `meta`. Padrão de 5 unidades (era 10 com `query` e 20 com `context`), teto 10; 5 é teto, não meta: o
+  que não couber vai para o cursor com `page.stop:"budget"`. Fontes diferentes com texto parecido
+  continuam dois cartões.
+- **Unidade (cartão)**: só se fundem num cartão (a) o registro de título de uma recomendação/seção com o
+  corpo dela (a primeira cláusula de prosa da seção na lista) e (b) as linhas da mesma tabela
+  (API/anatomia). Cláusulas de prosa distintas da mesma seção são cartões separados, cada uma com seu
+  `citeAs`; `citeAs` é sempre a cláusula que carrega a obrigação, nunca o título. (Revisão da NAT-99: a
+  regra do contrato §5.2, "mesmo `corpusFile + sectionPath`", fundia até 27 cláusulas independentes.) `groups`, `pageConstraints` e `notRetrieved` saíram do topo do `context`;
+  defeitos de exemplo e conflitos de página-fonte vão em `warnings` (1ª página).
+- **Ambígua** (sem `component`): resultados em ≥ 3 grupos (componentes; `global` conta) e nenhum com a
+  maioria → `status:"ambiguous"` e `ambiguity.groups[].next` com a chamada exata de cada grupo. É sinal
+  e orientação, não outro conjunto: os cartões são as mesmas unidades, na mesma ordem do ranking, com
+  cursor. Regra fixa, não calibrada no benchmark.
+- **Orçamento e cartões**: antes de cortar uma busca abaixo de 5 cartões, todos passam a levar 1
+  `toVerify` e 1 `evidence` (o texto da cláusula fica); só então vale `page.stop:"budget"`.
+- **`component:"global"`** filtra só as regras sem componente.
+- **Listagem sem `query`**: `kind:"listing"`, projeção `index` (`n, id, force, title ≤ 110,
+  titleComplete, category`), padrão 20, teto 50; `detail:"brief"|"full"` continuam, no orçamento.
+  Antes: 40 em `brief`, sem teto de caracteres (B-04: `{limit:200, detail:"full"}` = 246 KB).
+- **`get_ds_rules{ids}`**: `kind:"lookup"`, `results` em cartões sem `why`; teto de 10 ids (20 com
+  `detail:"index"`); ids repetidos contam uma vez. **`{id}`**: sem duplicar `rule.source` em
+  `unitSource` nem o texto da regra em `mainClause`; cláusulas adjacentes acima do teto por `clauseCursor`.
+- **`offset`** está obsoleto: aceito até a 4.0.0 com `deprecation`; com `cursor`, é ignorado. Cursor de
+  outra consulta, versão ou ranking = erro `stale-cursor`.
+- **`get_component_spec`**: `rules.ids` (lista de todos os ids) virou `rules {total, byStrategy,
+  next ≤ 3}`; um exemplo por chamada (`example: <nome>`; `include_examples` traz o primeiro), `examples[]`
+  saiu; acrescenta `runtime` (comportamento da implementação, texto fixo `implementation`) e `gaps`.
+- **`scan_page`**: `checksOmitted` virou `checksRun {executed, omitted, limits, coverageNote,
+  completeOmitted}`, sempre presente; `normativeContext` (ponteiro para centenas de candidatas) virou
+  `investigate` (≤ 5 componentes na ordem do DOM, um passo cada, `doNotRepeat`); `observations` virou
+  bloco limitado (`total`, `byKind`, `whyNotAFinding`, itens compactos sem HTML, continuação por
+  `get_finding_details{scanId, view:"observations", cursor}`), S-03: tela B 144 KB → 8 KB; `maxChars`
+  vale para a resposta inteira (padrão 8.000, era 12.000 só para as famílias); `absenceNote` sempre (S-09).
+- **`verify_finding`**: campos de leitura ao lado do objeto `verification` (inalterado): `verdict`,
+  `about`, `observation {status, message}`, `normResolution` (checks do próprio oráculo), `reasons[]`,
+  `actions` (≤ 3, vocabulário fixo). Veredito sobre citação/aplicabilidade/estado nunca põe
+  `observation.status:"contradicted"`. Com `about:"none"` (predicado existe, sem `live`) a mensagem diz
+  que nada foi avaliado; id legado substituído tem `about:"citation"` e o estado da sucessora. Além da
+  tabela do §11 do contrato, três códigos mecânicos:
+
+  | `code` | Quando | `about` | `observation.status` | Ação |
+  |---|---|---|---|---|
+  | `locator-no-elements` | `evidenceConsistent: fail` com `live` e 0 elementos no estado reproduzido | state | not-evaluated | reproduzir estado (scanId ou actions do estado em que o elemento existe) |
+  | `evidence-contradicted` | `evidenceConsistent: fail` com `live` e elementos medidos que desmentem o valor alegado | evidence | contradicted | medir condição de novo no estado certo |
+  | `evidence-inconsistent` | `evidenceConsistent: fail` sem medição (dados estruturados contraditórios, ex. `expectedCondition` inválida) | evidence | not-evaluated | corrigir `evidence.data` e repetir |
+- **Todas as ferramentas no teto** (revisão de 28/10): `check_component_structure`,
+  `check_token_compliance` e `run_axe_scan` seguem o orçamento da resposta inteira do `scan_page`
+  (observações em bloco com continuação, `absenceNote` sempre); `get_finding_details` conta o `ledger`
+  (só na 1ª página) e o padrão é 8.000; `scan_page{compareToScanId}` leva em `stateDiff.findings` só
+  contagens e até 10 ids por tipo, e o diff completo vem por `get_finding_details{scanId, view:"diff",
+  cursor}`; `get_design_tokens` pagina `hexLookup` e a lista filtrada com `cursor` e ganha `hex` (índice
+  reverso direto); `get_page_rules{category}` devolve `parts` (seções cortadas por parágrafo, ≤ 3.000,
+  inteiras) com `cursor`.
+- **Fim e entrada vazia**: `offset`/cursor além da última unidade → `status:"end-of-results"`,
+  `page.stop:"end"`; `query:""` (ou só espaços) é erro `no-content-terms`, não listagem do catálogo.
+- **Erros**: todo erro de aplicação sai com `isError: true`, `kind:"error"`, `error` (texto, como antes),
+  `errorCode` e ≥ 1 `next` exato (B-08). Parâmetro desconhecido é recusado com o nome mais próximo
+  (`zod .strict()`, B-01), em vez de descartado em silêncio — também nos objetos aninhados
+  (`finding.rule.implement` → "você quis dizer 'implements'"); registros abertos (`evidence.data`) seguem
+  abertos.
+- **Prompt `validate_page`** só cita as ferramentas do perfil (S-15) e `max_iterations` precisa ser
+  inteiro de 0 a 99.
+- **`tools/list` muda** em todos os perfis (descrições e parâmetros novos `cursor`, `clauseCursor`,
+  `example`, `hex`, `detail:"index"`, `view:"observations"|"diff"`; `inspect_computed_styles` ganha
+  `cursor` e devolve os elementos no orçamento, em ordem do DOM). Campanhas novas fixam os sha da 3.0.0
+  (`test/integration/knowledge-free.test.ts`).
+
+Orientação curada (`data/retrieval/guidance-1.0.0.json`, §15.6): `investigation`, lacunas auditadas
+`no-clause-in-kb` (com `registryRefs` WCAG rotulados "referência de registro, texto não servido pela
+base; não sustenta sozinha uma exigência específica") e notas por cartão. Não muda ranking nem piso;
+cada frase aponta para uma cláusula da base ou para `componentProvenance`; desligável com
+`vocabulary:false` ou `GOVBR_RETRIEVAL_GUIDANCE=off`. **Por padrão só conceitos auditados são
+servidos**; o único conceito (`estado-atual-de-item`, do exemplo 01) está `audit.status:"pending"` e
+só sai com `GOVBR_RETRIEVAL_GUIDANCE=pending`, até a entrada de lote D-xx com revisão do Codex. Cada
+frase de `investigation.toVerify` sai com seu `basis`; o conceito vale só para os `components` do seu
+escopo (aqui `pagination`) e só para a versão da base em que foi escrito; frase sem `basis` válido
+(id da base ou `componentProvenance:<componente>` com fonte de implementação) derruba a subida.
+
+Benchmark de desenvolvimento `benchmark-1.0.0` (respondíveis, top 5, vocabulário ligado, orientação
+desligada): hit 75,0% → 75,0%, P@5 40,3% → 40,5% (nenhuma consulta ganha ou perde acerto), caracteres
+da 1ª chamada 6.287 → 5.879, por consulta 12.821 → 9.933; texto da 1ª chamada ≤ 7.911. Medido com uma cópia do avaliador que lê `results` (o avaliador do govbr-eval não lê o
+envelope novo; ver nota de migração).
+
+### Nota de migração: skill comum do govbr-eval e avaliador
+
+`govbr-eval/skills/avaliar-tela/SKILL.md` (só procedimento, sem norma):
+1. Passo 5: trocar "Continue uma resposta truncada pelo identificador recebido" por "Continue uma
+   resposta cortada pela continuação que ela indicar (cursor ou id), sem repetir a verificação."
+2. Passo 6: acrescentar "Se a ferramenta indicar uma ação (corrigir citação, reproduzir estado, medir
+   condição), ela é uma sugestão de próximo passo, não uma conclusão sobre o fato." Vale nos três braços
+   (o `verify_finding` do knowledge-free também devolve `actions`).
+3. Onde a skill citar `scan_page.normativeContext`, `checksOmitted`, `rules`/`candidates`, `more.nextOffset`
+   ou `offset`, trocar por `investigate`, `checksRun`, `results`, `page.cursor`/`cursor`.
+4. Nada sobre aria-current, data-current, paginação ou qualquer norma: isso fica no oráculo.
+
+`govbr-eval/scripts/benchmark-oraculo.ts` (não editado aqui): `units()` procura `units|rules|candidates|items`
+e falha com "Unrecognized retrieval response" em todas as 72 consultas — precisa ler `results`;
+`candidates` deve vir de `page.matched` (não há `total`); erros agora são `isError:true`. A regra de unidade
+foi estreitada para não fundir cláusulas independentes (o avaliador pontua o cartão pelo `citeAs`). Campanhas
+fixam os sha novos do `tools/list`.
+
 ## Related repositories
 
 | Repo | Role |
@@ -111,11 +231,11 @@ ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize
 ## Tools
 
 **Oracle knowledge** (read-only):
-- `get_ds_rules (id?, ids?, context?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, include_evidence?, detail?, limit?, offset?)` — authoritative KB store; exact ids can be fetched in one batch; `context` returns candidate rules for observed components/regions/terms (2.9.0)
+- `get_ds_rules (id?, ids?, context?, component?, category?, force?, validationStrategy?, automatable?, automationConfidence?, severitySuggestion?, standard?, query?, match?, vocabulary?, include_evidence?, detail?, limit?, cursor?, clauseCursor?, offset? [obsoleto])` — authoritative KB store; exact ids can be fetched in one batch; `query`/`context` return up to 5 candidate units as cards (3.0.0 contract, ≤ 8,000 characters, `page.cursor` continuation)
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines; without a category, also the citable page constraints `ds-page-header`, `ds-page-footer`, `ds-page-skip-link` (2.7.0)
-- `list_components ()` / `get_component_spec (component, include_examples?)` — canonical structure contracts; HTML examples are opt-in. Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
+- `list_components ()` / `get_component_spec (component, include_examples?, example?)` — canonical structure contracts; HTML examples are opt-in, one per call (3.0.0). Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
 
 **Evidence (C5 phase 1)**:
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
@@ -128,7 +248,8 @@ ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize
 - `get_finding_details (ids? | scanId?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?, familyId?)` — retrieves selected evidence or continues a stored scan without rerunning it; with `scanId` + `familyId` pages every member of a finding family (2.11.0)
 
 All three scanners default to `detail="summary"`, return explicit `truncated`/`nextCursor`, and
-respect an approximate 12,000-character budget. Use `detail="evidence"` for adjudication and
+respect an approximate 12,000-character budget for findings; since 3.0.0 `scan_page`'s `maxChars`
+(default 8,000) bounds the whole response. Use `detail="evidence"` for adjudication and
 `get_finding_details(..., detail="full")` only when a complete Finding is required.
 Scanner output also reports deterministic deduplication counts and the exact merge key.
 `scan_page` is the preferred first pass: its LRU cache is process-local and keyed by the rendered

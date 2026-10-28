@@ -95,9 +95,10 @@ describe("get_ds_rules context — contract", () => {
   it("empty query still returns the facet index; an empty context is an error, not the index", async () => {
     const index = await call(evaluation, "get_ds_rules", {});
     expect(index.facets).toBeDefined();
-    expect(index.rules).toBeUndefined();
+    expect(index.items).toBeUndefined();
     const empty = await call(evaluation, "get_ds_rules", { context: {} });
     expect(empty.error).toMatch(/context vazio/);
+    expect(empty.errorCode).toBe("empty-context");
   });
 
   it("rejects ambiguous combinations instead of guessing", async () => {
@@ -105,39 +106,44 @@ describe("get_ds_rules context — contract", () => {
     expect((await call(evaluation, "get_ds_rules", { context: { components: ["button"] }, ids: ["x"] })).error).toBeDefined();
   });
 
-  it("summary carries id, reason, applicability and evidence steps; brief/full add rule text, source and version", async () => {
-    const summary = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] } });
-    expect(summary.retrieval).toBe("direct");
-    expect(summary.detail).toBe("summary");
-    expect(summary.note).toMatch(/não defeitos/);
-    const first = summary.candidates[0];
+  it("cards carry unit ids, citeAs, literal text, what to verify, evidence, unknown applicability and source (3.0.0)", async () => {
+    const collected: any[] = [];
+    let page = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] }, limit: 10 });
+    expect(page.kind).toBe("retrieval");
+    expect(page.reading).toMatch(/não veredito/);
+    const first = page.results[0];
     expect(Object.keys(first)).toEqual(
-      expect.arrayContaining(["ruleId", "title", "force", "obligation", "reasons", "applicability", "expectedEvidence", "neededState"]),
+      expect.arrayContaining(["rank", "ids", "citeAs", "status", "force", "modality", "requirement", "why", "toVerify", "evidence", "applicability", "source", "more"]),
     );
     expect(first).not.toHaveProperty("normalizedRule");
-
-    const brief = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] }, detail: "brief" });
-    const conditional = brief.candidates.find((c: { conditions?: string[] }) => c.conditions?.length);
+    for (let i = 0; i < 30; i++) {
+      collected.push(...page.results);
+      if (!page.page.cursor) break;
+      page = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] }, limit: 10, cursor: page.page.cursor });
+    }
+    const conditional = collected.find((c) => c.toVerify.some((t: { origin: string }) => t.origin === "extracted-condition"));
     expect(conditional).toBeDefined();
-    expect(conditional.applicability).toMatchObject({ status: "unknown", unevaluated: ["conditions"] });
+    expect(conditional.applicability).toBe("unknown");
     expect(conditional.source).toEqual(expect.objectContaining({ url: expect.stringMatching(/^https:/), version: "3.7.0" }));
-    expect(conditional.normalizedRule.length).toBeGreaterThan(0);
-
+    expect(conditional.requirement.text.length).toBeGreaterThan(0);
+    // detail não muda os cartões de busca; o registro inteiro vem por id.
     const full = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] }, detail: "full" });
-    expect(full.candidates[0]).toHaveProperty("rationale");
-    expect(full.candidates[0]).toHaveProperty("wcagReferences");
+    expect(full.results[0]).not.toHaveProperty("rationale");
+    const record = await call(evaluation, full.results[0].more.next.tool, full.results[0].more.next.arguments);
+    expect(record.rule).toHaveProperty("rationale");
+    expect(record.rule).toHaveProperty("wcagReferences");
   });
 
   it("documented name variants resolve; undocumented ones are reported, never guessed", async () => {
     const data = await call(evaluation, "get_ds_rules", { context: { components: ["Br-Button", "Cookie Bar", "carrossel"] } });
-    expect(data.context.components).toEqual(["button", "cookiebar"]);
-    expect(data.context.unresolved).toEqual(["carrossel"]);
+    expect(data.query.components).toEqual(["button", "cookiebar"]);
+    expect(data.query.unresolved).toEqual(["carrossel"]);
     // 2.17.0 (B-05): fora do context, component usa o mesmo resolvedor; match:"literal" mantém o id
     // exato da 2.8.0; nome desconhecido é erro de entrada com sugestões, não "0 regras".
     const byComponent = await call(evaluation, "get_ds_rules", { component: "Button" });
     const exact = await call(evaluation, "get_ds_rules", { component: "button" });
-    expect(byComponent.count).toBeGreaterThan(0);
-    expect(byComponent.rules.map((r: { id: string }) => r.id)).toEqual(exact.rules.map((r: { id: string }) => r.id));
+    expect(byComponent.items.length).toBeGreaterThan(0);
+    expect(byComponent.items.map((r: { id: string }) => r.id)).toEqual(exact.items.map((r: { id: string }) => r.id));
     expect((await call(evaluation, "get_ds_rules", { component: "Button", match: "literal" })).count).toBe(0);
     const unknown = await call(evaluation, "get_ds_rules", { component: "carrossel", query: "foco" });
     expect(unknown).toMatchObject({ errorCode: "unknown-component", field: "component", didYouMean: ["carousel"] });
@@ -147,50 +153,54 @@ describe("get_ds_rules context — contract", () => {
 
   it("labels conflicts and example defects; examples never appear as candidates", async () => {
     const data = await call(evaluation, "get_ds_rules", { context: { components: ["modal", "card", "wizard"] } });
-    expect(data.candidates.every((c: { force: string }) => c.force !== "example")).toBe(true);
-    expect(data.exampleWarnings.items.map((w: { component: string }) => w.component)).toEqual(["card", "wizard"]);
-    // Conflito só da página-fonte não se liga a regra: vai para sourcePageNotes.
-    expect(data.candidates.some((c: { conflicts?: unknown[] }) => c.conflicts?.length)).toBe(false);
-    expect(data.sourcePageNotes.items).toContainEqual(
+    expect(data.results.every((c: { force: string }) => c.force !== "example")).toBe(true);
+    expect(data.warnings.exampleDefects.map((w: { component: string }) => w.component)).toEqual(["card", "wizard"]);
+    // Conflito só da página-fonte não se liga a regra: vai para warnings.sourcePageNotes.
+    expect(data.results.some((c: { conflicts?: unknown[] }) => c.conflicts?.length)).toBe(false);
+    expect(data.warnings.sourcePageNotes).toContainEqual(
       expect.objectContaining({ type: "documentation-typo-suspected", url: "https://www.gov.br/ds/components/modal" }),
     );
-    const cdn = await call(evaluation, "get_ds_rules", { context: { terms: ["cdn"] } });
-    const titled = cdn.candidates.find((c: { title: string }) => c.title === "Evitar CDN legado");
+    const cdn = await call(evaluation, "get_ds_rules", { context: { terms: ["cdn"] }, limit: 10 });
+    const titled = cdn.results.find((c: { conflicts?: unknown[] }) => c.conflicts?.length);
     expect(titled.conflicts).toEqual([expect.objectContaining({ link: "ruleTitle" })]);
   });
 
-  it("explicit pagination walks every candidate once, in order, within the budget", async () => {
+  it("cursor walks every distinct unit once, in order, each page within the 8,000 budget, without loops", async () => {
     const context = {
       components: ["header", "footer", "breadcrumb", "menu", "button", "input", "select", "checkbox", "radio", "modal", "tooltip", "table", "tag", "pagination", "card"],
       terms: ["teclado", "erro"],
     };
-    const all = await call(evaluation, "get_ds_rules", { context, limit: 200, detail: "summary" });
-    const total = all.total;
-    expect(total).toBeGreaterThan(20);
-
     const ids: string[] = [];
-    let offset: number | undefined = 0;
+    const ranks: number[] = [];
+    let cursor: string | null | undefined;
+    let matched = 0;
     let pages = 0;
-    while (offset !== undefined) {
-      const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: { context, detail: "brief", limit: 15, offset } }));
+    do {
+      const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: { context, limit: 10, ...(cursor ? { cursor } : {}) } }));
+      expect(raw.length).toBeLessThanOrEqual(8_000);
       const page = JSON.parse(raw);
-      expect(page.count).toBeGreaterThan(0);
-      expect(page.count).toBeLessThanOrEqual(15);
-      expect(raw.length).toBeLessThanOrEqual(12_000);
-      if (page.offset > 0) expect(page.pageConstraints).toBeUndefined();
-      ids.push(...page.candidates.map((c: { ruleId: string }) => c.ruleId));
-      offset = page.more?.nextOffset;
+      if (pages === 0) matched = page.page.matched;
+      else {
+        expect(page.kb).toBeUndefined();
+        expect(page.messages).toBeUndefined();
+      }
+      expect(page.results.length).toBeGreaterThan(0);
+      expect(page.results.length).toBeLessThanOrEqual(10);
+      expect(["limit", "budget", "relevance-floor"]).toContain(page.page.stop);
+      ids.push(...page.results.map((c: { citeAs: string }) => c.citeAs));
+      ranks.push(...page.results.map((c: { rank: number }) => c.rank));
+      expect(page.page.cursor).not.toBe(cursor);
+      cursor = page.page.cursor;
       pages += 1;
-    }
+      expect(pages).toBeLessThan(400);
+    } while (cursor);
     expect(pages).toBeGreaterThan(1);
-    expect(ids).toHaveLength(total);
-    expect(new Set(ids).size).toBe(total);
-
-    // Paginação por orçamento: a página para antes do limit, sinaliza e continua do ponto exato.
-    const full = await call(evaluation, "get_ds_rules", { context, detail: "full", limit: 200 });
-    expect(full.truncated).toBe(true);
-    expect(full.more.reason).toMatch(/orçamento/);
-    expect(full.candidates.map((c: { ruleId: string }) => c.ruleId)).toEqual(ids.slice(0, full.count));
+    expect(ids).toHaveLength(matched);
+    expect(new Set(ids).size).toBe(matched);
+    expect(ranks).toEqual(ranks.map((_, i) => i + 1));
+    // Mesma entrada, mesma ordem.
+    const again = await call(evaluation, "get_ds_rules", { context, limit: 10 });
+    expect(again.results.map((c: { citeAs: string }) => c.citeAs)).toEqual(ids.slice(0, again.results.length));
   });
 
   it("returns byte-identical text to different clients and profiles carrying norms", async () => {
@@ -209,61 +219,61 @@ describe("get_ds_rules context — contract", () => {
     }
   });
 
-  it("get_component_spec points to the component's rules without inventing others", async () => {
+  it("get_component_spec groups the component's rules by strategy without inventing others", async () => {
     const spec = await call(evaluation, "get_component_spec", { component: "tag" });
     expect(spec.rules.retrieval).toBe("automatic");
-    expect(spec.rules.next).toEqual({ tool: "get_ds_rules", arguments: { context: { components: ["tag"] } } });
-    const direct = await call(evaluation, "get_ds_rules", { context: { components: ["tag"] }, limit: 200 });
-    expect(spec.rules.ids).toEqual(direct.candidates.map((c: { ruleId: string }) => c.ruleId));
+    const listing = await call(evaluation, "get_ds_rules", { component: "tag" });
+    expect(spec.rules.total).toBe(listing.total);
+    for (const n of spec.rules.next) {
+      expect(n.arguments.component).toBe("tag");
+      const page = await call(evaluation, n.tool, n.arguments);
+      expect(page.total).toBe(spec.rules.byStrategy[n.arguments.validationStrategy]);
+    }
     // get_component_spec mantém o nome exato da 2.8.0.
     const byVariant = await call(evaluation, "get_component_spec", { component: "br-tag" });
     expect(byVariant.error).toMatch(/não encontrado/);
+    expect(byVariant.didYouMean).toEqual(["tag"]);
   });
 });
 
-describe("scan_page normativeContext on a neutral-domain fixture", () => {
-  it("marks automatic retrieval in profiles with norms and the follow-up gives correct guidance", async () => {
+describe("scan_page investigate on a neutral-domain fixture (3.0.0; normativeContext da 2.9.0)", () => {
+  it("lists up to 5 found components in DOM order, each with one bounded step, in profiles with norms", async () => {
     const scan = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure"], limit: 5 });
-    const ctx = scan.normativeContext;
-    expect(ctx.retrieval).toBe("automatic");
-    expect(ctx.basis).toBe("coverage.componentsFound");
-    expect(ctx.components).toEqual([...scan.coverage.componentsFound].sort());
-    expect(ctx.components).toEqual(expect.arrayContaining(["button", "input", "modal", "tag", "header"]));
-    // 2.12.0: tamanho de cada componente antes de pedir.
-    expect(Object.values(ctx.byComponent as Record<string, number>).reduce((x, y) => x + y, 0)).toBe(ctx.candidates);
-
-    const followUp = await call(evaluation, ctx.next.tool === "get_ds_rules" ? "get_ds_rules" : "", { ...ctx.next.arguments, limit: 200 });
-    expect(followUp.total).toBe(ctx.candidates);
-    const observed = new Set<string>(ctx.components);
-    // Nenhuma regra de componente ausente da página (ex.: carousel, wizard, upload).
-    expect(followUp.candidates.every((c: { reasons: Array<{ component?: string }> }) =>
-      c.reasons.some((r) => r.component && observed.has(r.component)))).toBe(true);
-    // A tag de contagem tem regra condicional relacionada a tooltip, que a página não tem: fica rotulada.
-    const tagRule = followUp.candidates.find((c: { reasons: Array<{ component?: string }>; applicability: { unevaluated?: string[] } }) =>
-      c.reasons.some((r) => r.component === "tag") && c.applicability.unevaluated?.includes("conditions"));
-    expect(tagRule.applicability.status).toBe("unknown");
-    expect(tagRule.applicability.unknowns.join(" ")).toMatch(/tooltip/);
-    // O skip link encontrado traz a regra global do Template Base pela relação documentada.
-    const viaRelation = followUp.candidates.find((c: { reasons: Array<{ kind: string; component?: string }> }) =>
-      c.reasons.some((r) => r.kind === "related-component-observed" && r.component === "skiplink"));
-    expect(viaRelation).toBeDefined();
+    expect(scan.normativeContext).toBeUndefined();
+    const inv = scan.investigate;
+    expect(inv.retrieval).toBe("automatic");
+    expect(inv.doNotRepeat).toMatch(/Não repita este scan/);
+    const found: string[] = scan.coverage.componentsFound;
+    expect(found).toEqual(expect.arrayContaining(["button", "input", "modal", "tag", "header"]));
+    // Ordem do DOM: a do coverage.componentsFound, sem ordenação alfabética.
+    expect(inv.items.map((i: { component: string }) => i.component)).toEqual(found.slice(0, 5));
+    expect(found[0]).toBe("skiplink");
+    if (found.length > 5) expect(inv.more).toEqual({ remaining: found.length - 5, components: found.slice(5) });
+    for (const item of inv.items) {
+      expect(item.stateRef).toBe(scan.scanId);
+      expect(item.next).toEqual({ tool: "get_component_spec", arguments: { component: item.component } });
+    }
+    const followUp = await call(evaluation, inv.items[1].next.tool, inv.items[1].next.arguments);
+    expect(followUp.kind).toBe("component-spec");
+    expect(followUp.name).toBe(inv.items[1].component);
   });
 
-  it("emits normativeContext only on the first page, not on cursor continuations", async () => {
+  it("emits investigate only on the first page, not on cursor continuations", async () => {
     const first = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure", "axe"], limit: 1 });
-    expect(first.normativeContext).toBeDefined();
+    expect(first.investigate).toBeDefined();
     const next = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure", "axe"], limit: 1, cursor: first.nextCursor ?? 1 });
-    expect(next.normativeContext).toBeUndefined();
+    expect(next.investigate).toBeUndefined();
     // cursor 0 é a primeira página.
     const zero = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure", "axe"], limit: 1, cursor: 0 });
-    expect(zero.normativeContext).toEqual(first.normativeContext);
+    expect(zero.investigate).toEqual({ ...first.investigate, items: first.investigate.items.map((i: { stateRef: string }) => ({ ...i, stateRef: zero.scanId })) });
   });
-
   it("profiles without norms get no normative projection", async () => {
     const deterministic = await connect("deterministic", "sem-normas");
     try {
       const scan = await call(deterministic, "scan_page", { url: baseUrl, checks: ["structure"], limit: 5 });
       expect(scan.normativeContext).toBeUndefined();
+      expect(scan.investigate).toBeUndefined();
+      expect(scan.checksRun).toBeDefined();
       expect(scan.coverage.componentsFound.length).toBeGreaterThan(0);
     } finally {
       await deterministic.close();
@@ -283,7 +293,9 @@ describe("legacy get_ds_rules call shapes are byte-identical to 2.8.0", () => {
     for (const shape of shapes) {
       // 2.17.0 (NAT-97): query e component mudaram de semântica de propósito (relevância, resolvedor de
       // nomes); a semântica antiga continua disponível, byte a byte, com match:"literal".
-      const legacyArgs = "query" in shape.args || "component" in shape.args ? { ...shape.args, match: "literal" } : shape.args;
+      // 3.0.0 (NAT-99): o contrato oraculo-resposta muda todas as formas; a superfície antiga continua,
+      // byte a byte, com match:"literal".
+      const legacyArgs = { ...shape.args, match: "literal" };
       const raw = textOf(await evaluation.callTool({ name: "get_ds_rules", arguments: legacyArgs }));
       // 2.12.0 acrescenta só meta.knowledgeVersion; sem ele, o texto tem de ser o da 2.8.0 byte a byte.
       const parsed = JSON.parse(raw);

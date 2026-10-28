@@ -1,7 +1,8 @@
 /**
- * NAT-97 (2.17.0) through MCP: get_ds_rules{query} ranks by relevance with the same listing shape,
- * match:"literal" keeps 2.16.1, component goes through the name resolver (B-05), evidence obeys the
- * engine and limit (B-07), the floor and the engine version are declared.
+ * NAT-97 (2.17.0) → NAT-99 (3.0.0) through MCP: get_ds_rules{query} ranks by relevance (engine
+ * unchanged) and answers in the `oraculo-resposta/1.0.0` envelope; match:"literal" keeps 2.16.1,
+ * component goes through the name resolver (B-05), evidence obeys the engine and limit (B-07), the
+ * floor and the engine version are declared.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdtempSync } from "node:fs";
@@ -16,10 +17,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 let client: Client;
-const call = async (args: Record<string, unknown>) => {
+const raw = async (args: Record<string, unknown>) => {
   const r = await client.callTool({ name: "get_ds_rules", arguments: args });
-  return JSON.parse((r.content as Array<{ text: string }>).map((c) => c.text).join("")) as Record<string, any>;
+  return { text: (r.content as Array<{ text: string }>).map((c) => c.text).join(""), isError: Boolean(r.isError) };
 };
+const call = async (args: Record<string, unknown>) => JSON.parse((await raw(args)).text) as Record<string, any>;
 
 beforeAll(async () => {
   const server = createServer({ reportsDir: mkdtempSync(join(tmpdir(), "govbr-reports-")), toolProfile: "evaluation" });
@@ -32,72 +34,94 @@ afterAll(async () => {
   await client.close();
 });
 
-describe("get_ds_rules{query} — relevance (2.17.0)", () => {
-  it("keeps the listing shape and declares engine, weights, floor and vocabulary", async () => {
+describe("get_ds_rules{query} — relevance (2.17.0 engine, 3.0.0 envelope)", () => {
+  it("answers in the retrieval envelope and declares engine, vocabulary and the hint", async () => {
     const r = await call({ query: "foco ao fechar o modal", component: "modal", limit: 3 });
-    expect(r.rules.length).toBeGreaterThan(0);
-    expect(r.rules.length).toBeLessThanOrEqual(3);
-    expect(r.rules[0]).toEqual(expect.objectContaining({ id: expect.any(String), force: expect.any(String), relevance: expect.any(Object) }));
-    expect(r.meta.ranking).toMatchObject({ engine: RANKING_VERSION, vocabulary: "vocab-1.0.0", floor: expect.any(Object), weights: expect.any(Object) });
-    expect(r.retrieval).toMatchObject({ mode: "relevance", componentHint: "modal", globalsAllowed: true });
-    expect(r.total).toBeGreaterThanOrEqual(r.count);
+    expect(r).toMatchObject({ contract: "oraculo-resposta/1.0.0", kind: "retrieval" });
+    expect(r.results.length).toBeGreaterThan(0);
+    expect(r.results.length).toBeLessThanOrEqual(3);
+    expect(r.results[0]).toEqual(expect.objectContaining({ ids: expect.any(Array), citeAs: expect.any(String), force: expect.any(String), status: "investigate", applicability: "unknown" }));
+    expect(r.kb).toMatchObject({ ranking: RANKING_VERSION, vocabulary: "vocab-1.0.0" });
+    expect(r.query).toMatchObject({ componentHint: "modal", globalsAllowed: true });
+    expect(r.page.matched).toBeGreaterThanOrEqual(r.page.returned);
     expect(JSON.stringify(r)).not.toMatch(/"(applicable|verified|conforme|violation)"/);
   });
 
-  it("is stable for the same input + version + cursor, and the cursor walks without repeats", async () => {
-    const a = await call({ query: "rótulo associado ao campo", limit: 4 });
-    const b = await call({ query: "rótulo associado ao campo", limit: 4 });
+  it("is stable for the same input + version + cursor, and the cursor walks without repeats or jumps", async () => {
+    const a = await call({ query: "foco", component: "modal", limit: 4 });
+    const b = await call({ query: "foco", component: "modal", limit: 4 });
     expect(a).toEqual(b);
-    if (a.more) {
-      const next = await call({ query: "rótulo associado ao campo", limit: 4, offset: a.more.nextOffset });
-      const seen = new Set(a.rules.map((x: { id: string }) => x.id));
-      expect(next.rules.some((x: { id: string }) => seen.has(x.id))).toBe(false);
-      expect(a.retrieval.stop).toBe("limit");
-    }
+    expect(a.page.cursor).toMatch(/^c1\./);
+    expect(a.page.stop).toBe("limit");
+    const next = await call({ query: "foco", component: "modal", limit: 4, cursor: a.page.cursor });
+    const seen = new Set(a.results.flatMap((x: { ids: string[] }) => x.ids));
+    expect(next.results.some((x: { ids: string[] }) => x.ids.some((id) => seen.has(id)))).toBe(false);
+    expect(next.results[0].rank).toBe(a.results.length + 1);
+    // The cursor is bound to the query: reused elsewhere it is stale, never silently reinterpreted.
+    const stale = await raw({ query: "foco", cursor: a.page.cursor });
+    expect(stale.isError).toBe(true);
+    expect(JSON.parse(stale.text)).toMatchObject({ errorCode: "stale-cursor", next: [expect.objectContaining({ tool: "get_ds_rules", arguments: { query: "foco" } })] });
+    // Legacy offset is accepted until 4.0.0, with a deprecation notice; with a cursor it is ignored.
+    const legacy = await call({ query: "foco", component: "modal", limit: 4, offset: 4 });
+    expect(legacy.results.map((x: { citeAs: string }) => x.citeAs)).toEqual(next.results.map((x: { citeAs: string }) => x.citeAs));
+    expect(legacy.deprecation).toContain("4.0.0");
   });
 
   it("stops at the declared floor and answers an unknown question honestly with next steps", async () => {
-    const all = await call({ query: "foco ao fechar o modal", component: "modal", limit: 50 });
-    expect(all.retrieval.stop).toBe("relevance-floor");
-    expect(all.retrieval.belowFloor).toBeGreaterThan(0);
+    const all = await call({ query: "foco ao fechar o modal", component: "modal", limit: 10 });
+    expect(["relevance-floor", "limit", "budget"]).toContain(all.page.stop);
     const none = await call({ query: "xyzzy quux", component: "modal" });
-    expect(none).toMatchObject({ total: 0, rules: [], absenceNote: ABSENCE_NOTE });
-    expect(none.retrieval).toMatchObject({ stop: "no-match", unmatchedTerms: ["quux", "xyzzy"] });
-    expect(none.next).toEqual(expect.arrayContaining([{ tool: "get_component_spec", arguments: { component: "modal" } }]));
+    expect(none).toMatchObject({ status: "no-match", results: [], absenceNote: ABSENCE_NOTE });
+    expect(none.page).toMatchObject({ stop: "no-match", cursor: null, returned: 0 });
+    expect(none.query.unmatchedTerms).toEqual(["quux", "xyzzy"]);
+    expect(none.gaps).toEqual([expect.objectContaining({ kind: "unmatched-terms" })]);
+    expect(none.next).toEqual(expect.arrayContaining([expect.objectContaining({ tool: "get_component_spec", arguments: { component: "modal" } })]));
+    expect(none.next.length).toBeLessThanOrEqual(3);
   });
 
   it("vocabulary:false switches the expansions off and says so", async () => {
     const on = await call({ query: "label" });
     const off = await call({ query: "label", vocabulary: false });
-    expect(on.retrieval.expansions.length).toBeGreaterThan(0);
-    expect(off.retrieval.expansions).toEqual([]);
-    expect(off.meta.ranking.vocabulary).toBe("off");
+    expect(on.query.expansions.length).toBeGreaterThan(0);
+    expect(off.query.expansions).toEqual([]);
+    expect(off.kb.vocabulary).toBe("off");
+    expect(off.kb.guidance).toBe("off");
   });
 
   it("match:'literal' keeps the 2.16.1 semantics (whole-phrase substring, accent-sensitive, exact component)", async () => {
     expect((await call({ query: "navegacao  por teclado", match: "literal" })).total).toBe(0);
-    expect((await call({ query: "navegacao  por teclado" })).total).toBeGreaterThan(0);
+    expect((await call({ query: "navegacao  por teclado" })).page.matched).toBeGreaterThan(0);
     const lit = await call({ query: "aria-current", component: "pagination", match: "literal" });
     expect(lit.total).toBe(0);
     expect(lit.retrieval).toBeUndefined();
-    expect((await call({ query: "aria-current", component: "pagination" })).total).toBeGreaterThan(0);
+    expect((await call({ query: "aria-current", component: "pagination" })).page.matched).toBeGreaterThan(0);
+    // literal is the 2.x path: no cursor there.
+    expect((await raw({ query: "foco", match: "literal", cursor: "c1.0.0123456789" })).isError).toBe(true);
   });
 
   it("B-05: component variants resolve as in context; an unknown name is an input error with suggestions", async () => {
     const a = await call({ query: "foco", component: "Modal" });
     const b = await call({ query: "foco", component: "br-modal" });
     const c = await call({ query: "foco", component: "modal" });
-    expect(a.rules).toEqual(c.rules);
-    expect(b.rules).toEqual(c.rules);
-    const bad = await call({ query: "foco", component: "tooltipp" });
-    expect(bad).toMatchObject({ errorCode: "unknown-component", didYouMean: ["tooltip"] });
-    expect(bad.total).toBeUndefined();
+    expect(a.results).toEqual(c.results);
+    expect(b.results).toEqual(c.results);
+    const bad = await raw({ query: "foco", component: "tooltipp" });
+    expect(bad.isError).toBe(true);
+    expect(JSON.parse(bad.text)).toMatchObject({ errorCode: "unknown-component", didYouMean: ["tooltip"] });
     const pt = await call({ query: "foco", component: "Paginação" });
     expect(pt.didYouMean).toEqual(["pagination"]);
   });
 
+  it("component:'global' filters rules without a component", async () => {
+    const g = await call({ query: "foco", component: "global" });
+    expect(g.query).toMatchObject({ componentFilter: "global", componentHint: null });
+    expect(g.status).not.toBe("ambiguous");
+    expect(g.results.length).toBeGreaterThan(0);
+    for (const card of g.results) expect(card.why.relation).toBe("global");
+  });
+
   it("B-07: include_evidence follows the same engine, hint and limit", async () => {
-    const r = await call({ include_evidence: true, query: "foco", limit: 1 });
+    const r = await call({ include_evidence: true, query: "foco", component: "modal", limit: 1 });
     expect(r.evidence.count).toBeLessThanOrEqual(1);
     const byComponent = await call({ include_evidence: true, query: "botão", component: "button", limit: 3 });
     expect(byComponent.evidence.items.every((e: { component: string }) => e.component === "button")).toBe(true);
@@ -112,15 +136,16 @@ describe("get_ds_rules{query} — relevance (2.17.0)", () => {
       const text = (r.content as Array<{ text: string }>).map((c) => c.text).join(String.fromCharCode(10));
       expect(createHash("sha256").update(text).digest("hex"), JSON.stringify(shape.args)).toBe(shape.sha256);
     }
-    // Without literal, the same shapes go through the engine and say so.
+    // Without literal, the same shapes go through the engine and the 3.0.0 envelope.
     const ranked = await call(snapshot.shapes[1].args);
-    expect(ranked.meta.ranking).toMatchObject({ engine: RANKING_VERSION, match: "relevance" });
+    expect(ranked).toMatchObject({ kind: "retrieval", kb: { ranking: RANKING_VERSION } });
   });
 
   it("a query is bounded and must carry content words (actionable input errors)", async () => {
-    const long = await call({ query: "foco ".repeat(200) });
-    expect(long).toMatchObject({ errorCode: "query-too-long", field: "query", maxChars: 500 });
-    expect(long.next.length).toBeGreaterThan(0);
+    const long = await raw({ query: "foco ".repeat(200) });
+    expect(long.isError).toBe(true);
+    expect(JSON.parse(long.text)).toMatchObject({ errorCode: "query-too-long", field: "query", maxChars: 500 });
+    expect(JSON.parse(long.text).next.length).toBeGreaterThan(0);
     for (const query of ["a de que", "não", "?!"]) {
       const r = await call({ query });
       expect(r).toMatchObject({ errorCode: "no-content-terms", field: "query" });

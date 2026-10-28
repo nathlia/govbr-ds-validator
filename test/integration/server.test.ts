@@ -11,6 +11,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import type { ToolTelemetryEvent } from "../../src/telemetry.js";
+import { ABSENCE_NOTE } from "../../src/responses/absence.js";
 
 let client: Client;
 
@@ -167,6 +168,7 @@ describe("surface", () => {
 
   it("get_finding_details requires exactly one retrieval mode", async () => {
     const res = await client.callTool({ name: "get_finding_details", arguments: {} });
+    expect(res.isError).toBe(true);
     const data = JSON.parse(textOf(res));
     expect(data.error).toContain("exatamente um");
   });
@@ -176,6 +178,7 @@ describe("surface", () => {
       name: "save_report",
       arguments: { url: "http://example.test", finding_ids: ["F-does-not-exist"] },
     });
+    expect(res.isError).toBe(true);
     const data = JSON.parse(textOf(res));
     expect(data.error).toContain("não existem");
     expect(data.missingFindingIds).toEqual(["F-does-not-exist"]);
@@ -208,6 +211,66 @@ describe("surface", () => {
     expect(text).toContain("check_token_compliance");
     // Procedure only — no few-shot violation examples
     expect(text).not.toMatch(/exemplo de violação/i);
+  });
+
+  it("S-15: in the evaluation profile the prompt names only the tools that profile registers; max_iterations must be an integer", async () => {
+    const evaluation = createServer({ reportsDir: mkdtempSync(join(tmpdir(), "govbr-prompt-")), toolProfile: "evaluation" });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const evalClient = new Client({ name: "prompt-test", version: "1.0.0" });
+    await evaluation.connect(st);
+    await evalClient.connect(ct);
+    try {
+      const registered = new Set((await evalClient.listTools()).tools.map((t) => t.name));
+      const prompt = await evalClient.getPrompt({ name: "validate_page", arguments: { url: "http://localhost:3000" } });
+      const text = (prompt.messages[0].content as { text: string }).text;
+      for (const name of ["save_report", "run_axe_scan", "check_token_compliance", "check_component_structure", "inspect_computed_styles", "list_components"]) {
+        expect(registered.has(name)).toBe(false);
+        expect(text, name).not.toContain(name);
+      }
+      for (const name of ["scan_page", "get_finding_details", "verify_finding", "get_ds_rules"]) expect(text).toContain(name);
+      await expect(evalClient.getPrompt({ name: "validate_page", arguments: { url: "http://x", max_iterations: "-5" } })).rejects.toThrow();
+    } finally {
+      await evalClient.close();
+    }
+  });
+
+  it("application errors are isError with errorCode and a next step (B-08); unknown parameters are rejected (B-01)", async () => {
+    const cases: Array<[string, Record<string, unknown>, string]> = [
+      ["get_ds_rules", { id: "nope" }, "unknown-id"],
+      ["get_ds_rules", { id: "x", ids: ["y"] }, "invalid-combination"],
+      ["get_ds_rules", { context: {} }, "empty-context"],
+      ["get_ds_rules", { context: { components: ["button"] }, component: "button" }, "invalid-combination"],
+      ["get_ds_rules", { id: "x", query: "botão" }, "invalid-combination"],
+      ["get_ds_rules", { query: "foco", cursor: "c1.5.0123456789" }, "stale-cursor"],
+      ["get_emag_rules", { id: "4.10" }, "unknown-id"],
+      ["get_component_spec", { component: "Button" }, "unknown-component"],
+      ["get_finding_details", {}, "invalid-combination"],
+      ["get_finding_details", { scanId: "nope" }, "unknown-scan"],
+      ["save_report", { url: "http://x", finding_ids: ["F-0"] }, "missing-finding-ids"],
+    ];
+    for (const [name, args, code] of cases) {
+      const res = await client.callTool({ name, arguments: args });
+      expect(res.isError, `${name} ${JSON.stringify(args)}`).toBe(true);
+      const data = JSON.parse(textOf(res));
+      expect(data).toMatchObject({ contract: "oraculo-resposta/1.0.0", kind: "error", errorCode: code });
+      expect(typeof data.error).toBe("string");
+      expect(data.next.length, `${name} next`).toBeGreaterThan(0);
+      for (const n of data.next) expect(JSON.stringify(n.arguments ?? {})).not.toMatch(/<[^>]+>/);
+    }
+    for (const [name, args, near] of [
+      ["get_ds_rules", { componente: "modal", query: "foco" }, "component"],
+      ["get_ds_rules", { q: "foco" }, null],
+      ["get_ds_rules", { context: { components: ["modal"], extra: 1 } }, null],
+      ["get_component_spec", { component: "modal", includeExamples: true }, "include_examples"],
+      ["get_emag_rules", { recommendation: "4.4" }, null],
+      ["get_design_tokens", { name: "focus" }, null],
+    ] as Array<[string, Record<string, unknown>, string | null]>) {
+      const res = await client.callTool({ name, arguments: args });
+      expect(res.isError, `${name} ${JSON.stringify(args)}`).toBe(true);
+      const text = textOf(res);
+      expect(text).toMatch(/unrecognized_keys|campo desconhecido/);
+      if (near) expect(text).toContain(`você quis dizer '${near}'`);
+    }
   });
 });
 
@@ -259,7 +322,11 @@ describe("oracle knowledge tools", () => {
       allowedTags: ["a", "button"],
     });
     expect(data.variantClasses).toContain("circle");
-    expect(data.examples.length).toBeGreaterThan(0);
+    // 3.0.0 (§7.8): um exemplo por chamada.
+    expect(data.example.name).toBe(data.availableExamples[0]);
+    expect(data.examples).toBeUndefined();
+    const second = JSON.parse(textOf(await client.callTool({ name: "get_component_spec", arguments: { component: "button", example: data.availableExamples[1] } })));
+    expect(second).toMatchObject({ kind: "component-example", component: "button", example: { name: data.availableExamples[1] } });
   });
 
   it("get_component_spec gives input root-tag evidence a citable checker id", async () => {
@@ -272,18 +339,31 @@ describe("oracle knowledge tools", () => {
     }));
   });
 
-  it("get_component_spec omits HTML examples by default", async () => {
+  it("get_component_spec omits HTML examples by default; rules by strategy with at most 3 exact next steps", async () => {
     const res = await client.callTool({ name: "get_component_spec", arguments: { component: "button" } });
     const data = JSON.parse(textOf(res));
-    expect(data.examples).toEqual([]);
+    expect(data.example).toBeUndefined();
     expect(data.availableExamples.length).toBeGreaterThan(0);
+    expect(data.exampleNext).toEqual({ tool: "get_component_spec", arguments: { component: "button", example: data.availableExamples[0] } });
+    expect(data.rules.ids).toBeUndefined();
+    expect(Object.values(data.rules.byStrategy as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(data.rules.total);
+    expect(data.rules.next.length).toBeLessThanOrEqual(3);
+    for (const n of data.rules.next) expect(n).toMatchObject({ action: "request-detail", tool: "get_ds_rules", arguments: { component: "button", limit: 5 } });
+    expect(data.gaps[0]).toMatchObject({ kind: "state-not-covered" });
   });
 
-  it("get_component_spec lists alternatives for unknown components", async () => {
+  it("get_component_spec lists alternatives for unknown components (isError + errorCode + next)", async () => {
     const res = await client.callTool({ name: "get_component_spec", arguments: { component: "nope" } });
+    expect(res.isError).toBe(true);
     const data = JSON.parse(textOf(res));
     expect(data.error).toBeDefined();
+    expect(data.errorCode).toBe("unknown-component");
     expect(data.available).toContain("button");
+    expect(data.next.length).toBeGreaterThan(0);
+    // B-19: nomes do protótipo de Object não quebram a ferramenta.
+    const proto = await client.callTool({ name: "get_component_spec", arguments: { component: "constructor" } });
+    expect(proto.isError).toBe(true);
+    expect(JSON.parse(textOf(proto)).errorCode).toBe("unknown-component");
   });
 });
 
@@ -291,21 +371,26 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
   it("warns that a truncated template excerpt cannot entail a mandatory footer", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",
-      arguments: { ids: ["govbr-3.7.0-template-global-19f93475dc5e"] },
+      arguments: { ids: ["govbr-3.7.0-template-global-19f93475dc5e"], detail: "full" },
     });
     const data = JSON.parse(textOf(res));
-    expect(data.rules[0].caveats).toContainEqual(expect.stringMatching(/não derive obrigatoriedade/i));
+    expect(data.results[0].caveats).toContainEqual(expect.stringMatching(/não derive obrigatoriedade/i));
   });
 
-  it("force=required returns the 1102 required rules (2.12.0, literal version)", async () => {
+  it("force=required lists the 1102 required rules (2.12.0, literal version), within the budget, by cursor", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",
       arguments: { force: "required", limit: 200 },
     });
-    const data = JSON.parse(textOf(res));
+    const text = textOf(res);
+    expect(text.length).toBeLessThanOrEqual(8_000);
+    const data = JSON.parse(text);
+    expect(data.kind).toBe("listing");
     expect(data.total).toBe(1102);
-    expect(data.count).toBe(200);
-    expect(data.rules.every((r: { force: string }) => r.force === "required")).toBe(true);
+    expect(data.page.limit).toEqual({ requested: 200, applied: 50, ceiling: 50 });
+    expect(data.items.length).toBeGreaterThan(0);
+    expect(data.items.every((r: { force: string }) => r.force === "required")).toBe(true);
+    expect(data.page.cursor).toMatch(/^c1\./);
   });
 
   it("component=button returns only button rules with the full projection", async () => {
@@ -314,8 +399,8 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
       arguments: { component: "button", detail: "full" },
     });
     const data = JSON.parse(textOf(res));
-    expect(data.count).toBeGreaterThan(0);
-    for (const r of data.rules) {
+    expect(data.items.length).toBeGreaterThan(0);
+    for (const r of data.items) {
       expect(r.component).toBe("button");
       expect(r.id).toMatch(/^govbr-3\.7\.0-/);
       expect(r.normalizedRule.length).toBeGreaterThan(0);
@@ -339,9 +424,9 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
       },
     });
     const data = JSON.parse(textOf(res));
-    expect(data.count).toBeGreaterThan(0);
+    expect(data.items.length).toBeGreaterThan(0);
     expect(
-      data.rules.every(
+      data.items.every(
         (r: { automatable: boolean; automationConfidence: string }) =>
           r.automatable && r.automationConfidence === "high"
       )
@@ -351,36 +436,38 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
   it("returns a normative facet index instead of the whole KB when called without filters", async () => {
     const res = await client.callTool({ name: "get_ds_rules", arguments: {} });
     const data = JSON.parse(textOf(res));
-    expect(data.meta.totalNormative).toBe(3004);
-    expect(data.rules).toBeUndefined();
+    expect(data.kind).toBe("index");
+    expect(data.kb.totalNormative).toBe(3004);
+    expect(data.items).toBeUndefined();
     expect(data.facets.force.example).toBeUndefined();
     expect(data.note).toContain("Índice, não listagem");
   });
 
-  it("explicit limit/offset with no other filter pages the whole normative base (2.9.0 fix)", async () => {
-    // Até a 2.8.0, server.ts retirava limit/offset do filtro e o ramo semFiltro devolvia o índice,
-    // embora a própria nota prometesse paginação com limit/offset explícitos.
-    const first = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 40, offset: 0 } })));
-    expect(first.facets).toBeUndefined();
+  it("explicit limit with no other filter pages the whole normative base by cursor, without loops (2.9.0 fix)", async () => {
+    const first = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 50 } })));
+    expect(first.facets).toBeDefined();
     expect(first.total).toBe(3004);
-    expect(first.offset).toBe(0);
-    expect(first.count).toBe(40);
-    const ids: string[] = first.rules.map((r: { id: string }) => r.id);
-    let next = first.more?.nextOffset;
-    while (next !== undefined) {
-      const page = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 40, offset: next } })));
-      ids.push(...page.rules.map((r: { id: string }) => r.id));
-      next = page.more?.nextOffset;
+    expect(first.page.offset).toBe(0);
+    const ids: string[] = first.items.map((r: { id: string }) => r.id);
+    let cursor = first.page.cursor;
+    let pages = 1;
+    while (cursor) {
+      const page = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 50, cursor } })));
+      expect(page.facets).toBeUndefined(); // a continuação não repete o cabeçalho
+      expect(page.page.offset).toBe(ids.length);
+      ids.push(...page.items.map((r: { id: string }) => r.id));
+      expect(page.page.cursor).not.toBe(cursor);
+      cursor = page.page.cursor;
+      pages += 1;
+      expect(pages).toBeLessThan(200);
     }
     expect(ids).toHaveLength(3004);
     expect(new Set(ids).size).toBe(3004);
-    // Mesma ordem da listagem única: paginar não reordena.
-    const all = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 200 } })));
-    expect(all.rules.map((r: { id: string }) => r.id)).toEqual(ids.slice(0, 200));
-    // Só offset também é pedido de listagem.
-    const tail = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { offset: 2980 } })));
-    expect(tail.rules.map((r: { id: string }) => r.id)).toEqual(ids.slice(2980));
-    expect(tail.more).toBeUndefined();
+    // Só offset (legado) também é pedido de listagem, com aviso de depreciação.
+    const tail = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { offset: 2990 } })));
+    expect(tail.items.map((r: { id: string }) => r.id)).toEqual(ids.slice(2990));
+    expect(tail.page.cursor).toBeNull();
+    expect(tail.deprecation).toContain("4.0.0");
   });
 
   it("serves evidence only through the separate 'evidence' channel", async () => {
@@ -389,9 +476,9 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
       arguments: { component: "accordion", include_evidence: true },
     });
     const data = JSON.parse(textOf(res));
-    expect(data.rules.some((r: { force: string }) => r.force === "example")).toBe(false);
+    expect(data.items.some((r: { force: string }) => r.force === "example")).toBe(false);
     expect(data.evidence.items.length).toBeGreaterThan(0);
-    expect(data.evidence.items.every((r: { force: string }) => r.force === "example")).toBe(true);
+    expect(data.evidence.items.every((r: { component: string }) => r.component === "accordion")).toBe(true);
     expect(data.evidence.note).toContain("NÃO normas");
   });
 
@@ -399,7 +486,7 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     const list = JSON.parse(
       textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "prohibited" } }))
     );
-    const id = list.rules[0].id;
+    const id = list.items[0].id;
     const res = await client.callTool({ name: "get_ds_rules", arguments: { id } });
     const data = JSON.parse(textOf(res));
     expect(data.kind).toBe("normative");
@@ -415,17 +502,20 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
         arguments: { force: "prohibited", limit: 2 },
       }))
     );
-    const ids = seed.rules.map((rule: { id: string }) => rule.id);
+    const ids = seed.items.map((rule: { id: string }) => rule.id);
     const res = await client.callTool({
       name: "get_ds_rules",
-      arguments: { ids: [...ids, "govbr-3.7.0-missing"] },
+      arguments: { ids: [...ids, "govbr-3.7.0-missing", ids[0]] },
     });
     const data = JSON.parse(textOf(res));
-    expect(data.count).toBe(ids.length);
-    expect(data.rules.map((rule: { id: string }) => rule.id)).toEqual(ids);
-    expect(data.rules.every((rule: { kind: string }) => rule.kind === "normative")).toBe(true);
-    expect(data.rules[0]).not.toHaveProperty("expectedEvidence");
+    expect(data.kind).toBe("lookup");
+    expect(data.requested).toBe(ids.length + 1); // duplicatas contam uma vez (B-22)
+    expect(data.results.map((rule: { citeAs: string }) => rule.citeAs)).toEqual(ids);
+    expect(data.results.every((rule: { kind: string }) => rule.kind === "normative")).toBe(true);
+    expect(data.results[0]).not.toHaveProperty("why");
+    expect(data.results[0].toVerify.length).toBeGreaterThan(0);
     expect(data.missing).toEqual(["govbr-3.7.0-missing"]);
+    expect(data.absenceNote).toBe(ABSENCE_NOTE);
   });
 });
 
@@ -479,63 +569,58 @@ describe("get_emag_rules — KB enrichment (Phase 2.6)", () => {
 
 describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => {
   it("Input brings 'feedback visual imediato' and 'ajuda contextual' from its accessibility tab", async () => {
-    const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { component: "input", limit: 200 } })));
+    const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { component: "input", limit: 200, detail: "brief" } })));
     expect(data.total).toBe(64);
-    const texts = data.rules.map((r: { normalizedRule: string }) => r.normalizedRule).join(" ");
-    expect(texts).toContain("feedback visual imediato");
-    expect(texts).toContain("ajuda contextual");
+    const texts: string[] = [];
+    let page = data;
+    for (let i = 0; i < 20; i++) {
+      texts.push(...page.items.map((r: { normalizedRule: string }) => r.normalizedRule));
+      if (!page.page.cursor) break;
+      page = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { component: "input", limit: 200, detail: "brief", cursor: page.page.cursor } })));
+    }
+    expect(texts).toHaveLength(64);
+    expect(texts.join(" ")).toContain("feedback visual imediato");
+    expect(texts.join(" ")).toContain("ajuda contextual");
   });
 
   it("context for input returns the literal rules as candidates", async () => {
     const data = JSON.parse(
       textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: ["input"] }, limit: 200 } }))
     );
-    expect(data.total).toBe(64);
-    expect(data.candidates.every((c: { force: string }) => c.force !== "example")).toBe(true);
+    expect(data.kind).toBe("retrieval");
+    expect(data.page.matched).toBeGreaterThan(0);
+    expect(data.page.limit).toEqual({ requested: 200, applied: 10, ceiling: 10 });
+    expect(data.results.every((c: { force: string }) => c.force !== "example")).toBe(true);
+    expect(data.results.every((c: { status: string; applicability: string }) => c.status === "investigate" && c.applicability === "unknown")).toBe(true);
   });
 
-  it("meta names the served knowledge version", async () => {
+  it("kb names the served knowledge version", async () => {
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: {} })));
-    expect(data.meta).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15" });
+    expect(data.kb).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15" });
   });
 
-  it("context page 1 interleaves the observed components, obligations first, with per-component counts and cursors", async () => {
+  it("context page 1 interleaves the observed components; the continuation does not repeat the header", async () => {
     const form = ["input", "datetimepicker", "upload", "button"];
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form } } })));
-    expect(data.total).toBe(188);
-    const firstGroups = new Set(data.candidates.slice(0, 4).map((c: { reasons: Array<{ component?: string }> }) => c.reasons[0].component));
-    expect([...firstGroups].sort()).toEqual([...form].sort());
-    expect(data.candidates.every((c: { obligation: string }) => c.obligation === "mandatory")).toBe(true);
-    expect(data.groups.items).toEqual([
-      expect.objectContaining({ group: "button", total: 58, next: { tool: "get_ds_rules", arguments: { context: { components: ["button"] } } } }),
-      expect.objectContaining({ group: "datetimepicker", total: 36 }),
-      expect.objectContaining({ group: "input", total: 64 }),
-      expect.objectContaining({ group: "upload", total: 30 }),
-    ]);
-    // Um grupo só, pela chamada em next: as 30 do upload.
-    const upload = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { ...data.groups.items[3].next.arguments, limit: 200 } })));
-    expect(upload.total).toBe(30);
-    // Continuação não repete os grupos.
-    const page2 = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form }, offset: data.count } })));
-    expect(page2.groups).toBeUndefined();
+    const firstGroups = new Set(data.results.slice(0, 4).map((c: { why: { matched: string[] } }) => c.why.matched[0]));
+    expect([...firstGroups].sort()).toEqual(form.map((c) => `componente:${c}`).sort());
+    expect(data.groups).toBeUndefined();
+    expect(data.page.cursor).toMatch(/^c1\./);
+    const page2 = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form }, cursor: data.page.cursor } })));
+    expect(page2.kb).toBeUndefined();
+    expect(page2.reading).toBeUndefined();
+    expect(page2.results[0].rank).toBe(data.results.length + 1);
   });
 
   it("global rules matched by terms (e-MAG, form patterns) share page 1 with the components", async () => {
     const context = { components: ["input", "datetimepicker", "upload", "button"], terms: ["formulario", "erro", "obrigatorio"] };
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context } })));
-    const groups = data.candidates.map((c: { reasons: Array<{ component?: string }> }) => c.reasons.find((r) => r.component)?.component ?? "(global)");
-    expect(groups[0]).toBe("(global)");
-    // 2.17.0: the 12k page budget is unchanged, but each candidate now carries its relevance and the
-    // engine's term fields (~5% larger: 4 fit instead of 5). The interleave is unchanged: global first,
-    // then each component once, A→Z — the first five positions (across the page boundary) are the five groups.
-    const next = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context, offset: data.count } })));
-    const firstFive = [...data.candidates, ...next.candidates].slice(0, 5).map((c: { reasons: Array<{ component?: string }> }) => c.reasons.find((r) => r.component)?.component ?? "(global)");
-    expect(firstFive).toEqual(["(global)", "button", "datetimepicker", "input", "upload"]);
-    expect(groups.length).toBeGreaterThanOrEqual(4);
-    expect(data.groups.items[0]).toMatchObject({
-      group: "(global)",
-      next: { tool: "get_ds_rules", arguments: { context: { terms: ["erro", "formulario", "obrigatorio"] } } },
-    });
+    // Interleave unchanged (global first, then each component once, A→Z) — read across the cursor.
+    const next = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context, cursor: data.page.cursor } })));
+    const rows = [...data.results, ...next.results].slice(0, 5);
+    const groups = rows.map((c: { why: { matched: string[] }; source: unknown; ids: string[] }) =>
+      c.why.matched.find((m) => m.startsWith("componente:"))?.slice("componente:".length) ?? "(global)");
+    expect(groups).toEqual(["(global)", "button", "datetimepicker", "input", "upload"]);
   });
 
   it("a superseded 3.7.0 id still resolves, flagged as legacy with its replacement", async () => {
@@ -547,7 +632,8 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
       textOf(await client.callTool({ name: "get_ds_rules", arguments: { ids: ["govbr-3.7.0-accessibility-global-e6fd5e1247de"] } }))
     );
     expect(batch.missing).toEqual([]);
-    expect(batch.rules[0].legacy.class).toBe("superseded");
+    expect(batch.results[0].kind).toBe("historical");
+    expect(batch.results[0].legacyResolution.status).toBe("mapped");
   });
 });
 
@@ -563,9 +649,9 @@ describe("verification gate — KB rule ids (D-11 exact-id matching)", () => {
 
   it("grounds a finding citing a real normative KB rule id without confirming it (no predicate)", async () => {
     const list = JSON.parse(
-      textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "required" } }))
+      textOf(await client.callTool({ name: "get_ds_rules", arguments: { force: "required", detail: "brief" } }))
     );
-    const rule = list.rules[0];
+    const rule = list.items[0];
     const res = JSON.parse(
       textOf(
         await client.callTool({

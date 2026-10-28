@@ -102,7 +102,9 @@ describe("finding families on calendar and table fixtures", () => {
     try {
       const responses = [];
       for (const client of [evaluation, deterministic]) {
-        const scan = await call(client, "scan_page", { url, ...SCAN, memberLimit: 5 });
+        // 3.0.0: o orçamento padrão (8.000) vale para a resposta inteira e o cabeçalho difere por perfil
+        // (investigate só com normas); aqui se compara o conteúdo das famílias, com orçamento folgado.
+        const scan = await call(client, "scan_page", { url, ...SCAN, memberLimit: 5, maxChars: 100_000 });
         expect(scan.view).toBe("families"); // padrão
         expect(scan.truncated).toBe(true); // telemetria lê este campo
         expect(scan.summary.total).toBe(scan.totalFindings);

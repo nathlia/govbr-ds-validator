@@ -1,0 +1,44 @@
+{
+  "version": "guidance-1.0.0",
+  "knowledgeVersion": "3.7.0-literal-2026-10-15",
+  "note": "Orientação curada do contrato de resposta (NAT-98 §5.3, §15.6). Não altera ranking, piso nem força: só acrescenta texto de investigação ao lado dos resultados. Regras: (a) kbCoverage é lacuna auditada por pessoa, não inferida; (b) cada frase de toVerify/cardNotes aponta para uma cláusula da base (basis = id) ou para componentProvenance (basis = componentProvenance:<componente>); nenhuma afirmação normativa nova; (c) desligável: GOVBR_RETRIEVAL_GUIDANCE=off ou get_ds_rules{vocabulary:false}; (d) auditoria em uma entrada de lote (um D-xx por versão), com revisão do Codex. Conceitos com audit.status diferente de 'audited' não são servidos por padrão (GOVBR_RETRIEVAL_GUIDANCE=pending os serve, para revisão e testes). Conceitos só entram a partir de observações reais; a reserva nunca é fonte. components restringe o conceito aos componentes indicados (pista component ou context.components): fora deles, o gatilho não dispara. Toda frase tem basis válido, conferido na carga (falha na subida se não tiver).",
+  "concepts": [
+    {
+      "id": "estado-atual-de-item",
+      "components": ["pagination"],
+      "triggers": ["selecionada", "selecionado", "selecionadas", "selecionados", "atual", "ativa", "ativo", "corrente", "current", "aria-current"],
+      "toVerify": [
+        { "text": "O item atual se distingue por outro meio além da cor (texto, forma, peso, borda, ícone)?", "basis": "govbr-3.7.0-accessibility-global-b396d1fcdadc" },
+        { "text": "O estado atual chega à tecnologia assistiva: papel, nome acessível e estado do item atual, comparados aos de um item que não é o atual?", "basis": "componentProvenance:pagination" },
+        { "text": "O estado continua exposto depois de trocar de página (estado após interação)?", "basis": "componentProvenance:pagination" }
+      ],
+      "next": [
+        { "action": "measure-condition", "what": "árvore de acessibilidade do item atual e de um vizinho: papel, nome, estado" },
+        { "action": "reproduce-state", "what": "repetir a medição depois de selecionar outro item" }
+      ],
+      "kbCoverage": {
+        "status": "partial",
+        "about": "exposição programática do estado atual de um item (nome, papel, estado)",
+        "registryRefs": [
+          { "ref": "wcag:4.1.2", "name": "Name, Role, Value" },
+          { "ref": "wcag:1.3.1", "name": "Info and Relationships" }
+        ],
+        "related": [
+          { "id": "govbr-3.7.0-accessibility-pagination-adc2b6c0da5f", "why": "pede textos descritivos nos botões para leitores de tela; não trata do estado atual" }
+        ]
+      },
+      "cardNotes": {
+        "govbr-3.7.0-development-pagination-ea455e768955": {
+          "text": "data-current é propriedade de configuração lida pelo script do componente (estratégia source-code). Sua presença não mostra o que a tecnologia assistiva recebe; não use como prova de que o estado é exposto.",
+          "basis": "govbr-3.7.0-development-pagination-ea455e768955"
+        },
+        "govbr-3.7.0-accessibility-pagination-21228530de06": {
+          "text": "Trata do feedback visual por cor; não trata da exposição do estado à tecnologia assistiva.",
+          "basis": "govbr-3.7.0-accessibility-pagination-21228530de06"
+        }
+      },
+      "provenance": { "observation": "tela A, A-12 (diagnóstico do oráculo, 2026-10-22): pagination com data-current e sem aria-current lida como conforme", "writtenBy": "contrato de resposta NAT-98, exemplo 01" },
+      "audit": { "status": "pending", "batch": null, "reviewedBy": null }
+    }
+  ]
+}

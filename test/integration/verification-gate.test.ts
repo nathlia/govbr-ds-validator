@@ -1,3 +1,4 @@
+import { MESSAGES } from "../../src/responses/contract.js";
 /**
  * The verification gate against a live page (v02, slice 4): what may become `confirmed`, what may
  * not, and how the report binds to the verification the server holds. The fixture carries its
@@ -425,7 +426,7 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
   }
 
   it("scan → verify round trip: the scanner's own findings confirm without implements in the payload", async () => {
-    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100 } })));
+    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100, maxChars: 100_000 } })));
     const own = (scan.findings as Array<Record<string, any>>).filter((f) =>
       ["govbr-ds-structure", "govbr-ds-page"].includes(f.rule.source)
     );
@@ -441,7 +442,7 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
   });
 
   it("controls without implements never confirm: invented id, forged payload, corrected fact, unreached state", async () => {
-    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100 } })));
+    const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100, maxChars: 100_000 } })));
     const tag = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag")!);
     const footer = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer")!);
 
@@ -544,14 +545,21 @@ describe("silence is not conformance (2.15.0)", () => {
   });
 });
 
-describe("scan_page.checksOmitted (2.15.0)", () => {
-  it("lists, in this state, the checks that did not run and what was left unmeasured", async () => {
+describe("scan_page.checksRun (3.0.0; checksOmitted da 2.15.0)", () => {
+  it("lists, in this state, the checks that did not run and what was left unmeasured — always, with fixed limits and the exact completing call", async () => {
     const narrowed = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["axe", "structure"] } })));
-    expect(narrowed.checksOmitted.items.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
-    expect(narrowed.checksOmitted.items[0].why).toContain("tokens");
+    expect(narrowed.checksRun.executed.map((i: { check: string }) => i.check)).toEqual(["axe", "structure"]);
+    expect(narrowed.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
+    expect(narrowed.checksRun.omitted[0].why).toContain("tokens");
+    expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
+    expect(narrowed.checksRun.coverageNote).toBe(MESSAGES["scan-coverage"]);
+    expect(narrowed.checksRun.limits.map((l: { code: string }) => l.code)).toEqual(expect.arrayContaining(["no-state-semantics", "single-state"]));
     const sub = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["tokens"], tokenChecks: ["font"], components: ["button"] } })));
-    expect(sub.checksOmitted.items.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
+    expect(sub.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
     const full = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page } })));
-    expect(full.checksOmitted).toBeUndefined();
+    expect(full.checksRun.omitted).toEqual([]);
+    expect(full.checksRun.completeOmitted).toBeNull();
+    expect(full.checksRun.limits.length).toBeGreaterThan(0);
+    expect(full.absenceNote).toBe(ABSENCE_NOTE);
   });
 });

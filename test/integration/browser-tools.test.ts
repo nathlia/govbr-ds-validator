@@ -333,14 +333,18 @@ describe("scan_page aggregate fast path", () => {
       stateChanged: true,
       elementsInspectedDelta: 0,
     }));
-    expect(expanded.stateDiff.findings.added).toHaveLength(1);
-    expect(expanded.stateDiff.findings.removed).toEqual([]);
+    // Revisão da 3.0.0: contagens + poucos ids no cabeçalho; o diff completo por view:"diff".
+    expect(expanded.stateDiff.findings).toMatchObject({ added: 1, removed: 0, removedIds: [] });
+    expect(expanded.stateDiff.findings.addedIds).toHaveLength(1);
+    const diff = JSON.parse(textOf(await client.callTool({ name: "get_finding_details", arguments: { scanId: expanded.scanId, view: "diff" } })));
+    expect(diff.changes).toEqual([{ change: "added", id: expanded.stateDiff.findings.addedIds[0] }]);
 
     // O achado que nasce da interação é fundamentado: cita a norma que aplica (D-27).
     const nascido = expanded.findings.find((f: { rule: { id: string } }) => f.rule.id === "emag-2.2");
     expect(nascido).toBeDefined();
     // A classe não canônica que a interação também introduz sai por fora da pontuação.
-    expect(expanded.observations.some((o: { kind: string }) => o.kind === "structure-unknown-classes")).toBe(true);
+    // 3.0.0 (S-03): observações em bloco limitado, contagem por tipo + continuação.
+    expect(expanded.observations.byKind["structure-unknown-classes"]).toBeGreaterThan(0);
     expect(expanded.findings.every((f: { rule: { id: string } }) => !/variant/.test(f.rule.id))).toBe(true);
 
     const repeated = JSON.parse(textOf(await client.callTool({

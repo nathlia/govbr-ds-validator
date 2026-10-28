@@ -1,0 +1,688 @@
+/**
+ * 3.0.0 (NAT-99): envelopes do contrato para get_ds_rules — busca (`query`/`context`), listagem de
+ * catálogo, lote por `ids` e unidade por `id` (§5–§8). O ranking não muda aqui: a ordem que entra é a
+ * do motor (retrieval.ts) ou a do adaptador de contexto (applicability.ts); este módulo só decide o
+ * que sai, em que formato e dentro de que orçamento.
+ */
+import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
+import { NORMATIVE_FORCES } from "../data/knowledge.js";
+import { normativeUnit, normativeUnitRef, legacyResolution } from "../data/normativeUnits.js";
+import { neededStateFor } from "../data/applicability.js";
+import { isTableRow } from "../data/retrieval.js";
+import type { GuidanceConcept } from "../data/guidance.js";
+import { componentProvenance } from "../data/componentProvenance.js";
+import { ABSENCE_NOTE } from "./absence.js";
+import {
+  CONTRACT,
+  MESSAGES,
+  RESPONSE_BUDGET,
+  encodeCursor,
+  step,
+  textSize,
+  type MessageCode,
+  type NextStep,
+} from "./contract.js";
+
+export const RETRIEVAL_DEFAULT_LIMIT = 5;
+export const RETRIEVAL_MAX_LIMIT = 10;
+export const LISTING_DEFAULT_LIMIT = 20;
+export const LISTING_MAX_LIMIT = 50;
+export const IDS_MAX_DEFAULT = 10;
+export const IDS_MAX_INDEX = 20;
+export const CARD_TEXT_MAX = 600;
+export const INDEX_TITLE_MAX = 110;
+
+const MODALITY: Record<string, string> = {
+  required: "obrigação",
+  prohibited: "proibição",
+  recommended: "recomendação",
+  discouraged: "desaconselhado",
+  permitted: "permitido",
+  informative: "informativo",
+  unclear: "indefinido",
+  example: "exemplo",
+};
+
+const plain = (text: string) => text.replace(/[*_`]/g, "").replace(/[ \t]+/g, " ").trim();
+
+/** Corte em fronteira de palavra, com reticência; `complete` diz se houve corte. */
+function cut(text: string, max: number): { text: string; complete: boolean } {
+  if (text.length <= max) return { text, complete: true };
+  const slice = text.slice(0, max - 1);
+  const space = slice.lastIndexOf(" ");
+  return { text: `${(space > max * 0.6 ? slice.slice(0, space) : slice).trimEnd()}…`, complete: false };
+}
+
+export function isTitleRecord(rule: KnowledgeRule): boolean {
+  return typeof rule.source.section === "string" && plain(rule.originalText) === plain(rule.source.section);
+}
+
+function sectionKey(rule: KnowledgeRule): string | null {
+  const file = rule.source.corpusFile;
+  const path = rule.source.sectionPath;
+  return typeof file === "string" && typeof path === "string" ? `${file}#${path}` : null;
+}
+
+/**
+ * Unidade distinta (§5.2, estreitada na revisão da NAT-99): só se fundem num cartão (a) o registro
+ * de título de uma recomendação/seção com o corpo dela e (b) linhas da mesma tabela (API/anatomia).
+ * Cláusulas de prosa distintas da mesma seção continuam cartões separados, cada uma com seu citeAs.
+ */
+export function unitKey(rule: KnowledgeRule): string {
+  const section = sectionKey(rule);
+  if (section && isTableRow(rule.originalText ?? "")) return `table:${section}`;
+  return `id:${rule.id}`;
+}
+
+function heading(rule: KnowledgeRule): string {
+  const section = typeof rule.source.section === "string" ? rule.source.section : null;
+  const path = typeof rule.source.sectionPath === "string" ? rule.source.sectionPath.split(" > ") : [];
+  if (!section) return path.join(" > ") || rule.title;
+  const top = path[0];
+  return top && top !== section ? `${plain(top)} > ${plain(section)}` : plain(section);
+}
+
+function evidenceState(strategy: string): "observed" | "initial" | "after-interaction" {
+  return strategy === "keyboard-interaction" ? "after-interaction" : strategy === "source-code" ? "initial" : "observed";
+}
+
+/** `evidence` (≤2): de `expectedEvidence` + `validationStrategy` (§3). */
+function evidenceOf(rule: KnowledgeRule) {
+  const kind = rule.validationStrategy;
+  const state = evidenceState(kind);
+  const items = rule.expectedEvidence.length ? rule.expectedEvidence.slice(0, 2) : [neededStateFor(kind)];
+  return items.map((what) => ({ kind, what: cut(plain(what), 200).text, state }));
+}
+
+function sourceOf(rule: KnowledgeRule) {
+  return {
+    standard: rule.standard ?? "gov.br Design System",
+    version: rule.standardVersion ?? rule.dsVersion,
+    url: rule.source.url,
+  };
+}
+
+/** Uma ocorrência que entrou na lista, com o motivo que o motor ou o adaptador declarou. */
+export interface Hit {
+  rule: KnowledgeRule;
+  matched: string[];
+  relation: "component" | "global" | "related";
+  field: string | null;
+  /** Conflito documentado que nomeia a regra pelo título (conflicts.json), quando houver. */
+  conflicts?: unknown[];
+}
+
+interface Unit {
+  key: string;
+  hits: Hit[];
+}
+
+export function groupUnits(hits: Hit[]): Unit[] {
+  // O título de uma seção se junta à primeira cláusula de prosa (não título, não linha de tabela) da
+  // mesma seção presente na lista; sem ela, fica sozinho.
+  const bodyOf = new Map<string, string>();
+  for (const hit of hits) {
+    const section = sectionKey(hit.rule);
+    if (section && !isTitleRecord(hit.rule) && !isTableRow(hit.rule.originalText ?? "") && !bodyOf.has(section)) {
+      bodyOf.set(section, unitKey(hit.rule));
+    }
+  }
+  const keyOf = (rule: KnowledgeRule) => {
+    const section = sectionKey(rule);
+    return isTitleRecord(rule) && section && bodyOf.has(section) ? bodyOf.get(section)! : unitKey(rule);
+  };
+  const units: Unit[] = [];
+  const byKey = new Map<string, Unit>();
+  for (const hit of hits) {
+    const key = keyOf(hit.rule);
+    const unit = byKey.get(key);
+    if (unit) unit.hits.push(hit);
+    else {
+      const created = { key, hits: [hit] };
+      byKey.set(key, created);
+      units.push(created);
+    }
+  }
+  return units;
+}
+
+/** Cláusula principal: a primeira que não é só o título da seção (§5.2). */
+function mainHit(unit: Unit): Hit {
+  return unit.hits.find((h) => !isTitleRecord(h.rule)) ?? unit.hits[0];
+}
+
+function unitIds(unit: Unit): string[] {
+  const main = mainHit(unit);
+  const rest = unit.hits.filter((h) => h !== main);
+  return [main.rule.id, ...rest.filter((h) => !isTitleRecord(h.rule)).map((h) => h.rule.id), ...rest.filter((h) => isTitleRecord(h.rule)).map((h) => h.rule.id)];
+}
+
+type ToVerify = { text: string; origin: string } | { code: MessageCode; origin: string };
+
+interface CardContext {
+  concept: GuidanceConcept | null;
+  conceptRef: string | null;
+  used: Set<MessageCode>;
+}
+
+function toVerifyOf(rule: KnowledgeRule, ctx: CardContext): ToVerify[] {
+  const out: ToVerify[] = [];
+  const note = ctx.concept?.cardNotes?.[rule.id];
+  if (note && ctx.conceptRef) out.push({ text: note.text, origin: ctx.conceptRef });
+  for (const condition of rule.conditions) out.push({ text: cut(plain(condition), 240).text, origin: "extracted-condition" });
+  for (const exception of rule.exceptions) out.push({ text: cut(plain(exception), 240).text, origin: "extracted-exception" });
+  if (!out.length) {
+    ctx.used.add("no-declared-condition");
+    out.push({ code: "no-declared-condition", origin: "clause" });
+  }
+  return out.slice(0, 3);
+}
+
+function moreOf(rule: KnowledgeRule) {
+  return {
+    adjacentClauses: normativeUnitRef(rule)?.adjacentClauses ?? 0,
+    next: { tool: "get_ds_rules", arguments: { id: rule.id } },
+  };
+}
+
+function requirementOf(rule: KnowledgeRule, ctx: CardContext) {
+  const { text, complete } = cut(plain(rule.originalText), CARD_TEXT_MAX);
+  if (!complete) ctx.used.add("text-deferred");
+  return { heading: heading(rule), text, complete, ...(complete ? {} : { code: "text-deferred" as const }) };
+}
+
+/** Cartão completo (§5.2). `why` só existe quando houve busca. */
+function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compact = false) {
+  const main = mainHit(unit);
+  const rule = main.rule;
+  const matched = [...new Set(unit.hits.flatMap((h) => h.matched))];
+  const table = isTableRow(rule.originalText ?? "");
+  if (table) ctx.used.add("table-row");
+  return {
+    rank,
+    ids: unitIds(unit),
+    citeAs: rule.id,
+    status: "investigate" as const,
+    force: rule.force,
+    modality: MODALITY[rule.force] ?? "indefinido",
+    requirement: requirementOf(rule, ctx),
+    ...(withWhy ? { why: { matched, relation: main.relation, field: main.field } } : {}),
+    toVerify: compact ? toVerifyOf(rule, ctx).slice(0, 1) : toVerifyOf(rule, ctx),
+    evidence: compact ? evidenceOf(rule).slice(0, 1) : evidenceOf(rule),
+    applicability: "unknown" as const,
+    source: sourceOf(rule),
+    more: moreOf(rule),
+    ...(main.conflicts?.length ? { conflicts: main.conflicts } : {}),
+    ...(table ? { note: { code: "table-row" as const } } : {}),
+  };
+}
+
+export interface KbMeta {
+  dsVersion: string;
+  knowledgeVersion: string;
+  ranking: string;
+  vocabulary: string;
+  guidance: string;
+}
+
+export interface RetrievalInput {
+  mode: "query" | "context";
+  hits: Hit[];
+  /** Posição (em unidades distintas) onde a página começa; 0 = resposta inicial. */
+  position: number;
+  limit: number;
+  /** Argumentos da chamada inicial (sem cursor/offset/limit): base de `next`. */
+  args: Record<string, unknown>;
+  cursorKey: string;
+  kb: KbMeta;
+  query: Record<string, unknown>;
+  /** Termos sem nenhuma unidade na base (mecânico, §5.3). */
+  unmatchedTerms: string[];
+  concept: GuidanceConcept | null;
+  /** Pista de componente efetiva (null = sem pista): decide ambiguidade e `next` de ausência. */
+  componentHint: string | null;
+  /** Consulta sem pista e sem filtro `global`: a única que pode ser ambígua (§5.1). */
+  ambiguityAllowed: boolean;
+  /** Aviso de depreciação do `offset` legado, quando usado. */
+  deprecation?: string;
+  evidence?: unknown;
+  /** Avisos fixos da 1ª página (defeitos dos exemplos, conflitos de página-fonte). */
+  warnings?: Record<string, unknown>;
+  budget?: number;
+}
+
+function groupOf(unit: Unit): string {
+  return mainHit(unit).rule.component ?? "global";
+}
+
+/** §5.1: ≥ 3 componentes (global conta como grupo) e nenhum grupo com a maioria das unidades. */
+export function isAmbiguous(units: Unit[]): boolean {
+  if (units.length < 3) return false;
+  const counts = new Map<string, number>();
+  for (const unit of units) counts.set(groupOf(unit), (counts.get(groupOf(unit)) ?? 0) + 1);
+  if (counts.size < 3) return false;
+  return Math.max(...counts.values()) * 2 <= units.length;
+}
+
+function registryChecked(refs: Array<{ ref: string; name: string }>, wcagNames: Map<string, string>) {
+  return refs
+    .filter((r) => r.ref.startsWith("wcag:") && wcagNames.has(r.ref.slice(5)))
+    .map((r) => ({ ref: r.ref, name: wcagNames.get(r.ref.slice(5)) ?? r.name, status: "registry-only" as const, note: MESSAGES["registry-ref"] }));
+}
+
+export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, string>, ruleExists: (id: string) => boolean) {
+  const budget = input.budget ?? RESPONSE_BUDGET;
+  const units = groupUnits(input.hits);
+  const first = input.position === 0;
+  const ctx: CardContext = {
+    concept: input.concept,
+    conceptRef: input.concept ? `${input.kb.guidance}#${input.concept.id}` : null,
+    used: new Set(),
+  };
+
+  // Posição além da última unidade (offset legado ou cursor forjado): fim explícito, não "candidatas".
+  if (input.position > 0 && input.position >= units.length) {
+    return {
+      contract: CONTRACT,
+      kind: "retrieval",
+      status: "end-of-results",
+      results: [],
+      page: { returned: 0, matched: units.length, cursor: null, stop: "end", note: MESSAGES["results-end"] },
+      next: [step("request-detail", "primeira página desta consulta", "get_ds_rules", input.args)],
+      ...(input.deprecation ? { deprecation: input.deprecation } : {}),
+    };
+  }
+
+  // ── lacunas (mecânicas + auditadas) ──
+  const gaps: Array<Record<string, unknown>> = [];
+  if (input.unmatchedTerms.length) {
+    gaps.push({ kind: "unmatched-terms", about: input.unmatchedTerms.join(" "), message: MESSAGES["gap-unmatched"] });
+  }
+  const coverage = input.concept?.kbCoverage;
+  if (coverage && coverage.status !== "covered") {
+    const refs = registryChecked(coverage.registryRefs, wcagNames);
+    const related = coverage.related.filter((r) => ruleExists(r.id));
+    gaps.push({
+      kind: "no-clause-in-kb",
+      about: coverage.about,
+      message: MESSAGES["gap-no-clause"],
+      ...(refs.length ? { registryRefs: refs, registryNote: MESSAGES["registry-only"] } : {}),
+      ...(related.length ? { related } : {}),
+      origin: ctx.conceptRef,
+    });
+  }
+  const hasNoClause = gaps.some((g) => g.kind === "no-clause-in-kb");
+
+  // ── ambígua (§5.1, revisão NAT-99): sinal + orientação, NÃO outro conjunto de resultados. Os
+  // cartões seguem as mesmas unidades e a mesma ordem do ranking; ambiguity.groups dá a chamada exata
+  // de cada grupo.
+  let ambiguity: Record<string, unknown> | undefined;
+  if (first && input.ambiguityAllowed && isAmbiguous(units)) {
+    const groups = new Map<string, Unit[]>();
+    for (const unit of units) {
+      const g = groupOf(unit);
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g)!.push(unit);
+    }
+    const ordered = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+    const shown = ordered.slice(0, 5);
+    const others = ordered.slice(5);
+    ambiguity = {
+      message: MESSAGES.ambiguous,
+      groups: [
+        ...shown.map(([group, list]) => ({
+          group,
+          matched: list.length,
+          next: { tool: "get_ds_rules", arguments: { ...input.args, component: group } },
+        })),
+        ...(others.length
+          ? [{ group: "outros", matched: others.reduce((n, [, l]) => n + l.length, 0), members: others.map(([g]) => g).sort() }]
+          : []),
+      ],
+    };
+  }
+
+  // ── cartões dentro do orçamento ──
+  const rest = units.slice(input.position);
+  const take = Math.min(input.limit, RETRIEVAL_MAX_LIMIT);
+  const cards: ReturnType<typeof card>[] = [];
+  const investigation =
+    first && input.concept
+      ? {
+          concept: ctx.conceptRef,
+          toVerify: input.concept.toVerify.slice(0, 3).map((p) => ({ text: p.text, basis: p.basis })),
+          ...implementationFor(input.componentHint),
+        }
+      : undefined;
+
+  const compose = (list: ReturnType<typeof card>[], stop: string, nextPosition: number | null) => {
+    const matched = units.length;
+    const status = matched === 0 ? "no-match" : ambiguity ? "ambiguous" : gaps.length ? "partial-match" : "candidates";
+    const cursor = nextPosition !== null ? encodeCursor(nextPosition, input.cursorKey) : null;
+    const messages = Object.fromEntries([...ctx.used].map((code) => [code, MESSAGES[code]]));
+    const nextSteps: NextStep[] = [];
+    if (ambiguity && matched > 0) {
+      nextSteps.push(
+        step("request-detail", "repita com o componente observado (ambiguity.groups[].next) ou acrescente o estado: abrir, exibir, foco, posição"),
+      );
+    }
+    if (cursor) nextSteps.push(step("request-detail", "próxima página", "get_ds_rules", { ...input.args, cursor }));
+    if (matched === 0) {
+      nextSteps.push(
+        step(
+          "request-detail",
+          "Reformule pela propriedade que você mediu (cor, contraste, foco, nome, posição, estado), não pelo tema da tela, e repita a consulta.",
+        ),
+      );
+      if (input.componentHint) {
+        nextSteps.push(
+          step("request-detail", "regras do componente agrupadas por estratégia de verificação", "get_component_spec", {
+            component: input.componentHint,
+          }),
+        );
+      }
+      nextSteps.push(
+        step(
+          "keep-uncertain",
+          "se o fato foi medido e nenhuma norma da base o sustenta, mantenha-o com a referência WCAG/e-MAG que você justifica, ou rule: null",
+        ),
+      );
+    } else {
+      for (const n of first ? input.concept?.next ?? [] : []) nextSteps.push(step(n.action, n.what));
+      if (list.length) nextSteps.push(step("request-detail", "unidade completa da 1ª candidata", "get_ds_rules", { id: list[0].citeAs }));
+      if (!input.concept) {
+        nextSteps.push(step("measure-condition", "meça as condições em toVerify de cada candidata, no estado em que a regra se aplica, antes de citar"));
+      }
+    }
+    const noteCode: MessageCode = cursor ? "continuation" : matched === 0 ? "no-match-floor" : "relevance-floor";
+    return {
+      contract: CONTRACT,
+      kind: "retrieval",
+      status,
+      ...(first ? { reading: MESSAGES.reading } : {}),
+      ...(first && Object.keys(messages).length ? { messages } : {}),
+      ...(first ? { kb: input.kb } : {}),
+      ...(first ? { query: input.query } : {}),
+      ...(ambiguity ? { ambiguity } : {}),
+      results: list,
+      ...(investigation ? { investigation } : {}),
+      ...(first ? { gaps } : {}),
+      page: { returned: list.length, matched, cursor, stop, note: MESSAGES[noteCode] },
+      next: nextSteps.slice(0, 3),
+      ...(input.evidence && first ? { evidence: input.evidence } : {}),
+      ...(input.warnings && first ? { warnings: input.warnings } : {}),
+      ...(status === "no-match" || status === "partial-match" || hasNoClause || (ambiguity && gaps.length) ? { absenceNote: ABSENCE_NOTE } : {}),
+      ...(input.deprecation ? { deprecation: input.deprecation } : {}),
+    };
+  };
+
+  let stop = rest.length === 0 ? (units.length === 0 ? "no-match" : "relevance-floor") : "relevance-floor";
+  let consumed = 0;
+  // Revisão NAT-99: o orçamento não derruba uma busca normal abaixo de 5 cartões enquanto der para
+  // encurtar campos: antes de cortar um cartão, todos passam a levar 1 toVerify e 1 evidence (o texto
+  // da cláusula, até 600, fica). Só então o corte por orçamento vale (page.stop:"budget").
+  const floorCards = Math.min(RETRIEVAL_DEFAULT_LIMIT, take);
+  let compact = false;
+  const rebuild = () => rest.slice(0, cards.length).map((u, i) => card(u, input.position + i + 1, ctx, true, true));
+  for (const unit of rest) {
+    if (cards.length >= take) {
+      stop = "limit";
+      break;
+    }
+    const used = new Set(ctx.used);
+    let candidate = card(unit, input.position + cards.length + 1, ctx, true, compact);
+    let trial = compose([...cards, candidate], "limit", input.position + cards.length + 1);
+    if (cards.length > 0 && textSize(trial) > budget && !compact && cards.length < floorCards) {
+      compact = true;
+      cards.splice(0, cards.length, ...rebuild());
+      candidate = card(unit, input.position + cards.length + 1, ctx, true, true);
+      trial = compose([...cards, candidate], "limit", input.position + cards.length + 1);
+    }
+    if (cards.length > 0 && textSize(trial) > budget) {
+      ctx.used.clear();
+      for (const code of used) ctx.used.add(code);
+      stop = "budget";
+      break;
+    }
+    cards.push(candidate);
+    consumed += 1;
+  }
+  const nextPosition = input.position + consumed < units.length ? input.position + consumed : null;
+  if (nextPosition === null && stop !== "no-match") stop = "relevance-floor";
+  return compose(cards, stop, nextPosition);
+}
+
+/** `investigation.implementation` (§5.3): só de componentProvenance, com o texto fixo `implementation`. */
+function implementationFor(component: string | null) {
+  if (!component) return {};
+  const provenance = componentProvenance(component) as { runtimeSource?: { kind: string; note?: string } };
+  const note = provenance.runtimeSource?.kind === "implementation-source-code" ? provenance.runtimeSource.note : undefined;
+  if (!note) return {};
+  return {
+    implementation: {
+      text: note,
+      code: "implementation",
+      message: MESSAGES.implementation,
+      next: { tool: "get_component_spec", arguments: { component } },
+    },
+  };
+}
+
+// ── Listagem de catálogo (§7.5, §8) ─────────────────────────────────────────────────────────
+
+export function indexItem(rule: KnowledgeRule, n: number) {
+  const { text, complete } = cut(plain(rule.title), INDEX_TITLE_MAX);
+  // Títulos da base já podem vir cortados ("…"): completo só se nem a base nem este corte cortaram.
+  return { n, id: rule.id, force: rule.force, title: text, titleComplete: complete && !rule.title.trimEnd().endsWith("…"), category: rule.category };
+}
+
+export interface ListingInput {
+  rules: KnowledgeRule[];
+  position: number;
+  limit: number;
+  args: Record<string, unknown>;
+  filter: Record<string, unknown>;
+  cursorKey: string;
+  kb: { dsVersion: string; knowledgeVersion: string };
+  project: (rule: KnowledgeRule, n: number) => unknown;
+  detail: "index" | "brief" | "full";
+  deprecation?: string;
+  evidence?: unknown;
+  budget?: number;
+}
+
+export function listingResponse(input: ListingInput) {
+  const budget = input.budget ?? RESPONSE_BUDGET;
+  const total = input.rules.length;
+  const take = Math.min(input.limit, LISTING_MAX_LIMIT);
+  const force: Record<string, number> = {};
+  for (const r of input.rules) force[r.force] = (force[r.force] ?? 0) + 1;
+  const first = input.position === 0;
+  const compose = (items: unknown[], stop: string) => {
+    const end = input.position + items.length;
+    const cursor = end < total ? encodeCursor(end, input.cursorKey) : null;
+    const next: NextStep[] = [];
+    if (cursor) next.push(step("request-detail", "próxima página", "get_ds_rules", { ...input.args, cursor }));
+    if (total === 0) {
+      next.push(step("request-detail", "afrouxe um filtro, ou busque pelo que você mediu com query", null));
+      next.push(step("keep-uncertain", "ausência na base não desmente o fato medido: mantenha-o com a referência que você justifica, ou rule: null"));
+    } else {
+      next.push(
+        step(
+          "request-detail",
+          "estreitar pelo que você observou: acrescente query (o que mediu) ou validationStrategy; com query a resposta vira busca com relevância",
+        ),
+      );
+    }
+    return {
+      contract: CONTRACT,
+      kind: "listing",
+      status: total === 0 ? "no-match" : "listed",
+      ...(first ? { reading: MESSAGES["listing-reading"], kb: input.kb } : {}),
+      filter: input.filter,
+      total,
+      ...(first ? { facets: { force } } : {}),
+      detail: input.detail,
+      items,
+      page: {
+        returned: items.length,
+        offset: input.position,
+        total,
+        cursor,
+        stop: total === 0 ? "no-match" : cursor ? stop : "end",
+        note: cursor ? MESSAGES.continuation : MESSAGES["listing-end"],
+      },
+      next: next.slice(0, 3),
+      ...(input.evidence && first ? { evidence: input.evidence } : {}),
+      ...(total === 0 ? { absenceNote: ABSENCE_NOTE } : {}),
+      ...(input.deprecation ? { deprecation: input.deprecation } : {}),
+    };
+  };
+  const items: unknown[] = [];
+  let stop = "limit";
+  for (const rule of input.rules.slice(input.position)) {
+    if (items.length >= take) break;
+    const item = input.project(rule, input.position + items.length + 1);
+    if (items.length > 0 && textSize(compose([...items, item], "limit")) > budget) {
+      stop = "budget";
+      break;
+    }
+    items.push(item);
+  }
+  return compose(items, stop);
+}
+
+// ── Lote por ids (§8) ───────────────────────────────────────────────────────────────────────
+
+export function ruleKind(rule: KnowledgeRule): "historical" | "normative" | "evidence" {
+  return rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence";
+}
+
+/** Cartão de lookup: o cartão sem `why` (não houve busca), com `toVerify`/`evidence` (§8). */
+export function lookupCard(rule: KnowledgeRule, rank: number, used: Set<MessageCode>) {
+  const ctx: CardContext = { concept: null, conceptRef: null, used };
+  const c = card({ key: unitKey(rule), hits: [{ rule, matched: [], relation: rule.component ? "component" : "global", field: null }] }, rank, ctx, false);
+  return {
+    ...c,
+    kind: ruleKind(rule),
+    ...(rule.legacy ? { legacyResolution: legacyResolution(rule) } : {}),
+  };
+}
+
+export interface LookupInput {
+  requested: string[];
+  found: KnowledgeRule[];
+  missing: string[];
+  position: number;
+  args: Record<string, unknown>;
+  cursorKey: string;
+  detail: "index" | "brief" | "full";
+  project: (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => unknown;
+  budget?: number;
+}
+
+export function lookupResponse(input: LookupInput) {
+  const budget = input.budget ?? RESPONSE_BUDGET;
+  const used = new Set<MessageCode>();
+  const first = input.position === 0;
+  const compose = (items: unknown[]) => {
+    const end = input.position + items.length;
+    const cursor = end < input.found.length ? encodeCursor(end, input.cursorKey) : null;
+    const messages = Object.fromEntries([...used].map((code) => [code, MESSAGES[code]]));
+    const next: NextStep[] = [];
+    if (cursor) next.push(step("request-detail", "próximos ids do lote", "get_ds_rules", { ...input.args, cursor }));
+    if (input.missing.length) {
+      next.push(step("correct-citation", "ids ausentes não existem nesta base: cite só ids devolvidos por uma ferramenta; não ajuste o id até ele existir"));
+    }
+    return {
+      contract: CONTRACT,
+      kind: "lookup",
+      status: input.found.length ? (input.missing.length ? "partial-match" : "found") : "no-match",
+      ...(first && Object.keys(messages).length ? { messages } : {}),
+      requested: input.requested.length,
+      missing: input.missing,
+      detail: input.detail,
+      results: items,
+      page: {
+        returned: items.length,
+        found: input.found.length,
+        cursor,
+        stop: cursor ? "budget" : "end",
+        ...(cursor ? { note: MESSAGES.continuation } : {}),
+      },
+      next: next.slice(0, 3),
+      ...(input.missing.length ? { absenceNote: ABSENCE_NOTE } : {}),
+    };
+  };
+  const items: unknown[] = [];
+  for (const rule of input.found.slice(input.position)) {
+    const snapshot = new Set(used);
+    const item = input.project(rule, input.position + items.length + 1, used);
+    if (items.length > 0 && textSize(compose([...items, item])) > budget) {
+      used.clear();
+      for (const code of snapshot) used.add(code);
+      break;
+    }
+    items.push(item);
+  }
+  return compose(items);
+}
+
+// ── Unidade por id (§7.7) ───────────────────────────────────────────────────────────────────
+
+/**
+ * Registro + unidade sem duplicação: `unitSource` = `rule.source` e o texto de `mainClause` = o da
+ * regra saem (ficam as referências). Acima do teto, cláusulas adjacentes por `clauseCursor`, cada uma
+ * inteira ou ausente.
+ */
+export function idResponse(rule: KnowledgeRule, clauseCursor: number | undefined, budget = RESPONSE_BUDGET) {
+  const unit = normativeUnit(rule) as
+    | (Record<string, unknown> & { unitSource: unknown; mainClause: Record<string, unknown>; adjacentClauses: unknown[] })
+    | undefined;
+  const base = { contract: CONTRACT, kind: ruleKind(rule) };
+  if (!unit) {
+    return { ...base, rule, normativeContext: unit ?? null, legacyResolution: legacyResolution(rule) ?? null, next: [] as NextStep[] };
+  }
+  const { unitSource, mainClause, adjacentClauses, ...restUnit } = unit;
+  const sameSource = JSON.stringify(unitSource) === JSON.stringify(rule.source);
+  const dedupedUnit = {
+    ...restUnit,
+    unitSource: sameSource ? { ref: "rule.source" } : unitSource,
+    mainClause: { id: mainClause.id, ref: "rule", applicability: "unknown" },
+  };
+  const start = clauseCursor ?? 0;
+  const compose = (clauses: unknown[], end: number) => {
+    const more = end < adjacentClauses.length;
+    const next: NextStep[] = more
+      ? [step("request-detail", "próximas cláusulas adjacentes desta unidade", "get_ds_rules", { id: rule.id, clauseCursor: end })]
+      : [];
+    if (clauseCursor !== undefined) {
+      return {
+        ...base,
+        kind: "clauses",
+        id: rule.id,
+        clauseCursor: start,
+        adjacentClauses: clauses,
+        totalAdjacent: adjacentClauses.length,
+        nextClauseCursor: more ? end : null,
+        next,
+      };
+    }
+    return {
+      ...base,
+      rule,
+      normativeContext: { ...dedupedUnit, adjacentClauses: clauses, totalAdjacent: adjacentClauses.length, nextClauseCursor: more ? end : null },
+      legacyResolution: legacyResolution(rule) ?? null,
+      next,
+    };
+  };
+  const clauses: unknown[] = [];
+  let index = start;
+  while (index < adjacentClauses.length) {
+    const trial = compose([...clauses, adjacentClauses[index]], index + 1);
+    if (textSize(trial) > budget && (clauses.length > 0 || clauseCursor === undefined)) break;
+    clauses.push(adjacentClauses[index]);
+    index += 1;
+  }
+  return compose(clauses, index);
+}

@@ -273,6 +273,8 @@ const SCAN_PAGE_FIELDS = [
   ...element("$.findings[*]"),
   ...element("$.families[*].example"),
   ...element("$.observations[*]"),
+  // 3.0.0 (NAT-99, S-03): bloco limitado de observações e a página completa por cursor.
+  "$.observations.items[*].locator",
   ...observedState("$.state"),
   "$.url",
 ];
@@ -323,6 +325,11 @@ export const TOOL_FIELDS: Record<string, ToolFields> = {
     echo: [
       {
         path: "$.verification.detail",
+        args: ["finding.rule.id", "finding.rule.source", "finding.rule.wcag", "finding.evidence.data.expectedCondition", "finding.evidence.data.component", "finding.evidence.data.part"],
+      },
+      // 3.0.0 (NAT-99): reasons[].detail repete o detalhe do veredito (mesmos ecos permitidos).
+      {
+        path: "$.reasons[*].detail",
         args: ["finding.rule.id", "finding.rule.source", "finding.rule.wcag", "finding.evidence.data.expectedCondition", "finding.evidence.data.component", "finding.evidence.data.part"],
       },
       { path: "$.findingId", args: ["finding.id"] },

@@ -103,6 +103,27 @@ import {
 import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
 import { PageScanCache, scanPage } from "./scan/pageScan.js";
 import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.js";
+import {
+  CONTRACT,
+  MESSAGES,
+  RESPONSE_BUDGET,
+  budgetPage,
+  cursorKey,
+  decodeCursor,
+  encodeCursor,
+  fail,
+  ok,
+  staleCursorError,
+  step,
+  strictInput,
+  textSize,
+  type ContractError,
+} from "./responses/contract.js";
+import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
+import { getGuidance } from "./data/guidance.js";
+import { assembleScan, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
+import { verificationEnvelope } from "./responses/verify.js";
+import type { Observation } from "./schema/finding.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
@@ -143,60 +164,29 @@ export interface ServerOptions {
   knowledgeLock?: "process" | "call";
 }
 
+/** Serialização da 2.x (indentada): só no caminho `match:"literal"` do get_ds_rules, byte a byte. */
 function json(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+  const isError = Boolean(data && typeof data === "object" && "error" in (data as Record<string, unknown>));
+  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }], ...(isError ? { isError: true } : {}) };
 }
 
 const StylePropertySchema = z.enum(STYLE_PROPERTIES);
 
-/**
- * 2.15.0: o que um check omitido deixa de medir. Na tela A (ensaio 03) o agente varreu o diálogo com
- * checks ["axe","structure"] e a cor fora da paleta (#334333), que o check tokens acusa nesse estado,
- * não apareceu — e o scan não dizia que tokens não tinha rodado.
- */
-const CHECK_OMISSION_WHY = {
-  tokens: "cores, fonte, raio e espaçamento fora do registro de tokens do DS não foram medidos neste estado.",
-  structure: "a tag raiz e o nome acessível dos componentes br-* não foram conferidos neste estado.",
-  axe: "as regras do axe-core (WCAG) não rodaram neste estado.",
-  page: "as regiões obrigatórias do Template Base (cabeçalho, rodapé) e o salto para o conteúdo não foram conferidos neste estado.",
-} as const;
-const TOKEN_CHECK_OMISSION_WHY = {
-  color: "cores fora da paleta do DS não foram medidas neste estado.",
-  font: "família tipográfica fora da Rawline não foi medida neste estado.",
-  radius: "raio de borda fora dos tokens não foi medido neste estado.",
-  spacing: "espaçamento fora dos tokens não foi medido neste estado.",
-} as const;
-
-/** Checks que NÃO rodaram neste estado, um por linha com o que ficou sem medir. Vazio: nada omitido. */
-function checksOmittedFor(
-  checks: Array<keyof typeof CHECK_OMISSION_WHY> | undefined,
-  tokenChecks: Array<keyof typeof TOKEN_CHECK_OMISSION_WHY> | undefined,
-  components: string[] | undefined,
-) {
-  const omitted: Array<{ check: string; why: string }> = [];
-  const active = checks ?? (Object.keys(CHECK_OMISSION_WHY) as Array<keyof typeof CHECK_OMISSION_WHY>);
-  for (const check of Object.keys(CHECK_OMISSION_WHY) as Array<keyof typeof CHECK_OMISSION_WHY>) {
-    if (!active.includes(check)) omitted.push({ check, why: CHECK_OMISSION_WHY[check] });
-  }
-  if (active.includes("tokens") && tokenChecks) {
-    for (const sub of Object.keys(TOKEN_CHECK_OMISSION_WHY) as Array<keyof typeof TOKEN_CHECK_OMISSION_WHY>) {
-      if (!tokenChecks.includes(sub)) omitted.push({ check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
-    }
-  }
-  if (active.includes("structure") && components?.length) {
-    omitted.push({
-      check: "structure.components",
-      why: `a estrutura só foi conferida para ${[...components].sort().join(", ")}; os demais componentes br-* não foram conferidos neste estado.`,
-    });
-  }
-  return omitted.length
-    ? {
-        checksOmitted: {
-          note: "Checks que não rodaram neste estado. Zero achados de um check omitido não é ausência de defeito: repita o scan neste estado sem restringir checks para medir.",
-          items: omitted,
-        },
-      }
-    : {};
+/** Erro de sessão (scanId/familyId/ids desconhecidos): os ids só valem na sessão MCP que os gerou. */
+function sessionFailure(error: string, errorCode: ContractError["errorCode"], field: string, extra: Record<string, unknown> = {}) {
+  return fail({
+    error,
+    errorCode,
+    field,
+    ...extra,
+    next: [
+      step(
+        "reproduce-state",
+        "ids de scan e de finding só valem na sessão MCP em que foram gerados: rode scan_page nesta sessão e use os ids que ele devolver",
+        "scan_page",
+      ),
+    ],
+  });
 }
 
 function selectorBatch(selector?: string, selectors?: string[]): string | string[] | undefined {
@@ -696,40 +686,6 @@ function contextResponse(
   return { ...head, ...groups, ...page, ...tail };
 }
 
-/**
- * Projeção automática no scan_page (perfis com normas): só contagem e a chamada exata que devolve as
- * candidatas para os componentes encontrados. Marcada `retrieval:"automatic"` para separar, na
- * análise, conhecimento empurrado pelo scanner de consulta direta (`retrieval:"direct"`). Não exige
- * nenhuma chamada: é ponteiro, não tarefa. Perfis sem normas (deterministic/evidence) não a recebem.
- */
-function normativeContextFor(componentsFound: string[]) {
-  const components = [...componentsFound].sort();
-  if (!components.length) return {};
-  const { normalized, candidates } = contextCandidates({ components }, {});
-  const byReason: Record<string, number> = {};
-  for (const c of candidates) {
-    const kind = c.reasons[0].kind;
-    byReason[kind] = (byReason[kind] ?? 0) + 1;
-  }
-  // 2.12.0: contagem por componente, para o agente ver o tamanho de cada um antes de pedir.
-  const byComponent = Object.fromEntries(summarizeGroups(candidates).map((g) => [g.group, g.total]));
-  return {
-    normativeContext: {
-      retrieval: "automatic" as const,
-      basis: "coverage.componentsFound",
-      components: normalized.components,
-      candidates: candidates.length,
-      byReason,
-      byComponent,
-      next: { tool: "get_ds_rules", arguments: { context: { components: normalized.components } } },
-      note:
-        "Regras candidatas a investigar para os componentes encontrados — pertinência, não defeito nem verificação. " +
-        "A resposta alterna os componentes (obrigações primeiro); byComponent dá o tamanho de cada um, e " +
-        "context.components com um componente só pagina apenas ele.",
-    },
-  };
-}
-
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
   const toolProfile = resolveToolProfile(options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE);
@@ -756,6 +712,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const findingStore = new FindingStore();
   const verificationStore = new VerificationStore();
   const pageScanCache = new PageScanCache();
+  /** 3.0.0 (S-03): observações por scanId, fora da resposta inicial e pagináveis (get_finding_details view=observations). */
+  const observationStore = new Map<string, Observation[]>();
+  /** Revisão da 3.0.0: diff completo de findings por scanId (o cabeçalho leva só contagens). */
+  const diffStore = new Map<string, { previousScanId: string; diff: ReturnType<typeof diffFindings> }>();
+  const recordDiff = (scanId: string, previousScanId: string, previous: Finding[], current: Finding[]) => {
+    const diff = diffFindings(previous, current);
+    diffStore.set(scanId, { previousScanId, diff });
+    return diff;
+  };
   const verificationFor = (finding: Finding) => verificationStore.lookup(finding)?.verification;
 
   /**
@@ -799,6 +764,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
   // the same DS release (logs to stderr — stdout is the MCP transport). Sem base no knowledge-free.
   if (!knowledgeFree) warnOnVersionMismatch();
+  // 3.0.0 (revisão): orientação curada sem basis válido não sobe (§15.6b, falha cedo).
+  if (hasNorms) getGuidance();
 
   // ══════════════════════════════════════════════════════════════════════════
   // Oracle knowledge tools (A1–A4)
@@ -809,8 +776,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Regras atômicas do gov.br DS (knowledge base)",
       description:
-        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Com query, ordena por relevância (termos combinados, sem acento; component é pista e as regras globais continuam elegíveis) e para no piso de relevância — relevância não é aplicabilidade. Use a projeção breve para triagem e detalhe completo somente para regras candidatas. Com context (componentes/regiões observados, termos de estado), devolve candidatas a investigar com motivo, aplicabilidade desconhecida rotulada e evidência esperada — candidata não é defeito.",
-      inputSchema: {
+        "Busca regras normativas do gov.br DS e e-MAG por filtro ou id. Com query ou context, devolve até 5 unidades candidatas a investigar (status investigate, aplicabilidade desconhecida), cada uma com o texto da cláusula, o que medir (toVerify) e a evidência a obter; diz o que a base não cobre (gaps) e para no piso de relevância — candidata não é defeito nem conformidade. component é pista (as regras globais continuam elegíveis; 'global' filtra só as sem componente). Sem query, lista o catálogo em ordem da base (títulos). Continue uma resposta cortada pelo cursor que ela devolve, ou pelo id.",
+      inputSchema: strictInput("get_ds_rules", {
         context: z
           .object({
             components: z
@@ -829,6 +796,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               .optional()
               .describe("Termos do estado/contexto observado, buscados em condições, exceções, evidência esperada, título e regra"),
           })
+          .strict()
           .optional()
           .describe("Contexto observado → regras candidatas (componente/região próprios, relatedComponents, termos). Combina com force/category/validationStrategy/standard/query; não com component/id/ids"),
         id: z.string().optional().describe("Id exato de regra (govbr-3.7.0-…) — retorna o registro completo"),
@@ -869,7 +837,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         query: z
           .string()
           .optional()
-          .describe("Pergunta ou observação em texto livre (até 500 caracteres): busca por relevância (padrão 10 resultados acima do piso)"),
+          .describe("Pergunta ou observação em texto livre (até 500 caracteres): busca por relevância (até 5 unidades acima do piso; limit até 10)"),
         match: z
           .enum(["relevance", "literal"])
           .optional()
@@ -883,21 +851,35 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Anexar fragmentos canônicos (force=example) no campo separado 'evidence'"),
         detail: z
-          .enum(["summary", "brief", "full"])
+          .enum(["summary", "brief", "full", "index"])
           .optional()
-          .describe("Detalhe: 'brief' (padrão das listagens) traz id/título/regra/força/estratégia; 'full' traz o registro projetado inteiro; 'summary' (padrão com context) traz id, motivo, aplicabilidade e passos de evidência — fora de context equivale a brief"),
+          .describe("Listagem: 'index' (padrão: id, força, título) | 'brief' | 'full', sempre no orçamento com cursor. ids: cartões (padrão), 'index' (até 20 ids) ou 'full' (registro projetado). Sem efeito em query/context (cartões)"),
         limit: z
           .number()
           .int()
           .min(1)
           .max(200)
           .optional()
-          .describe("Máximo de regras por página (padrão 40)"),
-        offset: z.number().int().min(0).optional().describe("Deslocamento da paginação (padrão 0)"),
-      },
+          .describe("Máximo por página: query/context padrão 5, teto 10; listagem padrão 20, teto 50 (acima do teto vale o teto, dito em page.limit). Toda resposta fica em ~8.000 caracteres; o resto vem pelo cursor"),
+        offset: z.number().int().min(0).optional().describe("Obsoleto (aceito até a 4.0.0, com aviso): use cursor"),
+        cursor: z.string().max(40).optional().describe("Continuação opaca devolvida em page.cursor; repita os mesmos parâmetros com ela"),
+        clauseCursor: z.number().int().min(0).optional().describe("Com id: continuação das cláusulas adjacentes de uma unidade grande (devolvida em nextClauseCursor)"),
+      }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_ds_rules", async ({ id, ids, context, include_evidence, detail, limit, offset, match, vocabulary, ...rawFilter }) => {
+    instrumentTool(telemetry, "get_ds_rules", async (args) => {
+      // 3.0.0: o contrato oraculo-resposta/1.0.0. match:"literal" = a superfície da 2.17.1, byte a byte.
+      if (args.match !== "literal") return getDsRules(args, { brief: briefRule, full: projectRule });
+      if (args.cursor !== undefined || args.clauseCursor !== undefined || args.detail === "index") {
+        return fail({
+          error: "match:'literal' é o caminho da 2.x: não aceita cursor, clauseCursor nem detail:'index'. Pagine com offset.",
+          errorCode: "invalid-combination",
+          field: "match",
+          next: [step("request-detail", "repita sem match:'literal' para o contrato 3.0.0", null)],
+        });
+      }
+      const { id, ids, context, include_evidence, limit, offset, match, vocabulary, cursor: _cursor, clauseCursor: _clause, detail: rawDetail, ...rawFilter } = args;
+      const detail = rawDetail as "summary" | "brief" | "full" | undefined;
       const kb = getKnowledgeBase();
       const search: SearchOptions = { match, vocabulary };
       if (id && ids) return json({ error: "Informe id ou ids, não ambos." });
@@ -1028,19 +1010,64 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Design tokens do gov.br DS",
       description:
         "Consulta tokens do gov.br DS por nome. Sem filtro, retorna apenas destaques semânticos e o índice reverso de cores.",
-      inputSchema: {
-        query: z.string().optional().describe("Fragmento de nome para filtrar (omitir para destaques semânticos + índice hex)"),
-      },
+      inputSchema: strictInput("get_design_tokens", {
+        query: z.string().max(200).optional().describe("Fragmento de nome para filtrar (omitir para destaques semânticos + índice hex)"),
+        hex: z.string().max(20).optional().describe("Cor (#rrggbb, rrggbb): devolve os tokens com esse valor (índice reverso)"),
+        cursor: z.string().max(40).optional().describe("Continuação devolvida em page.cursor (mesmos parâmetros)"),
+      }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_design_tokens", async ({ query }) => {
+    instrumentTool(telemetry, "get_design_tokens", async ({ query, hex, cursor }) => {
       const registry = getTokenRegistry();
-      if (!query) {
-        return json({ meta: registry.meta, semantic: registry.semantic, hexLookup: registry.hexLookup });
+      const args = { ...(query !== undefined ? { query } : {}), ...(hex !== undefined ? { hex } : {}) };
+      if (hex !== undefined) {
+        const key = `#${hex.trim().replace(/^#/, "").toLowerCase()}`;
+        const tokens = registry.hexLookup[key] ?? [];
+        return ok({
+          contract: CONTRACT,
+          kind: "tokens",
+          hex: key,
+          count: tokens.length,
+          tokens,
+          ...(tokens.length ? {} : { absenceNote: ABSENCE_NOTE, note: "Nenhum token do registro tem este valor; isto descreve o registro, não a página." }),
+        });
       }
-      const q = query.toLowerCase();
-      const matches = Object.fromEntries(Object.entries(registry.all).filter(([k]) => k.toLowerCase().includes(q)));
-      return json({ query, count: Object.keys(matches).length, tokens: matches });
+      // Revisão da 3.0.0 (M3): índice reverso e lista filtrada no orçamento, com cursor.
+      const keyOf = cursorKey({ tool: "get_design_tokens", args, version: registry.meta });
+      const start = cursor !== undefined ? decodeCursor(cursor, keyOf) : 0;
+      if (start === null) return staleCursorError("get_design_tokens", args);
+      const entries: Array<[string, unknown]> = query
+        ? Object.entries(registry.all).filter(([k]) => k.toLowerCase().includes(query.toLowerCase()))
+        : Object.entries(registry.hexLookup);
+      const first = start === 0;
+      if (query && entries.length === 0) {
+        return ok({
+          contract: CONTRACT,
+          kind: "tokens",
+          query,
+          count: 0,
+          tokens: {},
+          absenceNote: ABSENCE_NOTE,
+          next: [step("request-detail", "para saber se um valor é token, use hex", "get_design_tokens", {})],
+        });
+      }
+      return ok(
+        budgetPage(entries, start, (page, next) => ({
+          contract: CONTRACT,
+          kind: "tokens",
+          ...(query ? { query, count: entries.length, tokens: Object.fromEntries(page) } : {}),
+          ...(!query && first ? { meta: registry.meta, semantic: registry.semantic } : {}),
+          ...(!query ? { hexLookup: Object.fromEntries(page), hexTotal: entries.length } : {}),
+          page: {
+            returned: page.length,
+            offset: Math.min(start, entries.length),
+            total: entries.length,
+            cursor: next !== null ? encodeCursor(next, keyOf) : null,
+            note: next !== null ? MESSAGES.continuation : MESSAGES["page-end"],
+          },
+          ...(next !== null ? { next: [step("request-detail", "próxima página", "get_design_tokens", { ...args, cursor: encodeCursor(next, keyOf) })] } : {}),
+        })),
+      );
     })
   );
 
@@ -1050,17 +1077,38 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Regras e-MAG 3.1",
       description:
         "Consulta recomendações do e-MAG por seção ou id. Sem filtro, retorna somente o índice de seções.",
-      inputSchema: {
-        section: z.number().min(1).max(6).optional().describe("Seção 1–6"),
-        id: z.string().optional().describe("Id de regra específica, ex.: '4.1'"),
-      },
+      inputSchema: strictInput("get_emag_rules", {
+        section: z.number().int().min(1).max(6).optional().describe("Seção 1–6"),
+        id: z.string().max(20).optional().describe("Id de regra específica, ex.: '4.1'"),
+      }),
       annotations: { readOnlyHint: true },
     },
     instrumentTool(telemetry, "get_emag_rules", async ({ section, id }) => {
       const emag = getEmag();
+      if (section !== undefined && id) {
+        return fail({
+          error: "Informe section ou id, não ambos.",
+          errorCode: "invalid-combination",
+          field: "id",
+          next: [step("request-detail", "a recomendação pelo id", "get_emag_rules", { id })],
+        });
+      }
       if (id) {
         const rule = findEmagRule(id);
-        if (!rule) return json({ error: `Regra '${id}' não encontrada. Use section para listar ids válidos.`, absenceNote: ABSENCE_NOTE });
+        if (!rule) {
+          const sectionGuess = /^([1-6])\./.exec(id)?.[1];
+          return fail({
+            error: `Regra '${id}' não encontrada. Use section para listar ids válidos.`,
+            errorCode: "unknown-id",
+            field: "id",
+            absenceNote: ABSENCE_NOTE,
+            next: [
+              sectionGuess
+                ? step("request-detail", "os ids válidos da seção", "get_emag_rules", { section: Number(sectionGuess) })
+                : step("request-detail", "o índice de seções", "get_emag_rules", {}),
+            ],
+          });
+        }
         // KB enrichment (Phase 2.6): how to verify this recommendation.
         const template = getEmagValidationTemplate(id);
         const templateRule = template ? getRuleById(template.ruleId) : undefined;
@@ -1069,20 +1117,70 @@ export function createServer(options: ServerOptions = {}): McpServer {
           kind: templateRule?.legacy ? "historical" : templateRule ? "current" : "unresolved",
           ...(templateRule ? { legacyResolution: legacyResolution(templateRule) } : { absenceNote: ABSENCE_NOTE }),
         } : undefined;
-        const normativeContext = emagUnits(id);
-        const description = id === "3.9" && normativeContext.sourceContext
-          ? normativeContext.sourceContext.text : rule.description;
-        return json({ ...rule, description, normativeContext, ...(template ? { validationTemplate: { ...template, citation: templateCitation } } : {}) });
+        const units = emagUnits(id);
+        const description = id === "3.9" && units.sourceContext ? units.sourceContext.text : rule.description;
+        const response: Record<string, unknown> = {
+          contract: CONTRACT,
+          kind: "emag-recommendation",
+          ...rule,
+          description,
+          normativeContext: units,
+          ...(template ? { validationTemplate: { ...template, citation: templateCitation } } : {}),
+        };
+        // Teto do contrato (§7.7): cláusulas que não cabem vão por id, inteiras, no get_ds_rules.
+        if (textSize(response) > RESPONSE_BUDGET) {
+          const clauses = [...units.clauses];
+          const kept: typeof clauses = [];
+          for (const clause of clauses) {
+            const trial = { ...response, normativeContext: { ...units, clauses: [...kept, clause] } };
+            if (kept.length && textSize(trial) > RESPONSE_BUDGET - 400) break;
+            kept.push(clause);
+          }
+          const deferred = clauses.slice(kept.length).map((c) => c.id);
+          response.normativeContext = {
+            ...units,
+            clauses: kept,
+            ...(deferred.length
+              ? { clausesDeferred: { count: deferred.length, note: MESSAGES["text-deferred"], next: { tool: "get_ds_rules", arguments: { ids: deferred.slice(0, 10) } } } }
+              : {}),
+          };
+        }
+        return ok(response);
       }
       if (section) {
-        const found = emag.sections[String(section)];
-        return json({ meta: emag.meta, section: found ? { ...found, rules: found.rules.map((rule) => {
-          // 2.16.1: a listagem leva só a referência; a descrição contextual da 3.9 continua aqui.
-          const units = emagUnits(rule.id);
-          return { ...rule, ...(rule.id === "3.9" && units.sourceContext ? { description: units.sourceContext.text } : {}), normativeContext: emagUnitsRef(rule.id) };
-        }) } : `Seção ${section} não encontrada`, ...(found ? { normativeContextNote: LIST_CONTEXT_NOTE } : { absenceNote: ABSENCE_NOTE }) });
+        const found = Object.hasOwn(emag.sections, String(section)) ? emag.sections[String(section)] : undefined;
+        if (!found) {
+          return fail({
+            error: `Seção ${section} não encontrada.`,
+            errorCode: "unknown-section",
+            field: "section",
+            absenceNote: ABSENCE_NOTE,
+            next: [step("request-detail", "o índice de seções", "get_emag_rules", {})],
+          });
+        }
+        return ok({
+          contract: CONTRACT,
+          kind: "emag-section",
+          meta: emag.meta,
+          section: {
+            ...found,
+            rules: found.rules.map((rule) => {
+              // 2.16.1: a listagem leva só a referência; a descrição contextual da 3.9 continua aqui.
+              const units = emagUnits(rule.id);
+              const ref = emagUnitsRef(rule.id);
+              return {
+                ...rule,
+                ...(rule.id === "3.9" && units.sourceContext ? { description: units.sourceContext.text } : {}),
+                more: { clauses: ref.clauses, sourceParagraph: ref.sourceParagraph, next: ref.next },
+              };
+            }),
+          },
+          note: "Listagem só com referência: a recomendação completa (cláusulas com forças próprias, parágrafo literal) vem por id, em more.next. Aplicabilidade desconhecida.",
+        });
       }
-      return json({
+      return ok({
+        contract: CONTRACT,
+        kind: "emag-index",
         meta: emag.meta,
         sections: Object.entries(emag.sections).map(([id, value]) => ({
           id,
@@ -1100,7 +1198,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Diretrizes de página do gov.br DS",
       description:
         "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link: regiões obrigatórias do Template Base e salto para o conteúdo), verificáveis pelo scan_page e pelo verify_finding.",
-      inputSchema: {
+      inputSchema: strictInput("get_page_rules", {
         category: z
           .enum([
             "page_structure",
@@ -1118,24 +1216,71 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "minimum_standard",
           ])
           .optional(),
-      },
+        cursor: z.string().max(40).optional().describe("Com category: continuação devolvida em page.cursor"),
+      }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_page_rules", async ({ category }) => {
+    instrumentTool(telemetry, "get_page_rules", async ({ category, cursor }) => {
       const pageRules = getPageRules();
       // 2.7.0: as restrições citáveis de página acompanham o índice e as categorias que as sustentam,
       // como as restrições estruturais acompanham get_component_spec (D-29).
       const constraints = pageConstraints();
       if (!category) {
-        return json({
+        return ok({
+          contract: CONTRACT,
+          kind: "page-rules-index",
           meta: pageRules.meta,
           constraints,
           available: Object.entries(pageRules.categories).map(([key, { label, url }]) => ({ key, label, url })),
         });
       }
-      const found = pageRules.categories[category];
-      if (!found) return json({ error: `Categoria '${category}' não encontrada.` });
-      return json(category === "page_structure" || category === "minimum_standard" ? { ...found, constraints } : found);
+      const found = Object.hasOwn(pageRules.categories, category) ? pageRules.categories[category] : undefined;
+      if (!found) {
+        return fail({
+          error: `Categoria '${category}' não encontrada.`,
+          errorCode: "unknown-category",
+          field: "category",
+          next: [step("request-detail", "o índice de categorias", "get_page_rules", {})],
+        });
+      }
+      // Revisão da 3.0.0 (M3): as seções da categoria no orçamento, com cursor.
+      const keyOf = cursorKey({ tool: "get_page_rules", category, version: pageRules.meta });
+      const start = cursor !== undefined ? decodeCursor(cursor, keyOf) : 0;
+      if (start === null) return staleCursorError("get_page_rules", { category });
+      const { sections: rawSections, ...rest } = found as unknown as { sections?: Record<string, unknown> } & Record<string, unknown>;
+      // Cada seção é prosa markdown longa (até ~8.000): vira partes por parágrafo (≤ 3.000), inteiras.
+      const sectionEntries: Array<{ section: string; part: number; text: string }> = [];
+      for (const [section, value] of Object.entries(rawSections ?? {})) {
+        const paragraphs = String(value).split(/\n\n+/);
+        let part = "";
+        let n = 0;
+        for (const paragraph of paragraphs) {
+          if (part && part.length + paragraph.length + 2 > 3_000) {
+            sectionEntries.push({ section, part: n++, text: part });
+            part = "";
+          }
+          part = part ? `${part}\n\n${paragraph}` : paragraph;
+        }
+        if (part) sectionEntries.push({ section, part: n, text: part });
+      }
+      const withConstraints = category === "page_structure" || category === "minimum_standard";
+      return ok(
+        budgetPage(sectionEntries, start, (page, next) => ({
+          contract: CONTRACT,
+          kind: "page-rules",
+          ...rest,
+          ...(withConstraints && start === 0 ? { constraints } : {}),
+          parts: page,
+          page: {
+            returned: page.length,
+            offset: Math.min(start, sectionEntries.length),
+            total: sectionEntries.length,
+            cursor: next !== null ? encodeCursor(next, keyOf) : null,
+            note: next !== null ? MESSAGES.continuation : MESSAGES["page-end"],
+          },
+          ...(next !== null ? { next: [step("request-detail", "próximas seções", "get_page_rules", { category, cursor: encodeCursor(next, keyOf) })] } : {}),
+        })),
+      );
     })
   );
 
@@ -1144,12 +1289,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Componentes do gov.br DS",
       description: "Lista os componentes disponíveis no @govbr-ds/core instalado, com classe raiz e tags canônicas.",
-      inputSchema: {},
+      inputSchema: strictInput("list_components", {}),
       annotations: { readOnlyHint: true },
     },
     instrumentTool(telemetry, "list_components", async () => {
       const { meta, components } = getComponentSpecs();
-      return json({
+      return ok({
+        contract: CONTRACT,
+        kind: "components",
         meta,
         components: Object.values(components).map(({ name, rootClass, tags, variantClasses }) => ({
           name,
@@ -1166,40 +1313,98 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Especificação canônica de componente",
       description:
-        "Consulta estrutura, variantes, atributos e tokens de um componente. Exemplos HTML são opcionais e podem conter alertas conhecidos.",
-      inputSchema: {
-        component: z.string().describe("Nome do componente, ex.: 'button', 'input', 'select'"),
-        include_examples: z.boolean().optional().describe("Incluir fragmentos HTML canônicos (padrão: false, até 5)"),
-      },
+        "Consulta estrutura, variantes, atributos e tokens de um componente, as regras da base agrupadas por estratégia de verificação (com até 3 próximos passos) e o comportamento da implementação. Um exemplo HTML por chamada, opcional, que pode conter alertas conhecidos.",
+      inputSchema: strictInput("get_component_spec", {
+        component: z.string().max(60).describe("Nome do componente, ex.: 'button', 'input', 'select'"),
+        include_examples: z
+          .boolean()
+          .optional()
+          .describe("Incluir UM fragmento HTML canônico (o primeiro, ou o nomeado em example); os demais nomes vêm em availableExamples"),
+        example: z.string().max(120).optional().describe("Nome de um exemplo em availableExamples: devolve só ele"),
+      }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_component_spec", async ({ component, include_examples }) => {
+    instrumentTool(telemetry, "get_component_spec", async ({ component, include_examples, example }) => {
       const specs = getComponentSpecs();
-      const spec = specs.components[component];
+      const spec = Object.hasOwn(specs.components, component) ? specs.components[component] : undefined;
       if (!spec) {
-        return json({
+        const resolved = resolveComponentName(component);
+        const didYouMean = resolved && Object.hasOwn(specs.components, resolved) ? [resolved] : suggestComponentNames(component);
+        return fail({
           error: `Componente '${component}' não encontrado.`,
+          errorCode: "unknown-component",
+          field: "component",
+          ...(didYouMean.length ? { didYouMean } : {}),
           available: Object.keys(specs.components),
           absenceNote: ABSENCE_NOTE,
+          next: didYouMean.length
+            ? [step("request-detail", "repita com o id do componente", "get_component_spec", { component: didYouMean[0] })]
+            : [step("request-detail", "escolha um nome em available e repita", null)],
         });
       }
-      const includeExamples = include_examples ?? false;
       // Defect awareness (D-10/Phase 2.4): the canonical examples of some
       // components are themselves non-conformant — warn at spec-serving time.
       const defects = getComponentDefects(spec.name);
-      // 2.9.0 (NAT-83): a especificação aponta para as regras da base sobre o componente, para que
-      // a ligação componente → regra não dependa de o agente lembrar de consultar get_ds_rules.
-      const { candidates } = contextCandidates({ components: [spec.name] }, {});
-      return json({
-        ...spec,
+      // 3.0.0 (§9): as regras do componente por estratégia de verificação, com até 3 passos exatos
+      // nas estratégias que exigem estado ou interação (ordem fixa, sem mapa por componente).
+      const own = filterRules({ component: spec.name });
+      const byStrategy: Record<string, number> = {};
+      for (const r of own) byStrategy[r.validationStrategy] = (byStrategy[r.validationStrategy] ?? 0) + 1;
+      const ruleNext = (["keyboard-interaction", "accessibility-tree", "semantic"] as const)
+        .filter((s) => byStrategy[s])
+        .map((validationStrategy) =>
+          step("request-detail", `regras ${validationStrategy} do componente`, "get_ds_rules", { component: spec.name, validationStrategy, limit: 5 }),
+        );
+      const provenance = componentProvenance(spec.name) as {
+        staticExample: { note: string };
+        runtimeSource?: { kind: string; note?: string };
+      };
+      const runtimeNote = provenance.runtimeSource?.kind === "implementation-source-code" ? provenance.runtimeSource.note : undefined;
+      const { examples, ...structure } = spec;
+      const wanted = example ?? (include_examples ? examples[0]?.name : undefined);
+      const chosen = wanted !== undefined ? examples.find((e) => e.name === wanted) : undefined;
+      if (example !== undefined && !chosen) {
+        return fail({
+          error: `Exemplo '${example}' não existe em ${spec.name}.`,
+          errorCode: "unknown-example",
+          field: "example",
+          availableExamples: examples.map((e) => e.name),
+          next: examples.length
+            ? [step("request-detail", "o primeiro exemplo disponível", "get_component_spec", { component: spec.name, example: examples[0].name })]
+            : [step("request-detail", "este componente não tem exemplos", null)],
+        });
+      }
+      // 3.0.0 (§7.8): um exemplo por chamada. Pedido por nome, a resposta é só o exemplo (cabe no teto).
+      if (example !== undefined && chosen) {
+        return ok({
+          contract: CONTRACT,
+          kind: "component-example",
+          component: spec.name,
+          example: chosen,
+          warnings: defects.map((d) => ({
+            type: d.type, severity: d.severity, file: d.file, element: d.element,
+            note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
+          })),
+          note: "Exemplo canônico do @govbr-ds/core: evidência de implementação, não norma.",
+          availableExamples: examples.map((e) => e.name),
+          absenceNote: ABSENCE_NOTE,
+        });
+      }
+      const response: Record<string, unknown> = {
+        contract: CONTRACT,
+        kind: "component-spec",
+        ...structure,
         implementationEvidence: componentProvenance(spec.name),
         constraints: constraintsForComponent(spec),
         rules: {
           retrieval: "automatic",
-          note: "Regras da base pertinentes a este componente (próprias ou por relatedComponents) — candidatas, não defeitos. Detalhe e evidência esperada: get_ds_rules com context ou ids.",
-          ids: candidates.map((c) => c.rule.id),
-          next: { tool: "get_ds_rules", arguments: { context: { components: [spec.name] } } },
+          total: own.length,
+          byStrategy,
+          note: "Regras do componente, candidatas e não defeitos.",
+          next: ruleNext.slice(0, 3),
         },
+        ...(runtimeNote ? { runtime: { text: runtimeNote, code: "implementation", message: MESSAGES.implementation, state: "after-interaction" } } : {}),
+        gaps: [{ kind: "state-not-covered", about: "atributos escritos em tempo de execução", message: provenance.staticExample.note }],
         warnings: defects.map((d) => ({
           type: d.type,
           severity: d.severity,
@@ -1208,12 +1413,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
           evidence: d.evidence,
           note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
         })),
-        examples: includeExamples ? spec.examples.slice(0, 5) : [],
-        availableExamples: spec.examples.map((e) => e.name),
+        ...(chosen ? { example: chosen } : {}),
+        availableExamples: examples.map((e) => e.name),
+        ...(chosen
+          ? {}
+          : examples.length
+            ? { exampleNext: { tool: "get_component_spec", arguments: { component: spec.name, example: examples[0].name } } }
+            : {}),
         // 2.15.0: a especificação é extraída dos exemplos estáticos; atributo, regra ou estado que ela
         // não lista (ex.: ARIA escrito em tempo de execução) não é prova de conformidade.
         absenceNote: ABSENCE_NOTE,
-      });
+      };
+      if (chosen && textSize(response) > RESPONSE_BUDGET) {
+        response.example = {
+          name: chosen.name,
+          status: "deferred",
+          note: "O exemplo não coube junto com a especificação; peça-o sozinho pelo nome.",
+          next: { tool: "get_component_spec", arguments: { component: spec.name, example: chosen.name } },
+        };
+      }
+      return ok(response);
     })
   );
 
@@ -1227,7 +1446,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Inspecionar estilos computados",
       description:
         "Coleta estilos computados, foco e evidência estrutural sem julgar. Agrupe alvos em selectors e peça somente as properties necessárias; omiti-las mantém a resposta completa legada.",
-      inputSchema: {
+      inputSchema: strictInput("inspect_computed_styles", {
         url: z.string().describe("URL da página"),
         selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS avaliados no mesmo carregamento"),
@@ -1236,25 +1455,102 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(STYLE_PROPERTIES.length)
           .optional()
           .describe("Somente propriedades necessárias; omitir mantém o contrato completo legado"),
-      },
+        cursor: z.number().int().min(0).optional().describe("Continuação devolvida em nextCursor (repete a coleta na mesma página e devolve os elementos seguintes)"),
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    instrumentTool(telemetry, "inspect_computed_styles", async ({ url, selector, selectors, properties }) =>
-      json(await inspectComputedStyles(url, selectorBatch(selector, selectors), properties))
-    )
+    instrumentTool(telemetry, "inspect_computed_styles", async ({ url, selector, selectors, properties, cursor }) => {
+      // Revisão da 3.0.0 (M3): elementos no orçamento de 8.000, em ordem do DOM, com continuação.
+      const { elements, ...evidence } = await inspectComputedStyles(url, selectorBatch(selector, selectors), properties);
+      const args = { url, ...(selector ? { selector } : {}), ...(selectors ? { selectors } : {}), ...(properties ? { properties } : {}) };
+      return ok(
+        budgetPage(elements, cursor ?? 0, (page, next) => ({
+          contract: CONTRACT,
+          kind: "evidence",
+          ...evidence,
+          cursor: Math.min(cursor ?? 0, elements.length),
+          returned: page.length,
+          elements: page,
+          ...(next !== null
+            ? {
+                nextCursor: next,
+                next: step("request-detail", "próximos elementos (a coleta é repetida na mesma página)", "inspect_computed_styles", { ...args, cursor: next }),
+              }
+            : {}),
+        })),
+      );
+    })
   );
 
   // ══════════════════════════════════════════════════════════════════════════
   // Deterministic checkers (B1/B2) — findings come out in the D2 schema
   // ══════════════════════════════════════════════════════════════════════════
 
+  /** 3.0.0: o orçamento do scan_page vale para a resposta inteira (padrão 8.000, §10). */
+  const ScanMaxChars = z
+    .number()
+    .int()
+    .min(1_000)
+    .max(100_000)
+    .optional()
+    .describe(
+      knowledgeFree
+        ? "Orçamento da resposta inteira em caracteres (padrão 8000): cabeçalho e checksRun entram na conta; as famílias ficam com o resto, com cursor"
+        : "Orçamento da resposta inteira em caracteres (padrão 8000): cabeçalho, checksRun, investigate e observações entram na conta; as famílias ficam com o resto, com cursor",
+    );
+
+  /** Estado não alcançado: nada foi varrido; o próximo passo é reproduzir o estado. */
+  function unreachedResponse(url: string, result: { status: string; limitation: unknown; state: unknown }) {
+    return ok({
+      contract: CONTRACT,
+      kind: "scan",
+      url,
+      status: result.status,
+      scanId: null,
+      stateFingerprint: null,
+      limitation: result.limitation,
+      state: result.state,
+      next: [step("reproduce-state", "corrija actions/arrival (limitation.detail diz o que falhou) e repita o scan", "scan_page")],
+      absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE,
+    });
+  }
+
+  /** Regras do componente nas estratégias que nenhum check do scan mede (investigate.unmeasured). */
+  const unmeasuredFor = (component: string) => {
+    const out: Record<string, number> = {};
+    for (const r of filterRules({ component })) {
+      if (r.validationStrategy === "keyboard-interaction" || r.validationStrategy === "semantic") {
+        out[r.validationStrategy] = (out[r.validationStrategy] ?? 0) + 1;
+      }
+    }
+    return out;
+  };
+
+  /**
+   * Revisão da 3.0.0 (H1/M3): os checkers isolados (perfil full) seguem o mesmo orçamento da resposta
+   * inteira do scan_page: observações em bloco limitado com continuação, famílias com o resto,
+   * absenceNote sempre.
+   */
+  function isolatedScan(
+    fields: Record<string, unknown>,
+    observations: Observation[],
+    scanId: string,
+    findings: Finding[],
+    args: { view?: "findings" | "families"; detail?: FindingDetail; cursor?: number; limit?: number; maxChars?: number; memberLimit?: number },
+  ) {
+    const head = { contract: CONTRACT, kind: "scan", ...fields, absenceNote: ABSENCE_NOTE };
+    return assembleScan(head, !args.cursor && observations.length ? observations : null, scanId, args.maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
+      batchView(findings, null, { ...args, maxChars: budget }),
+    );
+  }
+
   if (hasDeterministic) server.registerTool(
     "scan_page",
     {
       title: "Varredura determinística agregada",
       description:
-        "Carrega a página uma vez e executa tokens, estrutura, página (regiões obrigatórias do Template Base e salto para o conteúdo) e/ou axe no mesmo estado. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
-      inputSchema: {
+        "Carrega a página uma vez e executa tokens, estrutura, página (regiões obrigatórias do Template Base e salto para o conteúdo) e/ou axe no mesmo estado. Retorna fingerprint, cobertura, o que rodou e o que não rodou (checksRun), cache exato e findings compactos registrados no ledger da sessão, numa resposta de até ~8.000 caracteres. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
+      inputSchema: strictInput("scan_page", {
         url: z.string().describe("URL da página"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
         checks: z
@@ -1281,8 +1577,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
         ...FindingPageInputShape,
+        maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
@@ -1292,24 +1589,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
         const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
         if (compareToScanId && !previousFindings) {
-          return json({ error: `compareToScanId '${compareToScanId}' não existe nesta sessão MCP.` });
+          return sessionFailure(`compareToScanId '${compareToScanId}' não existe nesta sessão MCP.`, "unknown-scan", "compareToScanId");
         }
         const result = await scanPage(
           { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
           pageScanCache
         );
-        if (result.status === "state-not-reached") {
-          // 2.10.0: estado não alcançado não vira lote — sem scanId, sem findings, sem cobertura; zero
-          // achados aqui seria lido como "sem defeito" num estado que ninguém viu.
-          return json({
-            url,
-            status: result.status,
-            scanId: null,
-            stateFingerprint: null,
-            limitation: result.limitation,
-            state: result.state,
-          });
-        }
+        // 2.10.0: estado não alcançado não vira lote — sem scanId, sem findings, sem cobertura; zero
+        // achados aqui seria lido como "sem defeito" num estado que ninguém viu.
+        if (result.status === "state-not-reached") return unreachedResponse(url, result);
         const scanId = findingStore.putBatch("page", result.findings, {
           stateFingerprint: result.stateFingerprint,
           cacheHit: result.cacheHit,
@@ -1317,13 +1605,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           coverage: result.coverage,
           state: result.state,
         });
+        observationStore.set(scanId, result.observations);
         const stateDiff = compareToScanId && previousFindings
           ? {
               previousScanId: compareToScanId,
               previousFingerprint: previousLedger?.stateFingerprint ?? null,
               currentFingerprint: result.stateFingerprint,
               stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
-              findings: diffFindings(previousFindings, result.findings),
+              findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
               elementsInspectedDelta:
                 typeof (previousLedger?.coverage as { elementsInspected?: unknown } | undefined)?.elementsInspected === "number"
                   ? result.coverage.elementsInspected -
@@ -1331,7 +1620,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
                   : null,
             }
           : undefined;
-        return json({
+        const summary = summarize(result.findings);
+        const first = !cursor;
+        // §10 + §15.8: investigate na ordem do DOM (coverage.componentsFound não é ordenado), 1ª página.
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor) : undefined;
+        const head = {
+          contract: CONTRACT,
+          kind: "scan",
           url,
           status: result.status,
           scanId,
@@ -1340,16 +1635,24 @@ export function createServer(options: ServerOptions = {}): McpServer {
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
-          ...checksOmittedFor(checks, tokenChecks, components),
-          // Fora da pontuação, de propósito (D-27): o que o oráculo observa mas não afirma.
-          observations: result.observations,
-          summary: summarize(result.findings),
+          checksRun: checksRunFor(
+            { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
+            result.coverage,
+            result.state.observed.viewport,
+            false,
+          ),
+          summary,
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),
-          // Só na primeira página (cursor ausente ou 0): a continuação não repete o ponteiro.
-          ...(hasNorms && !cursor ? normativeContextFor(result.coverage.componentsFound ?? []) : {}),
-          ...batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars, memberLimit }),
-        });
+          ...(investigate ? { investigate } : {}),
+          // S-09: zero achados (ou poucos) nunca é conformidade.
+          absenceNote: ABSENCE_NOTE,
+        };
+        return ok(
+          assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
+            batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+          ),
+        );
       }
     )
   );
@@ -1359,8 +1662,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Varredura determinística (axe-core)",
       description:
-        "Carrega a página uma vez e executa o axe-core no estado reproduzido. Retorna fingerprint, cobertura, cache exato e findings compactos registrados no ledger da sessão. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
-      inputSchema: {
+        "Carrega a página uma vez e executa o axe-core no estado reproduzido. Retorna fingerprint, cobertura, o que rodou (checksRun), cache exato e findings compactos registrados no ledger da sessão, numa resposta de até ~8.000 caracteres. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
+      inputSchema: strictInput("scan_page", {
         url: z.string().describe("URL da página"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
         actions: PageActionsSchema
@@ -1374,31 +1677,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
         ...FindingPageInputShape,
+        maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     tool("scan_page", async ({ url, selectors, actions, arrival, compareToScanId, detail, cursor, limit, maxChars, view, memberLimit }) => {
       const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
       const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
       if (compareToScanId && !previousFindings) {
-        return json({ error: `compareToScanId '${compareToScanId}' não existe nesta sessão MCP.` });
+        return sessionFailure(`compareToScanId '${compareToScanId}' não existe nesta sessão MCP.`, "unknown-scan", "compareToScanId");
       }
       const result = await scanPage(
         { url, selectors, actions, ...(arrival ? { arrival } : {}) },
         pageScanCache,
         { knowledgeFree: true }
       );
-      if (result.status === "state-not-reached") {
-        return json({
-          url,
-          status: result.status,
-          scanId: null,
-          stateFingerprint: null,
-          limitation: result.limitation,
-          state: result.state,
-        });
-      }
+      if (result.status === "state-not-reached") return unreachedResponse(url, result);
       const scanId = findingStore.putBatch("page", result.findings, {
         stateFingerprint: result.stateFingerprint,
         cacheHit: result.cacheHit,
@@ -1412,10 +1707,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
             previousFingerprint: previousLedger?.stateFingerprint ?? null,
             currentFingerprint: result.stateFingerprint,
             stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
-            findings: diffFindings(previousFindings, result.findings),
+            findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
           }
         : undefined;
-      return json({
+      const head = {
+        contract: CONTRACT,
+        kind: "scan",
         url,
         status: result.status,
         scanId,
@@ -1424,11 +1721,17 @@ export function createServer(options: ServerOptions = {}): McpServer {
         cacheHit: result.cacheHit,
         ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
         coverage: result.coverage,
+        checksRun: checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
         summary: summarize(result.findings),
         deduplication: result.deduplication,
         ...(stateDiff ? { stateDiff } : {}),
-        ...batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars, memberLimit }),
-      });
+        absenceNote: ABSENCE_NOTE_KNOWLEDGE_FREE,
+      };
+      return ok(
+        assembleScan(head, null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
+          batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+        ),
+      );
     })
   );
 
@@ -1438,7 +1741,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Verificação determinística de tokens",
       description:
         "Compara cores, tipografia, raios e espaçamento computados com o registro de tokens. Retorna referências compactas por padrão; use get_finding_details para evidência ou objetos Finding completos. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
-      inputSchema: {
+      inputSchema: strictInput("check_token_compliance", {
         url: z.string().describe("URL da página"),
         selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS verificados no mesmo carregamento"),
@@ -1447,8 +1750,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Subconjunto de verificações (padrão: todas)"),
         ...FindingPageInputShape,
+        maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
@@ -1468,20 +1772,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const deduplication = deduplicateFindings(rawFindings);
         const findings = deduplication.findings;
         const scanId = findingStore.putBatch("tokens", findings);
-        return json({
-          url,
-          scanId,
-          elementsInspected: evidence.count,
-          summary: summarize(findings),
-          ...(observations.length ? { observations } : {}),
-          deduplication: {
-            input: deduplication.inputCount,
-            output: deduplication.outputCount,
-            merged: deduplication.merged,
-            key: deduplication.key,
+        observationStore.set(scanId, observations);
+        return ok(isolatedScan(
+          {
+            url,
+            scanId,
+            elementsInspected: evidence.count,
+            summary: summarize(findings),
+            deduplication: {
+              input: deduplication.inputCount,
+              output: deduplication.outputCount,
+              merged: deduplication.merged,
+              key: deduplication.key,
+            },
           },
-          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
-        });
+          observations, scanId, findings, { view, detail, cursor, limit, maxChars, memberLimit },
+        ));
       }
     )
   );
@@ -1492,7 +1798,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Verificação determinística de estrutura",
       description:
         "Compara elementos br-* com tags, variantes e requisitos de nome acessível da especificação canônica. Retorna referências compactas por padrão; detalhe completo é recuperado por id. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
-      inputSchema: {
+      inputSchema: strictInput("check_component_structure", {
         url: z.string().describe("URL da página"),
         component: z
           .string()
@@ -1500,8 +1806,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .describe("Componente específico (ex.: 'button'). Omitir para validar todos os br-* presentes."),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Seletores CSS verificados no mesmo carregamento"),
         ...FindingPageInputShape,
+        maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
@@ -1509,6 +1816,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       "check_component_structure",
       async ({ url, component, selectors, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const specs = getComponentSpecs().components;
+        if (component !== undefined && !Object.hasOwn(specs, component)) return unknownComponentFailure(component, "check_component_structure", { url });
         const targets = component ? [component] : Object.keys(specs);
         const selector = selectors ?? (component ? `.br-${component}` : "[class*='br-']");
         const evidence = await inspectComputedStyles(url, selector, []);
@@ -1534,21 +1842,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ];
 
         const scanId = findingStore.putBatch("structure", findings);
-        return json({
-          url,
-          scanId,
-          componentsFound,
-          elementsInspected: evidence.count,
-          observations,
-          summary: summarize(findings),
-          deduplication: {
-            input: deduplication.inputCount,
-            output: deduplication.outputCount,
-            merged: deduplication.merged,
-            key: deduplication.key,
+        observationStore.set(scanId, observations);
+        return ok(isolatedScan(
+          {
+            url,
+            scanId,
+            componentsFound,
+            elementsInspected: evidence.count,
+            summary: summarize(findings),
+            deduplication: {
+              input: deduplication.inputCount,
+              output: deduplication.outputCount,
+              merged: deduplication.merged,
+              key: deduplication.key,
+            },
           },
-          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
-        });
+          observations, scanId, findings, { view, detail, cursor, limit, maxChars, memberLimit },
+        ));
       }
     )
   );
@@ -1559,13 +1869,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Varredura axe-core",
       description:
         "Executa axe-core e cruza regras compatíveis com o e-MAG 3.1. Retorna referências compactas por padrão e preserva Findings completos para recuperação por id. Por padrão agrupa instâncias idênticas em famílias (contagem, exemplo, ids); os demais ids de uma família vêm de get_finding_details(scanId, familyId, cursor); view=findings dá a lista plana.",
-      inputSchema: {
+      inputSchema: strictInput("run_axe_scan", {
         url: z.string().describe("URL da página"),
         selector: z.string().optional().describe("Seletor CSS único (compatibilidade)"),
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Subtrees avaliadas na mesma varredura"),
         ...FindingPageInputShape,
+        maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     instrumentTool(
@@ -1576,21 +1887,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const deduplication = deduplicateFindings(result.findings);
         const findings = deduplication.findings;
         const scanId = findingStore.putBatch("axe", findings);
-        return json({
-          url,
-          scanId,
-          engine: result.engine,
-          passes: result.passeCount,
-          incomplete: result.incompleteCount,
-          summary: summarize(findings),
-          deduplication: {
-            input: deduplication.inputCount,
-            output: deduplication.outputCount,
-            merged: deduplication.merged,
-            key: deduplication.key,
+        return ok(isolatedScan(
+          {
+            url,
+            scanId,
+            engine: result.engine,
+            passes: result.passeCount,
+            incomplete: result.incompleteCount,
+            summary: summarize(findings),
+            deduplication: {
+              input: deduplication.inputCount,
+              output: deduplication.outputCount,
+              merged: deduplication.merged,
+              key: deduplication.key,
+            },
           },
-          ...batchView(findings, null, { view, detail, cursor, limit, maxChars, memberLimit }),
-        });
+          [], scanId, findings, { view, detail, cursor, limit, maxChars, memberLimit },
+        ));
       }
     )
   );
@@ -1601,52 +1914,117 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Detalhes de findings já produzidos",
       description:
         "Recupera candidatos por ids ou continua uma página pelo scanId, sem executar novamente o scanner. Use full somente quando o objeto Finding completo for indispensável.",
-      inputSchema: {
+      inputSchema: strictInput("get_finding_details", {
         ids: z.array(z.string()).min(1).max(50).optional().describe("Finding ids retornados nesta sessão MCP"),
         scanId: z.string().optional().describe("Id do lote retornado por um scanner; use com cursor para continuar sem repetir a varredura"),
         detail: FindingDetailSchema.optional().describe("summary, evidence (padrão para ids) ou full"),
         cursor: FindingPageInputShape.cursor,
         limit: FindingPageInputShape.limit,
-        maxChars: FindingPageInputShape.maxChars,
-        view: FamilyViewInputShape.view,
+        maxChars: z
+          .number()
+          .int()
+          .min(1_000)
+          .max(100_000)
+          .optional()
+          .describe("Orçamento da resposta inteira em caracteres (padrão 8000), cabeçalho e ledger incluídos; o resto vem por nextCursor"),
+        view: (knowledgeFree ? z.enum(["findings", "families", "diff"]) : z.enum(["findings", "families", "observations", "diff"]))
+          .optional()
+          .describe(
+            "families (padrão): agrupa instâncias idênticas (mesma norma, tipo, propriedade, estado e evidência) com contagem, " +
+              "um exemplo, vereditos por membro e ids com cursor. findings: a página plana de findings. " +
+              (knowledgeFree ? "" : "observations: as observações do scan (fora da pontuação), completas, por cursor. ") +
+              "diff: as mudanças de findings de um scan com compareToScanId, por cursor. Só apresentação: contagens e lote não mudam"
+          ),
         memberLimit: FamilyViewInputShape.memberLimit,
         familyId: z
           .string()
           .optional()
           .describe("Com scanId: pagina os membros de uma família (id, localizador, valor, assinatura, status individual); cursor=nextCursor percorre todos os ids"),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     tool(
       "get_finding_details",
       async ({ ids, scanId, detail, cursor, limit, maxChars, view, memberLimit, familyId }) => {
         if ((!ids && !scanId) || (ids && scanId)) {
-          return json({ error: "Informe exatamente um de ids ou scanId." });
+          return fail({
+            error: "Informe exatamente um de ids ou scanId.",
+            errorCode: "invalid-combination",
+            field: "scanId",
+            next: [step("request-detail", "continue um lote pelo scanId devolvido pelo scan_page (com cursor), ou peça findings por ids", null)],
+          });
         }
         if ((familyId || view !== undefined) && !scanId) {
-          return json({ error: "familyId e view exigem scanId: a família é uma projeção de um lote." });
+          return fail({
+            error: "familyId e view exigem scanId: a família é uma projeção de um lote.",
+            errorCode: "invalid-combination",
+            field: "familyId",
+            next: [step("request-detail", "repita com o scanId do lote", null)],
+          });
         }
         const batch = scanId ? findingStore.getBatch(scanId) : undefined;
         const ledger = scanId ? findingStore.getBatchMetadata(scanId) : undefined;
-        if (scanId && !batch) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
+        if (scanId && !batch) return sessionFailure(`scanId '${scanId}' não existe nesta sessão MCP.`, "unknown-scan", "scanId");
         const stateFingerprint = typeof ledger?.stateFingerprint === "string" ? ledger.stateFingerprint : null;
+        const budget = maxChars ?? RESPONSE_BUDGET;
+        if (scanId && (view as string | undefined) === "observations") {
+          return ok(observationPage(observationStore.get(scanId) ?? [], scanId, cursor ?? 0, budget));
+        }
+        if (scanId && (view as string | undefined) === "diff") {
+          const stored = diffStore.get(scanId);
+          if (!stored) {
+            return fail({
+              error: `scanId '${scanId}' não tem diff: o scan não foi feito com compareToScanId.`,
+              errorCode: "invalid-argument",
+              field: "view",
+              next: [step("reproduce-state", "rode scan_page com compareToScanId e use o scanId devolvido", "scan_page")],
+            });
+          }
+          return ok(diffPage(stored.diff, scanId, stored.previousScanId, cursor ?? 0, budget));
+        }
         if (scanId && familyId) {
-          const members = buildFamilyMemberPage(batch ?? [], familyId, {
-            detail, cursor, limit, maxChars, stateFingerprint, verificationFor,
-          });
-          if (!members) return json({ error: `familyId '${familyId}' não existe no lote '${scanId}'.` });
-          return json({ scanId, ...members });
+          // Revisão da 3.0.0: o orçamento conta a resposta inteira (os membros ficam com o resto).
+          let memberBudget = budget - 300;
+          let members = buildFamilyMemberPage(batch ?? [], familyId, { detail, cursor, limit, maxChars: memberBudget, stateFingerprint, verificationFor });
+          for (let i = 0; members && i < 4 && textSize({ contract: CONTRACT, kind: "family-members", scanId, ...members }) > budget; i++) {
+            memberBudget = Math.max(200, memberBudget - (textSize({ contract: CONTRACT, kind: "family-members", scanId, ...members }) - budget) - 100);
+            members = buildFamilyMemberPage(batch ?? [], familyId, { detail, cursor, limit, maxChars: memberBudget, stateFingerprint, verificationFor });
+          }
+          if (!members) {
+            return fail({
+              error: `familyId '${familyId}' não existe no lote '${scanId}'.`,
+              errorCode: "unknown-family",
+              field: "familyId",
+              next: [step("request-detail", "as famílias do lote", "get_finding_details", { scanId })],
+            });
+          }
+          return ok({ contract: CONTRACT, kind: "family-members", scanId, ...members });
         }
         const { found, missing } = ids ? findingStore.get(ids) : { found: batch ?? [], missing: [] };
-        return json({
+        const familyView = view as "findings" | "families" | undefined;
+        // Revisão da 3.0.0 (M3): o ledger (estado, cobertura) entra na conta do orçamento; na
+        // continuação ele não se repete (já veio na 1ª página).
+        const head = {
+          contract: CONTRACT,
+          kind: "finding-details",
           requested: ids?.length ?? found.length,
           ...(scanId ? { scanId } : {}),
-          ...(ledger ? { ledger } : {}),
+          ...(ledger && !cursor ? { ledger } : {}),
           missing,
-          ...(scanId
-            ? batchView(found, stateFingerprint, { view, detail: detail ?? "summary", cursor, limit, maxChars, memberLimit })
-            : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars })),
-        });
+          ...(missing.length
+            ? {
+                missingNote:
+                  "Ids de finding só valem na sessão MCP em que foram gerados; depois de um reinício, o mesmo id pode nomear outro achado. Rode scan_page nesta sessão.",
+              }
+            : {}),
+        };
+        return ok(
+          assembleScan(head, null, scanId ?? "", budget, (pageBudget) =>
+            scanId
+              ? batchView(found, stateFingerprint, { view: familyView, detail: detail ?? "summary", cursor, limit, maxChars: pageBudget, memberLimit })
+              : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars: pageBudget }),
+          ),
+        );
       }
     )
   );
@@ -1661,7 +2039,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Portão de verificação anti-alucinação",
       description:
         "Confere em separado: existência da regra citada (critérios WCAG 2.2 no registro público; regras do axe-core são do verificador embutido; outras fontes não são conferidas neste perfil), consistência dos dados estruturados (expectedCondition e campos da condição) e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions ou pela receita do scanId. Dados estruturados ausentes ou sem predicado deixam o resultado unverifiable; dados contraditórios rejeitam; confirmed exige a violação verificada. observed/expected em texto livre são explicações humanas e não são interpretados. O servidor guarda o resultado para este payload exato.",
-      inputSchema: {
+      inputSchema: strictInput("verify_finding", {
         finding: FindingSchemaKnowledgeFree.describe("O achado candidato, no esquema Finding"),
         live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
         actions: PageActionsSchema.optional().describe("Ações reproduzidas antes da verificação, quando o estado alegado depende de interação"),
@@ -1671,13 +2049,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe("scan_page desta sessão cujo estado é o alegado: reaplica a receita gravada e exige a mesma URL, janela e fingerprint. Não envie actions/arrival/stateFingerprint junto"),
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     } : {
       title: "Portão de verificação anti-alucinação",
       description:
         "Confere em separado: existência da regra num registro versionado, aplicabilidade, consistência dos dados estruturados (property, observed/observedHex ou observedTag e expectedCondition) com cada elemento vivo e, com live, a violação por um predicado implementado em cada elemento do localizador, no estado reproduzido por actions. Dados estruturados ausentes ou sem predicado deixam o resultado unverifiable; dados contraditórios rejeitam; confirmed exige a violação verificada. observed/expected em texto livre são explicações humanas e não são interpretados. O servidor guarda o resultado para este payload exato.",
-      inputSchema: {
+      inputSchema: strictInput("verify_finding", {
         finding: FindingSchema.describe("O achado candidato, no esquema Finding"),
         live: z.boolean().optional().describe("Reabrir a página e verificar cada elemento do localizador (padrão: false)"),
         actions: PageActionsSchema.optional().describe("Ações reproduzidas antes da verificação, quando o estado alegado depende de interação"),
@@ -1687,24 +2065,37 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe("scan_page desta sessão cujo estado é o alegado: reaplica a receita gravada e exige a mesma URL, janela e fingerprint. Não envie actions/arrival/stateFingerprint junto"),
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     tool("verify_finding", async ({ finding, live, actions, stateFingerprint, arrival, scanId }) => {
       let scanState: Parameters<typeof verifyFinding>[0]["scanState"];
       if (scanId) {
         if (actions !== undefined || arrival !== undefined || stateFingerprint !== undefined) {
-          return json({ error: "scanId já carrega a receita, as condições de chegada e o fingerprint do estado; não envie actions, arrival ou stateFingerprint junto." });
+          return fail({
+            error: "scanId já carrega a receita, as condições de chegada e o fingerprint do estado; não envie actions, arrival ou stateFingerprint junto.",
+            errorCode: "invalid-combination",
+            field: "scanId",
+            next: [step("request-detail", "repita só com scanId (sem actions, arrival e stateFingerprint)", null)],
+          });
         }
         const ledger = findingStore.getBatchMetadata(scanId);
         const state = ledger?.state as StateAttestation | undefined;
-        if (!ledger) return json({ error: `scanId '${scanId}' não existe nesta sessão MCP.` });
+        if (!ledger) return sessionFailure(`scanId '${scanId}' não existe nesta sessão MCP.`, "unknown-scan", "scanId");
         if (!state || typeof ledger.stateFingerprint !== "string") {
-          return json({ error: `scanId '${scanId}' não é de scan_page: não tem receita de estado.` });
+          return fail({
+            error: `scanId '${scanId}' não é de scan_page: não tem receita de estado.`,
+            errorCode: "not-a-page-scan",
+            field: "scanId",
+            next: [step("reproduce-state", "cite o scanId de um scan_page desta sessão", "scan_page")],
+          });
         }
         if (!sameScanPage(finding.element.page, state.recipe.url)) {
-          return json({
+          return fail({
             error: `scanId '${scanId}' é de ${state.recipe.url}, mas o achado aponta para ${finding.element.page}: cite o scan da página do achado (barra final e fragmento não contam).`,
+            errorCode: "scan-page-mismatch",
+            field: "scanId",
+            next: [step("reproduce-state", "rode scan_page na página do achado e cite o scanId devolvido", "scan_page", { url: finding.element.page })],
           });
         }
         scanState = {
@@ -1727,12 +2118,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const stored = verificationStore.record(finding, verification);
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
-      return json({
-        findingId: finding.id,
-        verificationId: stored.verificationId,
-        verification,
-        ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
-      });
+      // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
+      return ok(
+        verificationEnvelope(finding as Finding, verification, {
+          verificationId: stored.verificationId,
+          knowledgeFree,
+          ...(scanId ? { scanId } : {}),
+          ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
+        }),
+      );
     })
   );
 
@@ -1742,7 +2136,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       title: "Consolidar e persistir relatório",
       description:
         "Persiste o relatório validado. Reuse finding_ids dos scanners sem reenviar objetos completos; envie findings somente para achados criados pelo agente.",
-      inputSchema: {
+      inputSchema: strictInput("save_report", {
         url: z.string().describe("URL da página validada"),
         finding_ids: z
           .array(z.string())
@@ -1754,13 +2148,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Achados criados pelo agente no esquema Finding (explícitos/heurísticos). O campo verification enviado é ignorado: vale a verificação guardada pelo servidor para o payload idêntico; explicit sem verificação fica em revisão."),
         notes: z.string().optional().describe("Notas gerais da validação (contexto, limitações desta rodada)"),
-      },
+      }),
     },
     instrumentTool(telemetry, "save_report", async ({ url, finding_ids, findings, notes }) => {
       const stored = findingStore.get(finding_ids ?? []);
       if (stored.missing.length) {
-        return json({
-          error: "Alguns finding_ids não existem nesta sessão MCP; o relatório não foi salvo.",
+        return sessionFailure("Alguns finding_ids não existem nesta sessão MCP; o relatório não foi salvo.", "missing-finding-ids", "finding_ids", {
           missingFindingIds: stored.missing,
         });
       }
@@ -1770,7 +2163,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
       });
       const report = buildReport(url, accepted, notes, reviewItems);
       const persisted = persistReport(report, reportsDir);
-      return json({
+      return ok({
+        contract: CONTRACT,
+        kind: "report",
         summary: report.summary,
         accepted: accepted.length,
         reviewItems: reviewItems.length,
@@ -1881,6 +2276,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
   // Prompt (A6) — the standardized validation procedure
   // ══════════════════════════════════════════════════════════════════════════
 
+  /** 3.0.0 (S-15): o procedimento só cita as ferramentas que este perfil registrou. */
+  const profileTools: ReadonlySet<string> = new Set([
+    ...(hasNorms ? ["get_ds_rules", "get_design_tokens", "get_emag_rules", "get_page_rules", "get_component_spec"] : []),
+    ...(toolProfile === "full" ? ["list_components", "check_token_compliance", "check_component_structure", "run_axe_scan", "save_report"] : []),
+    ...(hasEvidence ? ["inspect_computed_styles"] : []),
+    ...(hasDeterministic || knowledgeFree ? ["scan_page", "get_finding_details"] : []),
+    ...(hasCombinedGate || knowledgeFree ? ["verify_finding"] : []),
+  ]);
+
   if (hasCombinedGate) server.registerPrompt(
     "validate_page",
     {
@@ -1890,14 +2294,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
       argsSchema: {
         url: z.string().describe("URL da página a validar"),
         scope: z.string().optional().describe("Componentes a focar, separados por vírgula (ex.: 'button,input')"),
-        max_iterations: z.string().optional().describe("Máximo de iterações adicionais (padrão: 2)"),
+        // 3.0.0 (S-15): inteiro >= 0; "-5" entrava no texto como estava.
+        max_iterations: z.string().regex(/^\d{1,2}$/, "max_iterations: inteiro de 0 a 99").optional().describe("Máximo de iterações adicionais (padrão: 2)"),
       },
     },
     ({ url, scope, max_iterations }) => ({
       messages: [
         {
           role: "user" as const,
-          content: { type: "text" as const, text: buildValidatePagePrompt({ url, scope, max_iterations }) },
+          content: { type: "text" as const, text: buildValidatePagePrompt({ url, scope, max_iterations, tools: profileTools }) },
         },
       ],
     })
