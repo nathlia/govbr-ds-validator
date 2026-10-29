@@ -90,7 +90,7 @@ describe("enforceCeiling: honesty texts are the last resort (3.4.2, D-154)", () 
     contract: "oraculo-resposta/1.0.0",
     kind: "scan",
     scanId: "S-page-001",
-    state: { reached: true, settle: { settled: true, log: "s".repeat(statePad) }, replay: { status: "ok" }, observed: { url: "http://x/a.html", path: "/a.html", viewport: "1280x900", extra: "o".repeat(200) } },
+    state: { reached: true, settle: { settled: true, log: "s".repeat(statePad) }, replay: { status: "ok" }, recipe: { viewport: "1280x900", viewportSource: "harness" }, observed: { url: "http://x/a.html", path: "/a.html", viewport: "1280x900", extra: "o".repeat(200) } },
     coverage: { checks: ["page"], elementsInspected: 40, componentsFound: Array.from({ length: 30 }, (_, i) => `componente-${i}`), actionsApplied: [] },
     checksRun: { executed: ["page"], limits: [{ code: "no-state-order-position", text: limitText + "l".repeat(limitsPad) }], coverageNote: "Mediu apenas os checks em executed." },
   });
@@ -104,6 +104,8 @@ describe("enforceCeiling: honesty texts are the last resort (3.4.2, D-154)", () 
     expect(r.squeezed).toEqual(["state → essencial (inteiro no ledger)"]);
     expect(limitsOf(r)).toEqual([{ code: "no-state-order-position", text: expect.stringContaining(limitText) }]);
     expect((r.checksRun as { coverageNote?: string }).coverageNote).toBeDefined();
+    // 3.4.3: a atestação da janela (janela da receita + fonte) sobrevive ao estado encolhido
+    expect((r.state as { recipe: Record<string, unknown> }).recipe).toEqual({ viewport: "1280x900", viewportSource: "harness" });
     expect(r.exceedsMaxChars).toBeUndefined();
   });
 

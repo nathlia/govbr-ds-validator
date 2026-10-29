@@ -193,15 +193,18 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
-        const st = r.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown } } | undefined;
+        const st = r.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown }; recipe?: { viewport?: unknown; viewportSource?: unknown } } | undefined;
         if (!st) return null;
         const o = st.observed ?? {};
+        // 3.4.3 (D-154): a janela da receita e a fonte dela ficam — é a atestação que o harness confere.
+        const recipe = st.recipe?.viewportSource !== undefined ? { recipe: { viewport: st.recipe.viewport, viewportSource: st.recipe.viewportSource } } : {};
         return {
           ...r,
           state: {
             reached: st.reached,
             replay: st.replay?.status,
             settled: st.settle?.settled,
+            ...recipe,
             observed: { url: o.url, path: o.path, viewport: o.viewport, ...(o.httpStatus ? { httpStatus: o.httpStatus } : {}) },
             ...(scanId ? { full: { tool: "get_finding_details", arguments: { scanId } } } : {}),
           },

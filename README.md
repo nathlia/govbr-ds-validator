@@ -83,6 +83,12 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.4.3 — atestação da janela no estado encolhido (D-154)
+
+Com o estado reduzido ao essencial pelo teto (3.4.2), fica também `state.recipe: {viewport, viewportSource}`
+(a janela declarada e a fonte dela). É a atestação de janela que o harness do `govbr-eval` confere nas
+respostas que o agente recebeu; sem ela, a checagem `janela-do-oraculo` ficava "não exercitada".
+
 ## 3.4.2 — ordem do teto da resposta (D-154, revisão pós-reexecução)
 
 Na reexecução das chamadas reais, o primeiro `scan_page` de `solicitacao.html` (sem `maxChars`, 8 achados)
