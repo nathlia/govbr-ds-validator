@@ -42,6 +42,12 @@ export interface PageFacts {
    * `skipsToContent`: o href é uma âncora interna (`#id`) cujo alvo existe no documento.
    */
   firstLink: { href: string; text: string; targetId: string | null; targetExists: boolean; skipsToContent: boolean } | null;
+  /**
+   * 3.4.4 (C12): o primeiro a receber foco pelo Tab quando há `tabindex` positivo — ele vem antes de
+   * qualquer elemento com tabindex 0/nativo, então antes do salto. `null` sem tabindex positivo exibido.
+   * `isFirstLink`: é o próprio primeiro link.
+   */
+  positiveTabindexFirst?: { tag: string; tabindex: number; text: string; id: string | null; isFirstLink: boolean } | null;
 }
 
 export async function inspectPageStructure(page: Page, url: string): Promise<PageFacts> {
@@ -74,6 +80,32 @@ export async function inspectPageStructure(page: Page, url: string): Promise<Pag
     };
     walk(document.documentElement, new Set());
 
+    // 3.4.4 (C12): tabindex positivo exibido e habilitado — o menor valor, depois a ordem do documento.
+    let positiveTabindexFirst: PageFacts["positiveTabindexFirst"] = null;
+    {
+      let best: { el: Element; tabindex: number } | null = null;
+      const scan = (root: Document | ShadowRoot) => {
+        for (const el of Array.from(root.querySelectorAll("[tabindex]"))) {
+          const t = parseInt(el.getAttribute("tabindex") ?? "", 10);
+          if (!(t > 0)) continue;
+          const cs = getComputedStyle(el);
+          if (el.getClientRects().length === 0 || cs.visibility === "hidden" || (el as HTMLButtonElement).disabled) continue;
+          if (!best || t < best.tabindex) best = { el, tabindex: t };
+        }
+        for (const host of Array.from(root.querySelectorAll("*"))) if (host.shadowRoot) scan(host.shadowRoot);
+      };
+      scan(document);
+      const chosen = best as { el: Element; tabindex: number } | null;
+      if (chosen) {
+        positiveTabindexFirst = {
+          tag: chosen.el.tagName.toLowerCase(),
+          tabindex: chosen.tabindex,
+          text: ((chosen.el as HTMLElement).innerText ?? chosen.el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 60),
+          id: chosen.el.id || null,
+          isFirstLink: chosen.el === links[0],
+        };
+      }
+    }
     const first = links[0];
     let firstLink: PageFacts["firstLink"] = null;
     if (first) {
@@ -96,6 +128,7 @@ export async function inspectPageStructure(page: Page, url: string): Promise<Pag
       mainLandmarks,
       linkCount: links.length,
       firstLink,
+      positiveTabindexFirst,
     };
   }, PAGE_REGION_SELECTORS as Record<string, string>);
   return { url, ...facts, regions: facts.regions as Record<PageRegion, number> };

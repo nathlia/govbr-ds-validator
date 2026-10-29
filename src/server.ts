@@ -63,6 +63,7 @@ import { rankRules, rankingMeta, vocabularyEnabledByDefault, vocabularyLabel, to
 import type { PageRegion } from "./evidence/pageFacts.js";
 import { readFileSync } from "node:fs";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS } from "./checkers/tokenCompliance.js";
+import { demoteToObservations, partitionByOwnership, splitOutside } from "./checkers/ownership.js";
 
 /**
  * A versão que o servidor anuncia no handshake MCP.
@@ -144,6 +145,8 @@ import { getGuidance } from "./data/guidance.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
+import { ANATOMY_PARTS } from "./verify/contextual.js";
+import { EXPECTED_CONDITIONS } from "./schema/structuredClaims.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIR = join(__dirname, "../../reports");
@@ -1469,6 +1472,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...specRelated(spec.name),
           next: ruleNext.slice(0, 3),
         },
+        // 3.4.4 (C13, D4): os valores aceitos de `part` no predicado de anatomia só apareciam no erro.
+        ...(ANATOMY_PARTS.some((p) => p.component === spec.name)
+          ? {
+              verifiableAnatomy: {
+                expectedCondition: EXPECTED_CONDITIONS.anatomyPart,
+                parts: ANATOMY_PARTS.filter((p) => p.component === spec.name).map((p) => ({ part: p.part, label: p.label, rules: p.rules })),
+                note: "verify_finding decide a ausência destas partes com evidence.data {expectedCondition, component, part} e rule.id = uma das rules.",
+              },
+            }
+          : {}),
         ...(runtimeNote ? { runtime: { text: runtimeNote, code: "implementation", message: MESSAGES.implementation, state: "after-interaction" } } : {}),
         gaps: [{ kind: "state-not-covered", about: "atributos escritos em tempo de execução", message: provenance.staticExample.note }],
         warnings: defects.map((d) => ({
@@ -1853,10 +1866,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
           selectorBatch(selector, selectors),
           tokenProperties(activeChecks)
         );
-        const rawFindings = checkTokenCompliance({ url }, evidence.elements, getTokenRegistry(), activeChecks);
-        const observations = activeChecks.includes("font")
-          ? collectTokenObservations({ url }, evidence.elements, getTokenRegistry())
-          : [];
+        // 3.4.4 (C3/C4): fora da autoria da página (web component do DS, terceiros, não renderizado) → observação.
+        const scope = partitionByOwnership(evidence.elements, true);
+        const rawFindings = checkTokenCompliance({ url }, scope.page, getTokenRegistry(), activeChecks);
+        const observations = [
+          ...(activeChecks.includes("font") ? collectTokenObservations({ url }, scope.page, getTokenRegistry()) : []),
+          ...demoteToObservations(checkTokenCompliance({ url }, scope.outside, getTokenRegistry(), activeChecks), scope.outside),
+        ];
         const deduplication = deduplicateFindings(rawFindings);
         const findings = deduplication.findings;
         const scanId = findingStore.putBatch("tokens", findings);
@@ -1909,17 +1925,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const selector = selectors ?? (component ? `.br-${component}` : "[class*='br-']");
         const evidence = await inspectComputedStyles(url, selector, []);
 
-        const rawFindings = targets.flatMap((name) => {
-          const spec = specs[name];
-          if (!spec) return [];
-          return checkComponentStructure({ url }, evidence.elements, spec);
-        });
+        // 3.4.4 (C3/C5): internos de web component do DS e terceiros embutidos pelo DS → observação.
+        const scope = partitionByOwnership(evidence.elements, false);
+        const outside = targets.map((name) => (specs[name] ? splitOutside(checkComponentStructure({ url }, scope.outside, specs[name]), scope.outside) : { findings: [], observations: [] }));
+        const rawFindings = [
+          ...targets.flatMap((name) => {
+            const spec = specs[name];
+            if (!spec) return [];
+            return checkComponentStructure({ url }, scope.page, spec);
+          }),
+          ...outside.flatMap((o) => o.findings),
+        ];
         // Canal separado, fora da pontuação (D-27): o que se observa mas não se pode afirmar.
         const observations = targets.flatMap((name) => {
           const spec = specs[name];
           if (!spec) return [];
           return collectStructureObservations({ url }, evidence.elements, spec);
-        });
+        }).concat(outside.flatMap((o) => o.observations));
 
         const deduplication = deduplicateFindings(rawFindings);
         const findings = deduplication.findings;
@@ -1982,6 +2004,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             engine: result.engine,
             passes: result.passeCount,
             incomplete: result.incompleteCount,
+            ...(result.incompleteRules.length ? { incompleteRules: result.incompleteRules } : {}),
             summary: summarize(findings),
             deduplication: {
               input: deduplication.inputCount,
@@ -2199,8 +2222,31 @@ export function createServer(options: ServerOptions = {}): McpServer {
           fingerprint: ledger.stateFingerprint,
         };
       }
+      // 3.4.4 (C9): o achado do próprio scanner volta sem edição. A projeção compacta do scan não traz
+      // evidence.data (expectedCondition e os campos da condição); com o id de um achado do ledger desta
+      // sessão — mesma norma e mesmo localizador —, os campos que faltam são herdados do achado guardado
+      // e a resposta diz quais. O que o agente enviou prevalece.
+      let candidate = finding as Finding;
+      let inherited: { findingId: string; fields: string[] } | undefined;
+      if (typeof candidate.id === "string") {
+        const stored = findingStore.get([candidate.id]).found[0];
+        if (
+          stored &&
+          stored.rule.id === candidate.rule.id &&
+          stored.rule.source === candidate.rule.source &&
+          stored.element.locator === candidate.element.locator &&
+          stored.evidence.data
+        ) {
+          const sent = (candidate.evidence?.data ?? {}) as Record<string, unknown>;
+          const fields = Object.keys(stored.evidence.data).filter((k) => !(k in sent));
+          if (fields.length) {
+            candidate = { ...candidate, evidence: { ...candidate.evidence, data: { ...stored.evidence.data, ...sent } } };
+            inherited = { findingId: stored.id, fields };
+          }
+        }
+      }
       const verification = await verifyFinding({
-        finding: finding as Finding,
+        finding: candidate,
         live: live ?? false,
         actions,
         stateFingerprint,
@@ -2208,15 +2254,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
         scanState,
         ...(knowledgeFree ? { knowledgeFree: true } : {}),
       });
-      const stored = verificationStore.record(finding, verification);
+      const stored = verificationStore.record(candidate, verification);
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
       // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
       return ok(
-        verificationEnvelope(finding as Finding, verification, {
+        verificationEnvelope(candidate, verification, {
           verificationId: stored.verificationId,
           knowledgeFree,
           ...(scanId ? { scanId } : {}),
+          ...(inherited ? { inheritedFromLedger: { ...inherited, note: "evidence.data que faltava no payload foi herdado do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
           ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
         }),
       );

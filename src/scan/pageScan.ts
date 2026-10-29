@@ -4,6 +4,7 @@ import { httpStatusOf, nativeDialogsOf, withPage } from "../evidence/browser.js"
 import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
+import { demoteToObservations, ownershipOf, partitionByOwnership, splitOutside } from "../checkers/ownership.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
 import { checkFocusIndicators } from "../checkers/focusIndicator.js";
@@ -101,7 +102,7 @@ export interface PageScanResult {
     componentsRequested?: string[];
     /** Ausente no perfil knowledge-free (2.14.0). */
     componentsFound?: string[];
-    axe?: { engine: { name: string; version: string }; passes: number; incomplete: number };
+    axe?: { engine: { name: string; version: string }; passes: number; incomplete: number; incompleteRules?: Array<{ rule: string; nodes: number; example: string | null; help?: string }> };
     actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string; path?: string }>;
   };
   deduplication: {
@@ -329,11 +330,17 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         ),
       ];
       if (checks.includes("tokens")) {
+        // 3.4.4 (C3/C4/C5): internos de web component do DS, terceiros embutidos pelo DS e elementos não
+        // renderizados não geram achado de estilo — viram observação com o motivo (ownership.ts).
+        const tokenScope = partitionByOwnership(evidence.elements, true);
         rawFindings.push(
-          ...checkTokenCompliance({ url: request.url }, evidence.elements, getTokenRegistry(), activeTokenChecks)
+          ...checkTokenCompliance({ url: request.url }, tokenScope.page, getTokenRegistry(), activeTokenChecks)
+        );
+        observations.push(
+          ...demoteToObservations(checkTokenCompliance({ url: request.url }, tokenScope.outside, getTokenRegistry(), activeTokenChecks), tokenScope.outside)
         );
         if (activeTokenChecks.includes("font")) {
-          observations.push(...collectTokenObservations({ url: request.url }, evidence.elements, getTokenRegistry()));
+          observations.push(...collectTokenObservations({ url: request.url }, tokenScope.page, getTokenRegistry()));
         }
         // 3.4.0 (B5, V-09): texto autoral fora dos controles (`p`, `span`, títulos, células, `hr`) também
         // tem a cor conferida — só a cor, só elementos exibidos, e com a mesma exigência de autoria (cor
@@ -341,16 +348,24 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         if (activeTokenChecks.includes("color") && normalized.selectors.length === 0) {
           const text = await inspectPageComputedStyles(page, request.url, TEXT_COLOR_SELECTOR, ["backgroundColor", "color", "borderColor"]);
           const known = new Set(evidence.elements.map((element) => element.locator));
-          const authoredText = text.elements.filter((element) => element.rendered !== false && !known.has(element.locator));
+          const authoredText = text.elements.filter((element) => ownershipOf(element) === "page" && !known.has(element.locator));
           elementsInspected += authoredText.length;
           rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
+          // 3.4.4 (revisão, L6): o texto fora da autoria da página (dentro de componente do DS, de terceiros ou
+          // oculto neste estado) não some em silêncio — vira observação com o motivo, como nos outros checks.
+          const outsideText = text.elements.filter((element) => ownershipOf(element) !== "page" && !known.has(element.locator));
+          observations.push(...demoteToObservations(checkTokenCompliance({ url: request.url }, outsideText, getTokenRegistry(), ["color"]), outsideText));
         }
       }
       if (checks.includes("structure")) {
+        const structureScope = partitionByOwnership(evidence.elements, false);
         for (const component of componentTargets) {
           const spec = specs[component];
           if (!spec) continue;
-          rawFindings.push(...checkComponentStructure({ url: request.url }, evidence.elements, spec));
+          rawFindings.push(...checkComponentStructure({ url: request.url }, structureScope.page, spec));
+          const outside = splitOutside(checkComponentStructure({ url: request.url }, structureScope.outside, spec), structureScope.outside);
+          rawFindings.push(...outside.findings);
+          observations.push(...outside.observations);
           observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
       }
@@ -390,6 +405,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         engine: result.engine,
         passes: result.passeCount,
         incomplete: result.incompleteCount,
+        ...(result.incompleteRules.length ? { incompleteRules: result.incompleteRules } : {}),
       };
     }
 
@@ -464,7 +480,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     if (cached) return { ...cached, state, cacheHit: true };
 
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
-    const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false });
+    const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);
     const value: CachedScan = {
       status: "scanned",
@@ -483,7 +499,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
           ...(action.action === "navigate" ? { path: action.path } : {}),
           ...(action.action === "press" ? { key: action.key } : {}),
         })),
-        axe: { engine: result.engine, passes: result.passeCount, incomplete: result.incompleteCount },
+        axe: { engine: result.engine, passes: result.passeCount, incomplete: result.incompleteCount, ...(result.incompleteRules.length ? { incompleteRules: result.incompleteRules } : {}) },
       },
       deduplication: {
         input: deduplicated.inputCount,

@@ -11,6 +11,13 @@
  * diferença em qualquer um desses conta como indicador — a medição é generosa de propósito: só a
  * AUSÊNCIA de qualquer mudança vira achado.
  *
+ * 3.4.4 (C6): duas mudanças deixaram de contar. (a) Campo em estado de erro cuja borda vermelha volta a um
+ * cinza neutro ao focar (sem ganhar espessura): perde o estado de erro, não marca o foco — e a medição fica
+ * incompleta (nunca vira achado), porque a cor de repouso sem o erro não é conhecida. (b) Mudança no próprio elemento (e nos pseudo-elementos e descendentes dele) quando ele é
+ * invisível — opacidade efetiva 0, sem área ou visibility hidden: o `outline` de um input com opacity:0
+ * não se vê. O rótulo, o irmão e o pai continuam valendo (o checkbox do DS marca o foco em
+ * `label::before`). O que foi descartado sai em `discounted`.
+ *
  * Limites declarados: não julga contraste nem tamanho do indicador (WCAG 2.4.11/2.4.13), só a
  * existência de mudança; um indicador desenhado por script em outro elemento, ou só por transição
  * animada, não é visto; um elemento que ao receber foco move o foco para outro não é medido.
@@ -30,6 +37,8 @@ export interface FocusIndicatorFact {
    * pôde ser descartada (subárvore grande demais, shadow root fechado): nunca vira achado.
    */
   complete: boolean;
+  /** 3.4.4 (C6): mudanças medidas que não contam como indicador, com o motivo. */
+  discounted?: string[];
 }
 
 /** 3.4.1: teto de descendentes comparados por elemento; acima disso a medição não é completa. */
@@ -159,13 +168,73 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
         }
         const after = focused ? snapshot(list) : before;
         el.blur();
+        // 3.4.4 (C6b): o elemento é invisível? Então nada desenhado nele, nos pseudo-elementos ou nos
+        // descendentes se vê.
+        const invisibleSelf = (() => {
+          const cs = getComputedStyle(el);
+          if (cs.visibility === "hidden" || cs.visibility === "collapse") return true;
+          const r = el.getBoundingClientRect();
+          if (r.width * r.height === 0) return true;
+          let node: Element | null = el;
+          let opacity = 1;
+          while (node) {
+            opacity *= parseFloat(getComputedStyle(node).opacity || "1");
+            const parent: Element | null = node.parentElement ?? ((node.getRootNode() as ShadowRoot).host ?? null);
+            node = parent;
+          }
+          return opacity === 0;
+        })();
+        // 3.4.4 (C6a, revisão): perda de contraste NÃO é critério (escuro → azul da marca e preto → amarelo
+        // são indicadores). Só uma mudança é posta em dúvida: o campo está em estado de erro (aria-invalid no
+        // próprio campo ou num contêiner próximo, ou classe de erro/perigo nele ou num ancestral próximo), a
+        // borda em repouso é vermelha e, com foco, volta a um cinza neutro — o mesmo que perder o estado de
+        // erro. Essa mudança não conta como indicador, mas também não vira achado: a medição fica incompleta
+        // (undetermined), porque o oráculo não sabe a cor de repouso do campo sem o erro.
+        const rgb = (value: string): [number, number, number] | null => {
+          const m = value.match(/rgba?\(([^)]+)\)/);
+          if (!m) return null;
+          const parts = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+          if (parts.length > 3 && parts[3] === 0) return null;
+          return [parts[0], parts[1], parts[2]];
+        };
+        const ERROR_CLASS = /^(danger|invalid|is-invalid|error|erro|has-error|has-danger)$/;
+        const inError = (() => {
+          let n: Element | null = el;
+          for (let depth = 0; n && depth < 4; depth++) {
+            if (n.getAttribute("aria-invalid") === "true") return true;
+            if (Array.from(n.classList).some((c) => ERROR_CLASS.test(c))) return true;
+            n = n.parentElement;
+          }
+          return false;
+        })();
+        const reddish = (c: [number, number, number] | null) => !!c && c[0] >= 150 && c[0] > c[1] * 1.8 && c[0] > c[2] * 1.8;
+        const neutral = (c: [number, number, number] | null) => !!c && Math.max(...c) - Math.min(...c) <= 16;
+        let lostErrorOnly = false;
         const changed: string[] = [];
+        const discounted: string[] = [];
         before.forEach(([name, styles], i) => {
           const next = after[i][1];
           if (!styles || !next) return;
-          for (const p of props) if (styles[p] !== next[p]) changed.push(`${name}:${p}`);
+          const ownDrawing = name === "self" || name.startsWith("self::") || name.startsWith("desc[");
+          for (const p of props) {
+            if (styles[p] === next[p]) continue;
+            if (invisibleSelf && ownDrawing) { discounted.push(`${name}:${p} (elemento invisível)`); continue; }
+            const side = p.match(/^border-(top|right|bottom|left)-color$/)?.[1];
+            if (side && name === "self" && inError && styles[p] !== "none" && next[p] !== "none") {
+              const widthKey = `border-${side}-width`;
+              const thicker = parseFloat(next[widthKey]) > parseFloat(styles[widthKey]);
+              if (!thicker && reddish(rgb(styles[p])) && neutral(rgb(next[p]))) {
+                discounted.push(`${name}:${p} (${styles[p]} → ${next[p]}: o campo em erro perde a cor de erro no foco)`);
+                lostErrorOnly = true;
+                continue;
+              }
+            }
+            changed.push(`${name}:${p}`);
+          }
         });
-        return { locator, focused, changed, complete: desc.complete };
+        // A perda do estado de erro não indica foco, mas também não prova ausência de indicador: incompleta.
+        const complete = desc.complete && !(lostErrorOnly && changed.length === 0);
+        return { locator, focused, changed, complete, ...(discounted.length ? { discounted } : {}) };
       });
       if (original && typeof original.focus === "function") original.focus({ preventScroll: true });
       return out;

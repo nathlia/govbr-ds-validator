@@ -43,6 +43,12 @@ export interface CheckGrounding {
   implements: string[];
   /** Por que estes ids. É a frase que um revisor confere contra a fonte. */
   basis: string;
+  /**
+   * 3.4.4 (C7): norma da base que trata do mesmo assunto, mas que a verificação mecânica não decide
+   * (ex.: escala tipográfica). Não vira achado (`implements` continua vazio); é dita na observação e no
+   * verify_finding, para o agente citá-la com a medição em vez de ouvir "não há norma".
+   */
+  relatedRule?: { id: string; force: "required" | "recommended" | "permitted" | "informative"; text: string };
 }
 
 /** A regra geral de tokens, usada quando não há regra mais específica para a propriedade. */
@@ -61,10 +67,18 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
   },
   "token-font-size": {
     implements: [],
+    relatedRule: {
+      id: "govbr-3.7.0-foundation-global-21fb08664799",
+      force: "required",
+      text: "Dessa forma, nenhuma fonte deve estar fora da escala definida no DS: Minor Third.",
+    },
     basis:
-      "NÃO HÁ NORMA que sustente a afirmação binária. A única regra da KB sobre tamanho de fonte " +
-      "é a de fonte-base de 16 px, e ela é INFORMATIVA e admite ajuste contextual. O que restava " +
-      "era esticar a regra geral de consumo de token até cobrir uma diferença sub-pixel: a escala " +
+      "HÁ NORMA na base: govbr-3.7.0-foundation-global-21fb08664799 (required) — 'nenhuma fonte deve " +
+      "estar fora da escala definida no DS: Minor Third'. O que o check NÃO faz é afirmá-la por máquina: " +
+      "a escala é modular e não redonda, e o veredito binário dependeria de onde se corta a tolerância, " +
+      "não da norma (3.4.4, C7: até a 3.4.3 este texto dizia que não havia norma). A distância ao passo " +
+      "mais próximo vai em data.nearestStepPx; com ela, cite a unidade e justifique o desvio. Histórico " +
+      "(D-32): a alternativa era esticar a regra geral de consumo de token até cobrir uma diferença sub-pixel: a escala " +
       "do DS é modular e não redonda (14 · 16,8 · 20,16 · 24,192 px), de modo que a página que " +
       "escreve 20px está a 0,16px do passo e a que escreve 16px está a 0,8px — e o veredito passava " +
       "a depender de onde se corta a tolerância, não da norma. Julgar se um desvio desses é defeito " +

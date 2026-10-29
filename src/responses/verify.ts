@@ -275,7 +275,7 @@ function normResolutionOf(finding: Finding, knowledgeFree: boolean) {
 export function verificationEnvelope(
   finding: Finding,
   verification: GateVerification,
-  options: { verificationId: string; knowledgeFree: boolean; scanId?: string; absenceNote?: string },
+  options: { verificationId: string; knowledgeFree: boolean; scanId?: string; absenceNote?: string; inheritedFromLedger?: { findingId: string; fields: string[]; note: string } },
 ) {
   const { reasons, legacy } = reasonsOf(finding, verification, options.knowledgeFree);
   const confirmed = verification.verdict === "confirmed";
@@ -296,6 +296,7 @@ export function verificationEnvelope(
     reasons: confirmed ? [] : reasons.map(({ status: _s, ...r }) => r),
     actions: confirmed ? [] : actionsOf(reasons, finding, options.scanId, options.knowledgeFree, legacy),
     verification,
+    ...(options.inheritedFromLedger ? { inheritedFromLedger: options.inheritedFromLedger } : {}),
     ...(options.absenceNote ? { absenceNote: options.absenceNote } : {}),
   };
 }

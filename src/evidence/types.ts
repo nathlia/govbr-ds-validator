@@ -114,9 +114,11 @@ export interface ElementEvidence {
    * 3.4.0 (B10): origem conhecida do elemento quando não é marcação da página — `flatpickr` = injetado
    * pela biblioteca de calendário que o datetimepicker do @govbr-ds/core usa.
    */
-  origin?: "flatpickr";
+  origin?: "flatpickr" | "ds-web-component";
+  /** 3.4.4 (C3): com origin "ds-web-component", a tag do host (ex.: br-breadcrumb). */
+  originHost?: string;
   /** 3.4.0 (B9): medição de foco visível, preenchida só pelo portão para o predicado focus-indicator. */
-  focusIndicator?: { focused: boolean; changed: string[]; complete?: boolean };
+  focusIndicator?: { focused: boolean; changed: string[]; complete?: boolean; discounted?: string[] };
 }
 
 export interface PageEvidence {

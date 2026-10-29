@@ -396,14 +396,21 @@ export function collectTokenObservations(
     // Sem declaração autoral, o valor é herdado ou padrão do navegador — não é escolha da página.
     if (!size || declarations?.length === 0 || !foraDaEscala(size, scale)) continue;
 
+    const px = parsePx(size);
+    const nearest = px === null ? null : scale.reduce((best, s) => (Math.abs(s - px) < Math.abs(best - px) ? s : best), scale[0]);
+    const related = CHECK_GROUNDING["token-font-size"].relatedRule!;
     observations.push({
       kind: "token-font-size-off-scale",
       element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: page.url },
-      note: `font-size: ${size} não coincide com a escala tipográfica do DS (${rotulo}).`,
+      note: `font-size: ${size} não coincide com a escala tipográfica do DS (${rotulo})${
+        nearest !== null && px !== null ? `; passo mais próximo ${+nearest.toFixed(2)}px (a ${+Math.abs(px - nearest).toFixed(2)}px)` : ""
+      }. Norma: ${related.id} (${related.force}).`,
       whyNotAFinding: CHECK_GROUNDING["token-font-size"].basis,
       data: {
         property: "font-size",
         observed: size,
+        relatedRule: { id: related.id, force: related.force },
+        ...(nearest !== null && px !== null ? { nearestStepPx: +nearest.toFixed(3), distancePx: +Math.abs(px - nearest).toFixed(3) } : {}),
         allowedScale: scale.map((v) => `${v}px`),
         authoredDeclarations: declarations ?? null,
       },

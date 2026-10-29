@@ -294,7 +294,7 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
       nature: first.nature,
       mode: first.mode,
       severity: first.severity,
-      stateFingerprint: state,
+      // 3.4.4 (C1): o estado é um só por página — sai uma vez no topo (stateFingerprint), não por família.
       evidenceSignature: evidenceSignature(first),
       value: valueOf(first),
       // 3.3.0 (N-05): o exemplo não repete o que a família já diz (página, severidade, natureza, modo, via).
@@ -343,6 +343,7 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
     view: "families" as const,
     familyKey: FAMILY_KEY,
     evidenceSignatureKey: EVIDENCE_SIGNATURE_KEY,
+    stateFingerprint: state,
     totalFindings: findings.length,
     totalFamilies: families.length,
     cursor,
@@ -432,7 +433,8 @@ export function familyIndex(findings: Finding[], stateFingerprint: string | null
 
 function slimExample(example: Record<string, unknown>, value?: string) {
   const { page: _page, ...element } = (example.element ?? {}) as Record<string, unknown>;
-  const { severity: _s, nature: _n, mode: _m, pathway: _p, ...rest } = example;
+  // 3.4.4 (C1): a norma do exemplo é a da família (está na chave) — não se repete.
+  const { severity: _s, nature: _n, mode: _m, pathway: _p, rule: _r, ...rest } = example;
   // 3.4.0 (B6): `observed` igual ao `value` da família não se repete no exemplo.
   if (value !== undefined && rest.observed === value) delete rest.observed;
   return { ...rest, element };

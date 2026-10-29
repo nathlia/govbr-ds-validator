@@ -53,7 +53,12 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     expect(observations).toHaveLength(1);
     expect(observations[0].kind).toBe("token-font-size-off-scale");
     expect(observations[0].note).toContain("13px");
-    expect(observations[0].whyNotAFinding).toContain("NÃO HÁ NORMA");
+    // 3.4.4 (C7): há norma na base (escala Minor Third, required) — dita, não afirmada por máquina.
+    expect(observations[0].whyNotAFinding).toContain("HÁ NORMA na base: govbr-3.7.0-foundation-global-21fb08664799");
+    expect(observations[0].whyNotAFinding).not.toContain("NÃO HÁ NORMA");
+    expect(observations[0].data?.relatedRule).toEqual({ id: "govbr-3.7.0-foundation-global-21fb08664799", force: "required" });
+    expect(observations[0].data?.nearestStepPx).toBe(14);
+    expect(observations[0].note).toContain("govbr-3.7.0-foundation-global-21fb08664799");
     // Observação não tem severidade: se tivesse, entraria na pontuação pela porta dos fundos.
     expect(observations[0]).not.toHaveProperty("severity");
   });

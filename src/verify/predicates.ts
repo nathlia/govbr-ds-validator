@@ -185,7 +185,12 @@ const focusIndicatorPredicate: Predicate = {
     if (marked.length === 0 && partial.length > 0) {
       return {
         status: "undetermined",
-        detail: `${partial.length} de ${elements.length} elemento(s) sem mudança vista, mas a medição não cobriu todos os descendentes (teto): uma marca de foco não pode ser descartada.`,
+        detail: `${partial.length} de ${elements.length} elemento(s) sem mudança que indique foco, mas a medição não é conclusiva: ${(() => {
+          const lost = partial.flatMap((e) => e.focusIndicator?.discounted ?? []).filter((d) => d.includes("perde a cor de erro"));
+          return lost.length
+            ? `a única mudança é o campo em erro perdendo a cor de erro (${lost.slice(0, 2).join("; ")}); a cor de repouso sem o erro não é conhecida`
+            : "a medição não cobriu todos os descendentes (teto)";
+        })()}: uma marca de foco não pode ser descartada.`,
       };
     }
     if (marked.length > 0) {
@@ -199,7 +204,10 @@ const focusIndicatorPredicate: Predicate = {
     }
     return {
       status: "verified",
-      detail: `Em ${elements.length} de ${elements.length} elemento(s), nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou com o foco.`,
+      detail: `Em ${elements.length} de ${elements.length} elemento(s), nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou com o foco${(() => {
+        const d = elements.flatMap((e) => e.focusIndicator?.discounted ?? []);
+        return d.length ? ` de forma que marque o foco (descartadas: ${d.slice(0, 3).join("; ")})` : "";
+      })()}.`,
     };
   },
 };
@@ -402,8 +410,8 @@ export function selectPredicate(finding: Finding): PredicateSelection {
         evaluate: (_elements, url, facts) => {
           if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-skip-link." };
           return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
-            ? { status: "verified", detail: "Violação recalculada no documento: o primeiro link não é o salto para o conteúdo (e-MAG 1.5)." }
-            : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente; não viola neste estado." };
+            ? { status: "verified", detail: "Violação recalculada no documento: o primeiro a receber o foco não é o salto para o conteúdo (primeiro link sem âncora válida, ou tabindex positivo antes dele; e-MAG 1.5)." }
+            : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente e nenhum tabindex positivo recebe o foco antes dele; não viola neste estado." };
         },
       },
     };

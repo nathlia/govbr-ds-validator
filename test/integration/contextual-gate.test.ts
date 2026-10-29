@@ -527,6 +527,8 @@ describe("P3 — foco em transições", () => {
     const campo = await verdict(claim("/p3-foco-campo", "#janela", INFO, data), OPEN);
     expect(campo.verdict).toBe("unverifiable");
     expect(campo.issue).toBe("rule-not-applicable");
+    // 3.4.4 (C8): regra inaplicável não sai com applicability "pass".
+    expect(campo.checks.applicability).toBe("not-applicable");
   });
 
   it("confinamento do Tab: sai da modal confirma; laço a partir do último rejeita", async () => {

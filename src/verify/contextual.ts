@@ -97,7 +97,9 @@ export interface AnatomyPart {
 }
 
 export const ANATOMY_PARTS: AnatomyPart[] = [
-  { component: "message", part: "mensagem", rules: ["govbr-3.7.0-component-message-d0c7ed3f91af"], label: "Mensagem (texto do Message)" },
+  // 3.4.4 (C13, D4): a cláusula em prosa 829632 ("A mensagem é o elemento essencial e obrigatório") diz o
+  // mesmo que a linha de anatomia d0c7ed — as duas acionam o predicado.
+  { component: "message", part: "mensagem", rules: ["govbr-3.7.0-component-message-d0c7ed3f91af", "govbr-3.7.0-component-message-829632c90fd3"], label: "Mensagem (texto do Message)" },
   {
     component: "header",
     part: "titulo",
@@ -518,13 +520,42 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
   if (mismatch) return mismatch;
   const outcomes = final.subjects.map((subject): ContextOutcome => {
     const facts = factsFor(evidence, subject.ref);
-    if (!facts?.ax) return { status: "undetermined", detail: "O Chromium não expôs o campo na árvore de acessibilidade (ou não há CDP)." };
+    if (!facts?.ax) {
+      // 3.4.4 (C14): campo oculto (display:none, d-none) fica fora da árvore — sem decisão, e o porquê.
+      if (!subject.shown) {
+        return {
+          status: "undetermined",
+          detail:
+            "o campo alegado não está exibido (display:none ou oculto) e por isso fica fora da árvore de acessibilidade: nenhuma mensagem pode ser associada a ele, e quem o usuário opera é outro elemento (o controle visível que aciona este campo). Sem decisão sobre este campo: verifique o controle visível com o seletor dele; se nenhum controle visível for operável por teclado, isso é outro fato (WCAG 2.1.1).",
+        };
+      }
+      return { status: "undetermined", detail: "O Chromium não expôs o campo na árvore de acessibilidade (ou não há CDP)." };
+    }
     const { ax } = facts;
-    if (ax.invalid) return { status: "contradicted", detail: "o campo expõe invalid=true (item identificado programaticamente)." };
     if (contains(ax.description, messageText) || contains(messageText, ax.description)) {
       if (ax.description.trim()) return { status: "contradicted", detail: `a descrição calculada do campo ("${ax.description}") contém a mensagem.` };
     }
     if (contains(ax.name, messageText)) return { status: "contradicted", detail: `o nome calculado do campo ("${ax.name}") contém a mensagem.` };
+    // 3.4.4 (C2): aria-invalid sozinho marca o campo como inválido, mas não associa a mensagem: até a
+    // 3.4.3 invalid=true desmentia "o erro não está associado" mesmo com descrição vazia e nenhum IDREF
+    // para a mensagem. Só desmente com a mensagem ligada por IDREF do próprio campo (aria-errormessage /
+    // aria-describedby); sem isso, a associação da mensagem falta e o oráculo não decide se o estado
+    // inválido basta para o critério — nunca `contradicted`.
+    if (ax.invalid) {
+      const explicit = subject.binding?.explicit;
+      if (explicit) {
+        return {
+          status: "contradicted",
+          detail: `o campo expõe invalid=true e ${explicit.attribute} aponta a mensagem (${explicit.target ?? `registro ${explicit.targetRef}`}): item identificado e mensagem associada programaticamente.`,
+        };
+      }
+      return {
+        status: "undetermined",
+        detail: `o campo expõe invalid=true (estado inválido marcado), mas a mensagem "${messageText}" não está associada a ele: descrição ${
+          ax.description ? `"${ax.description}"` : "vazia"
+        }, o nome não contém a mensagem e nenhum IDREF do campo (aria-errormessage/aria-describedby) aponta para ela.${danglingDetail(facts)} Ambiguidade declarada: a técnica ARIA21 da WCAG aceita aria-invalid como identificação do campo em erro para o 3.3.1, então "item identificado" não é decidível a partir de aria-invalid sozinho; a associação da mensagem ao campo (aria-errormessage/aria-describedby) é outro fato, e ela falta aqui. aria-invalid sozinho não associa a mensagem e não desmente a alegação.`,
+      };
+    }
     // 3.4.0 (B4, V-03a): citar o nome do campo no texto da mensagem NÃO é associação programática.
     // Até a 3.3.0 isso contradizia a alegação e o agente retirava um defeito real. Agora a associação
     // medida (invalid, descrição, nome) é o que contradiz; sem ela, a citação textual deixa sem decisão

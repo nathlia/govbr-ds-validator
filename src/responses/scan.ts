@@ -370,10 +370,37 @@ export function assembleScan(
 ) {
   let response = assembleScanPage(head, observations, scanId, maxChars, page, options);
   if (options.firstScanPage) response = ensureFirstPageFamilies(response, head, observations, scanId, maxChars, page);
-  return enforceCeiling(response, maxChars, scanId);
+  const ceiled = enforceCeiling(response, maxChars, scanId);
+  const sized = withResponseSize(ceiled);
+  // O campo de tamanho não pode ser o que estoura o teto.
+  if (textSize(sized) <= maxChars || textSize(ceiled) > maxChars) return sized;
+  // Sem espaço para o campo certo, ele sai (nunca o tamanho só da lista, que mentia sobre a resposta).
+  const { responseCharsEstimate: _r, ...rest } = ceiled;
+  return rest;
 }
 
-/** 3.4.0 (B6): meta de famílias na 1ª página do scan (ou todas, se houver menos). */
+/**
+ * 3.4.4 (C1): `responseCharsEstimate` era só o tamanho das famílias (~2,4k), e o agente o lia como o
+ * tamanho da resposta inteira (~7,8k de 8k) — parecia corte a 30% do teto. Agora é a resposta inteira;
+ * o tamanho só da página de itens fica em `itemsChars`.
+ */
+function withResponseSize(response: Record<string, unknown>): Record<string, unknown> {
+  if (typeof response.responseCharsEstimate !== "number") return response;
+  let out: Record<string, unknown> = { ...response, itemsChars: response.responseCharsEstimate };
+  for (let i = 0; i < 3; i++) {
+    const size = textSize(out);
+    if (out.responseCharsEstimate === size) break;
+    out = { ...out, responseCharsEstimate: size };
+  }
+  return out;
+}
+
+/**
+ * 3.4.0 (B6): meta mínima de famílias na 1ª página do scan (ou todas, se houver menos).
+ * 3.4.4 (C1): a meta passou a ser TODAS as famílias que couberem: o cabeçalho segue encolhendo (só o que
+ * tem continuação no ledger) enquanto isso traz mais famílias para dentro do teto. Os textos de
+ * checksRun.limits nunca encolhem por esse caminho (D-154).
+ */
 export const FIRST_PAGE_MIN_FAMILIES = 3;
 
 const listedItems = (r: Record<string, unknown>) =>
@@ -394,7 +421,7 @@ function ensureFirstPageFamilies(
   page: (familyBudget: number) => Record<string, unknown>,
 ): Record<string, unknown> {
   const total = Number(response.totalFamilies ?? response.total ?? 0);
-  const want = Math.min(FIRST_PAGE_MIN_FAMILIES, total);
+  const want = total;
   if (response.nextCursor === undefined || listedItems(response) >= want) return response;
   const constants = (p: Record<string, unknown>) => {
     const { familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, ...rest } = p;
@@ -431,15 +458,18 @@ function ensureFirstPageFamilies(
       return true;
     }],
     ["state → essencial (inteiro no ledger)", () => {
-      const st = h.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown } } | undefined;
+      const st = h.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown }; recipe?: { viewport?: unknown; viewportSource?: unknown } } | undefined;
       if (!st) return false;
       const o = st.observed ?? {};
+      // 3.4.4: como no enforceCeiling (D-154), a janela da receita e a fonte dela ficam (atestação do harness).
+      const recipe = st.recipe?.viewportSource !== undefined ? { recipe: { viewport: st.recipe.viewport, viewportSource: st.recipe.viewportSource } } : {};
       h = {
         ...h,
         state: {
           reached: st.reached,
           replay: st.replay?.status,
           settled: st.settle?.settled,
+          ...recipe,
           observed: { url: o.url, path: o.path, viewport: o.viewport, ...(o.httpStatus ? { httpStatus: o.httpStatus } : {}) },
           full: { tool: "get_finding_details", arguments: { scanId } },
         },
@@ -458,9 +488,12 @@ function ensureFirstPageFamilies(
   for (const [label, apply] of stages) {
     if (!apply()) continue;
     done.push(label);
-    const trial = assembleScanPage(h, obs, scanId, maxChars, pager, { firstScanPage: true });
+    // O orçamento interno desconta a lista `compacted` que vai junto (senão a página enche o teto e a lista estoura).
+    const raw = assembleScanPage(h, obs, scanId, maxChars - textSize({ compacted: done }) - 40, pager, { firstScanPage: true });
+    // 3.4.4: o tamanho conferido é o da resposta COM a lista `compacted` (antes ela entrava depois do teste).
+    const trial = { ...raw, compacted: [...done, ...((raw.compacted as string[] | undefined) ?? [])] };
     if (textSize(trial) > maxChars || listedItems(trial) <= listedItems(best)) continue;
-    best = { ...trial, compacted: [...done, ...((trial.compacted as string[] | undefined) ?? [])] };
+    best = trial;
     if (listedItems(best) >= want) break;
   }
   return best;
