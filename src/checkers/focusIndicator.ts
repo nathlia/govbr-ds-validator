@@ -43,12 +43,15 @@ export function checkFocusIndicators(
       },
       element: { locator: fact.locator, snippet: fact.snippet, page: page.url },
       evidence: {
-        observed: "Ao receber foco, nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou: sem indicador de foco visível",
+        observed: fact.discounted?.length
+          ? `Ao receber foco, nada que se veja marca o elemento: as únicas mudanças não indicam foco (${fact.discounted.slice(0, 3).join("; ")}): sem indicador de foco visível`
+          : "Ao receber foco, nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou: sem indicador de foco visível",
         expected: "Alguma marca visível de foco (contorno, sombra, borda, fundo, cor ou sublinhado)",
         data: {
           expectedCondition: FOCUS_INDICATOR_CONDITION,
           comparedProperties: [...FOCUS_COMPARED_PROPERTIES],
           changedOnFocus: [],
+          ...(fact.discounted?.length ? { discountedOnFocus: fact.discounted } : {}),
         },
       },
       severity: "serious" as const,

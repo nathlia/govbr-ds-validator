@@ -112,7 +112,7 @@ interface AxeViolation {
 interface AxeResults {
   violations: AxeViolation[];
   passes: { id: string }[];
-  incomplete: { id: string }[];
+  incomplete: { id: string; help?: string; nodes?: AxeNodeResult[] }[];
   testEngine: { name: string; version: string };
 }
 
@@ -126,12 +126,37 @@ function wcagFromTags(tags: string[]): string | undefined {
     : `${digits[0]}.${digits[1]}.${digits.slice(2)}`;
 }
 
+/**
+ * 3.4.4 (C10a): regra só `best-practice` (nenhum critério WCAG nas tags) não reprova critério. A ponte
+ * para o e-MAG fica (agrupa a mesma falha vista por duas regras), mas declarada como relação temática —
+ * nunca como "viola e-MAG x.y".
+ */
+export function isBestPracticeOnly(tags: string[]): boolean {
+  return tags.includes("best-practice") && wcagFromTags(tags) === undefined;
+}
+
+/**
+ * 3.4.4 (C10b): `aria-valid-attr-value` reprovando SÓ `aria-controls` (IDREF para um id que não existe)
+ * não é falha de nome, papel, estado ou valor: o estado (aria-expanded) continua exposto. O critério
+ * 4.1.2 que a tag do axe traz fica como relação, não como critério reprovado, e a severidade cai para moderate.
+ */
+const RELATION_ONLY_ATTRS = new Set(["aria-controls"]);
+export function relationOnlyAriaValue(ruleId: string, failureSummary: string | undefined): boolean {
+  if (ruleId !== "aria-valid-attr-value" || !failureSummary) return false;
+  const attrs = [...failureSummary.matchAll(/\b(aria-[a-z]+)\s*=/g)].map((m) => m[1]);
+  return attrs.length > 0 && attrs.every((a) => RELATION_ONLY_ATTRS.has(a));
+}
+
 export interface AxeScanResult {
   findings: Finding[];
   engine: { name: string; version: string };
   passeCount: number;
   incompleteCount: number;
+  /** 3.4.4 (C11): o que o axe não decidiu — regra, quantos elementos e um exemplo (até AXE_INCOMPLETE_DETAIL). */
+  incompleteRules: Array<{ rule: string; nodes: number; example: string | null; help?: string }>;
 }
+
+export const AXE_INCOMPLETE_DETAIL = 5;
 
 export async function runAxeScan(url: string, selector?: string): Promise<AxeScanResult> {
   return withPage(url, (page) => runAxeScanOnPage(page, url, selector));
@@ -191,16 +216,21 @@ export async function runAxeScanOnPage(
   for (const violation of axeResults.violations) {
     const emagId = withEmag ? AXE_TO_EMAG[violation.id] : undefined;
     const emagRule = emagId ? findEmagRule(emagId) : undefined;
-    const wcag = wcagFromTags(violation.tags);
+    const tagWcag = wcagFromTags(violation.tags);
+    const bestPractice = isBestPracticeOnly(violation.tags);
 
     for (const node of violation.nodes) {
+      const relationOnly = relationOnlyAriaValue(violation.id, node.failureSummary);
+      const wcag = relationOnly ? undefined : tagWcag;
       findings.push({
         id: nextFindingId(),
         rule: {
           id: violation.id,
           source: "axe-core",
           description: emagRule
-            ? `${violation.help} (e-MAG ${emagId}: ${emagRule.title})`
+            ? bestPractice
+              ? `${violation.help} (best-practice do axe, sem critério WCAG; e-MAG ${emagId} só por tema: ${emagRule.title})`
+              : `${violation.help} (e-MAG ${emagId}: ${emagRule.title})`
             : violation.help,
           wcag,
         },
@@ -212,11 +242,19 @@ export async function runAxeScanOnPage(
         evidence: {
           observed: node.failureSummary ?? violation.description,
           expected: violation.help,
-          data: withEmag
-            ? { helpUrl: violation.helpUrl, axeTags: violation.tags, emagId: emagId ?? null }
-            : { helpUrl: violation.helpUrl, axeTags: violation.tags },
+          data: {
+            ...(withEmag
+              ? { helpUrl: violation.helpUrl, axeTags: violation.tags, emagId: emagId ?? null }
+              : { helpUrl: violation.helpUrl, axeTags: violation.tags }),
+            ...(bestPractice ? { normative: "best-practice", ...(emagId ? { emagRelation: "topical" } : {}) } : {}),
+            ...(relationOnly
+              ? {
+                  wcagRelation: { criterion: tagWcag ?? null, kind: "related", note: "só aria-controls com IDREF inexistente: o estado do controle continua exposto; não é falha de nome/papel/estado/valor." },
+                }
+              : {}),
+          },
         },
-        severity: IMPACT_TO_SEVERITY[violation.impact ?? "moderate"] ?? "moderate",
+        severity: ((impact: Severity) => (relationOnly && (impact === "critical" || impact === "serious") ? "moderate" : impact))(IMPACT_TO_SEVERITY[violation.impact ?? "moderate"] ?? "moderate"),
         nature: "syntactic",
         mode: INTERACTION_RULE.test(violation.id) ? "interaction" : "display",
         pathway: "deterministic",
@@ -229,6 +267,12 @@ export async function runAxeScanOnPage(
     engine: axeResults.testEngine,
     passeCount: axeResults.passes.length,
     incompleteCount: axeResults.incomplete.length,
+    incompleteRules: axeResults.incomplete.slice(0, AXE_INCOMPLETE_DETAIL).map((r) => ({
+      rule: r.id,
+      nodes: r.nodes?.length ?? 0,
+      example: r.nodes?.[0] ? axeLocator(r.nodes[0].target).slice(0, 160) : null,
+      ...(r.help ? { help: r.help.slice(0, 120) } : {}),
+    })),
   };
 }
 

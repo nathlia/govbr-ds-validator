@@ -11,6 +11,13 @@
  * diferença em qualquer um desses conta como indicador — a medição é generosa de propósito: só a
  * AUSÊNCIA de qualquer mudança vira achado.
  *
+ * 3.4.4 (C6): duas mudanças deixaram de contar. (a) Cor de borda que PERDE contraste contra o fundo sem
+ * ganhar espessura — o campo em erro cuja borda vermelha volta ao cinza ao focar perde um estado, não
+ * marca o foco. (b) Mudança no próprio elemento (e nos pseudo-elementos e descendentes dele) quando ele é
+ * invisível — opacidade efetiva 0, sem área ou visibility hidden: o `outline` de um input com opacity:0
+ * não se vê. O rótulo, o irmão e o pai continuam valendo (o checkbox do DS marca o foco em
+ * `label::before`). O que foi descartado sai em `discounted`.
+ *
  * Limites declarados: não julga contraste nem tamanho do indicador (WCAG 2.4.11/2.4.13), só a
  * existência de mudança; um indicador desenhado por script em outro elemento, ou só por transição
  * animada, não é visto; um elemento que ao receber foco move o foco para outro não é medido.
@@ -30,6 +37,8 @@ export interface FocusIndicatorFact {
    * pôde ser descartada (subárvore grande demais, shadow root fechado): nunca vira achado.
    */
   complete: boolean;
+  /** 3.4.4 (C6): mudanças medidas que não contam como indicador, com o motivo. */
+  discounted?: string[];
 }
 
 /** 3.4.1: teto de descendentes comparados por elemento; acima disso a medição não é completa. */
@@ -159,13 +168,72 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
         }
         const after = focused ? snapshot(list) : before;
         el.blur();
+        // 3.4.4 (C6b): o elemento é invisível? Então nada desenhado nele, nos pseudo-elementos ou nos
+        // descendentes se vê.
+        const invisibleSelf = (() => {
+          const cs = getComputedStyle(el);
+          if (cs.visibility === "hidden" || cs.visibility === "collapse") return true;
+          const r = el.getBoundingClientRect();
+          if (r.width * r.height === 0) return true;
+          let node: Element | null = el;
+          let opacity = 1;
+          while (node) {
+            opacity *= parseFloat(getComputedStyle(node).opacity || "1");
+            const parent: Element | null = node.parentElement ?? ((node.getRootNode() as ShadowRoot).host ?? null);
+            node = parent;
+          }
+          return opacity === 0;
+        })();
+        // 3.4.4 (C6a): contraste de uma cor contra o fundo efetivo do nó (primeiro fundo opaco subindo; branco).
+        const rgb = (value: string): [number, number, number, number] | null => {
+          const m = value.match(/rgba?\(([^)]+)\)/);
+          if (!m) return null;
+          const parts = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+          return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+        };
+        const luminance = ([r, g, b]: [number, number, number, number]) => {
+          const ch = (c: number) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+          return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+        };
+        const background = (node: Element | null): [number, number, number, number] => {
+          let n: Element | null = node;
+          while (n) {
+            const c = rgb(getComputedStyle(n).backgroundColor);
+            if (c && c[3] >= 1) return c;
+            n = n.parentElement ?? ((n.getRootNode() as ShadowRoot).host ?? null);
+          }
+          return [255, 255, 255, 1];
+        };
+        const contrast = (color: string, bg: [number, number, number, number]) => {
+          const c = rgb(color);
+          if (!c || c[3] === 0) return 1;
+          const a = luminance(c), b = luminance(bg);
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        };
         const changed: string[] = [];
+        const discounted: string[] = [];
         before.forEach(([name, styles], i) => {
           const next = after[i][1];
           if (!styles || !next) return;
-          for (const p of props) if (styles[p] !== next[p]) changed.push(`${name}:${p}`);
+          const ownDrawing = name === "self" || name.startsWith("self::") || name.startsWith("desc[");
+          const node = list[i][1];
+          for (const p of props) {
+            if (styles[p] === next[p]) continue;
+            if (invisibleSelf && ownDrawing) { discounted.push(`${name}:${p} (elemento invisível)`); continue; }
+            const side = p.match(/^border-(top|right|bottom|left)-color$/)?.[1];
+            if (side && styles[p] !== "none" && next[p] !== "none") {
+              const widthKey = `border-${side}-width`;
+              const thicker = parseFloat(next[widthKey]) > parseFloat(styles[widthKey]);
+              const bg = background(node);
+              if (!thicker && contrast(next[p], bg) <= contrast(styles[p], bg)) {
+                discounted.push(`${name}:${p} (${styles[p]} → ${next[p]}: perde contraste)`);
+                continue;
+              }
+            }
+            changed.push(`${name}:${p}`);
+          }
         });
-        return { locator, focused, changed, complete: desc.complete };
+        return { locator, focused, changed, complete: desc.complete, ...(discounted.length ? { discounted } : {}) };
       });
       if (original && typeof original.focus === "function") original.focus({ preventScroll: true });
       return out;

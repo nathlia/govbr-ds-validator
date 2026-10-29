@@ -199,7 +199,10 @@ const focusIndicatorPredicate: Predicate = {
     }
     return {
       status: "verified",
-      detail: `Em ${elements.length} de ${elements.length} elemento(s), nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou com o foco.`,
+      detail: `Em ${elements.length} de ${elements.length} elemento(s), nenhuma propriedade visual do elemento, dos pseudo-elementos, do rótulo ou do pai mudou com o foco${(() => {
+        const d = elements.flatMap((e) => e.focusIndicator?.discounted ?? []);
+        return d.length ? ` de forma que marque o foco (descartadas: ${d.slice(0, 3).join("; ")})` : "";
+      })()}.`,
     };
   },
 };
@@ -402,8 +405,8 @@ export function selectPredicate(finding: Finding): PredicateSelection {
         evaluate: (_elements, url, facts) => {
           if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-skip-link." };
           return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
-            ? { status: "verified", detail: "Violação recalculada no documento: o primeiro link não é o salto para o conteúdo (e-MAG 1.5)." }
-            : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente; não viola neste estado." };
+            ? { status: "verified", detail: "Violação recalculada no documento: o primeiro a receber o foco não é o salto para o conteúdo (primeiro link sem âncora válida, ou tabindex positivo antes dele; e-MAG 1.5)." }
+            : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente e nenhum tabindex positivo recebe o foco antes dele; não viola neste estado." };
         },
       },
     };

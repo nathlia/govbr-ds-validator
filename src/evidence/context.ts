@@ -248,6 +248,12 @@ function installHelpers(): void {
     if (!el.isConnected) return false;
     const check = (el as Element & { checkVisibility?: (o: object) => boolean }).checkVisibility;
     if (check && !check.call(el, { checkOpacity: true, checkVisibilityCSS: true })) return false;
+    // 3.4.4: controle de formulário/elemento substituído não tem texto nem filhos — a caixa dele decide
+    // (até a 3.4.3 um input visível de 400×40 saía shown:false no traço).
+    if (/^(input|select|textarea|img|video|canvas|iframe|progress|meter)$/i.test(el.tagName)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return true;
+    }
     if (textChunks(el, () => false).length > 0) return true;
     return composedElements(el).some((child) => visible(child));
   }

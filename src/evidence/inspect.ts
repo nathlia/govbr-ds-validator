@@ -376,7 +376,19 @@ export async function inspectPageComputedStyles(
           ...(borderSides ? { borderSides } : {}),
           rendered,
           // 3.4.0 (B10): elemento injetado pelo flatpickr, a biblioteca que o datetimepicker do core usa.
-          ...(el.closest(".flatpickr-calendar") ? { origin: "flatpickr" } : {}),
+          // 3.4.4 (C3): elemento dentro do shadow root de um web component do DS (host <br-*>): é código
+          // do componente, não marcação da página que o usou.
+          ...(el.closest(".flatpickr-calendar")
+            ? { origin: "flatpickr" }
+            : (() => {
+                let root = el.getRootNode();
+                while (root instanceof ShadowRoot) {
+                  const host = root.host.tagName.toLowerCase();
+                  if (host.startsWith("br-")) return { origin: "ds-web-component", originHost: host };
+                  root = root.host.getRootNode();
+                }
+                return {};
+              })()),
         };
       });
     }, {

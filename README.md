@@ -83,6 +83,32 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.4.4 — correções da auditoria com agente de 2026-10-29 (lista única C1–C14)
+
+- **C1 (scan_page):** a 1ª página enche o teto com famílias (o cabeçalho encolhe só o que tem continuação no
+  ledger enquanto isso traz famílias; os textos de `checksRun.limits` nunca). Família sem `stateFingerprint`
+  repetido (sai uma vez no topo) e exemplo sem a norma repetida. `responseCharsEstimate` passa a ser a
+  resposta inteira (era só a lista de famílias, ~30% do teto, e parecia corte precoce); `itemsChars` = só a
+  lista. Medido (padrão 8.000): fluxo 3→5 de 8 famílias, A 4→5 de 6, B 3→5 de 12; `maxChars` 6.000: 1→2.
+- **C2 (verify_finding P1):** `aria-invalid=true` sozinho não desmente "erro não associado": sem IDREF do campo
+  para a mensagem, `undetermined` com o porquê; com IDREF explícito, `contradicted`.
+- **C3/C4/C5:** internos de shadow root de web component `<br-*>`, terceiros embutidos pelo DS (flatpickr) e,
+  para tokens, elementos não renderizados viram observação `outside-page-authorship` (com motivo, norma e
+  valor). O nome acessível de botão dentro de `<br-*>` continua achado (vem do que a página passa ao host).
+- **C6 (foco visível):** borda que perde contraste sem ganhar espessura e mudança no próprio elemento
+  invisível (opacidade efetiva 0, sem área) não contam como indicador (`discounted`).
+- **C7:** a observação de escala tipográfica cita a norma da base (`…foundation-global-21fb08664799`,
+  required) e a distância ao passo; `verify_finding` diz que há norma, que o oráculo não decide por máquina.
+- **C8:** regra inaplicável sai com `checks.applicability: "not-applicable"`.
+- **C9:** `verify_finding` com o id de um achado do ledger (mesma norma e localizador) herda o `evidence.data`
+  que falta (`inheritedFromLedger`).
+- **C10:** regra só `best-practice` do axe declara a ponte e-MAG como temática; `aria-valid-attr-value` só por
+  `aria-controls` vira relação com 4.1.2 (não critério reprovado) e severidade moderate.
+- **C11:** `coverage.axe.incompleteRules` (regra, nº de elementos, exemplo). **C12:** tabindex positivo antes do
+  salto é achado `ds-page-skip-link`. **C13:** a cláusula em prosa da Message (829632) aciona o predicado de
+  anatomia; `get_component_spec` lista as partes aceitas (`verifiableAnatomy`). Busca não mudou.
+  **C14:** campo oculto fica `undetermined` dizendo por quê. Registro contextual 1.5.0 (knowledge-free 1.4.0).
+
 ## 3.4.3 — atestação da janela no estado encolhido (D-154)
 
 Com o estado reduzido ao essencial pelo teto (3.4.2), fica também `state.recipe: {viewport, viewportSource}`

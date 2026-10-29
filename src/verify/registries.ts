@@ -162,6 +162,12 @@ export function pageConstraintMembership(id: string): Membership<PageConstraint>
  * `null`: o id não é verificação publicada desta fonte (a existência já falha na conferência de
  * membro). `[]`: a verificação existe e não nomeia norma (D-27/D-32) — não sustenta achado.
  */
+/** 3.4.4 (C7): norma da base sobre o assunto de um check sem norma decidível (só token-font-size hoje). */
+export function relatedRuleForCheckId(source: string, id: string) {
+  if (source === "govbr-ds-token" && id === "ds-token-font-size") return CHECK_GROUNDING["token-font-size"].relatedRule;
+  return undefined;
+}
+
 export function groundingForCheckId(source: string, id: string): string[] | null {
   switch (source) {
     case "govbr-ds-token":
@@ -192,7 +198,10 @@ export function groundingForCheckId(source: string, id: string): string[] | null
 // invocador, sem fechar, de outro tipo) e sujeito que não é diálogo ficam `undetermined` com código, nunca
 // `contradicted`; mensagem que só cita o campo em texto não desmente 3.3.1 (fica sem decisão). Fora das
 // condições contextuais, o predicado de foco visível (emag-4.4 / WCAG 2.4.7, `focus-indicator-visible`).
-export const CONTEXT_CONDITIONS_VERSION = "contextual-1.4.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) + foco visível · catalogo-controles-1.0.0";
+// 3.4.4 (C2/C6/C13): contextual-1.5.0 / knowledge-free contextual-1.4.0 — invalid=true sem IDREF do campo para a
+// mensagem não desmente "erro não associado" (fica sem decisão); a anatomia do Message aceita também a cláusula
+// em prosa 829632; o foco visível descarta perda de contraste da borda e mudança em elemento invisível.
+export const CONTEXT_CONDITIONS_VERSION = "contextual-1.5.0 · 9 condições (P1 associação, P2 anatomia, P3 foco) + foco visível · catalogo-controles-1.0.0";
 
 /** Versões contra as quais o portão conferiu, devolvidas em toda verificação. */
 export function registryVersions(): Record<string, string> {
@@ -209,7 +218,7 @@ export function registryVersions(): Record<string, string> {
 }
 
 /** 2.14.0 (NAT-61): o registro de condições do perfil knowledge-free — só P1 pela fonte WCAG. */
-export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.3.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
+export const CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE = "contextual-1.4.0 · 3 condições P1 (WCAG 3.3.1, 4.1.3)";
 
 /** Versões do perfil knowledge-free: só registros públicos (WCAG 2.2) e o registro de condições P1. */
 export function registryVersionsKnowledgeFree(): Record<string, string> {

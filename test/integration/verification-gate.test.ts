@@ -485,7 +485,8 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
     const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } })));
     const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer");
     expect(footer?.rule.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
-    expect(footer?.example.rule.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+    // 3.4.4 (C1): a norma do exemplo é a da família — não se repete no exemplo.
+    expect(footer?.example.rule).toBeUndefined();
   });
 
   it("a payload implements that differs is ignored, not trusted: the server's grounding decides", async () => {
@@ -514,7 +515,9 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
     );
     expect(res.verification.verdict).toBe("unverifiable");
     expect(res.verification.checks.applicability).toBe("unknown");
-    expect(res.verification.next).toContain("rule: null");
+    // 3.4.4 (C7): a escala tipográfica tem norma na base, que o oráculo não decide por máquina — o próximo passo a nomeia.
+    expect(res.verification.next).toContain("govbr-3.7.0-foundation-global-21fb08664799");
+    expect(res.verification.detail).toContain("Há norma na base sobre o assunto");
     expect(res.absenceNote).toBe(ABSENCE_NOTE);
   });
 });

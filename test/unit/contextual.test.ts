@@ -179,11 +179,14 @@ describe("P1: fatos de acessibilidade pareados pelo número do elemento", () => 
     obs(0, null, [field(1, "cinza"), field(2, "cinza")], { message: { found: 1, shown: false, text: "" } }),
     obs(1, null, [field(1, "vermelho"), field(2, "vermelho")], { message: { found: 1, shown: true, text: "Valor inválido." } }),
   ];
-  const ax = (ref: number, invalid: boolean) => ({ ref, tag: "input", idrefs: [], ax: { name: `Campo ${ref}`, description: "", invalid } });
+  // 3.4.4 (C2): "identificado" = a descrição calculada contém a mensagem (invalid sozinho não associa).
+  const ax = (ref: number, identified: boolean) => ({ ref, tag: "input", idrefs: [], ax: { name: `Campo ${ref}`, description: identified ? "Valor inválido." : "", invalid: identified } });
 
   it("ordem diferente da do traço não troca os fatos de sujeito", () => {
     // o sujeito 2 é o identificado; os fatos chegam em ordem invertida
-    expect(evaluateContext(cond, f, { actions, trace, accessibility: [ax(2, true), ax(1, false)] }).status).toBe("contradicted");
+    const out = evaluateContext(cond, f, { actions, trace, accessibility: [ax(2, true), ax(1, false)] });
+    expect(out.status).toBe("contradicted");
+    expect(out.detail).toContain("1 de 2");
     const soUm = finding({ id: "3.3.1", source: "wcag", description: "d" }, { expectedCondition: C.errorItemIdentified, errorMessage: "#m" });
     const traceUm = trace.map((o) => ({ ...o, subjects: o.subjects.filter((s) => s.ref === 1) }));
     expect(evaluateContext(cond, soUm, { actions, trace: traceUm, accessibility: [ax(1, false)] }).status).toBe("verified");
@@ -391,11 +394,24 @@ describe("P1 2.14.3: vínculo ESTA mensagem ↔ ESTE campo (revisão Codex 4d66c
     expect(r.detail).toContain("casa 2 elementos");
   });
 
-  it("o vínculo não é prova automática: a mensagem certa que nomeia o campo não decide (B4); invalid exposto contradiz", () => {
+  it("o vínculo não é prova automática: a mensagem certa que nomeia o campo não decide (B4); invalid sozinho não contradiz (3.4.4, C2)", () => {
     const bound = { binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) };
     expect(run(trace(bound, { text: "Telefone inválido." })).status).toBe("undetermined");
     const t = trace(bound);
-    expect(evaluateContext(cond, f, { actions, trace: t, accessibility: [{ ...ax, ax: { ...ax.ax, invalid: true } }] }).status).toBe("contradicted");
+    const soInvalid = evaluateContext(cond, f, { actions, trace: t, accessibility: [{ ...ax, ax: { ...ax.ax, invalid: true } }] });
+    expect(soInvalid.status).toBe("undetermined");
+    expect(soInvalid.detail).toContain("aria-invalid sozinho não associa a mensagem");
+    // invalid + IDREF explícito do campo para a mensagem: aí sim, item identificado e mensagem associada.
+    const explicit = trace({ binding: binding({ explicit: { attribute: "aria-errormessage", targetRef: 90, target: "<span#m>", relation: "exata" } }) });
+    expect(evaluateContext(cond, f, { actions, trace: explicit, accessibility: [{ ...ax, ax: { ...ax.ax, invalid: true } }] }).status).toBe("contradicted");
+  });
+
+  it("3.4.4 (C14): campo oculto fora da árvore fica sem decisão e a resposta diz por quê", () => {
+    const t = trace({ shown: false, binding: binding({ structural: { wrapperRef: 50, wrapper: "<div>" } }) });
+    const out = evaluateContext(cond, f, { actions, trace: t, accessibility: [{ ref: 1, tag: "input", idrefs: [], ax: null } as never] });
+    expect(out.status).toBe("undetermined");
+    expect(out.detail).toContain("não está exibido");
+    expect(out.detail).toContain("controle visível");
   });
 
   it("vínculo sem erro detectado continua undetermined (simultaneidade não é detecção)", () => {

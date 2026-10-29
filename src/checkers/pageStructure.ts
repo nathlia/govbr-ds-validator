@@ -131,8 +131,35 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
     }
 
     // page-skip-link
-    if (constraint.implements.length === 0 || facts.linkCount === 0 || !facts.firstLink || facts.firstLink.skipsToContent) continue;
+    if (constraint.implements.length === 0 || facts.linkCount === 0 || !facts.firstLink) continue;
     const first = facts.firstLink;
+    // 3.4.4 (C12): o salto existe e é o 1º link, mas um tabindex positivo recebe o foco antes dele — a
+    // cláusula é sobre o primeiro a receber o foco, não sobre o primeiro link do DOM.
+    const before = facts.positiveTabindexFirst;
+    if (first.skipsToContent && before && !before.isFirstLink) {
+      findings.push({
+        id: nextFindingId(),
+        rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },
+        element,
+        evidence: {
+          observed: `O salto para o conteúdo (href="${first.href}") é o primeiro link, mas não o primeiro a receber foco: <${before.tag}${before.id ? ` id="${before.id}"` : ""}> com tabindex=${before.tabindex}${before.text ? ` ("${before.text}")` : ""} vem antes na ordem do Tab.`,
+          expected: "O salto para o conteúdo é o primeiro elemento a receber o foco (e-MAG 1.5); tabindex positivo põe outro elemento antes dele.",
+          data: {
+            region: "skip-link",
+            firstLinkHref: first.href,
+            targetExists: first.targetExists,
+            expectedCondition: EXPECTED_CONDITIONS.skipLink,
+            focusedBefore: { tag: before.tag, tabindex: before.tabindex, id: before.id },
+          },
+        },
+        severity: "serious",
+        nature: "syntactic",
+        mode: "interaction",
+        pathway: "deterministic",
+      });
+      continue;
+    }
+    if (first.skipsToContent) continue;
     findings.push({
       id: nextFindingId(),
       rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },

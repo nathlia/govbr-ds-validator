@@ -42,6 +42,7 @@ import {
   wcagMembership,
   type Membership,
 } from "./registries.js";
+import { relatedRuleForCheckId } from "./registries.js";
 import { selectPredicate, selectPredicateKnowledgeFree } from "./predicates.js";
 import type { ContextEvidence } from "./contextual.js";
 import { collectAccessibility, collectAnatomy, traceObserver, type TraceObservation, type TraceRequest } from "../evidence/context.js";
@@ -185,6 +186,8 @@ export async function verifyFinding({
   notes.push(...rule.notes);
   // 2.15.0: verificação do oráculo sem norma nunca confirma — e também não rejeita o fato medido.
   const ungrounded = rule.ungrounded === true;
+  // 3.4.4 (C7): sem norma decidível por máquina, mas com norma da base sobre o assunto — o próximo passo a nomeia.
+  const related = ungrounded ? relatedRuleForCheckId(finding.rule.source, finding.rule.id) : undefined;
 
   const claims = knowledgeFree ? null : checkRegistryClaims(finding);
   if (claims) {
@@ -202,7 +205,13 @@ export async function verifyFinding({
     predicate: selection.predicate?.id ?? null,
     binding,
     registries: knowledgeFree ? registryVersionsKnowledgeFree() : registryVersions(),
-    ...(ungrounded ? { next: UNGROUNDED_NEXT } : {}),
+    ...(ungrounded
+      ? {
+          next: related
+            ? `Há norma na base sobre isto: ${related.id} (${related.force}): "${related.text}" O oráculo não a decide por máquina (tolerância da escala). Leia a unidade, meça o valor e mantenha o fato citando essa unidade se o desvio for claro; senão, declare a incerteza.`
+            : UNGROUNDED_NEXT,
+        }
+      : {}),
   });
 
   let issue: GateIssue | undefined;
@@ -423,7 +432,7 @@ export async function verifyFinding({
       if (selection.predicate?.needsFocusIndicator) {
         const measured = await measureFocusIndicators(page, evidence.elements.map((element) => element.locator));
         evidence.elements.forEach((element, i) => {
-          element.focusIndicator = { focused: measured[i]?.focused ?? false, changed: measured[i]?.changed ?? [], complete: measured[i]?.complete ?? false };
+          element.focusIndicator = { focused: measured[i]?.focused ?? false, changed: measured[i]?.changed ?? [], complete: measured[i]?.complete ?? false, ...(measured[i]?.discounted ? { discounted: measured[i].discounted } : {}) };
         });
       }
 
@@ -456,6 +465,9 @@ export async function verifyFinding({
         verifiedBy = `predicate:${selection.predicate.id}`;
         notes.push(outcome.detail);
         if (outcome.status === "undetermined" && outcome.code) issue = outcome.code;
+        // 3.4.4 (C8): a regra julgada inaplicável neste estado não pode sair com applicability "pass" —
+        // quem lê só `checks` entendia "aplicável e indeterminado".
+        if (outcome.status === "undetermined" && outcome.code === "rule-not-applicable") checks.applicability = "not-applicable";
       } else {
         notes.push(`O localizador resolveu ${evidence.count} elemento(s); localizar não confirma a alegação.`);
       }
@@ -599,7 +611,9 @@ function checkRule(finding: Finding): RuleCheck {
       check.ungrounded = true;
       check.verifiedBy = "rule-grounding-index";
       check.notes.push(
-        `'${id}' é verificação do oráculo sem norma nomeada: o desvio é observação de revisão, não achado do oráculo (D-27/D-32). Isto não desmente o fato medido.`
+        `'${id}' é verificação do oráculo sem norma nomeada: o desvio é observação de revisão, não achado do oráculo (D-27/D-32). Isto não desmente o fato medido.${
+          relatedRuleForCheckId(source, id) ? ` Há norma na base sobre o assunto, que o oráculo não decide por máquina: ${relatedRuleForCheckId(source, id)!.id}.` : ""
+        }`
       );
     } else if (grounded !== null) {
       const declared = finding.rule.implements;
