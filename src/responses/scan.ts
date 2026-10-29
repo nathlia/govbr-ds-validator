@@ -178,33 +178,18 @@ export function boundStrings<T>(value: T, maxString = 300, maxArray = 50, depth 
 
 /**
  * 3.3.0 (N-03): o teto vale para a resposta inteira. Se, depois de famílias e partes com continuação,
- * o envelope ainda passa de `maxChars`, encolhe o que se repete ou tem outra fonte — textos de
- * `checksRun.limits` (ficam os códigos), cobertura (ficam as contagens), estado (fica o essencial; o
- * inteiro está no ledger: get_finding_details(scanId)) — e só então declara `exceedsMaxChars`.
+ * o envelope ainda passa de `maxChars`, encolhe primeiro o que se repete ou tem outra fonte — estado
+ * (fica o essencial; o inteiro está no ledger: get_finding_details(scanId)), cobertura (ficam as
+ * contagens), investigate, dicas/chaves de família — e, só como último recurso, os textos de
+ * `checksRun.limits` e a `coverageNote` (ficam os códigos), porque são a orientação de honestidade
+ * (o que nenhum check mede). Só então declara `exceedsMaxChars`. 3.4.2 (D-154): essa ordem; antes os
+ * textos de limits saíam primeiro.
  */
 export function enforceCeiling(response: Record<string, unknown>, maxChars: number, scanId: string): Record<string, unknown> {
   if (textSize(response) <= maxChars) return response;
   let out = { ...response };
   const squeezed: string[] = [];
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
-    [
-      "checksRun → códigos",
-      (r) => {
-        const cr = r.checksRun as { limits?: Array<{ code: string }>; coverageNote?: string; executed?: unknown } | undefined;
-        if (!cr) return null;
-        const { coverageNote: _n, ...rest } = cr;
-        return { ...r, checksRun: { ...rest, limits: (cr.limits ?? []).map((l) => l.code) } };
-      },
-    ],
-    [
-      "coverage → contagens",
-      (r) => {
-        const c = r.coverage as Record<string, unknown> | undefined;
-        if (!c) return null;
-        const count = (k: string) => (Array.isArray(c[k]) ? (c[k] as unknown[]).length : undefined);
-        return { ...r, coverage: { checks: c.checks, elementsInspected: c.elementsInspected, componentsFound: count("componentsFound"), actionsApplied: count("actionsApplied") } };
-      },
-    ],
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
@@ -223,8 +208,26 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
         };
       },
     ],
+    [
+      "coverage → contagens",
+      (r) => {
+        const c = r.coverage as Record<string, unknown> | undefined;
+        if (!c) return null;
+        const count = (k: string) => (Array.isArray(c[k]) ? (c[k] as unknown[]).length : undefined);
+        return { ...r, coverage: { checks: c.checks, elementsInspected: c.elementsInspected, componentsFound: count("componentsFound"), actionsApplied: count("actionsApplied") } };
+      },
+    ],
     ["investigate → removido", (r) => (r.investigate ? (({ investigate: _i, ...rest }) => rest)(r) : null)],
     ["familyHint/chaves → removidos", (r) => (({ familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, detailHint: _d, ...rest }) => rest)(r)],
+    [
+      "checksRun → códigos",
+      (r) => {
+        const cr = r.checksRun as { limits?: Array<{ code: string }>; coverageNote?: string; executed?: unknown } | undefined;
+        if (!cr) return null;
+        const { coverageNote: _n, ...rest } = cr;
+        return { ...r, checksRun: { ...rest, limits: (cr.limits ?? []).map((l) => l.code) } };
+      },
+    ],
   ];
   for (const [label, transform] of steps) {
     if (textSize(out) <= maxChars) break;

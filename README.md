@@ -83,6 +83,16 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.4.2 — ordem do teto da resposta (D-154, revisão pós-reexecução)
+
+Na reexecução das chamadas reais, o primeiro `scan_page` de `solicitacao.html` (sem `maxChars`, 8 achados)
+passava do teto, e o primeiro corte de `enforceCeiling` (`src/responses/scan.ts`) reduzia `checksRun.limits`
+aos códigos: o agente perdia "Nenhum check deste scan mede estado atual/selecionado, ordem de foco ou posição
+visual; zero achados não diz nada sobre eles." enquanto estado e cobertura, recuperáveis por outro caminho,
+seguiam inteiros. Nova ordem: estado → essencial (inteiro no ledger, `get_finding_details(scanId)`), cobertura
+→ contagens, `investigate` removido, dicas/chaves de família removidas e, só como último recurso, `checksRun`
+→ códigos (textos de limits e `coverageNote`). `squeezed` lista os passos nessa ordem. Nenhum checker muda.
+
 ## 3.4.0 — lista única, lado A (D-153): busca, conhecimento e orientação
 
 Fonte: `thesis-workspace/planejamento/atual/lista-unica-correcoes-3.4.0-2026-10-28.md` (A1–A12), com as

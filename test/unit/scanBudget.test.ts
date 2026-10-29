@@ -4,7 +4,7 @@
  * continuation instead of overflowing 8,000 characters (roteiro sem modelo: 8,126 / 8,565 in 3.0.0).
  */
 import { describe, it, expect } from "vitest";
-import { assembleScan, SCAN_DEFAULT_MAX_CHARS } from "../../src/responses/scan.js";
+import { assembleScan, enforceCeiling, SCAN_DEFAULT_MAX_CHARS } from "../../src/responses/scan.js";
 import { textSize } from "../../src/responses/contract.js";
 import type { Observation } from "../../src/schema/finding.js";
 
@@ -81,5 +81,44 @@ describe("scan_page budget: the head counts (3.1.0)", () => {
     // 3.3.0 (N-03): o estado gigante encolhe para o essencial (o inteiro fica no ledger) e a resposta cabe.
     expect(JSON.stringify(b).length).toBeLessThanOrEqual(SCAN_DEFAULT_MAX_CHARS);
     expect(b.squeezed).toContain("state → essencial (inteiro no ledger)");
+  });
+});
+
+describe("enforceCeiling: honesty texts are the last resort (3.4.2, D-154)", () => {
+  const limitText = "Nenhum check deste scan mede estado atual/selecionado, ordem de foco ou posição visual; zero achados não diz nada sobre eles.";
+  const envelope = (statePad: number, limitsPad = 0) => ({
+    contract: "oraculo-resposta/1.0.0",
+    kind: "scan",
+    scanId: "S-page-001",
+    state: { reached: true, settle: { settled: true, log: "s".repeat(statePad) }, replay: { status: "ok" }, observed: { url: "http://x/a.html", path: "/a.html", viewport: "1280x900", extra: "o".repeat(200) } },
+    coverage: { checks: ["page"], elementsInspected: 40, componentsFound: Array.from({ length: 30 }, (_, i) => `componente-${i}`), actionsApplied: [] },
+    checksRun: { executed: ["page"], limits: [{ code: "no-state-order-position", text: limitText + "l".repeat(limitsPad) }], coverageNote: "Mediu apenas os checks em executed." },
+  });
+  const limitsOf = (r: Record<string, unknown>) => (r.checksRun as { limits: unknown[] }).limits;
+
+  it("just over the ceiling: state/coverage shrink, limits keep their text", () => {
+    const base = envelope(2_000);
+    const max = textSize(base) - 50;
+    const r = enforceCeiling(base, max, "S-page-001");
+    expect(textSize(r)).toBeLessThanOrEqual(max);
+    expect(r.squeezed).toEqual(["state → essencial (inteiro no ledger)"]);
+    expect(limitsOf(r)).toEqual([{ code: "no-state-order-position", text: expect.stringContaining(limitText) }]);
+    expect((r.checksRun as { coverageNote?: string }).coverageNote).toBeDefined();
+    expect(r.exceedsMaxChars).toBeUndefined();
+  });
+
+  it("limits become codes only when nothing else suffices, and squeezed follows the new order", () => {
+    const base = { ...envelope(2_000, 3_000), investigate: { items: ["x".repeat(300)] }, familyHint: "h".repeat(200) };
+    const r = enforceCeiling(base, 1_500, "S-page-001");
+    expect(r.squeezed).toEqual([
+      "state → essencial (inteiro no ledger)",
+      "coverage → contagens",
+      "investigate → removido",
+      "familyHint/chaves → removidos",
+      "checksRun → códigos",
+    ]);
+    expect(limitsOf(r)).toEqual(["no-state-order-position"]);
+    expect((r.state as { full: unknown }).full).toEqual({ tool: "get_finding_details", arguments: { scanId: "S-page-001" } });
+    expect((r.coverage as { componentsFound: number }).componentsFound).toBe(30);
   });
 });
