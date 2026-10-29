@@ -373,7 +373,10 @@ export function assembleScan(
   const ceiled = enforceCeiling(response, maxChars, scanId);
   const sized = withResponseSize(ceiled);
   // O campo de tamanho não pode ser o que estoura o teto.
-  return textSize(sized) <= maxChars || textSize(ceiled) > maxChars ? sized : ceiled;
+  if (textSize(sized) <= maxChars || textSize(ceiled) > maxChars) return sized;
+  // Sem espaço para o campo certo, ele sai (nunca o tamanho só da lista, que mentia sobre a resposta).
+  const { responseCharsEstimate: _r, ...rest } = ceiled;
+  return rest;
 }
 
 /**

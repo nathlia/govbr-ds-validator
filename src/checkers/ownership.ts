@@ -85,6 +85,14 @@ export function demoteToObservations(findings: Finding[], elements: ElementEvide
         rule: { source: f.rule.source, id: f.rule.id },
         observed: f.evidence.observed,
         ...(f.evidence.expected ? { expected: f.evidence.expected } : {}),
+        // 3.4.4 (revisão, M2): estilo autoral da página num estado oculto (menu fechado, diálogo fechado) não
+        // some — fica fora da pontuação NESTE estado e diz como medi-lo no estado em que aparece.
+        ...(reason === "not-rendered"
+          ? {
+              hiddenInState: true,
+              next: { tool: "scan_page", hint: "meça no estado em que aparece (scan_page com a ação que o abre)" },
+            }
+          : {}),
       },
     };
   });

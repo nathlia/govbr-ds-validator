@@ -109,6 +109,18 @@ ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize
   anatomia; `get_component_spec` lista as partes aceitas (`verifiableAnatomy`). Busca não mudou.
   **C14:** campo oculto fica `undetermined` dizendo por quê. Registro contextual 1.5.0 (knowledge-free 1.4.0).
 
+### 3.4.4 — revisão independente (mesma versão)
+
+- **C6:** perda de contraste deixou de ser critério (escuro → azul e preto → amarelo são indicadores). Só o campo
+  em estado de erro cuja borda vermelha volta a cinza neutro no foco tem a mudança posta em dúvida, e a medição
+  fica incompleta (undetermined), nunca achado. Mudança em elemento invisível continua descartada.
+- **C4:** estilo autoral em estado oculto sai como observação com `hiddenInState: true` e `next` (medir no estado
+  em que aparece); `display:contents` não conta como oculto. Texto fora da autoria também vira observação.
+- **C3:** só host com tag de componente do catálogo (`br-<componente>`) é DS; filhos projetados por slot são da página.
+- **C2:** o detalhe nomeia a ambiguidade (ARIA21 aceita aria-invalid para 3.3.1). **C10a:** regras só
+  best-practice do axe saem como observação `axe-best-practice` (perfil knowledge-free: saída do axe intacta).
+- `responseCharsEstimate` nunca fica com o tamanho só da lista: sem espaço para o valor certo, o campo sai.
+
 ## 3.4.3 — atestação da janela no estado encolhido (D-154)
 
 Com o estado reduzido ao essencial pelo teto (3.4.2), fica também `state.recipe: {viewport, viewportSource}`

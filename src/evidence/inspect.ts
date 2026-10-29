@@ -22,7 +22,7 @@
 import type { PageEvidence, ElementEvidence } from "./types.js";
 import { withPage } from "./browser.js";
 import { AUTHORED_CSS_NAMES, partitionDeclarations, type RawDeclaration } from "./cssProvenance.js";
-import { getDsStylesheet } from "../data/load.js";
+import { getComponentSpecs, getDsStylesheet } from "../data/load.js";
 import { isKnowledgeLocked } from "../data/lock.js";
 import type { DsStylesheetIndex } from "./cssProvenance.js";
 import { INTERACTIVE_TAGS, NAME_PROBE_KEY, approximateAccessibleName, chromiumAccessibleNames, removeProbe } from "./accessibleName.js";
@@ -99,7 +99,9 @@ export async function inspectPageComputedStyles(
   let elements;
   let chromiumNames: (string | null)[] | null;
   try {
-  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit }) => {
+  // 3.4.4 (revisão, L5): só host com tag de componente do DS (br-<componente do catálogo>) conta como DS.
+  const dsHosts = isKnowledgeLocked() ? [] : Object.keys(getComponentSpecs().components).map((name) => `br-${name}`);
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -251,7 +253,11 @@ export async function inspectPageComputedStyles(
               style: computed.getPropertyValue(`border-${side}-style`),
             }))
           : undefined;
-        const rendered = el.getClientRects().length > 0 && computed.visibility !== "hidden" && computed.visibility !== "collapse";
+        // 3.4.4 (revisão, M2): display:contents não gera caixa, mas os filhos dele são desenhados — não é oculto.
+        const hasBox = (node: Element, depth = 0): boolean =>
+          node.getClientRects().length > 0 ||
+          (depth < 6 && getComputedStyle(node).display === "contents" && Array.from(node.children).some((child) => hasBox(child, depth + 1)));
+        const rendered = hasBox(el) && computed.visibility !== "hidden" && computed.visibility !== "collapse";
 
         // getComputedStyle mistura origens que o verificador não pode confundir: CSS da página,
         // CSS do próprio DS, valores resolvidos pelo layout (por exemplo margin:auto) e defaults do
@@ -384,7 +390,7 @@ export async function inspectPageComputedStyles(
                 let root = el.getRootNode();
                 while (root instanceof ShadowRoot) {
                   const host = root.host.tagName.toLowerCase();
-                  if (host.startsWith("br-")) return { origin: "ds-web-component", originHost: host };
+                  if (dsHosts.includes(host)) return { origin: "ds-web-component", originHost: host };
                   root = root.host.getRootNode();
                 }
                 return {};
@@ -399,6 +405,7 @@ export async function inspectPageComputedStyles(
       cssNames: AUTHORED_CSS_NAMES as Record<string, string[]>,
       interactiveTags: [...INTERACTIVE_TAGS] as string[],
       probeKey: NAME_PROBE_KEY,
+      dsHosts,
       descendants: options.descendants === true,
       descendantLimit: DESCENDANT_SCOPE_LIMIT,
     });

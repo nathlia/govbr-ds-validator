@@ -26,18 +26,25 @@ function page(body: string, style = "", script = ""): string {
 <body><a href="#conteudo">Ir para o conteúdo</a><header class="br-header">Agenda</header><main id="conteudo"><h1>Agenda de oficinas</h1>${body}</main><footer class="br-footer">fim</footer><script>${script}</script></body></html>`;
 }
 
-// Web component <br-*> de mentira: o shadow root dele é "código do componente".
+// Web components com tag de componente do DS (o shadow root é "código do componente") e um <br-*> que NÃO é
+// componente do DS (br-mural: autoria da página). O <br-breadcrumb> tem um filho claro projetado por <slot>.
 const WEB_COMPONENTS = `
-  customElements.define('br-trilha', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
-    r.innerHTML = '<div class="br-breadcrumb"><ul><li><a href="#x" style="padding: 0 6px">Início</a></li></ul></div>'; } });
-  customElements.define('br-acao', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
-    r.innerHTML = '<button class="br-button" type="button"><i class="icone-olho"></i></button>'; } });`;
+  customElements.define('br-breadcrumb', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
+    r.innerHTML = '<div class="br-breadcrumb"><ul><li><a href="#x" style="padding: 0 6px">Início</a></li></ul><slot></slot></div>'; } });
+  customElements.define('br-button', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
+    r.innerHTML = '<button class="br-button" type="button"><i class="icone-olho"></i></button>'; } });
+  customElements.define('br-mural', class extends HTMLElement { constructor() { super(); const r = this.attachShadow({ mode: 'open' });
+    r.innerHTML = '<div class="br-card" style="border-radius: 13px">Mural</div>'; } });`;
 
 const FOCUS_STYLE = `
   .campo input { border: 1px solid rgb(136, 136, 136); outline: none; }
   .campo.erro input { border-color: rgb(229, 34, 7); }
   .campo.erro input:focus { border-color: rgb(136, 136, 136); }
   #bom:focus { border-color: rgb(19, 81, 180); }
+  #escuro { border: 1px solid rgb(51, 51, 51); outline: none; }
+  #escuro:focus { border-color: rgb(19, 81, 180); }
+  #preto { border: 2px solid rgb(0, 0, 0); outline: none; }
+  #preto:focus { border-color: rgb(255, 205, 7); }
   .cb { position: absolute; opacity: 0; }
   .cb:focus { outline: 2px solid rgb(0, 0, 0); }
   .cb + label::before { content: ""; display: inline-block; width: 10px; height: 10px; }
@@ -45,7 +52,8 @@ const FOCUS_STYLE = `
 
 const PAGES: Record<string, string> = {
   "/origem": page(
-    `<br-trilha></br-trilha><br-acao></br-acao>
+    `<br-breadcrumb><span class="br-tag" id="projetado" style="border-radius: 11px">Projeto</span></br-breadcrumb><br-button></br-button><br-mural></br-mural>
+     <div style="display: contents"><button class="br-button" type="button" id="em-contents" style="border-radius: 19px">Contents</button></div>
      <div id="menu" hidden><button class="br-button" type="button" style="border-radius: 20px">Sair</button></div>
      <button class="br-button" type="button" style="border-radius: 20px">Confirmar</button>
      <div class="flatpickr-calendar"><span class="flatpickr-prev-month"><button class="br-button" type="button"><i class="seta"></i></button></span></div>`,
@@ -55,9 +63,26 @@ const PAGES: Record<string, string> = {
   "/foco": page(
     `<div class="campo erro"><label for="ruim">Nome</label><input id="ruim"></div>
      <div class="campo"><label for="bom">Cidade</label><input id="bom"></div>
+     <label for="escuro">Bairro</label><input id="escuro">
+     <label for="preto">Rua</label><input id="preto">
      <input type="checkbox" class="cb" id="cb1"><label for="cb1">Aceito A</label>
      <input type="checkbox" class="cb" id="cb2"><label for="cb2">Aceito B</label>`,
     FOCUS_STYLE,
+  ),
+  "/erro-assoc": page(
+    `<form id="f" novalidate><div><label for="cod">Código</label><input id="cod"></div><div><label for="out">Outro</label><input id="out"></div><button id="enviar" type="submit">Enviar</button></form>
+     <span id="msg-cod" hidden>Código inválido.</span><span id="nota">Nota fixa.</span>`,
+    "",
+    `const params = new URLSearchParams(location.search); document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault();
+       const c = document.getElementById('cod'); c.setAttribute('aria-invalid', 'true'); document.getElementById('msg-cod').hidden = false;
+       if (params.get('modo') === 'certo') c.setAttribute('aria-errormessage', 'msg-cod');
+       if (params.get('modo') === 'errado') c.setAttribute('aria-errormessage', 'nota'); });`,
+  ),
+  "/bp": `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Avisos</title></head><body><div><p>Texto fora de qualquer região.</p></div><main><h1>Avisos</h1></main></body></html>`,
+  "/familias2": page(
+    Array.from({ length: 9 }, (_, i) =>
+      `<div class="br-card" style="padding: ${5 + i * 2}px; font-family: Fonte${i}"><p>Cartão ${i}</p><img src="x${i}.png"></div>`,
+    ).join(""),
   ),
   "/tabindex": page(`<p>Texto.</p><button type="button" tabindex="1">Ajuda</button>`),
   "/sem-tabindex": page(`<p>Texto.</p><button type="button">Ajuda</button>`),
@@ -113,37 +138,55 @@ describe("3.4.4 C3/C4/C5 — o que não é autoria da página vira observação,
     const locs = r.findings.map((f) => `${f.rule.id} ${f.element.locator}`);
     // C3: tag e espaçamento DENTRO do shadow do componente do DS não são achado de página (a anatomia,
     // que depende do conteúdo que a página passa, continua com o check de anatomia)
-    expect(locs.some((l) => /^ds-(structure|token)-/.test(l) && l.includes("br-trilha >>>"))).toBe(false);
+    expect(locs.some((l) => /^ds-(structure|token)-/.test(l) && l.includes("br-breadcrumb >>>"))).toBe(false);
+    // guarda: filho claro projetado por <slot> num <br-*> continua da página
+    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("#projetado"))).toBe(true);
+    // host <br-*> que não é componente do DS: o shadow dele é autoria da página
+    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("br-mural >>>"))).toBe(true);
+    // display:contents não é "não renderizado"
+    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("#em-contents"))).toBe(true);
     // C4: o raio do botão no menu oculto não é achado; o mesmo raio visível é
     const radius = r.findings.filter((f) => f.rule.id === "ds-token-radius");
     expect(radius.map((f) => f.element.locator).some((l) => l.includes("#menu"))).toBe(false);
-    expect(radius.length).toBe(1);
+    expect(radius.filter((f) => !/projetado|br-mural|em-contents/.test(f.element.locator)).length).toBe(1);
     // C5: botão só ícone do calendário embutido não é achado
     expect(locs.some((l) => l.startsWith("emag-2.2") && !l.includes(">>>"))).toBe(false);
     // o nome acessível vem do que a página passa ao host: <br-acao> sem rótulo continua achado
-    expect(r.findings.some((f) => f.rule.id === "emag-2.2" && f.element.locator.includes("br-acao >>> button"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.id === "emag-2.2" && f.element.locator.includes("br-button >>> button"))).toBe(true);
 
     const outside = r.observations.filter((o) => o.kind === "outside-page-authorship");
     const reasons = new Set(outside.map((o) => o.data?.reason));
     expect(reasons).toEqual(new Set(["ds-web-component", "not-rendered", "ds-third-party"]));
     const tag = outside.find((o) => (o.data?.rule as { id: string }).id === "ds-structure-breadcrumb-tag");
-    expect(tag?.data?.host).toBe("br-trilha");
+    expect(tag?.data?.host).toBe("br-breadcrumb");
+    // M2: estilo autoral num estado oculto diz que está oculto e como medi-lo
+    const hidden = outside.find((o) => o.data?.reason === "not-rendered");
+    expect(hidden?.data?.hiddenInState).toBe(true);
+    expect((hidden?.data?.next as { hint: string }).hint).toMatch(/meça no estado em que aparece/);
     expect(tag?.whyNotAFinding).toMatch(/shadow root de um web component do próprio DS/);
     expect(outside.some((o) => o.data?.reason === "ds-web-component" && (o.data?.rule as { id: string }).id === "ds-token-spacing")).toBe(true);
   });
 });
 
 describe("3.4.4 C6 — foco visível: perda de cor e elemento invisível não indicam foco", () => {
-  it("borda de erro que volta ao cinza no foco e outline de input opacity:0 sem marca no rótulo são achados; borda que ganha contraste e rótulo marcado não", async () => {
+  it("revisão: escuro → azul e preto → amarelo são indicadores; campo em erro que volta ao cinza fica sem decisão (nunca achado); outline de input opacity:0 sem marca no rótulo é achado", async () => {
     const r = await scan("/foco", ["structure"]);
     const focus = r.findings.filter((f) => f.rule.id === "emag-4.4").map((f) => f.element.locator);
-    expect(focus).toContain("#ruim");
+    expect(focus).not.toContain("#escuro");
+    expect(focus).not.toContain("#preto");
+    expect(focus).not.toContain("#ruim");
     expect(focus).toContain("#cb1");
     expect(focus).not.toContain("#bom");
     expect(focus).not.toContain("#cb2");
-    const ruim = r.findings.find((f) => f.rule.id === "emag-4.4" && f.element.locator === "#ruim")!;
-    expect(ruim.evidence.observed).toMatch(/perde contraste/);
-    expect((ruim.evidence.data?.discountedOnFocus as string[]).join(" ")).toMatch(/rgb\(229, 34, 7\) → rgb\(136, 136, 136\)/);
+    const { measureFocusIndicators } = await import("../../src/evidence/focusIndicator.js");
+    const { withPage } = await import("../../src/evidence/browser.js");
+    const facts = await withPage(`${base}/foco`, (p) => measureFocusIndicators(p, ["#ruim", "#escuro", "#preto"]));
+    const ruim = facts.find((f) => f.locator === "#ruim")!;
+    expect(ruim.complete).toBe(false);
+    expect(ruim.changed).toEqual([]);
+    expect(ruim.discounted?.join(" ")).toMatch(/rgb\(229, 34, 7\) → rgb\(136, 136, 136\)/);
+    expect(facts.find((f) => f.locator === "#escuro")!.changed.length).toBeGreaterThan(0);
+    expect(facts.find((f) => f.locator === "#preto")!.changed.length).toBeGreaterThan(0);
     const cb1 = r.findings.find((f) => f.rule.id === "emag-4.4" && f.element.locator === "#cb1")!;
     expect(cb1.evidence.observed).toMatch(/elemento invisível/);
   });
@@ -207,13 +250,13 @@ describe("3.4.4 C1/C9 — resposta do scan e achado do scan reverificado como ve
     const { client, call } = await connect();
     try {
       const s = await call("scan_page", { url: `${base}/foco`, checks: ["structure"], view: "findings" });
-      const f = (s.data.findings as Array<Record<string, any>>).find((x) => x.rule.id === "emag-4.4" && x.element.locator === "#ruim");
+      const f = (s.data.findings as Array<Record<string, any>>).find((x) => x.rule.id === "emag-4.4" && x.element.locator === "#cb1");
       expect(f).toBeDefined();
       const v = await call("verify_finding", {
         finding: {
           id: f!.id,
           rule: { id: "emag-4.4", source: "emag", description: "foco visível" },
-          element: { locator: "#ruim", page: `${base}/foco` },
+          element: { locator: "#cb1", page: `${base}/foco` },
           evidence: { observed: "sem indicador de foco", expected: "indicador visível" },
           severity: "serious",
           nature: "syntactic",
@@ -230,7 +273,7 @@ describe("3.4.4 C1/C9 — resposta do scan e achado do scan reverificado como ve
         finding: {
           id: f!.id,
           rule: { id: "emag-6.6", source: "emag", description: "x" },
-          element: { locator: "#ruim", page: `${base}/foco` },
+          element: { locator: "#cb1", page: `${base}/foco` },
           evidence: { observed: "x", expected: "y" },
           severity: "serious",
           nature: "syntactic",
@@ -274,6 +317,59 @@ describe("3.4.4 C13 — anatomia do Message: a cláusula em prosa aciona o predi
       expect(spec.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
       const parts = spec.data.verifiableAnatomy?.parts as Array<{ part: string; rules: string[] }>;
       expect(parts.find((p) => p.part === "mensagem")?.rules).toContain("govbr-3.7.0-component-message-829632c90fd3");
+    } finally {
+      await client.close();
+    }
+  });
+});
+
+describe("3.4.4 revisão M3 — aria-invalid real no navegador: só a mensagem ligada por IDREF desmente", () => {
+  const claim = (modo: string) => ({
+    id: "F-861",
+    rule: { id: "3.3.1", source: "wcag" as const, description: "erro não associado" },
+    element: { locator: "#cod", page: `${base}/erro-assoc?modo=${modo}` },
+    evidence: { observed: "x", expected: "y", data: { expectedCondition: "input-error-item-identified", errorMessage: "#msg-cod" } },
+    severity: "serious" as const, nature: "semantic" as const, mode: "interaction" as const, pathway: "heuristic" as const,
+  });
+  const SUBMIT = [{ action: "click" as const, selector: "#enviar" }];
+  it("aria-errormessage apontando a mensagem contradiz; apontando outro elemento ou ausente fica sem decisão, com a ambiguidade ARIA21 dita", async () => {
+    const { verifyFinding } = await import("../../src/verify/gate.js");
+    const certo = await verifyFinding({ finding: claim("certo"), live: true, actions: SUBMIT });
+    expect(certo.verdict).toBe("rejected");
+    expect(certo.checks.violation).toBe("contradicted");
+    for (const modo of ["errado", "nenhum"]) {
+      const v = await verifyFinding({ finding: claim(modo), live: true, actions: SUBMIT });
+      expect(v.verdict, modo).toBe("unverifiable");
+      expect(v.checks.violation, modo).toBe("undetermined");
+    }
+    const nenhum = await verifyFinding({ finding: claim("nenhum"), live: true, actions: SUBMIT });
+    expect(nenhum.detail).toContain("ARIA21");
+  });
+});
+
+describe("3.4.4 revisão L7 — regra best-practice do axe é observação, não achado", () => {
+  it("region (best-practice) sai em observações axe-best-practice com a informação; nada de best-practice nos achados", async () => {
+    const r = await scan("/bp", ["axe"]);
+    const bp = r.findings.filter((f) => ((f.evidence.data?.axeTags as string[]) ?? []).includes("best-practice") && !((f.evidence.data?.axeTags as string[]) ?? []).some((t) => /^wcag\d{3,4}$/.test(t)));
+    expect(bp).toHaveLength(0);
+    const obs = r.observations.filter((o) => o.kind === "axe-best-practice");
+    expect(obs.some((o) => (o.data?.rule as { id: string }).id === "region")).toBe(true);
+    expect(obs[0].whyNotAFinding).toMatch(/best-practice/);
+  });
+});
+
+describe("3.4.4 revisão — C1 em outra forma de página (famílias de espaçamento, fonte e axe)", () => {
+  it("cartões com padding/fonte soltos e imagens sem alt: teto respeitado, tamanho real, mais de 3 famílias", async () => {
+    const { client, call } = await connect();
+    try {
+      const r = await call("scan_page", { url: `${base}/familias2` });
+      expect(r.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      expect(r.data.responseCharsEstimate).toBe(r.text.length);
+      expect(r.data.totalFamilies).toBeGreaterThan(3);
+      expect(r.data.families.length).toBeGreaterThan(3);
+      const small = await call("scan_page", { url: `${base}/familias2`, maxChars: 5000 });
+      expect(small.text.length).toBeLessThanOrEqual(5000);
+      if (small.data.responseCharsEstimate !== undefined) expect(small.data.responseCharsEstimate).toBe(small.text.length);
     } finally {
       await client.close();
     }

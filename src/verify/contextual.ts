@@ -553,7 +553,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
         status: "undetermined",
         detail: `o campo expõe invalid=true (estado inválido marcado), mas a mensagem "${messageText}" não está associada a ele: descrição ${
           ax.description ? `"${ax.description}"` : "vazia"
-        }, o nome não contém a mensagem e nenhum IDREF do campo (aria-errormessage/aria-describedby) aponta para ela.${danglingDetail(facts)} aria-invalid sozinho não associa a mensagem e não desmente a alegação; se o estado inválido basta para identificar o item, o oráculo não decide.`,
+        }, o nome não contém a mensagem e nenhum IDREF do campo (aria-errormessage/aria-describedby) aponta para ela.${danglingDetail(facts)} Ambiguidade declarada: a técnica ARIA21 da WCAG aceita aria-invalid como identificação do campo em erro para o 3.3.1, então "item identificado" não é decidível a partir de aria-invalid sozinho; a associação da mensagem ao campo (aria-errormessage/aria-describedby) é outro fato, e ela falta aqui. aria-invalid sozinho não associa a mensagem e não desmente a alegação.`,
       };
     }
     // 3.4.0 (B4, V-03a): citar o nome do campo no texto da mensagem NÃO é associação programática.

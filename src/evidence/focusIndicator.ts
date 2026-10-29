@@ -11,9 +11,9 @@
  * diferença em qualquer um desses conta como indicador — a medição é generosa de propósito: só a
  * AUSÊNCIA de qualquer mudança vira achado.
  *
- * 3.4.4 (C6): duas mudanças deixaram de contar. (a) Cor de borda que PERDE contraste contra o fundo sem
- * ganhar espessura — o campo em erro cuja borda vermelha volta ao cinza ao focar perde um estado, não
- * marca o foco. (b) Mudança no próprio elemento (e nos pseudo-elementos e descendentes dele) quando ele é
+ * 3.4.4 (C6): duas mudanças deixaram de contar. (a) Campo em estado de erro cuja borda vermelha volta a um
+ * cinza neutro ao focar (sem ganhar espessura): perde o estado de erro, não marca o foco — e a medição fica
+ * incompleta (nunca vira achado), porque a cor de repouso sem o erro não é conhecida. (b) Mudança no próprio elemento (e nos pseudo-elementos e descendentes dele) quando ele é
  * invisível — opacidade efetiva 0, sem área ou visibility hidden: o `outline` de um input com opacity:0
  * não se vê. O rótulo, o irmão e o pai continuam valendo (o checkbox do DS marca o foco em
  * `label::before`). O que foi descartado sai em `discounted`.
@@ -184,56 +184,57 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
           }
           return opacity === 0;
         })();
-        // 3.4.4 (C6a): contraste de uma cor contra o fundo efetivo do nó (primeiro fundo opaco subindo; branco).
-        const rgb = (value: string): [number, number, number, number] | null => {
+        // 3.4.4 (C6a, revisão): perda de contraste NÃO é critério (escuro → azul da marca e preto → amarelo
+        // são indicadores). Só uma mudança é posta em dúvida: o campo está em estado de erro (aria-invalid no
+        // próprio campo ou num contêiner próximo, ou classe de erro/perigo nele ou num ancestral próximo), a
+        // borda em repouso é vermelha e, com foco, volta a um cinza neutro — o mesmo que perder o estado de
+        // erro. Essa mudança não conta como indicador, mas também não vira achado: a medição fica incompleta
+        // (undetermined), porque o oráculo não sabe a cor de repouso do campo sem o erro.
+        const rgb = (value: string): [number, number, number] | null => {
           const m = value.match(/rgba?\(([^)]+)\)/);
           if (!m) return null;
           const parts = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
-          return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+          if (parts.length > 3 && parts[3] === 0) return null;
+          return [parts[0], parts[1], parts[2]];
         };
-        const luminance = ([r, g, b]: [number, number, number, number]) => {
-          const ch = (c: number) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
-          return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
-        };
-        const background = (node: Element | null): [number, number, number, number] => {
-          let n: Element | null = node;
-          while (n) {
-            const c = rgb(getComputedStyle(n).backgroundColor);
-            if (c && c[3] >= 1) return c;
-            n = n.parentElement ?? ((n.getRootNode() as ShadowRoot).host ?? null);
+        const ERROR_CLASS = /^(danger|invalid|is-invalid|error|erro|has-error|has-danger)$/;
+        const inError = (() => {
+          let n: Element | null = el;
+          for (let depth = 0; n && depth < 4; depth++) {
+            if (n.getAttribute("aria-invalid") === "true") return true;
+            if (Array.from(n.classList).some((c) => ERROR_CLASS.test(c))) return true;
+            n = n.parentElement;
           }
-          return [255, 255, 255, 1];
-        };
-        const contrast = (color: string, bg: [number, number, number, number]) => {
-          const c = rgb(color);
-          if (!c || c[3] === 0) return 1;
-          const a = luminance(c), b = luminance(bg);
-          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        };
+          return false;
+        })();
+        const reddish = (c: [number, number, number] | null) => !!c && c[0] >= 150 && c[0] > c[1] * 1.8 && c[0] > c[2] * 1.8;
+        const neutral = (c: [number, number, number] | null) => !!c && Math.max(...c) - Math.min(...c) <= 16;
+        let lostErrorOnly = false;
         const changed: string[] = [];
         const discounted: string[] = [];
         before.forEach(([name, styles], i) => {
           const next = after[i][1];
           if (!styles || !next) return;
           const ownDrawing = name === "self" || name.startsWith("self::") || name.startsWith("desc[");
-          const node = list[i][1];
           for (const p of props) {
             if (styles[p] === next[p]) continue;
             if (invisibleSelf && ownDrawing) { discounted.push(`${name}:${p} (elemento invisível)`); continue; }
             const side = p.match(/^border-(top|right|bottom|left)-color$/)?.[1];
-            if (side && styles[p] !== "none" && next[p] !== "none") {
+            if (side && name === "self" && inError && styles[p] !== "none" && next[p] !== "none") {
               const widthKey = `border-${side}-width`;
               const thicker = parseFloat(next[widthKey]) > parseFloat(styles[widthKey]);
-              const bg = background(node);
-              if (!thicker && contrast(next[p], bg) <= contrast(styles[p], bg)) {
-                discounted.push(`${name}:${p} (${styles[p]} → ${next[p]}: perde contraste)`);
+              if (!thicker && reddish(rgb(styles[p])) && neutral(rgb(next[p]))) {
+                discounted.push(`${name}:${p} (${styles[p]} → ${next[p]}: o campo em erro perde a cor de erro no foco)`);
+                lostErrorOnly = true;
                 continue;
               }
             }
             changed.push(`${name}:${p}`);
           }
         });
-        return { locator, focused, changed, complete: desc.complete, ...(discounted.length ? { discounted } : {}) };
+        // A perda do estado de erro não indica foco, mas também não prova ausência de indicador: incompleta.
+        const complete = desc.complete && !(lostErrorOnly && changed.length === 0);
+        return { locator, focused, changed, complete, ...(discounted.length ? { discounted } : {}) };
       });
       if (original && typeof original.focus === "function") original.focus({ preventScroll: true });
       return out;

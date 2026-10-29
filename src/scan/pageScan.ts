@@ -5,7 +5,7 @@ import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from 
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { demoteToObservations, ownershipOf, partitionByOwnership, splitOutside } from "../checkers/ownership.js";
-import { runAxeScanOnPage } from "../checkers/axe.js";
+import { axeBestPracticeObservations, runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
 import { checkFocusIndicators } from "../checkers/focusIndicator.js";
 import { FOCUSABLE_SELECTOR, measureFocusIndicators } from "../evidence/focusIndicator.js";
@@ -351,6 +351,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           const authoredText = text.elements.filter((element) => ownershipOf(element) === "page" && !known.has(element.locator));
           elementsInspected += authoredText.length;
           rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
+          // 3.4.4 (revisão, L6): o texto fora da autoria da página (dentro de componente do DS, de terceiros ou
+          // oculto neste estado) não some em silêncio — vira observação com o motivo, como nos outros checks.
+          const outsideText = text.elements.filter((element) => ownershipOf(element) !== "page" && !known.has(element.locator));
+          observations.push(...demoteToObservations(checkTokenCompliance({ url: request.url }, outsideText, getTokenRegistry(), ["color"]), outsideText));
         }
       }
       if (checks.includes("structure")) {
@@ -397,6 +401,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         normalized.selectors.length ? normalized.selectors.join(", ") : undefined
       );
       rawFindings.push(...result.findings);
+      observations.push(...axeBestPracticeObservations(result.bestPracticeFindings));
       axe = {
         engine: result.engine,
         passes: result.passeCount,
@@ -476,7 +481,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     if (cached) return { ...cached, state, cacheHit: true };
 
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
-    const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false });
+    const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);
     const value: CachedScan = {
       status: "scanned",

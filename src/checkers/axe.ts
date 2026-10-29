@@ -7,7 +7,7 @@
  */
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import type { Finding, Severity } from "../schema/finding.js";
+import type { Finding, Observation, Severity } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
 import { findEmagRule } from "../data/load.js";
 import { withPage } from "../evidence/browser.js";
@@ -149,6 +149,12 @@ export function relationOnlyAriaValue(ruleId: string, failureSummary: string | u
 
 export interface AxeScanResult {
   findings: Finding[];
+  /**
+   * 3.4.4 (revisão, C10a): violações de regras só `best-practice` (sem critério WCAG). Com
+   * `bestPractice: "separate"` (padrão) ficam aqui, fora de `findings` e fora da fusão por e-MAG; com
+   * "inline" (perfil knowledge-free: a saída do axe como veio) ficam em `findings` e esta lista é vazia.
+   */
+  bestPracticeFindings: Finding[];
   engine: { name: string; version: string };
   passeCount: number;
   incompleteCount: number;
@@ -192,6 +198,29 @@ export interface AxeScanOptions {
    * `evidence.data.emagId`). Padrão: sim. O perfil knowledge-free desliga: sai só a saída do axe.
    */
   emag?: boolean;
+  /** 3.4.4 (revisão): "separate" (padrão) tira as regras só best-practice dos achados; "inline" mantém. */
+  bestPractice?: "separate" | "inline";
+}
+
+/**
+ * 3.4.4 (revisão, C10a): regra só best-practice do axe não reprova critério — sinal de revisão (observação),
+ * com a regra, o elemento, o texto do axe e a ponte e-MAG temática quando houver. Nada da informação se perde.
+ */
+export function axeBestPracticeObservations(findings: Finding[]): Observation[] {
+  return findings.map((f) => ({
+    kind: "axe-best-practice",
+    element: f.element,
+    note: `${f.rule.id}: ${f.rule.description}`,
+    whyNotAFinding:
+      "Regra best-practice do axe-core: nenhuma tag de critério WCAG, então não reprova critério; a ponte com o e-MAG, quando há, é só temática. Sinal de revisão para julgar com a página na frente, não violação afirmada pelo oráculo.",
+    data: {
+      rule: { source: "axe-core", id: f.rule.id },
+      observed: f.evidence.observed,
+      severityFromAxe: f.severity,
+      ...(f.evidence.data?.emagId ? { emagTopical: f.evidence.data.emagId } : {}),
+      ...(f.evidence.data?.helpUrl ? { helpUrl: f.evidence.data.helpUrl } : {}),
+    },
+  }));
 }
 
 /** Run axe against an already-loaded page so aggregate scans do not navigate twice. */
@@ -262,8 +291,12 @@ export async function runAxeScanOnPage(
     }
   }
 
+  const separate = (options.bestPractice ?? "separate") === "separate";
+  const isBp = (f: Finding) => isBestPracticeOnly((f.evidence.data?.axeTags as string[] | undefined) ?? []);
+  const scored = separate ? findings.filter((f) => !isBp(f)) : findings;
   return {
-    findings: withEmag ? mergeSameEmagOnElement(findings) : findings,
+    findings: withEmag ? mergeSameEmagOnElement(scored) : scored,
+    bestPracticeFindings: separate ? findings.filter(isBp) : [],
     engine: axeResults.testEngine,
     passeCount: axeResults.passes.length,
     incompleteCount: axeResults.incomplete.length,
