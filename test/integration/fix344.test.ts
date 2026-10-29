@@ -347,14 +347,16 @@ describe("3.4.4 revisão M3 — aria-invalid real no navegador: só a mensagem l
   });
 });
 
-describe("3.4.4 revisão L7 — regra best-practice do axe é observação, não achado", () => {
-  it("region (best-practice) sai em observações axe-best-practice com a informação; nada de best-practice nos achados", async () => {
+describe("3.4.4 — regra best-practice do axe continua achado, marcada (sem critério WCAG)", () => {
+  it("region (best-practice) é achado com data.bestPractice=true e sem wcag; nenhuma observação axe-best-practice", async () => {
     const r = await scan("/bp", ["axe"]);
-    const bp = r.findings.filter((f) => ((f.evidence.data?.axeTags as string[]) ?? []).includes("best-practice") && !((f.evidence.data?.axeTags as string[]) ?? []).some((t) => /^wcag\d{3,4}$/.test(t)));
-    expect(bp).toHaveLength(0);
-    const obs = r.observations.filter((o) => o.kind === "axe-best-practice");
-    expect(obs.some((o) => (o.data?.rule as { id: string }).id === "region")).toBe(true);
-    expect(obs[0].whyNotAFinding).toMatch(/best-practice/);
+    const region = r.findings.filter((f) => f.rule.id === "region");
+    expect(region.length).toBeGreaterThan(0);
+    for (const f of region) {
+      expect(f.evidence.data?.bestPractice).toBe(true);
+      expect(f.rule.wcag).toBeUndefined();
+    }
+    expect(r.observations.some((o) => o.kind === "axe-best-practice")).toBe(false);
   });
 });
 

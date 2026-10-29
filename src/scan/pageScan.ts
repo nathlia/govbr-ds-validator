@@ -5,7 +5,7 @@ import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from 
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
 import { demoteToObservations, ownershipOf, partitionByOwnership, splitOutside } from "../checkers/ownership.js";
-import { axeBestPracticeObservations, runAxeScanOnPage } from "../checkers/axe.js";
+import { runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
 import { checkFocusIndicators } from "../checkers/focusIndicator.js";
 import { FOCUSABLE_SELECTOR, measureFocusIndicators } from "../evidence/focusIndicator.js";
@@ -401,7 +401,6 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         normalized.selectors.length ? normalized.selectors.join(", ") : undefined
       );
       rawFindings.push(...result.findings);
-      observations.push(...axeBestPracticeObservations(result.bestPracticeFindings));
       axe = {
         engine: result.engine,
         passes: result.passeCount,

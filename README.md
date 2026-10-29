@@ -118,7 +118,7 @@ ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize
   em que aparece); `display:contents` não conta como oculto. Texto fora da autoria também vira observação.
 - **C3:** só host com tag de componente do catálogo (`br-<componente>`) é DS; filhos projetados por slot são da página.
 - **C2:** o detalhe nomeia a ambiguidade (ARIA21 aceita aria-invalid para 3.3.1). **C10a:** regras só
-  best-practice do axe saem como observação `axe-best-practice` (perfil knowledge-free: saída do axe intacta).
+  best-practice do axe continuam achados (o conjunto da 3.4.3), marcados com `data.bestPractice: true` e sem critério WCAG.
 - `responseCharsEstimate` nunca fica com o tamanho só da lista: sem espaço para o valor certo, o campo sai.
 
 ## 3.4.3 — atestação da janela no estado encolhido (D-154)

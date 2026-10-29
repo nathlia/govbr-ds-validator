@@ -77,7 +77,7 @@ const VERSAO: string = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ).version;
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
-import { axeBestPracticeObservations, runAxeScan } from "./checkers/axe.js";
+import { runAxeScan } from "./checkers/axe.js";
 import { pageConstraints } from "./checkers/pageStructure.js";
 import {
   inspectComputedStyles,
@@ -1997,8 +1997,6 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const deduplication = deduplicateFindings(result.findings);
         const findings = deduplication.findings;
         const scanId = findingStore.putBatch("axe", findings);
-        const axeObservations = axeBestPracticeObservations(result.bestPracticeFindings);
-        observationStore.set(scanId, axeObservations);
         return ok(isolatedScan(
           {
             url,
@@ -2015,7 +2013,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               key: deduplication.key,
             },
           },
-          axeObservations, scanId, findings, { view, detail, cursor, limit, maxChars, memberLimit },
+          [], scanId, findings, { view, detail, cursor, limit, maxChars, memberLimit },
         ));
       }
     )

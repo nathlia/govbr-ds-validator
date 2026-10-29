@@ -198,7 +198,7 @@ export interface AxeScanOptions {
    * `evidence.data.emagId`). Padrão: sim. O perfil knowledge-free desliga: sai só a saída do axe.
    */
   emag?: boolean;
-  /** 3.4.4 (revisão): "separate" (padrão) tira as regras só best-practice dos achados; "inline" mantém. */
+  /** 3.4.4: "inline" (padrão, comportamento da 3.4.3) mantém as regras só best-practice como achados, marcados com data.bestPractice=true; "separate" as separa (não usado pelos scans). */
   bestPractice?: "separate" | "inline";
 }
 
@@ -275,7 +275,7 @@ export async function runAxeScanOnPage(
             ...(withEmag
               ? { helpUrl: violation.helpUrl, axeTags: violation.tags, emagId: emagId ?? null }
               : { helpUrl: violation.helpUrl, axeTags: violation.tags }),
-            ...(bestPractice ? { normative: "best-practice", ...(emagId ? { emagRelation: "topical" } : {}) } : {}),
+            ...(bestPractice ? { bestPractice: true, normative: "best-practice", ...(emagId ? { emagRelation: "topical" } : {}) } : {}),
             ...(relationOnly
               ? {
                   wcagRelation: { criterion: tagWcag ?? null, kind: "related", note: "só aria-controls com IDREF inexistente: o estado do controle continua exposto; não é falha de nome/papel/estado/valor." },
@@ -291,7 +291,7 @@ export async function runAxeScanOnPage(
     }
   }
 
-  const separate = (options.bestPractice ?? "separate") === "separate";
+  const separate = (options.bestPractice ?? "inline") === "separate";
   const isBp = (f: Finding) => isBestPracticeOnly((f.evidence.data?.axeTags as string[] | undefined) ?? []);
   const scored = separate ? findings.filter((f) => !isBp(f)) : findings;
   return {
