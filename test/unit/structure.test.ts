@@ -77,14 +77,14 @@ describe("checkComponentStructure (against the real button spec)", () => {
     expect(observations.some(observation => observation.kind === "structure-semantic-native-tag")).toBe(true);
   });
 
-  it("flags an icon-only button without aria-label (e-MAG 2.2)", () => {
+  it("flags an icon-only button without aria-label (e-MAG 1.1 / WCAG 4.1.2; era 2.2 até a 3.4.4)", () => {
     const el = makeElement({
       classes: ["br-button", "circle", "primary"],
       content: { textContent: "", hasVisibleText: false, hasIconOnly: true },
       outerHTML: '<button class="br-button circle primary"><i class="fas fa-city"></i></button>',
     });
     const findings = checkComponentStructure(page, [el], buttonSpec);
-    const a11y = findings.find((f) => f.rule.id === "emag-2.2");
+    const a11y = findings.find((f) => f.rule.id === "emag-1.1");
     expect(a11y).toBeDefined();
     expect(a11y?.rule.wcag).toBe("4.1.2");
     expect(a11y?.rule.description.length).toBeGreaterThan(10);
@@ -100,7 +100,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
         content: { textContent: "", hasVisibleText: false, hasIconOnly: true, ...content },
       });
     const fires = (el: ReturnType<typeof makeElement>) =>
-      checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-2.2").length;
+      checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-1.1").length;
 
     it("aria-label vazio ou só com espaços não é nome", () => {
       expect(fires(iconOnly({ ariaLabel: "" }))).toBe(1);
@@ -153,7 +153,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
       attributes: { ariaLabel: "Abrir menu" } as never,
       content: { textContent: "", hasVisibleText: false, hasIconOnly: true },
     });
-    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-2.2")).toEqual([]);
+    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "emag-1.1")).toEqual([]);
   });
 
   // Regression: status/emphasis variants (danger, success, info, warning)
@@ -216,7 +216,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
 describe("3.4.0 (B10): origem flatpickr e axe duplicado no mesmo elemento", () => {
   it("o botão só com ícone injetado pelo flatpickr do datetimepicker sai marcado com a origem", () => {
     const el = makeElement({ origin: "flatpickr", content: { textContent: "", hasVisibleText: false, hasIconOnly: true }, accessibleName: { name: "", source: "chromium" } });
-    const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "emag-2.2");
+    const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "emag-1.1");
     expect(finding?.evidence.observed).toContain("flatpickr");
     expect(finding?.evidence.data?.origin).toEqual({ kind: "ds-third-party", library: "flatpickr", component: "datetimepicker" });
   });

@@ -197,7 +197,7 @@ describe("check_component_structure (V3, V4)", () => {
 
     const ruleIds = data.findings.map((f: { rule: { id: string }; element: { locator: string } }) => `${f.rule.id}@${f.element.locator}`);
     expect(ruleIds).toContain("ds-structure-button-tag@#link-as-button");
-    expect(ruleIds).toContain("emag-2.2@#btn-icon-only");
+    expect(ruleIds).toContain("emag-1.1@#btn-icon-only");
     // The compliant twins produce nothing — including the danger status
     // variant, which only exists in button.css (not in the example HTML)
     expect(data.findings.filter((f: { element: { locator: string } }) => f.element.locator === "#btn-compliant")).toEqual([]);
@@ -343,7 +343,7 @@ describe("scan_page aggregate fast path", () => {
     expect(diff.changes).toEqual([{ change: "added", id: expanded.stateDiff.findings.addedIds[0] }]);
 
     // O achado que nasce da interação é fundamentado: cita a norma que aplica (D-27).
-    const nascido = expanded.findings.find((f: { rule: { id: string } }) => f.rule.id === "emag-2.2");
+    const nascido = expanded.findings.find((f: { rule: { id: string } }) => f.rule.id === "emag-1.1");
     expect(nascido).toBeDefined();
     // A classe não canônica que a interação também introduz sai por fora da pontuação.
     // 3.0.0 (S-03): observações em bloco limitado, contagem por tipo + continuação.

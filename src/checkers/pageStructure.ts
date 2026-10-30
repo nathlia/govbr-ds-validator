@@ -31,14 +31,14 @@ import { PAGE_REGION_SELECTORS } from "../evidence/pageFacts.js";
 import { groundingFor, type CheckKind } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
-export type PageConstraintKind = "page-region" | "page-skip-link";
+export type PageConstraintKind = "page-region" | "page-skip-link" | "page-focus-order";
 
 export interface PageConstraint {
   /** Id citável, ex.: `ds-page-header`. */
   id: string;
   kind: PageConstraintKind;
-  /** Região do Template Base (`header`, `footer`) ou `skip-link`. */
-  region: PageRegion | "skip-link";
+  /** Região do Template Base (`header`, `footer`), `skip-link` ou (3.5.0) `focus-order`. */
+  region: PageRegion | "skip-link" | "focus-order";
   selector: string | null;
   description: string;
   force: "required";
@@ -89,6 +89,23 @@ export function pageConstraints(): PageConstraint[] {
   return [
     ...regions,
     {
+      id: "ds-page-focus-order",
+      kind: "page-focus-order",
+      region: "focus-order",
+      selector: "[tabindex]",
+      description:
+        "O salto para o conteúdo deve ser o primeiro elemento a receber o foco pelo teclado: nenhum elemento com " +
+        "tabindex positivo pode recebê-lo antes (Skip Link; e-MAG 1.4 / WCAG 2.4.3). Só se aplica quando o salto existe.",
+      force: "required",
+      implements: [...FOCUS_ORDER_IMPLEMENTS],
+      claim: { expectedCondition: EXPECTED_CONDITIONS.skipLinkFirstFocus, fields: ["region", "firstLinkHref", "expectedCondition"] },
+      source: {
+        url: "https://www.gov.br/ds/components/skiplink?tab=acessibilidade",
+        scrapedAt: source.scrapedAt,
+        excerpt: "O skip link deve ser o primeiro elemento a receber o foco na navegação por teclado",
+      },
+    },
+    {
       id: "ds-page-skip-link",
       kind: "page-skip-link",
       region: "skip-link",
@@ -103,6 +120,20 @@ export function pageConstraints(): PageConstraint[] {
     },
   ];
 }
+
+/**
+ * 3.5.0 (revisão Fable P2): o salto existe e é o 1º link, mas um tabindex positivo recebe o foco antes dele.
+ * A frase do e-MAG 1.5 ("o primeiro link da página deve ser o de ir para o conteúdo") é CUMPRIDA nesse caso;
+ * o que falha é "o skip link deve ser o primeiro elemento a receber o foco" (Skip Link, obrigatória) e a ordem
+ * de tabulação (e-MAG 1.4 / WCAG 2.4.3). Até a 3.4.4 este caso saía como ds-page-skip-link e um juiz o lia,
+ * com razão, como norma não violada. Fica fora de CHECK_GROUNDING (como o foco visível): sem tipo novo no
+ * gerador de aliases do eval.
+ */
+export const FOCUS_ORDER_IMPLEMENTS = [
+  "govbr-3.7.0-accessibility-skiplink-b0641993618f",
+  "govbr-3.7.0-component-skiplink-02c2e513d936",
+  "emag-1.4",
+];
 
 export function checkPageStructure(page: { url: string }, facts: PageFacts): Finding[] {
   const findings: Finding[] = [];
@@ -130,25 +161,27 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
       continue;
     }
 
-    // page-skip-link
+    // page-skip-link / page-focus-order
     if (constraint.implements.length === 0 || facts.linkCount === 0 || !facts.firstLink) continue;
     const first = facts.firstLink;
     // 3.4.4 (C12): o salto existe e é o 1º link, mas um tabindex positivo recebe o foco antes dele — a
-    // cláusula é sobre o primeiro a receber o foco, não sobre o primeiro link do DOM.
+    // cláusula é sobre o primeiro a receber o foco, não sobre o primeiro link do DOM. 3.5.0 (P2): vira
+    // ds-page-focus-order, com as cláusulas de "primeiro a receber o foco".
     const before = facts.positiveTabindexFirst;
-    if (first.skipsToContent && before && !before.isFirstLink) {
+    if (constraint.kind === "page-focus-order") {
+      if (!(first.skipsToContent && before && !before.isFirstLink)) continue;
       findings.push({
         id: nextFindingId(),
-        rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },
+        rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, wcag: "2.4.3", implements: constraint.implements },
         element,
         evidence: {
           observed: `O salto para o conteúdo (href="${first.href}") é o primeiro link, mas não o primeiro a receber foco: <${before.tag}${before.id ? ` id="${before.id}"` : ""}> com tabindex=${before.tabindex}${before.text ? ` ("${before.text}")` : ""} vem antes na ordem do Tab.`,
-          expected: "O salto para o conteúdo é o primeiro elemento a receber o foco (e-MAG 1.5); tabindex positivo põe outro elemento antes dele.",
+          expected: "O salto para o conteúdo é o primeiro elemento a receber o foco (Skip Link; e-MAG 1.4 / WCAG 2.4.3); tabindex positivo põe outro elemento antes dele.",
           data: {
-            region: "skip-link",
+            region: "focus-order",
             firstLinkHref: first.href,
             targetExists: first.targetExists,
-            expectedCondition: EXPECTED_CONDITIONS.skipLink,
+            expectedCondition: EXPECTED_CONDITIONS.skipLinkFirstFocus,
             focusedBefore: { tag: before.tag, tabindex: before.tabindex, id: before.id },
           },
         },

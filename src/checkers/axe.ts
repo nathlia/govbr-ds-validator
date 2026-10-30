@@ -35,7 +35,9 @@ const AXE_TO_EMAG: Record<string, string> = {
   "valid-lang": "3.2",
   "document-title": "3.3",
   "link-name": "3.5",
-  "button-name": "2.2",
+  // 3.5.0 (revisão Fable P5): nome de botão é e-MAG 1.1 / WCAG 4.1.2 (a 2.2 trata de scripts; 10 vereditos
+  // cegos leram "erro-normativo" na família do scan que citava a 2.2).
+  "button-name": "1.1",
   "aria-allowed-attr": "2.2",
   "aria-required-attr": "2.2",
   "aria-valid-attr": "2.2",

@@ -5,13 +5,14 @@
  */
 import type { Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
+import { pageLevelCodes, type NotJudgedItem } from "../scan/notJudged.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 export const OBSERVATION_PAGE_MAX_CHARS = 8_000;
 
 const CHECK_OMISSION_WHY = {
   tokens: "cores, fonte, raio e espaçamento fora do registro de tokens do DS não foram medidos neste estado.",
-  structure: "a tag raiz e o nome acessível dos componentes br-* e o indicador de foco visível não foram conferidos neste estado.",
+  structure: "a tag raiz e o nome acessível dos componentes br-*, o indicador de foco visível e o rótulo dos campos (placeholder no lugar do rótulo) não foram conferidos neste estado.",
   axe: "as regras do axe-core (WCAG) não rodaram neste estado.",
   page: "as regiões obrigatórias do Template Base (cabeçalho, rodapé) e o salto para o conteúdo não foram conferidos neste estado.",
 } as const;
@@ -94,7 +95,7 @@ export function checksRunFor(
   if (active.includes("structure") && recipe.components?.length) {
     omitted.push({
       check: "structure.components",
-      why: `a estrutura só foi conferida para ${[...recipe.components].sort().join(", ")}; os demais componentes br-* e o indicador de foco visível não foram conferidos neste estado.`,
+      why: `a estrutura só foi conferida para ${[...recipe.components].sort().join(", ")}; os demais componentes br-*, o indicador de foco visível e o rótulo dos campos não foram conferidos neste estado.`,
     });
   }
   // A chamada exata com SÓ o que faltou, na mesma receita (url, seletores, ações, chegada).
@@ -120,29 +121,37 @@ export function checksRunFor(
   return { executed, omitted, limits: limits(actionsApplied, viewport, false), coverageNote: MESSAGES["scan-coverage"], completeOmitted };
 }
 
-const INVESTIGATE_WHY =
-  "componente encontrado neste estado; regras dele com estratégia keyboard-interaction ou semantic não são medidas pelos checks executados";
-
 /**
- * §10 + §15.8: até 5 componentes na ordem em que aparecem no DOM, cada um com UM passo limitado
- * (get_component_spec). `unmeasured` conta as regras do componente nas estratégias que nenhum check
- * mede. Não é lista de tarefas nem de defeitos.
+ * §10 + §15.8; 3.5.0 (revisão Fable P1/P9): TODOS os componentes encontrados, ordenados pelas obrigações e
+ * proibições da base que nenhum check do oráculo mede (empate: ordem do DOM). Os 5 primeiros com o passo
+ * (a lista de verificação do componente); os demais por nome em `more`, na mesma ordem. Nunca encolhe abaixo
+ * da lista de nomes + `next`. São candidatas a medir antes de encerrar, não defeitos.
  */
-export function investigateFor(componentsInDomOrder: string[], scanId: string, unmeasured: (component: string) => Record<string, number>) {
+export function investigateFor(
+  componentsInDomOrder: string[],
+  scanId: string,
+  unmeasured: (component: string) => Record<string, number>,
+  strong: (component: string) => { strong: number; unmeasured: number } = () => ({ strong: 0, unmeasured: 0 }),
+) {
   if (!componentsInDomOrder.length) return undefined;
-  const items = componentsInDomOrder.slice(0, 5).map((component) => ({
+  const ranked = componentsInDomOrder
+    .map((component, i) => ({ component, i, s: strong(component) }))
+    .sort((a, b) => b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+  const items = ranked.slice(0, 5).map(({ component, s }) => ({
     component,
     stateRef: scanId,
+    requiredUnmeasured: s.unmeasured,
     unmeasured: unmeasured(component),
-    next: { tool: "get_component_spec", arguments: { component } },
+    // 3.5.0 (D-155): o passo é a lista de verificação (obrigações/proibições + como medir).
+    next: { tool: "get_component_spec", arguments: { component, view: "checklist" } },
   }));
-  const rest = componentsInDomOrder.slice(5);
+  const rest = ranked.slice(5).map((r) => r.component);
   return {
-    note: "Até 5 componentes encontrados neste estado, na ordem do DOM, cada um com um passo limitado. Não é lista de tarefas nem de defeitos.",
+    note: "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
     retrieval: "automatic" as const,
-    why: INVESTIGATE_WHY,
     items,
     more: rest.length ? { remaining: rest.length, components: rest } : null,
+    next: { tool: "get_component_spec", arguments: { component: ranked[0].component, view: "checklist" } },
     doNotRepeat: MESSAGES["scan-no-repeat"],
   };
 }
@@ -183,13 +192,37 @@ export function boundStrings<T>(value: T, maxString = 300, maxArray = 50, depth 
  * contagens), investigate, dicas/chaves de família — e, só como último recurso, os textos de
  * `checksRun.limits` e a `coverageNote` (ficam os códigos), porque são a orientação de honestidade
  * (o que nenhum check mede). Só então declara `exceedsMaxChars`. 3.4.2 (D-154): essa ordem; antes os
- * textos de limits saíam primeiro.
+ * textos de limits saíam primeiro. 3.5.0 (D-155): o investigate encolhe para nomes + next (nunca some) e, por último, `checksRun.pageLevel` → códigos.
  */
+/**
+ * 3.5.0 (revisão do coordenador): os blocos novos encolhem ANTES de tudo — os achados do scan têm prioridade
+ * na 1ª página (todo spec que o braço com ganhou veio deles). investigate → nomes + contagens; pageLevel →
+ * códigos + contagem + next (inteiro no ledger).
+ */
+function investigateNames(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: unknown; components?: string[] } | undefined;
+  if (!inv || inv.components) return null;
+  const names = [
+    ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
+    ...(inv.more?.components ?? []),
+  ];
+  return { ...r, investigate: { components: names, next: inv.next } };
+}
+
+function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; count?: number } } | undefined;
+  if (!cr?.pageLevel?.notMeasured?.length || cr.pageLevel.count !== undefined) return null;
+  return { ...r, checksRun: { ...cr, pageLevel: pageLevelCodes(cr.pageLevel, scanId) } };
+}
+
 export function enforceCeiling(response: Record<string, unknown>, maxChars: number, scanId: string): Record<string, unknown> {
   if (textSize(response) <= maxChars) return response;
   let out = { ...response };
   const squeezed: string[] = [];
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
+    // 3.5.0: os blocos novos cedem primeiro.
+    ["investigate → nomes + next", investigateNames],
+    ["checksRun.pageLevel → códigos (inteiro no ledger)", (r) => pageLevelCompact(r, scanId)],
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
@@ -220,8 +253,9 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
         return { ...r, coverage: { checks: c.checks, elementsInspected: c.elementsInspected, componentsFound: count("componentsFound"), actionsApplied: count("actionsApplied") } };
       },
     ],
-    ["investigate → removido", (r) => (r.investigate ? (({ investigate: _i, ...rest }) => rest)(r) : null)],
     ["familyHint/chaves → removidos", (r) => (({ familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, detailHint: _d, ...rest }) => rest)(r)],
+    // 3.5.0: contagens de deduplicação têm outra fonte (o ledger) e saem antes dos textos de honestidade.
+    ["deduplication → removido (no ledger)", (r) => (r.deduplication ? (({ deduplication: _d, ...rest }) => rest)(r) : null)],
     [
       "checksRun → códigos",
       (r) => {
@@ -231,9 +265,22 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
         return { ...r, checksRun: { ...rest, limits: (cr.limits ?? []).map((l) => l.code) } };
       },
     ],
+    // 3.5.0 (D-155): as pendências (notJudged) são a outra metade da honestidade do scan — encolhem só
+    // depois de tudo, e só para códigos, assunto e contagem (inteiras no ledger).
+    // 3.5.0: último recurso — as pendências ficam só como contagem + next (nunca somem).
+    [
+      "checksRun.pageLevel → contagem + next",
+      (r) => {
+        const cr = r.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown } } | undefined;
+        const pl = cr?.pageLevel;
+        if (!pl || (pl.notMeasured === undefined && pl.count !== undefined)) return null;
+        return { ...r, checksRun: { ...cr, pageLevel: { count: pl.count ?? pl.notMeasured?.length ?? 0, next: pl.next ?? pl.full } } };
+      },
+    ],
   ];
   for (const [label, transform] of steps) {
-    if (textSize(out) <= maxChars) break;
+    // 3.5.0: a lista `squeezed`, que vai junto, também conta (antes ela podia ser o que estourava o teto).
+    if (textSize({ ...out, squeezed }) <= maxChars) break;
     const next = transform(out);
     if (!next) continue;
     out = next;
@@ -432,6 +479,26 @@ function ensureFirstPageFamilies(
   let pager = page;
   const done: string[] = [];
   const stages: Array<[string, () => boolean]> = [
+    // 3.5.0 (revisão do coordenador): os blocos novos cedem antes de tudo; os achados têm prioridade.
+    ["investigate → nomes + contagens", () => {
+      const next = investigateNames(h);
+      if (!next) return false;
+      h = next;
+      return true;
+    }],
+    ["checksRun.pageLevel → códigos + next (inteiro no ledger)", () => {
+      const next = pageLevelCompact(h, scanId);
+      if (!next) return false;
+      h = next;
+      return true;
+    }],
+    ["checksRun.pageLevel → contagem + next", () => {
+      const cr = h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown } } | undefined;
+      const pl = cr?.pageLevel;
+      if (!pl || pl.notMeasured === undefined) return false;
+      h = { ...h, checksRun: { ...cr, pageLevel: { count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
+      return true;
+    }],
     ["observations → contagem + get_finding_details(view:observations)", () => {
       if (!obs?.length) return false;
       h = { ...h, observations: minimalObservations(obs, scanId) };
@@ -474,6 +541,21 @@ function ensureFirstPageFamilies(
           full: { tool: "get_finding_details", arguments: { scanId } },
         },
       };
+      return true;
+    }],
+    // 3.5.0 (revisão do coordenador): mais duas partes com continuação cedem antes de a página perder família —
+    // os ids do diff (get_finding_details view:diff) e as contagens de deduplicação (no ledger).
+    ["stateDiff.findings ids → get_finding_details(view:diff)", () => {
+      const diff = h.stateDiff as { findings?: { addedIds?: unknown[]; removedIds?: unknown[] } } | undefined;
+      if (!diff?.findings || ((diff.findings.addedIds?.length ?? 0) + (diff.findings.removedIds?.length ?? 0)) === 0) return false;
+      const { addedIds: _a, removedIds: _r, ...counts } = diff.findings as Record<string, unknown>;
+      h = { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
+      return true;
+    }],
+    ["deduplication → removido (no ledger)", () => {
+      if (!h.deduplication) return false;
+      const { deduplication: _d, ...rest } = h;
+      h = rest;
       return true;
     }],
     ["investigate.items → investigate.more", () => {

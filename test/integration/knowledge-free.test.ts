@@ -50,7 +50,11 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "f358152ab77b8b6930687c1b12206f3821170600d52
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "adc4266162781cb6239ee4e84ae852889ceeb209556bf7270c267b015884c6b2";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "61177aa7f89b77801e4d8236a376361ffe4c57d574e3e67bf23678174b397f38";
+// 3.4.0–3.4.4: adc4266162781cb6239ee4e84ae852889ceeb209556bf7270c267b015884c6b2. 3.5.0 (D-155) muda de propósito:
+// get_component_spec ganha view ('spec' | 'checklist') e cursor; verify_finding (descrição de evidence.data) lista as
+// condições form-field-label-not-placeholder-only, skip-link-first-to-receive-focus, decorative-icon-aria-hidden e link-title-not-repeating-text; get_page_rules cita
+// ds-page-focus-order. O perfil knowledge-free não muda.
 // 3.3.0: c4066eab839eb59d092e68b55c3b75337e7a117d9014aa7b054314ad46b7e297. 3.4.0 (B7): ação `navigate` em scan_page/verify_finding.
 // 3.2.0: f15292681d18f1f516373e741e3e03911b32acc207ba6813cde046a1d33ebf60. 3.3.0 (NAT-109) muda de propósito o
 // get_ds_rules (sem o parâmetro retrieval, D-152; descrições mais curtas; maxLength em id/ids/component/query) e o get_design_tokens (hex aceita
@@ -217,7 +221,10 @@ describe("superfície do perfil knowledge-free", () => {
     await kf.close();
     const ev = await connect("evaluation");
     expect(ev.getInstructions()).toContain("get_ds_rules");
-    expect(ev.getInstructions()!.length).toBeLessThan(1200);
+    // 3.5.0 (D-155; revisão Fable P1/P7/P8/P9): pendências do scan, "pergunte antes de descartar", força da
+    // norma citada e critério de parada pela checklist — o teto do texto passa de 1.200 para 1.600.
+    expect(ev.getInstructions()!.length).toBeLessThan(1600);
+    expect(ev.getInstructions()).toContain("view checklist");
     await ev.close();
   });
 

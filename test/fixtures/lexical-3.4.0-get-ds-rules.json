@@ -1,5 +1,5 @@
 {
-  "note": "get_ds_rules da 3.4.0 (D-153, govbr-lexical/1.3.0, vocab-1.2.0, kb-relations-1.1.0, routing-1.0.1), perfil evaluation, via MCP: sha256 do texto de cada resposta; mesmas consultas da fixture 3.3.0. Mudanças de propósito (lista única A1–A12): índice do sucessor com o título do registro histórico, fallback por distância de edição, diretrizes de codificação HTML com peso menor quando há componente em escopo e a consulta não fala de marcação, gênero mínimo/máxima no vocabulário; blocos related (kb-relations), roteamento em next, lacuna só-permissão, registryRefs para aria-*/role sem correspondência; listagem em faixas (prosa que obriga → outra prosa → linhas de tabela). 3.4.1 (revisão independente): kb-relations-1.1.0 (kind documented/inferred, nota nas inferidas, trecho do Button com a alternativa <a>) e routing-1.0.1 (#id não é cor, 'antes de' não é posição, <a> → 'link âncora').",
+  "note": "get_ds_rules da 3.4.0 (D-153, govbr-lexical/1.3.0, vocab-1.2.0, kb-relations-1.1.0, routing-1.0.1), perfil evaluation, via MCP: sha256 do texto de cada resposta; mesmas consultas da fixture 3.3.0. Mudanças de propósito (lista única A1–A12): índice do sucessor com o título do registro histórico, fallback por distância de edição, diretrizes de codificação HTML com peso menor quando há componente em escopo e a consulta não fala de marcação, gênero mínimo/máxima no vocabulário; blocos related (kb-relations), roteamento em next, lacuna só-permissão, registryRefs para aria-*/role sem correspondência; listagem em faixas (prosa que obriga → outra prosa → linhas de tabela). 3.4.1 (revisão independente): kb-relations-1.1.0 (kind documented/inferred, nota nas inferidas, trecho do Button com a alternativa <a>) e routing-1.0.1 (#id não é cor, 'antes de' não é posição, <a> → 'link âncora'). 3.5.0 (D-155; revisão Fable P2/P6): kb-relations-1.2.0 (R-05..R-07, placeholder × rótulo e e-MAG 6.2 ligados ao Input) e a restrição citável ds-page-focus-order mudam de propósito as respostas listadas em changed35.",
   "source": "nat109-busca",
   "steps": [
     {
@@ -48,7 +48,7 @@
       },
       "isError": false,
       "chars": 6526,
-      "sha256": "6741ad64f124e863c4c091dbe8104f51a9e79bec37b3fec598ba90161ba6313b"
+      "sha256": "f156d81d5c9037318160b7c3cf70ff151fb27616d684846398da68dff08d3010"
     },
     {
       "args": {
@@ -58,7 +58,7 @@
       },
       "isError": false,
       "chars": 6236,
-      "sha256": "fa33362f8eee991bab2c4cc8656f26f0b1f3bfff69d4066fd2c790c2654bf841"
+      "sha256": "33d4505507cad021e7778369f2d38cecf7db038646142825d2cb6ad7d84a911b"
     },
     {
       "args": {
@@ -101,7 +101,7 @@
       },
       "isError": false,
       "chars": 5931,
-      "sha256": "32e4bd0679fc410efbe2934f7da1259a1b19fea25d68e37ac35224157572a796"
+      "sha256": "ce747c4b60c79349cf26bdb4700ff99a627944c4ff1608ecc6a9d184ec709b02"
     },
     {
       "args": {
@@ -178,7 +178,7 @@
       },
       "isError": false,
       "chars": 5575,
-      "sha256": "fc4c5680dd258f204d529985711eccb853c0b5b2cfcb4321a37ea6a7baa7c0fa"
+      "sha256": "a89f3edfa77afcf51614af87c1be49bd95ccb987eb1e9c0e74d3976e3f64eabc"
     },
     {
       "args": {
@@ -245,7 +245,7 @@
       },
       "isError": false,
       "chars": 2204,
-      "sha256": "ea1d258ca362acb5aa73953d1139bd686c4152912ebe72a47960acf3619f2942"
+      "sha256": "37fe1069ffe7b7a36891b6f5f833b2a1be63c7fec5d7f6d6e5b8bb561a37ca40"
     },
     {
       "args": {
@@ -256,7 +256,7 @@
       },
       "isError": false,
       "chars": 3671,
-      "sha256": "68c2f36279945117168f43de70bb39d4b3211e075b8129028365a10f4770b139"
+      "sha256": "7bd4b5de7b7f4eb9be093e9fda16be508a29762a3f4099bdbd8130545dc574c2"
     },
     {
       "args": {},
@@ -281,6 +281,36 @@
       "isError": true,
       "chars": 573,
       "sha256": "ca5dc8a96a8a8a1e56429aa837d5dce43eaa2bac044d4e35601e48dc50dfcbae"
+    }
+  ],
+  "changed35": [
+    {
+      "query": "rótulo do campo",
+      "component": "input",
+      "include_evidence": true
+    },
+    {
+      "query": "rotulo do campo",
+      "component": "br-input",
+      "vocabulary": false
+    },
+    {
+      "query": "botão primário único por tela",
+      "component": "button"
+    },
+    {
+      "query": "cor",
+      "limit": 3
+    },
+    {
+      "component": "button",
+      "limit": 5
+    },
+    {
+      "component": "button",
+      "force": "required",
+      "detail": "brief",
+      "limit": 5
     }
   ]
 }

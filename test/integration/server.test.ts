@@ -125,13 +125,13 @@ describe("surface", () => {
 
   it("get_page_rules publishes the citable page constraints with their norms and source excerpts (2.7.0)", async () => {
     const index = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: {} })));
-    expect(index.constraints.map((c: { id: string }) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-skip-link"]);
+    expect(index.constraints.map((c: { id: string }) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-focus-order", "ds-page-skip-link"]);
     const footer = index.constraints.find((c: { id: string }) => c.id === "ds-page-footer");
     expect(footer.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
     expect(footer.source.excerpt).toContain("Área de Rodapé (Obrigatório)");
     expect(footer.claim.expectedCondition).toBe("template-base-region-present");
     const structure = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "page_structure" } })));
-    expect(structure.constraints).toHaveLength(3);
+    expect(structure.constraints).toHaveLength(4);
     const forms = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "form_patterns" } })));
     expect(forms.constraints).toBeUndefined();
   });
@@ -604,7 +604,9 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form } } })));
     // 3.4.0 (A12): kb-relations liga a e-MAG 1.2 (global) ao Button → a global relacionada abre a alternância.
     const firstGroups = new Set(data.results.slice(0, 5).map((c: { why: { matched: string[] } }) => c.why.matched[0]));
-    expect([...firstGroups].sort()).toEqual([...form.map((c) => `componente:${c}`), "relacionado:button@kb-relations-1.1.0"].sort());
+    // 3.5.0 (kb-relations-1.2.0, P6): o Input (1º observado) agora tem ligações (placeholder × rótulo) e abre a
+    // alternância das globais relacionadas antes do Button.
+    expect([...firstGroups].sort()).toEqual([...form.map((c) => `componente:${c}`), "relacionado:input@kb-relations-1.2.0"].sort());
     expect(data.groups).toBeUndefined();
     expect(data.page.cursor).toMatch(/^c1\./);
     const page2 = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { context: { components: form }, cursor: data.page.cursor } })));

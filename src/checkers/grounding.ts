@@ -104,10 +104,15 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
       "(required) — a tag raiz é anatomia.",
   },
   "structure-accessible-name": {
-    implements: ["emag-2.2"],
+    // 3.5.0 (revisão Fable P5): até a 3.4.4 era e-MAG 2.2 ("objetos programáveis"), que trata de scripts, não
+    // de nome de controle — 10 vereditos cegos de "erro-normativo" na tela B. A base liga o nome/papel/valor
+    // (WCAG 4.1.1/4.1.2) à Recomendação 1.1 do e-MAG pelo registro 7e6420514860; esse id é LEGADO na base literal
+    // (substituído pelo título f12b1bae5784, força recommended), por isso a norma nomeada é a recomendação e-MAG
+    // inteira (emag-1.1), citada com wcag 4.1.2 — o critério que o achado mede.
+    implements: ["emag-1.1"],
     basis:
-      "e-MAG 2.2, garantir que os objetos programáveis sejam acessíveis. Já era citada " +
-      "corretamente antes do D-27 — é o precedente que o resto passou a seguir.",
+      "e-MAG 1.1 'Respeitar os Padrões Web', que a base liga à WCAG 4.1.2 (Name, Role, Value; registro " +
+      "7e6420514860, hoje legado): controle interativo sem nome acessível não expõe o nome. Citada com wcag 4.1.2.",
   },
   "page-header": {
     implements: ["govbr-3.7.0-template-global-19f93475dc5e"],
@@ -158,7 +163,7 @@ export function podeVirarAchado(kind: CheckKind): boolean {
 /**
  * 2.13.0 (NAT-85) — fundamentação das verificações contextuais (P1 associações, P2 anatomia, P3
  * foco em transições). Ficam FORA de `CHECK_GROUNDING` de propósito: estes achados citam o id
- * normativo diretamente (como `structure-accessible-name` cita `emag-2.2`), então não há ponte de
+ * normativo diretamente (como `structure-accessible-name` cita `emag-1.1`), então não há ponte de
  * vocabulário a gerar, e o gerador de aliases do eval (que recusa tipo não mapeado) não muda.
  * As listas de regras aceitas por condição estão em `verify/contextual.ts`; o teste de
  * fundamentação confere que cada id existe e é obrigatório ou proibido na base servida.

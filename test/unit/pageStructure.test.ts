@@ -27,7 +27,7 @@ function facts(overrides: Partial<PageFacts> = {}): PageFacts {
 describe("pageConstraints — o que get_page_rules publica", () => {
   it("publica cabeçalho, rodapé e salto para o conteúdo, cada um com norma existente (D-27)", () => {
     const constraints = pageConstraints();
-    expect(constraints.map((c) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-skip-link"]);
+    expect(constraints.map((c) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-focus-order", "ds-page-skip-link"]);
     for (const constraint of constraints) {
       expect(constraint.implements.length).toBeGreaterThan(0);
       for (const id of constraint.implements) {

@@ -4,6 +4,7 @@
  * do motor (retrieval.ts) ou a do adaptador de contexto (applicability.ts); este módulo só decide o
  * que sai, em que formato e dentro de que orçamento.
  */
+import { lostExceptionOf } from "../data/lostExceptions.js";
 import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
 import { NORMATIVE_FORCES, getKnowledgeBase } from "../data/knowledge.js";
 import { normativeUnit, normativeUnitRef, legacyResolution, emagUnits } from "../data/normativeUnits.js";
@@ -230,6 +231,7 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     more: moreOf(rule),
     ...(main.conflicts?.length ? { conflicts: main.conflicts } : {}),
     ...(table ? { note: { code: "table-row" as const } } : {}),
+    ...(lostExceptionOf(rule) ? { condition: lostExceptionOf(rule) } : {}),
   };
 }
 
@@ -569,8 +571,11 @@ export function indexItem(rule: KnowledgeRule, n: number) {
  * sai como propriedade da implementação, sem a força da tabela (o registro por id a mantém).
  */
 export function asImplementationProperty<T extends Record<string, unknown>>(rule: KnowledgeRule, item: T): T {
-  if (!isTableRow(rule.originalText ?? "")) return item;
-  return { ...item, kind: "implementation-property", force: null, modality: IMPLEMENTATION_PROPERTY };
+  // 3.5.0 (revisão, HIGH 2): exceção que a cláusula perdeu em relação ao legado (data/lostExceptions.ts).
+  const lost = lostExceptionOf(rule);
+  const withCondition = lost ? { ...item, condition: lost } : item;
+  if (!isTableRow(rule.originalText ?? "")) return withCondition;
+  return { ...withCondition, kind: "implementation-property", force: null, modality: IMPLEMENTATION_PROPERTY };
 }
 
 /**
@@ -872,6 +877,7 @@ export function idResponse(rule: KnowledgeRule, clauseCursor: number | undefined
     return {
       ...base,
       rule,
+      ...(lostExceptionOf(rule) ? { condition: lostExceptionOf(rule) } : {}),
       normativeContext: { ...dedupedUnit, adjacentClauses: clauses, totalAdjacent: adjacentClauses.length, nextClauseCursor: more ? end : null },
       legacyResolution: legacyResolution(rule) ?? null,
       next,

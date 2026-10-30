@@ -478,7 +478,7 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
 
   it("the summary and evidence projections the agent reads carry implements", async () => {
     for (const detail of ["summary", "evidence"]) {
-      const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["structure", "page"], view: "findings", detail } })));
+      const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["structure", "page"], view: "findings", detail, maxChars: 100_000 } })));
       const tag = (scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag");
       expect(tag?.rule.implements, detail).toEqual(["govbr-3.7.0-component-global-e30aab6e9a68"]);
     }

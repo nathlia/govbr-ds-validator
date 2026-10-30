@@ -62,7 +62,7 @@ describe("A2 — a regra de paleta 21b1a2733f7b entra quando a consulta trata de
     expect(r.results.length).toBe(5);
     const item = r.related.items.find((i: { id: string }) => i.id === `${P}foundation-global-21b1a2733f7b`);
     expect(item).toMatchObject({ relation: "R-04", next: { tool: "get_ds_rules", arguments: { id: `${P}foundation-global-21b1a2733f7b` } } });
-    expect(r.related.version).toBe("kb-relations-1.1.0");
+    expect(r.related.version).toBe("kb-relations-1.2.0");
     expect(r.messages["kb-relation"]).toBe(MESSAGES["kb-relation"]);
   });
 });
@@ -249,7 +249,7 @@ describe("A12 — ligações kb-relations (paginação → estados WAI-ARIA; bot
   it("context{pagination}: a regra WAI-ARIA entra como relação da camada, não do registro", async () => {
     const r = await call("get_ds_rules", { context: { components: ["pagination"] } });
     const card = r.results.find((c: { citeAs: string }) => c.citeAs === `${P}accessibility-global-5817ddd685a6`);
-    expect(card.why.matched).toContain("relacionado:pagination@kb-relations-1.1.0");
+    expect(card.why.matched).toContain("relacionado:pagination@kb-relations-1.2.0");
     expect(card.why.relation).toBe("related");
   });
   it("spec do button traz R-02 (e-MAG 1.2, HTML semântico)", async () => {

@@ -11,7 +11,10 @@ import { checkFocusIndicators } from "../checkers/focusIndicator.js";
 import { FOCUSABLE_SELECTOR, measureFocusIndicators } from "../evidence/focusIndicator.js";
 import { ANATOMY_ROOT_SELECTOR, checkAnatomy } from "../checkers/anatomy.js";
 import { collectAnatomy } from "../evidence/context.js";
-import { inspectPageStructure } from "../evidence/pageFacts.js";
+import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
+import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
+import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
+import { notJudgedFor, type NotJudgedItem } from "./notJudged.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
@@ -111,6 +114,11 @@ export interface PageScanResult {
     merged: number;
     key: string;
   };
+  /**
+   * 3.5.0 (D-155): o que está nesta página e nenhum check julgou — pendências para o agente (scan/notJudged.ts).
+   * Ausente no perfil knowledge-free.
+   */
+  notJudged?: NotJudgedItem[];
 }
 
 /**
@@ -216,6 +224,45 @@ export async function reproduceState(
 export function pageLevelFirst(findings: Finding[]): Finding[] {
   const rank = (f: Finding) => (f.rule.source === "govbr-ds-page" ? 0 : f.element.locator === "html" ? 1 : 2);
   return findings.map((f, i) => ({ f, i })).sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i).map(({ f }) => f);
+}
+
+/** Regras do axe que reprovam controle sem nome acessível — a mesma condição da estrutura "só ícone". */
+const AXE_NAME_RULES = new Set(["button-name", "link-name", "aria-command-name", "input-button-name"]);
+
+/**
+ * 3.5.0 (revisão Fable P5): achados de nome acessível da estrutura (só ícone) cujo elemento o axe já reprovou
+ * por uma regra de nome. Os localizadores têm formatos diferentes (o do axe e o do inspect); a identidade é
+ * decidida no navegador, resolvendo os dois até o nó.
+ */
+async function sameElementDuplicates(page: Page, findings: Finding[]): Promise<Set<Finding>> {
+  const structural = findings.filter((f) => f.rule.source !== "axe-core" && f.evidence.data?.hasIconOnly === true);
+  const axeNames = findings.filter((f) => f.rule.source === "axe-core" && AXE_NAME_RULES.has(f.rule.id));
+  if (!structural.length || !axeNames.length) return new Set();
+  const same = await page.evaluate(
+    ({ a, b, step }: { a: string[]; b: string[]; step: string }) => {
+      const resolve = (locator: string): Element | null => {
+        try {
+          let roots: Array<Document | ShadowRoot> = [document];
+          let found: Element[] = [];
+          const hops = locator.split(` ${step} `);
+          hops.forEach((hop, i) => {
+            found = roots.flatMap((r) => Array.from(r.querySelectorAll(hop)));
+            if (i < hops.length - 1) roots = found.map((el) => el.shadowRoot).filter((r): r is ShadowRoot => Boolean(r));
+          });
+          return found.length === 1 ? found[0] : null;
+        } catch {
+          return null;
+        }
+      };
+      const axeEls = b.map(resolve).filter((el): el is Element => el !== null);
+      return a.map((loc) => {
+        const el = resolve(loc);
+        return el !== null && axeEls.includes(el);
+      });
+    },
+    { a: structural.map((f) => f.element.locator), b: axeNames.map((f) => f.element.locator), step: ">>>" },
+  );
+  return new Set(structural.filter((_, i) => same[i]));
 }
 
 /** 3.4.0 (B9): teto de elementos focáveis medidos por scan. */
@@ -389,9 +436,37 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
 
     // 2.7.0: regiões obrigatórias do Template Base e salto para o conteúdo — fatos do documento,
     // não de um elemento; a ausência de um rodapé não aparece em evidência por elemento.
+    // 3.5.0: os fatos do documento são lidos sempre — também alimentam as pendências (notJudged).
+    const facts: PageFacts = await inspectPageStructure(page, request.url);
     if (checks.includes("page")) {
-      rawFindings.push(...checkPageStructure({ url: request.url }, await inspectPageStructure(page, request.url)));
+      rawFindings.push(...checkPageStructure({ url: request.url }, facts));
     }
+
+    // 3.5.0 (D-155, 4a): campos de formulário — de onde vem o rótulo. Com seletores, só os do escopo.
+    const scoped = normalized.selectors.length > 0;
+    // 3.5.0 (revisão, LOW): num scan com seletores, uma leitura só da região serve campos, controles e tabelas.
+    const region = scoped ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements : [];
+    const fieldEvidence = scoped
+      ? region.filter((el) => ["input", "textarea", "select"].includes(el.tagName))
+      : (await inspectPageComputedStyles(page, request.url, FORM_FIELD_SELECTOR, [])).elements;
+    const placeholderChecked = checks.includes("structure") && normalized.components.length === 0;
+    if (placeholderChecked) {
+      const labels = checkPlaceholderLabels({ url: request.url }, fieldEvidence);
+      rawFindings.push(...labels.findings);
+      observations.push(...labels.observations);
+      // 3.5.0 (C03): ícone decorativo exposto e title que repete o link.
+      const controls = scoped ? region.filter(isControl) : (await inspectPageComputedStyles(page, request.url, CONTROL_SELECTOR, [])).elements;
+      const icons = checkDecorativeIcons({ url: request.url }, controls);
+      rawFindings.push(...icons.findings);
+      observations.push(...icons.observations);
+    }
+    const tableEvidence = scoped ? region.filter((el) => el.tagName === "table") : (await inspectPageComputedStyles(page, request.url, "table", [])).elements;
+    const tableFacts = facts.tables ?? [];
+    const unnamedTables = scoped || tableFacts.length !== tableEvidence.length
+      // escopo ou contagens diferentes: a leitura por localizador decide (caption não é colhido; nome por atributos).
+      ? tableEvidence.filter((el) => el.rendered !== false && !["presentation", "none"].includes((el.attributes.role ?? "").toLowerCase()) &&
+          !/<caption[\s>]/i.test(el.outerHTML) && !el.attributes.ariaLabel?.trim() && !el.content.labelledbyText?.trim() && !el.attributes.title?.trim()).map((el) => el.locator)
+      : tableEvidence.filter((_, i) => tableFacts[i].rendered && !tableFacts[i].presentational && !tableFacts[i].named).map((el) => el.locator);
 
     let axe: PageScanResult["coverage"]["axe"];
     if (checks.includes("axe")) {
@@ -401,6 +476,14 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         normalized.selectors.length ? normalized.selectors.join(", ") : undefined
       );
       rawFindings.push(...result.findings);
+      // 3.5.0 (revisão Fable P5): o mesmo controle sem nome visto pelo axe (button-name & cia.) e pela
+      // estrutura (só ícone) é um defeito só — fica o do axe; o da estrutura sai do lote.
+      const duplicates = await sameElementDuplicates(page, rawFindings);
+      if (duplicates.size) {
+        const kept = rawFindings.filter((f) => !duplicates.has(f));
+        rawFindings.length = 0;
+        rawFindings.push(...kept);
+      }
       axe = {
         engine: result.engine,
         passes: result.passeCount,
@@ -417,12 +500,21 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     }
 
     const deduplicated = deduplicateFindings(rawFindings);
+    const notJudged = notJudgedFor({
+      facts,
+      pageWide: !scoped,
+      fields: fieldEvidence.map((el) => ({ locator: el.locator, source: labelSourceOf(el) })),
+      unnamedTables,
+      placeholderChecked,
+      axeRan: checks.includes("axe"),
+    });
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
       stateFingerprint,
       findings: pageLevelFirst(deduplicated.findings),
       observations,
+      ...(notJudged.length ? { notJudged } : {}),
       coverage: {
         checks,
         selectors: normalized.selectors,

@@ -9,7 +9,7 @@ import { analyzeQuery, editDistance, isMarkupQuestion, rankRules, getVocabulary 
 import { routeSteps } from "../../src/responses/routing.js";
 import { listingBand, listingOrder } from "../../src/responses/retrieval.js";
 
-const FILE = new URL("../../data/knowledge/relations/kb-relations-1.1.0.json", import.meta.url);
+const FILE = new URL("../../data/knowledge/relations/kb-relations-1.2.0.json", import.meta.url);
 const P = "govbr-3.7.0-";
 
 afterEach(() => {
@@ -17,10 +17,10 @@ afterEach(() => {
   resetRelationsCache();
 });
 
-describe("kb-relations-1.1.0 (A12): cada ligação com cláusula literal da base", () => {
+describe("kb-relations-1.2.0 (A12): cada ligação com cláusula literal da base", () => {
   it("valida na carga: regra e cláusulas existem e cada trecho está no texto", () => {
     const relations = getRelations()!;
-    expect(relations.version).toBe("kb-relations-1.1.0");
+    expect(relations.version).toBe("kb-relations-1.2.0");
     expect(relations.knowledgeVersion).toBe(getKnowledgeBase().meta.knowledgeVersion);
     for (const link of relations.links) expect(link.basis.length).toBeGreaterThan(0);
   });

@@ -48,6 +48,15 @@ export interface PageFacts {
    * `isFirstLink`: é o próprio primeiro link.
    */
   positiveTabindexFirst?: { tag: string; tabindex: number; text: string; id: string | null; isFirstLink: boolean } | null;
+  /**
+   * 3.5.0 (D-155): fatos para as pendências do scan (`notJudged`), nunca para achado. `h1`: texto do primeiro
+   * `<h1>` exibido (DOM claro e shadow roots abertos); `siteTitle`: o nome do sítio no cabeçalho do DS
+   * (`.header-title` ou o atributo `title` de `<br-header>`); `tables`: cada `<table>` na ordem de
+   * `inspectPageComputedStyles("table")`, com `named` = caption, aria-label, aria-labelledby ou title com texto.
+   */
+  h1?: string | null;
+  siteTitle?: string | null;
+  tables?: Array<{ rendered: boolean; presentational: boolean; named: boolean }>;
 }
 
 export async function inspectPageStructure(page: Page, url: string): Promise<PageFacts> {
@@ -121,7 +130,39 @@ export async function inspectPageStructure(page: Page, url: string): Promise<Pag
         skipsToContent: targetExists,
       };
     }
+    // 3.5.0 (D-155): mesma ordem de inspect.ts (querySelectorAll da raiz, depois cada shadow root aberto).
+    const deepAll = (selector: string): Element[] => {
+      const out: Element[] = [];
+      const visit = (root: Document | ShadowRoot) => {
+        out.push(...Array.from(root.querySelectorAll(selector)));
+        for (const el of Array.from(root.querySelectorAll("*"))) if (el.shadowRoot) visit(el.shadowRoot);
+      };
+      visit(document);
+      return out;
+    };
+    const shown = (el: Element) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+    const clean = (value: string | null | undefined) => (value ?? "").trim().replace(/\s+/g, " ");
+    const h1El = deepAll("h1").find(shown);
+    const siteEl = deepAll(".br-header .header-title, .header-title").find((el) => clean(el.textContent));
+    const brHeader = deepAll("br-header").find((el) => clean(el.getAttribute("title")));
+    const tables = deepAll("table").map((t) => {
+      const root = t.getRootNode() as Document | ShadowRoot;
+      const labelledby = clean(t.getAttribute("aria-labelledby"))
+        .split(" ")
+        .filter(Boolean)
+        .map((id) => clean(root.getElementById(id)?.textContent))
+        .join("");
+      const role = (t.getAttribute("role") ?? "").toLowerCase();
+      return {
+        rendered: shown(t),
+        presentational: role === "presentation" || role === "none",
+        named: Boolean(clean(t.querySelector(":scope > caption")?.textContent) || clean(t.getAttribute("aria-label")) || labelledby || clean(t.getAttribute("title"))),
+      };
+    });
     return {
+      h1: h1El ? clean(h1El.textContent).slice(0, 120) : null,
+      siteTitle: siteEl ? clean(siteEl.textContent).slice(0, 120) : brHeader ? clean(brHeader.getAttribute("title")).slice(0, 120) : null,
+      tables,
       lang: document.documentElement.getAttribute("lang"),
       title: document.title,
       regions,

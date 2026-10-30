@@ -104,7 +104,11 @@ export const EvidenceSchema = z.object({
         `ds-token-radius=${EXPECTED_CONDITIONS.tokenRadius}; ds-token-spacing=${EXPECTED_CONDITIONS.tokenSpacing}; ` +
         `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}; ` +
         `ds-page-header|ds-page-footer (region + observedCount)=${EXPECTED_CONDITIONS.pageRegion}; ` +
-        `ds-page-skip-link (region + firstLinkHref)=${EXPECTED_CONDITIONS.skipLink}. ` +
+        `ds-page-skip-link (region + firstLinkHref)=${EXPECTED_CONDITIONS.skipLink}; ` +
+        `ds-page-focus-order (region 'focus-order' + firstLinkHref)=${EXPECTED_CONDITIONS.skipLinkFirstFocus}; ` +
+        `emag 6.2 | wcag 3.3.2 (form field whose only label is the placeholder)=${EXPECTED_CONDITIONS.placeholderOnlyLabel}; ` +
+        `decorative icon next to a control's text exposed to AT=${EXPECTED_CONDITIONS.decorativeIconHidden}; ` +
+        `emag 3.5 (link title repeats the link text)=${EXPECTED_CONDITIONS.linkTitleNotRepeated}. ` +
         "2.13.0 contextual conditions (verified live, in the state the actions reproduce; element.locator names the subject): " +
         `wcag 3.3.1 | emag 6.6 (+ errorMessage = selector of the error text the last action made appear)=${EXPECTED_CONDITIONS.errorItemIdentified}; ` +
         `wcag 3.3.1 | emag 6.6 (no error text at all)=${EXPECTED_CONDITIONS.errorDescribedInText}; ` +

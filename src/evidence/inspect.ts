@@ -324,7 +324,8 @@ export async function inspectPageComputedStyles(
           labelledbyText = labelledby
             .split(/\s+/)
             .filter(Boolean)
-            .map((id) => root.getElementById(id)?.textContent?.trim() ?? "")
+            // 3.5.0 (revisão, LOW): elemento referido só com aria-label também dá nome.
+            .map((id) => { const ref = root.getElementById(id); return ref ? ref.getAttribute("aria-label")?.trim() || ref.textContent?.trim() || "" : ""; })
             .filter(Boolean)
             .join(" ");
         }
@@ -340,6 +341,32 @@ export async function inspectPageComputedStyles(
           labelText = forLabel?.textContent?.trim() || null;
         }
         if (!labelText) labelText = el.closest("label")?.textContent?.trim() || null;
+
+        // 3.5.0 (C03, auditoria de mensurabilidade): ícones dentro de controle cujo nome vem do conteúdo, com texto
+        // fora deles, que não estão escondidos da tecnologia assistiva (aria-hidden="true", role none/presentation)
+        // nem nomeados (aria-label/aria-labelledby/title no ícone, que o tornaria informativo).
+        let exposedIcons = 0;
+        const controlRole = ["link", "menuitem", "menuitemcheckbox", "menuitemradio", "tab", "option", "switch", "treeitem"].includes((el.getAttribute("role") ?? "").toLowerCase());
+        if ((interactive || controlRole) && text && !el.getAttribute("aria-label")?.trim() && !el.getAttribute("aria-labelledby")?.trim()) {
+          for (const icon of Array.from(el.querySelectorAll("i, svg, span[class*='fa-'], span[class*='icon']"))) {
+            if ((icon.textContent ?? "").trim()) continue;
+            if (icon.closest("svg") !== icon && icon.closest("svg")) continue;
+            // Invólucro (ex.: <span class="icon"><i …></i></span>): quem é medido é o ícone de dentro.
+            if (icon.tagName.toLowerCase() !== "svg" && icon.querySelector("i, svg")) continue;
+            // <i>/<span> só desenha (e entra no nome) pelo conteúdo gerado: sem ::before/::after, não há ícone exposto.
+            if (icon.tagName.toLowerCase() !== "svg") {
+              const drawn = ["::before", "::after"].some((p) => { const c = getComputedStyle(icon, p).content; return !!c && c !== "none" && c !== "normal" && c !== '""'; });
+              if (!drawn) continue;
+            }
+            if (["aria-label", "aria-labelledby", "title"].some((a) => icon.getAttribute(a)?.trim())) continue;
+            let hidden = false;
+            for (let n: Element | null = icon; n && n !== el; n = n.parentElement) {
+              const role = (n.getAttribute("role") ?? "").toLowerCase();
+              if (n.getAttribute("aria-hidden") === "true" || role === "none" || role === "presentation") { hidden = true; break; }
+            }
+            if (!hidden && icon.getClientRects().length > 0) exposedIcons += 1;
+          }
+        }
 
         return {
           nameProbeIndex,
@@ -372,6 +399,7 @@ export async function inspectPageComputedStyles(
             labelledbyText,
             descendantAlt: descendantAlt || null,
             labelText,
+            ...(exposedIcons > 0 ? { exposedIcons } : {}),
           },
           inlineStyle: el.getAttribute("style"),
           authoredRaw,
@@ -390,11 +418,32 @@ export async function inspectPageComputedStyles(
                 let root = el.getRootNode();
                 while (root instanceof ShadowRoot) {
                   const host = root.host.tagName.toLowerCase();
-                  if (dsHosts.includes(host)) return { origin: "ds-web-component", originHost: host };
+                  if (dsHosts.includes(host)) {
+                    // 3.5.0 (D-155): o host recebeu da página um nome (label/aria-label/aria-labelledby)? Só
+                    // para campos de formulário: com o host nomeado, o rótulo interno é do componente.
+                    const field = ["input", "select", "textarea"].includes(el.tagName.toLowerCase());
+                    const named = field && ["label", "aria-label", "aria-labelledby"].some((a) => (root as ShadowRoot).host.getAttribute(a)?.trim());
+                    return { origin: "ds-web-component", originHost: host, ...(field ? { originHostNamed: Boolean(named) } : {}) };
+                  }
                   root = root.host.getRootNode();
                 }
                 return {};
               })()),
+          // 3.5.0 (D-155): fora da árvore de acessibilidade por aria-hidden="true" ou inert num ancestral
+          // (atravessando hosts de shadow root). Só aparece quando é verdade.
+          ...((() => {
+            let node: Element | null = el;
+            for (let depth = 0; node && depth < 60; depth += 1) {
+              if (node.getAttribute("aria-hidden") === "true" || node.hasAttribute("inert")) return true;
+              const parent: Element | null = node.parentElement;
+              if (parent) { node = parent; continue; }
+              const r = node.getRootNode();
+              node = r instanceof ShadowRoot ? r.host : null;
+            }
+            return false;
+          })()
+            ? { axHidden: true }
+            : {}),
         };
       });
     }, {

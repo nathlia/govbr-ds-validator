@@ -254,25 +254,34 @@ describe("get_ds_rules context — contract", () => {
 });
 
 describe("scan_page investigate on a neutral-domain fixture (3.0.0; normativeContext da 2.9.0)", () => {
-  it("lists up to 5 found components in DOM order, each with one bounded step, in profiles with norms", async () => {
+  it("lists ALL found components, by required clauses no check measures (ties in DOM order), each with the checklist step (3.5.0, revisão Fable P1)", async () => {
     const scan = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure"], limit: 5 });
     expect(scan.normativeContext).toBeUndefined();
     const inv = scan.investigate;
     expect(inv.retrieval).toBe("automatic");
     expect(inv.doNotRepeat).toMatch(/Não repita este scan/);
+    expect(inv.note).toMatch(/candidatas a medir antes de encerrar; não são defeitos/);
     const found: string[] = scan.coverage.componentsFound;
     expect(found).toEqual(expect.arrayContaining(["button", "input", "modal", "tag", "header"]));
-    // Ordem do DOM: a do coverage.componentsFound, sem ordenação alfabética.
-    expect(inv.items.map((i: { component: string }) => i.component)).toEqual(found.slice(0, 5));
-    expect(found[0]).toBe("skiplink");
-    if (found.length > 5) expect(inv.more).toEqual({ remaining: found.length - 5, components: found.slice(5) });
+    // Todos os encontrados, nenhum a mais nem a menos: itens + more.
+    const listed = [...inv.items.map((i: { component: string }) => i.component), ...(inv.more?.components ?? [])];
+    expect([...listed].sort()).toEqual([...found].sort());
+    // Ordem: obrigações sem medida decrescentes; empate na ordem do DOM.
+    const { unmeasuredStrongCount } = await import("../../src/tools/componentChecklist.js");
+    const counts = listed.map((c) => unmeasuredStrongCount(c).unmeasured);
+    for (let i = 1; i < counts.length; i++) {
+      expect(counts[i - 1]).toBeGreaterThanOrEqual(counts[i]);
+      if (counts[i - 1] === counts[i]) expect(found.indexOf(listed[i - 1])).toBeLessThan(found.indexOf(listed[i]));
+    }
     for (const item of inv.items) {
       expect(item.stateRef).toBe(scan.scanId);
-      expect(item.next).toEqual({ tool: "get_component_spec", arguments: { component: item.component } });
+      expect(item.requiredUnmeasured).toBe(unmeasuredStrongCount(item.component).unmeasured);
+      expect(item.next).toEqual({ tool: "get_component_spec", arguments: { component: item.component, view: "checklist" } });
     }
+    expect(inv.next).toEqual(inv.items[0].next);
     const followUp = await call(evaluation, inv.items[1].next.tool, inv.items[1].next.arguments);
-    expect(followUp.kind).toBe("component-spec");
-    expect(followUp.name).toBe(inv.items[1].component);
+    expect(followUp.kind).toBe("component-checklist");
+    expect(followUp.component).toBe(inv.items[1].component);
   });
 
   it("emits investigate only on the first page, not on cursor continuations", async () => {

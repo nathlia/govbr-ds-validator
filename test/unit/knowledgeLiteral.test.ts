@@ -122,8 +122,14 @@ describe("get_ds_rules on the literal version", () => {
 
   it("normative context retrieves the observed component's own literal rules", () => {
     const candidates = retrieveContextCandidates(filterRules({}), normalizeContext({ components: ["input"] }));
-    expect(candidates).toHaveLength(64);
-    expect(candidates.every((c) => c.rule.component === "input" && c.rule.force !== "example")).toBe(true);
+    // 3.5.0: 64 do próprio Input + 3 globais que a kb-relations-1.2.0 liga a ele (R-05..R-07: placeholder × rótulo, e-MAG 6.2).
+    expect(candidates).toHaveLength(67);
+    const own = candidates.filter((c) => c.rule.component === "input");
+    expect(own).toHaveLength(64);
+    expect(candidates.filter((c) => c.rule.component !== "input").map((c) => c.rule.id).sort()).toEqual(
+      ["govbr-3.7.0-accessibility-global-25887e6e360f", "govbr-3.7.0-pattern-global-62888bfde020", "govbr-3.7.0-pattern-global-aabbc9b63402"],
+    );
+    expect(candidates.every((c) => c.rule.force !== "example")).toBe(true);
     expect(candidates.some((c) => c.rule.normalizedRule.includes("ajuda contextual"))).toBe(true);
   });
 
@@ -141,6 +147,7 @@ describe("get_ds_rules on the literal version", () => {
 describe("previous-version ids stay resolvable", () => {
   it("every id the deterministic checkers implement resolves to a listed (non-legacy) rule", () => {
     const ids = new Set(Object.values(CHECK_GROUNDING).flatMap((g) => g.implements).filter((id) => id.startsWith("govbr-")));
+    // 3.5.0 (revisão Fable P5): o nome acessível passa a citar emag-1.1 (id e-MAG, fora desta contagem).
     expect(ids.size).toBe(6);
     for (const id of ids) {
       const rule = getRuleById(id);

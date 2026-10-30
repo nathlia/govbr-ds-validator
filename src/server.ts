@@ -142,6 +142,8 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
+import { notJudgedObservations, pageLevelBlock } from "./scan/notJudged.js";
+import { componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
@@ -789,7 +791,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   }, {
     // 3.3.0 (B-18): procedimento de uso das ferramentas deste perfil, sem conhecimento do DS.
     instructions: serverInstructions(new Set([
-      ...(hasNorms ? ["get_ds_rules"] : []),
+      ...(hasNorms ? ["get_ds_rules", "get_component_spec"] : []),
       ...(hasEvidence ? ["inspect_computed_styles"] : []),
       ...(hasDeterministic || knowledgeFree ? ["scan_page", "get_finding_details"] : []),
       ...(hasCombinedGate || knowledgeFree ? ["verify_finding"] : []),
@@ -1257,7 +1259,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link: regiões obrigatórias do Template Base e salto para o conteúdo), verificáveis pelo scan_page e pelo verify_finding.",
+        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order: regiões obrigatórias do Template Base, salto para o conteúdo e o salto como primeiro a receber o foco), verificáveis pelo scan_page e pelo verify_finding.",
       inputSchema: strictInput("get_page_rules", {
         category: z
           .enum([
@@ -1385,10 +1387,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .optional()
           .describe("Incluir UM fragmento HTML canônico (o primeiro, ou o nomeado em example); os demais nomes vêm em availableExamples"),
         example: z.string().max(120).optional().describe("Nome de um exemplo em availableExamples: devolve só ele"),
+        view: z
+          .enum(["spec", "checklist"])
+          .optional()
+          .describe("spec (padrão) = especificação; checklist = obrigações e proibições do componente na base, cada uma com o id citável e como medi-la (o que o oráculo mede e o que medir no navegador), com cursor"),
+        cursor: z.number().int().min(0).optional().describe("Continuação da checklist (nextCursor)"),
       }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_component_spec", async ({ component, include_examples, example }) => {
+    instrumentTool(telemetry, "get_component_spec", async ({ component, include_examples, example, view, cursor }) => {
       const specs = getComponentSpecs();
       const spec = Object.hasOwn(specs.components, component) ? specs.components[component] : undefined;
       if (!spec) {
@@ -1404,6 +1411,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
           next: didYouMean.length
             ? [step("request-detail", "repita com o id do componente", "get_component_spec", { component: didYouMean[0] })]
             : [step("request-detail", "escolha um nome em available e repita", null)],
+        });
+      }
+      // 3.5.0 (D-155, item 2): lista de verificação do componente (obrigações/proibições + como medir).
+      if (view === "checklist") {
+        if (example !== undefined || include_examples) {
+          return fail({
+            error: "view 'checklist' não traz exemplos: peça o exemplo à parte.",
+            errorCode: "invalid-combination",
+            field: example !== undefined ? "example" : "include_examples",
+            next: [step("request-detail", "a lista de verificação, sem exemplo", "get_component_spec", { component: spec.name, view: "checklist" })],
+          });
+        }
+        return ok(componentChecklist(spec.name, cursor ?? 0));
+      }
+      if (cursor !== undefined) {
+        return fail({
+          error: "cursor só vale com view 'checklist'.",
+          errorCode: "invalid-combination",
+          field: "cursor",
+          next: [step("request-detail", "a lista de verificação", "get_component_spec", { component: spec.name, view: "checklist", cursor })],
         });
       }
       // Defect awareness (D-10/Phase 2.4): the canonical examples of some
@@ -1470,6 +1497,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           // 3.4.0 (A1/A10): texto das cláusulas de prosa do componente; A12: ligações kb-relations.
           clauses: specClauses(spec.name),
           ...specRelated(spec.name),
+          // 3.5.0 (D-155): todas as obrigações/proibições do componente, com como medir cada uma.
+          checklist: { tool: "get_component_spec", arguments: { component: spec.name, view: "checklist" } },
           next: ruleNext.slice(0, 3),
         },
         // 3.4.4 (C13, D4): os valores aceitos de `part` no predicado de anatomia só apareciam no erro.
@@ -1701,8 +1730,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: result.coverage,
           state: result.state,
+          // 3.5.0 (revisão, MED): só a contagem fica no cabeçalho do ledger; os itens inteiros paginam como
+          // observações `not-judged` depois das observações do scan (get_finding_details view:observations, cursor).
+          ...(result.notJudged?.length ? { notJudged: { count: result.notJudged.length, codes: result.notJudged.map((i) => i.code), next: { view: "observations", cursor: result.observations.length, note: "get_finding_details(scanId, view:'observations', cursor) traz os itens inteiros" } } } : {}),
         });
-        observationStore.set(scanId, result.observations);
+        observationStore.set(scanId, [...result.observations, ...notJudgedObservations(result.notJudged ?? [], url)]);
         const stateDiff = compareToScanId && previousFindings
           ? {
               previousScanId: compareToScanId,
@@ -1721,7 +1753,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const summary = summarize(result.findings);
         const first = !cursor;
         // §10 + §15.8: investigate na ordem do DOM (coverage.componentsFound não é ordenado), 1ª página.
-        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor) : undefined;
+        // 3.5.0 (revisão Fable P1): todos os componentes encontrados, por obrigações/proibições sem medida.
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount) : undefined;
+        const executedChecks = (checks ?? ["tokens", "structure", "axe", "page"]) as string[];
         const head = {
           contract: CONTRACT,
           kind: "scan",
@@ -1733,12 +1767,17 @@ export function createServer(options: ServerOptions = {}): McpServer {
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: boundStrings(result.coverage),
-          checksRun: checksRunFor(
-            { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
-            result.coverage,
-            result.state.observed.viewport,
-            false,
-          ),
+          checksRun: {
+            ...checksRunFor(
+              { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
+              result.coverage,
+              result.state.observed.viewport,
+              false,
+            ),
+            // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
+            // nenhum check julgou — pendências, nunca veredito. Só encolhe como último recurso do teto.
+            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, result.notJudged ?? [], Boolean(components?.length)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
+          },
           summary,
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),

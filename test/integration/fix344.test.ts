@@ -150,9 +150,9 @@ describe("3.4.4 C3/C4/C5 — o que não é autoria da página vira observação,
     expect(radius.map((f) => f.element.locator).some((l) => l.includes("#menu"))).toBe(false);
     expect(radius.filter((f) => !/projetado|br-mural|em-contents/.test(f.element.locator)).length).toBe(1);
     // C5: botão só ícone do calendário embutido não é achado
-    expect(locs.some((l) => l.startsWith("emag-2.2") && !l.includes(">>>"))).toBe(false);
+    expect(locs.some((l) => l.startsWith("emag-1.1") && !l.includes(">>>"))).toBe(false);
     // o nome acessível vem do que a página passa ao host: <br-acao> sem rótulo continua achado
-    expect(r.findings.some((f) => f.rule.id === "emag-2.2" && f.element.locator.includes("br-button >>> button"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.id === "emag-1.1" && f.element.locator.includes("br-button >>> button"))).toBe(true);
 
     const outside = r.observations.filter((o) => o.kind === "outside-page-authorship");
     const reasons = new Set(outside.map((o) => o.data?.reason));
@@ -194,11 +194,17 @@ describe("3.4.4 C6 — foco visível: perda de cor e elemento invisível não in
 
 describe("3.4.4 C12 — o salto tem de ser o primeiro a receber foco", () => {
   it("tabindex positivo antes do salto é achado; sem ele, nada", async () => {
-    const com = (await scan("/tabindex", ["page"])).findings.filter((f) => f.rule.id === "ds-page-skip-link");
+    // 3.5.0 (revisão Fable P2): o caso é ds-page-focus-order ("primeiro a receber o foco"), não ds-page-skip-link
+    // ("primeiro link", que aqui é cumprida).
+    const all = (await scan("/tabindex", ["page"])).findings;
+    expect(all.filter((f) => f.rule.id === "ds-page-skip-link")).toHaveLength(0);
+    const com = all.filter((f) => f.rule.id === "ds-page-focus-order");
     expect(com).toHaveLength(1);
     expect(com[0].evidence.observed).toMatch(/tabindex=1/);
     expect(com[0].evidence.data?.focusedBefore).toEqual({ tag: "button", tabindex: 1, id: null });
-    expect((await scan("/sem-tabindex", ["page"])).findings.filter((f) => f.rule.id === "ds-page-skip-link")).toHaveLength(0);
+    expect(com[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-skiplink-b0641993618f", "govbr-3.7.0-component-skiplink-02c2e513d936", "emag-1.4"]);
+    expect(com[0].rule.wcag).toBe("2.4.3");
+    expect((await scan("/sem-tabindex", ["page"])).findings.filter((f) => f.rule.id.startsWith("ds-page-"))).toHaveLength(0);
   });
 });
 

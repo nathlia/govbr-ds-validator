@@ -10,8 +10,8 @@
           ]
         }
       },
-      "sha256": "5393911f0779e0efb6bd8966c7210412254a8e4381ae4a3af32c3a20fa0449b1",
-      "chars": 10906,
+      "sha256": "1fbbe8c2c52ab60e3698cf2274aedb29711ad95aac3f70064562a420e1982348",
+      "chars": 10935,
       "total": 48
     },
     {
@@ -30,8 +30,8 @@
           ]
         }
       },
-      "sha256": "aa21d6d45175ff2d26cdc15740c7d8592a85b94f9140cb7df954fc258c418916",
-      "chars": 11809,
+      "sha256": "eaf9f9473ffd11430e8d2fc3be0bd8d6d0356a300cd30f26a12d76a426820f0b",
+      "chars": 11838,
       "total": 264
     },
     {
@@ -43,8 +43,8 @@
         },
         "limit": 5
       },
-      "sha256": "e46f907234c6a30d6de7fec15331ae8b2a29ce2ea6408d3aa7da63ab6129fab3",
-      "chars": 9194,
+      "sha256": "799e2fad7280a2f4704351f9f77d1c68ba184e06737f04dd06f2a4a28455e21a",
+      "chars": 9223,
       "total": 24
     },
     {
@@ -57,8 +57,8 @@
         "query": "foco",
         "detail": "brief"
       },
-      "sha256": "f693379be8d4fd50f41abe214a86f4d2cc1e201d8642f92d809589e5b9d835a0",
-      "chars": 9391,
+      "sha256": "34f68725caa9aeba818a972d6aafc231f453afbda0fb592f4fbd7dfa1ca7ac0a",
+      "chars": 9420,
       "total": 5
     },
     {
@@ -87,8 +87,8 @@
         "detail": "full",
         "limit": 3
       },
-      "sha256": "6ddc864136a3b3ff8eda94326487acf24b2e23365e591ded8e4973c0254367f8",
-      "chars": 8092,
+      "sha256": "378542d9f0a6a01d4a790ef2432b75c155f763f0cc53c705bf59eb16bd152157",
+      "chars": 8121,
       "total": 67
     },
     {
@@ -105,9 +105,75 @@
         },
         "force": "required"
       },
-      "sha256": "6329b3463fc5770cb522fc217a2715cadd2bc4745414d7fd991f314afdde2b92",
-      "chars": 11719,
+      "sha256": "06170ff406e7fa9df2811168303dbb9dc7de91c847da171a252b1cc1622d00ac",
+      "chars": 11748,
       "total": 79
     }
-  ]
+  ],
+  "changed35": {
+    "note": "3.5.0: a lista de restrições de página citáveis ganhou ds-page-focus-order (única diferença, conferida por diff contra a 3.4.4).",
+    "shapes": [
+      {
+        "context": {
+          "components": [
+            "pagination"
+          ]
+        }
+      },
+      {
+        "context": {
+          "components": [
+            "input",
+            "datetimepicker",
+            "upload",
+            "button"
+          ],
+          "terms": [
+            "formulario",
+            "erro",
+            "obrigatorio"
+          ]
+        }
+      },
+      {
+        "context": {
+          "terms": [
+            "foco"
+          ]
+        },
+        "limit": 5
+      },
+      {
+        "context": {
+          "components": [
+            "modal"
+          ]
+        },
+        "query": "foco",
+        "detail": "brief"
+      },
+      {
+        "context": {
+          "regions": [
+            "header"
+          ]
+        },
+        "detail": "full",
+        "limit": 3
+      },
+      {
+        "context": {
+          "components": [
+            "table",
+            "checkbox"
+          ],
+          "terms": [
+            "rótulo",
+            "cabeçalho"
+          ]
+        },
+        "force": "required"
+      }
+    ]
+  }
 }

@@ -10,6 +10,7 @@
  */
 import { filterRules, type KnowledgeRule } from "../data/knowledge.js";
 import { relatedFor, relationsLabel } from "../data/relations.js";
+import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTableRow } from "../data/retrieval.js";
 import { isTitleRecord, listingOrder } from "../responses/retrieval.js";
 import { RESPONSE_BUDGET, textSize } from "../responses/contract.js";
@@ -53,7 +54,8 @@ export function specClauses(component: string, max = SPEC_CLAUSES_MAX) {
     total: rules.length,
     items: rules.slice(0, max).map((r) => {
       const { text, complete } = cut(plain(r.originalText), SPEC_CLAUSE_TEXT_MAX);
-      return { citeAs: r.id, force: r.force, modality: MODALITY[r.force] ?? "indefinido", heading: heading(r), text, complete };
+      const lost = lostExceptionOf(r);
+      return { citeAs: r.id, force: r.force, modality: MODALITY[r.force] ?? "indefinido", heading: heading(r), text, complete, ...(lost ? { condition: { code: lost.code, legacyId: lost.legacyId, text: lost.text } } : {}) };
     }),
     ...(rules.length > max
       ? { next: { tool: "get_ds_rules", arguments: { component, detail: "brief" } } }

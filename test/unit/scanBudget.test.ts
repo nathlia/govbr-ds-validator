@@ -41,8 +41,9 @@ describe("scan_page budget: the head counts (3.1.0)", () => {
       const obs = r.observations as { total: number; next?: { arguments: { view: string } } };
       expect(obs.total).toBe(13);
       expect(obs.next?.arguments.view).toBe("observations");
-      const inv = r.investigate as { items: unknown[]; more: { remaining: number; components: string[] } };
-      expect(inv.items.length + inv.more.remaining).toBe(6); // nothing dropped: moved to more
+      // 3.5.0: investigate cede primeiro e fica como lista de nomes (+ next); nada some.
+      const inv = r.investigate as { items?: unknown[]; more?: { remaining: number }; components?: string[] };
+      expect(inv.components ? inv.components.length : (inv.items?.length ?? 0) + (inv.more?.remaining ?? 0)).toBe(6);
       // The first family enters while it fits; past that the page starts at the continuation (cursor 0).
       const fams = r.families as unknown[];
       if (fams.length === 0) expect(r).toMatchObject({ nextCursor: 0, next: { tool: "get_finding_details", arguments: { scanId: "S-page-002", cursor: 0 } } });
@@ -110,15 +111,23 @@ describe("enforceCeiling: honesty texts are the last resort (3.4.2, D-154)", () 
   });
 
   it("limits become codes only when nothing else suffices, and squeezed follows the new order", () => {
-    const base = { ...envelope(2_000, 3_000), investigate: { items: ["x".repeat(300)] }, familyHint: "h".repeat(200) };
+    const next = { tool: "get_component_spec", arguments: { component: "tabela", view: "checklist" } };
+    const base = {
+      ...envelope(2_000, 3_000),
+      investigate: { note: "n", items: [{ component: "tabela", unmeasured: { semantic: 3 }, why: "x".repeat(300), next }], more: { remaining: 1, components: ["aviso"] }, next },
+      familyHint: "h".repeat(200),
+    };
     const r = enforceCeiling(base, 1_500, "S-page-001");
+    // 3.5.0 (revisão do coordenador): os blocos novos (investigate, pageLevel) cedem antes de tudo.
     expect(r.squeezed).toEqual([
+      "investigate → nomes + next",
       "state → essencial (inteiro no ledger)",
       "coverage → contagens",
-      "investigate → removido",
       "familyHint/chaves → removidos",
       "checksRun → códigos",
     ]);
+    // 3.5.0 (revisão Fable P1): o investigate nunca some — fica a lista de nomes, na ordem, e o next.
+    expect(r.investigate).toEqual({ components: ["tabela", "aviso"], next });
     expect(limitsOf(r)).toEqual(["no-state-order-position"]);
     expect((r.state as { full: unknown }).full).toEqual({ tool: "get_finding_details", arguments: { scanId: "S-page-001" } });
     expect((r.coverage as { componentsFound: number }).componentsFound).toBe(30);

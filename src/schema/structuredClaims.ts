@@ -12,6 +12,14 @@ export const EXPECTED_CONDITIONS = {
   /** 2.7.0: regiões obrigatórias do Template Base e o salto para o conteúdo (e-MAG 1.5). */
   pageRegion: "template-base-region-present",
   skipLink: "first-link-skips-to-content",
+  /** 3.5.0 (revisão Fable P2): o salto é o primeiro elemento a receber o foco (nenhum tabindex>0 antes). */
+  skipLinkFirstFocus: "skip-link-first-to-receive-focus",
+  /** 3.5.0 (D-155): campo de formulário cujo único "rótulo" é o placeholder (e-MAG 6.2; DS Formulário). */
+  placeholderOnlyLabel: "form-field-label-not-placeholder-only",
+  /** 3.5.0 (C03): ícone decorativo ao lado do rótulo escondido da tecnologia assistiva (aria-hidden). */
+  decorativeIconHidden: "decorative-icon-aria-hidden",
+  /** 3.5.0 (C03): o title do link não repete o texto do link (e-MAG 3.5). */
+  linkTitleNotRepeated: "link-title-not-repeating-text",
   // 2.13.0 (NAT-85) — verificação contextual delimitada. Cada condição nomeia o estado ESPERADO;
   // a alegação de violação diz que ele não se cumpre. Só as regras listadas em
   // verify/contextual.ts (CONTEXT_CONDITIONS) selecionam estes predicados.

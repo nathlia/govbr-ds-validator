@@ -9,6 +9,10 @@ import type { GateVerification } from "../verify/gate.js";
 import { UNGROUNDED_NEXT } from "../verify/gate.js";
 import { groundingForCheckId } from "../verify/registries.js";
 import { getRuleById } from "../data/knowledge.js";
+import { getEmag } from "../data/load.js";
+import { emagUnits } from "../data/normativeUnits.js";
+import { wcagMembership } from "../verify/registries.js";
+import { registryRefsFor } from "../data/relations.js";
 import { CONTRACT, MESSAGES, PREDICATE_NOT_RUN, factNotEvaluated, step, type NextStep } from "./contract.js";
 
 type About = "citation" | "applicability" | "evidence" | "fact" | "state" | "none";
@@ -272,6 +276,92 @@ function normResolutionOf(finding: Finding, knowledgeFree: boolean) {
   };
 }
 
+// ── 3.5.0 (D-155, item 3): força da norma citada ─────────────────────────────────────────────
+
+const WEAK_FORCES: Record<string, string> = {
+  recommended: "recomendação",
+  discouraged: "desaconselhado (não é proibição)",
+  permitted: "permissão (opcional)",
+  informative: "informativa",
+  unclear: "força indefinida",
+};
+
+let emagOfClause: Map<string, string> | undefined;
+
+/** Cláusula literal da base → recomendação e-MAG a que pertence (pelas unidades literais servidas). */
+function emagRecommendationOf(clauseId: string): string | undefined {
+  if (!emagOfClause) {
+    emagOfClause = new Map();
+    for (const section of Object.values(getEmag().sections)) {
+      for (const rule of section.rules) {
+        try {
+          for (const clause of emagUnits(rule.id).clauses) if (!emagOfClause.has(clause.id)) emagOfClause.set(clause.id, rule.id);
+        } catch {
+          /* recomendação sem unidade literal */
+        }
+      }
+    }
+  }
+  return emagOfClause.get(clauseId);
+}
+
+/**
+ * No ensaio-trio-b-03 o agente trocou a WCAG 4.1.2 por uma cláusula do DS de força "recomendação" para afirmar
+ * uma violação, e o juiz a classificou como erro normativo. Quando a regra citada para a violação não obriga
+ * nem proíbe, a resposta diz isso com todas as letras e aponta a norma obrigatória que a base liga a ela, se
+ * houver. Não muda o veredito nem recusa: é aviso de citação.
+ */
+export function citationForceWarning(finding: Finding) {
+  if (finding.rule.source !== "govbr-ds-kb") return undefined;
+  const rule = getRuleById(finding.rule.id);
+  if (!rule || rule.legacy) return undefined;
+  const modality = WEAK_FORCES[rule.force];
+  if (!modality) return undefined;
+  const required: Array<{ id: string; source: string; why: string }> = [];
+  const push = (id: string, source: string, why: string) => {
+    if (!required.some((r) => r.id === id)) required.push({ id, source, why });
+  };
+  const emagId = emagRecommendationOf(rule.id);
+  if (emagId) {
+    for (const clause of emagUnits(emagId).clauses) {
+      if ((clause.force === "required" || clause.force === "prohibited") && clause.id !== rule.id) push(clause.id, "govbr-ds-kb", `cláusula ${clause.force} da mesma recomendação e-MAG ${emagId}`);
+    }
+  }
+  for (const ref of rule.emagReferences ?? []) {
+    const id = String(ref).replace(/^e-?mag[-:\s]*/i, "").trim();
+    if (/^\d\.\d{1,2}$/.test(id)) {
+      for (const clause of emagUnits(id).clauses) {
+        if (clause.force === "required" || clause.force === "prohibited") push(clause.id, "govbr-ds-kb", `cláusula ${clause.force} do e-MAG ${id}, que a regra cita`);
+      }
+    }
+  }
+  for (const ref of [...(rule.wcagReferences ?? []), ...(finding.rule.wcag ? [finding.rule.wcag] : [])]) {
+    const m = wcagMembership(String(ref));
+    if (m.status === "member") push(m.normalizedId, "wcag", m.entry && (rule.wcagReferences ?? []).includes(String(ref)) ? "critério WCAG que a regra cita" : "critério WCAG que você indicou em rule.wcag");
+  }
+  // 3.5.0 (revisão Fable P11): o registro WCAG que a camada de relações liga aos termos da própria cláusula
+  // (ex.: atributo aria-*/role → 4.1.2 e 1.3.1), como a busca já faz em `gaps.registryRefs`.
+  const terms = [...new Set((rule.originalText.toLowerCase().match(/[a-z][a-z0-9-]*/g) ?? []))];
+  for (const ref of registryRefsFor(terms)) {
+    const m = wcagMembership(ref.num);
+    if (m.status === "member") push(m.normalizedId, "wcag", `registro WCAG ligado ao termo da cláusula (${ref.route}): ${m.entry?.handle ?? ""}`.trim());
+  }
+  return {
+    citedId: rule.id,
+    force: rule.force,
+    modality,
+    warning:
+      `A regra citada tem força '${modality}': ela não obriga nem proíbe, então sozinha não sustenta uma violação ` +
+      "(um juiz a trata como erro normativo). O fato medido continua valendo; troque a norma citada pela obrigação que ele viola.",
+    ...(required.length
+      ? { requiredNorms: required.slice(0, 4), next: "Cite uma destas normas obrigatórias (leia a unidade antes) e reenvie com o mesmo element/evidence." }
+      : {
+          requiredNorms: [],
+          next: "A base não liga esta cláusula a uma norma obrigatória. Procure a obrigação com get_ds_rules/get_emag_rules (query = o fato medido) ou cite o critério WCAG que você justifica (source 'wcag'); senão, mantenha o fato como recomendação não atendida, não como violação.",
+        }),
+  };
+}
+
 export function verificationEnvelope(
   finding: Finding,
   verification: GateVerification,
@@ -284,6 +374,7 @@ export function verificationEnvelope(
   const decided = reasons.find((r) => (r.status as string) !== "follows");
   const status: ObservationStatus = confirmed ? "verified" : decided?.status ?? "not-evaluated";
   const normResolution = normResolutionOf(finding, options.knowledgeFree);
+  const citationForce = options.knowledgeFree ? undefined : citationForceWarning(finding);
   return {
     contract: CONTRACT,
     kind: "verification",
@@ -293,6 +384,7 @@ export function verificationEnvelope(
     about,
     observation: { status, message: observationMessage(status, about) },
     ...(normResolution ? { normResolution } : {}),
+    ...(citationForce ? { citationForce } : {}),
     reasons: confirmed ? [] : reasons.map(({ status: _s, ...r }) => r),
     actions: confirmed ? [] : actionsOf(reasons, finding, options.scanId, options.knowledgeFree, legacy),
     verification,

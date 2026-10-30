@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "./knowledge.js";
 import { foldText } from "./retrieval.js";
 
-const FILE = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/relations/kb-relations-1.1.0.json");
+const FILE = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/relations/kb-relations-1.2.0.json");
 
 /** 3.4.1 (revisão): nota fixa de uma ligação do projeto, que a cláusula citada não declara. */
 export const INFERRED_RELATION_NOTE = "ligação inferida pelo projeto; a cláusula não declara a ligação";

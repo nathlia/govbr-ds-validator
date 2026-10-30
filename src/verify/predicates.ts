@@ -21,6 +21,8 @@ import type { StyleProperty } from "../evidence/inspect.js";
 import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, scriptDependentAnchor } from "../checkers/structure.js";
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
+import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf } from "../checkers/formLabels.js";
+import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING, exposedDecorativeIcons, isControl, linkTitleRepeatsText } from "../checkers/decorativeIcons.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
@@ -212,6 +214,91 @@ const focusIndicatorPredicate: Predicate = {
   },
 };
 
+/** 3.5.0 (D-155): normas que o predicado de rótulo por placeholder decide (e-MAG 6.2, as cláusulas da base, WCAG 3.3.2/1.3.1/4.1.2). */
+function placeholderLabelRule(finding: Finding): boolean {
+  const { source, id } = finding.rule;
+  if (source === "emag") return id.trim().replace(/^emag[-:.]?/i, "") === "6.2";
+  // 3.5.0 (revisão, HIGH 1): 4.1.2 e 1.3.1 aceitam o placeholder como fonte de nome — não decidem este caso.
+  if (source === "wcag") return id.trim().replace(/^wcag[-:.]?/i, "") === "3.3.2";
+  return source === "govbr-ds-kb" && [...PLACEHOLDER_LABEL_GROUNDING.implements, "govbr-3.7.0-pattern-global-62888bfde020"].includes(id);
+}
+
+const placeholderLabelPredicate: Predicate = {
+  id: "placeholder-label",
+  properties: [],
+  verifyClaim: (elements) => ({
+    status: "consistent",
+    detail: `Condição '${PLACEHOLDER_LABEL_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.`,
+  }),
+  evaluate: (elements) => {
+    const sources = elements.map((element) => ({ element, source: labelSourceOf(element) }));
+    const labelled = sources.filter((s) => s.source.kind === "labelled");
+    if (labelled.length > 0) {
+      return {
+        status: "contradicted",
+        detail: `${labelled.length} de ${elements.length} campo(s) tem rótulo associado: ${labelled
+          .slice(0, 3)
+          .map((s) => `${s.element.locator} (${(s.source as { via: string }).via})`)
+          .join("; ")}.`,
+      };
+    }
+    const other = sources.filter((s) => s.source.kind !== "placeholder-only");
+    if (other.length > 0) {
+      return {
+        status: "undetermined",
+        detail: `${other.length} de ${elements.length} elemento(s) não é campo com placeholder e sem rótulo neste estado (${other
+          .slice(0, 3)
+          .map((s) => `${s.element.locator}: ${s.source.kind === "not-applicable" ? s.source.why : s.source.kind === "title-only" ? "nome só pelo title, sem placeholder" : "sem placeholder nem nome"}`)
+          .join("; ")}); o predicado não decide.`,
+      };
+    }
+    const thirdParty = elements.filter((element) => element.origin === "flatpickr");
+    if (thirdParty.length > 0) {
+      return { status: "undetermined", detail: `${thirdParty.length} campo(s) injetado(s) por terceiro que o DS embute (flatpickr): fora da autoria da página — observação, não violação (como no scan).` };
+    }
+    const namedHost = elements.filter((element) => element.origin === "ds-web-component" && element.originHostNamed === true);
+    if (namedHost.length > 0) {
+      return {
+        status: "undetermined",
+        detail: `${namedHost.length} campo(s) dentro de web component do DS cujo host recebeu nome da página: o rótulo interno é do componente, não da página.`,
+      };
+    }
+    return {
+      status: "verified",
+      detail: `Em ${elements.length} de ${elements.length} campo(s): placeholder presente e nenhum rótulo associado (sem <label> com texto, aria-labelledby com texto ou aria-label).`,
+    };
+  },
+};
+
+/** 3.5.0 (C03): predicado por elemento — verified quando todos violam, contradicted quando algum não. */
+function elementPredicate(id: string, condition: string, label: string, violates: (el: ElementEvidence) => boolean): Predicate {
+  return {
+    id,
+    properties: [],
+    verifyClaim: (elements) => ({ status: "consistent", detail: `Condição '${condition}' aceita; ${elements.length} elemento(s) no estado reproduzido.` }),
+    evaluate: (elements) => {
+      const hidden = elements.filter((el) => el.rendered === false || el.axHidden);
+      if (hidden.length) return { status: "undetermined", detail: `${hidden.length} de ${elements.length} elemento(s) oculto(s) neste estado: meça no estado em que aparece.` };
+      // Fora da autoria da página (interno de web component do DS, terceiro embutido): observação, como no scan.
+      const outside = elements.filter((el) => el.origin === "ds-web-component" || el.origin === "flatpickr");
+      if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de componente do DS ou de terceiro embutido: fora da autoria da página — observação, não violação.` };
+      // O localizador tem de nomear o CONTROLE (button, a, papel interativo), não o ícone dentro dele.
+      const notControl = elements.filter((el) => !isControl(el));
+      if (notControl.length) return { status: "undetermined", detail: `${notControl.length} de ${elements.length} elemento(s) não é controle (<${notControl[0].tagName}>): aponte element.locator para o botão/link que contém o ícone e repita.` };
+      return onEveryElement(elements, label, (el) => (violates(el) ? null : `${el.locator} não viola neste estado`));
+    },
+  };
+}
+const decorativeIconPredicate = elementPredicate("decorative-icon", DECORATIVE_ICON_CONDITION, "ícone decorativo exposto ao lado do rótulo", (el) => exposedDecorativeIcons(el) > 0);
+const linkTitlePredicate = elementPredicate("link-title", LINK_TITLE_CONDITION, "title do link repete o texto", linkTitleRepeatsText);
+
+function citesAny(finding: Finding, grounding: { implements: string[] }, emag?: string, wcag: string[] = []): boolean {
+  const { source, id } = finding.rule;
+  if (source === "emag") return emag !== undefined && id.trim().replace(/^emag[-:.]?/i, "") === emag;
+  if (source === "wcag") return wcag.includes(id.trim().replace(/^wcag[-:.]?/i, ""));
+  return source === "govbr-ds-kb" && grounding.implements.includes(id);
+}
+
 export function selectPredicate(finding: Finding): PredicateSelection {
   const { source, id } = finding.rule;
   const data = (finding.evidence.data ?? {}) as Record<string, unknown>;
@@ -224,6 +311,23 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   if (focusIndicatorRule(finding)) {
     if (data.expectedCondition === FOCUS_INDICATOR_CONDITION) return { predicate: focusIndicatorPredicate };
     return none(`${generic} Para foco visível, envie evidence.data.expectedCondition='${FOCUS_INDICATOR_CONDITION}'.`);
+  }
+
+  // 3.5.0 (D-155): campo com placeholder no lugar do rótulo — só com a condição estruturada exata.
+  if (data.expectedCondition === PLACEHOLDER_LABEL_CONDITION) {
+    if (placeholderLabelRule(finding)) return { predicate: placeholderLabelPredicate };
+    return none(`A condição '${PLACEHOLDER_LABEL_CONDITION}' só é decidida para emag-6.2, WCAG 3.3.2 ou ${[...PLACEHOLDER_LABEL_GROUNDING.implements.filter((i) => i.startsWith("govbr-")), "govbr-3.7.0-pattern-global-62888bfde020"].join(", ")}: a regra citada não decide placeholder × rótulo (WCAG 4.1.2/1.3.1 aceitam o placeholder como nome). Cite uma dessas normas.`);
+  }
+
+  // 3.5.0 (C03): ícone decorativo exposto e title que repete o link — só com a condição exata e a norma do caso.
+  if (data.expectedCondition === DECORATIVE_ICON_CONDITION) {
+    if (citesAny(finding, DECORATIVE_ICON_GROUNDING, undefined, ["1.1.1"]) || (finding.rule.source === "govbr-ds-kb" && finding.rule.id === "govbr-3.7.0-accessibility-button-23e3cfbf49f3")) return { predicate: decorativeIconPredicate };
+    return none(`A condição '${DECORATIVE_ICON_CONDITION}' só é decidida para ${DECORATIVE_ICON_GROUNDING.implements.join(", ")}, govbr-3.7.0-accessibility-button-23e3cfbf49f3 ou WCAG 1.1.1.`);
+  }
+  if (data.expectedCondition === LINK_TITLE_CONDITION) {
+    // 3.5.0 (revisão, MED): title redundante não reprova a WCAG 2.4.4 — só a cláusula do e-MAG 3.5 que o proíbe.
+    if (citesAny(finding, LINK_TITLE_GROUNDING, "3.5") || (finding.rule.source === "govbr-ds-kb" && finding.rule.id === "govbr-3.7.0-pattern-global-38e29fcf7bc4")) return { predicate: linkTitlePredicate };
+    return none(`A condição '${LINK_TITLE_CONDITION}' só é decidida para ${LINK_TITLE_GROUNDING.implements.join(", ")} ou govbr-3.7.0-pattern-global-38e29fcf7bc4 (title redundante não reprova a WCAG 2.4.4).`);
   }
 
   // 2.13.0 (NAT-85): condições contextuais. Só a regra listada na condição e a condição exata
@@ -388,6 +492,38 @@ export function selectPredicate(finding: Finding): PredicateSelection {
         },
       };
     }
+    if (constraint.kind === "page-focus-order") {
+      if (data.region === undefined || data.firstLinkHref === undefined || data.expectedCondition === undefined) {
+        return none(`${id} só é verificável com evidence.data.region='focus-order', firstLinkHref e expectedCondition ('${condition}').`, "missing");
+      }
+      if (data.region !== "focus-order" || typeof data.firstLinkHref !== "string" || data.expectedCondition !== condition) {
+        return none(`Dados estruturados contraditórios para ${id}: region deve ser 'focus-order', firstLinkHref texto e expectedCondition '${condition}'.`, "contradicted");
+      }
+      const href = data.firstLinkHref;
+      return {
+        predicate: {
+          id: "page-focus-order",
+          properties: [],
+          needsPageFacts: true,
+          verifyClaim: (_elements, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-focus-order." };
+            const live = facts.firstLink?.href ?? null;
+            return live === href
+              ? { status: "consistent", detail: `Dados estruturados conferidos: o primeiro link do documento é href="${live}".` }
+              : { status: "contradicted", detail: `O primeiro link do documento é ${live === null ? "inexistente" : `href="${live}"`}, não href="${href}".` };
+          },
+          evaluate: (_elements, url, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-focus-order." };
+            if (!facts.firstLink?.skipsToContent) {
+              return { status: "undetermined", code: "rule-not-applicable", detail: "O primeiro link não é um salto válido: a regra de ordem de foco do salto não se aplica; o caso é ds-page-skip-link (e-MAG 1.5)." };
+            }
+            return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+              ? { status: "verified", detail: "Violação recalculada no documento: um elemento com tabindex positivo recebe o foco antes do salto para o conteúdo." }
+              : { status: "contradicted", detail: "Nenhum elemento exibido com tabindex positivo recebe o foco antes do salto; não viola neste estado." };
+          },
+        },
+      };
+    }
     if (data.region === undefined || data.firstLinkHref === undefined || data.expectedCondition === undefined) {
       return none(`${id} só é verificável com evidence.data.region='skip-link', firstLinkHref e expectedCondition ('${condition}').`, "missing");
     }
@@ -409,6 +545,16 @@ export function selectPredicate(finding: Finding): PredicateSelection {
         },
         evaluate: (_elements, url, facts) => {
           if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-skip-link." };
+          // 3.5.0 (P2): salto como 1º link, mas tabindex positivo antes dele — e-MAG 1.5 cumprida; a regra
+          // que se aplica é ds-page-focus-order. Não desmente o fato medido.
+          const before = facts.positiveTabindexFirst;
+          if (facts.firstLink?.skipsToContent && before && !before.isFirstLink) {
+            return {
+              status: "undetermined",
+              code: "rule-not-applicable",
+              detail: `O primeiro link é o salto (e-MAG 1.5 cumprida), mas <${before.tag}> com tabindex=${before.tabindex} recebe o foco antes dele: cite ds-page-focus-order (Skip Link "primeiro elemento a receber o foco"; e-MAG 1.4 / WCAG 2.4.3).`,
+            };
+          }
           return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
             ? { status: "verified", detail: "Violação recalculada no documento: o primeiro a receber o foco não é o salto para o conteúdo (primeiro link sem âncora válida, ou tabindex positivo antes dele; e-MAG 1.5)." }
             : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente e nenhum tabindex positivo recebe o foco antes dele; não viola neste estado." };

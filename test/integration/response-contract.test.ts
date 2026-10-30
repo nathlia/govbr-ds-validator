@@ -258,7 +258,10 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
     expect(text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
     const r = JSON.parse(text);
     expect(r).toMatchObject({ contract: CONTRACT, kind: "scan", status: "scanned", absenceNote: ABSENCE_NOTE });
-    expect(Object.keys(r.checksRun)).toEqual(["executed", "omitted", "limits", "coverageNote", "completeOmitted"]);
+    // 3.5.0 (D-155 item 1, revisão Fable P8): pageLevel = o medido e o que nenhum check julgou nesta página.
+    expect(Object.keys(r.checksRun)).toEqual(["executed", "omitted", "limits", "coverageNote", "completeOmitted", "pageLevel"]);
+    expect(r.checksRun.pageLevel.measured).toEqual(expect.arrayContaining(["placeholder-label", "focus-visible"]));
+    expect(r.checksRun.pageLevel.notMeasured.map((i: { code: string }) => i.code)).toEqual(expect.arrayContaining(["document-title-adequacy"]));
     expect(r.checksRun.executed.map((e: { check: string }) => e.check)).toEqual(["axe", "structure"]);
     expect(r.checksRun.executed[0].engine).toMatch(/^axe-core /);
     expect(r.checksRun.omitted.map((o: { check: string }) => o.check)).toEqual(["tokens", "page"]);
@@ -268,10 +271,11 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
     expect(r.investigate.doNotRepeat).toBe(MESSAGES["scan-no-repeat"]);
     expect(r.investigate.items.length).toBeLessThanOrEqual(5);
     // 3.3.0 (N-05): famílias antes de investigate — os componentes que cedem espaço vão para investigate.more, na ordem.
+    // 3.5.0 (revisão Fable P1): todos os encontrados, ordenados por obrigações sem medida (empate: DOM).
     const listedComponents = [...r.investigate.items.map((i: { component: string }) => i.component), ...(r.investigate.more?.components ?? [])];
-    expect(listedComponents.slice(0, 5)).toEqual(r.coverage.componentsFound.slice(0, 5));
+    expect([...listedComponents].sort()).toEqual([...r.coverage.componentsFound].sort());
     for (const item of r.investigate.items) {
-      expect(Object.keys(item)).toEqual(["component", "stateRef", "unmeasured", "next"]);
+      expect(Object.keys(item)).toEqual(["component", "stateRef", "requiredUnmeasured", "unmeasured", "next"]);
       expect(item.stateRef).toBe(r.scanId);
     }
     // A chamada que completa roda e não repete os checks executados.
@@ -325,7 +329,9 @@ describe("contrato — orçamento, continuação, ausência, erro", () => {
       seen += page.count;
       args = page.next?.arguments;
     }
-    expect(seen).toBe(obs.total);
+    // 3.5.0 (revisão, MED): depois das observações do scan vêm as pendências do pageLevel como observações not-judged.
+    const pending = scan.checksRun.pageLevel?.count ?? scan.checksRun.pageLevel?.notMeasured?.length ?? 0;
+    expect(seen).toBe(obs.total + pending);
   });
 
   it("S-09: zero achados nunca vêm sem a nota de ausência", async () => {

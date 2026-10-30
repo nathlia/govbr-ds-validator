@@ -76,8 +76,10 @@ describe("finding families on calendar and table fixtures", () => {
   it("the baseline scanPage JSON is unchanged by the family projection", async () => {
     const result = await scanPage({ url, ...SCAN, checks: [...SCAN.checks], tokenChecks: [...SCAN.tokenChecks], components: [...SCAN.components] }, new PageScanCache(1));
     if (result.status !== "scanned") throw new Error("estado não alcançado");
-    // os campos que o CLI de linha de base imprime — nenhum novo, nenhum a menos
-    expect(Object.keys(result).sort()).toEqual(
+    // os campos que o CLI de linha de base imprime — nenhum novo, nenhum a menos. 3.5.0: `notJudged` (pendências
+    // do scan, D-155) fica no resultado para o ledger do MCP, mas o CLI de linha de base não o imprime.
+    const { notJudged: _pending, ...printed } = result;
+    expect(Object.keys(printed).sort()).toEqual(
       ["cacheHit", "cacheMissReason", "coverage", "deduplication", "findings", "observations", "stateFingerprint", "state", "status", "url"].sort()
     );
     expect(Object.keys(result.findings[0]).sort()).toEqual(["element", "evidence", "id", "mode", "nature", "pathway", "rule", "severity"]);
@@ -92,8 +94,11 @@ describe("finding families on calendar and table fixtures", () => {
 
     const radius = listed.filter((f) => f.rule.id === "ds-token-radius");
     expect(radius.map((f) => [f.count, f.value])).toEqual([[40, "border-radius: 6px"], [1, "border-radius: 3px"]]);
-    const iconOnly = listed.filter((f) => f.rule.id === "emag-2.2");
-    expect(iconOnly.map((f) => f.count)).toEqual([10]);
+    // 3.5.0 (revisão Fable P5): os 10 botões só com ícone que o axe reprova por button-name saem da estrutura
+    // (mesmo elemento × mesma condição): fica uma família só, a do axe.
+    const iconOnly = listed.filter((f) => f.rule.id === "emag-1.1");
+    expect(iconOnly).toEqual([]);
+    expect(listed.filter((f) => f.rule.id === "button-name").map((f) => f.count)).toEqual([10]);
   });
 
   it("both profiles with scan_page get identical family content, and the cursor walks every id", async () => {

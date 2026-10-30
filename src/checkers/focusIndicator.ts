@@ -3,7 +3,7 @@
  * em nada ao receber foco (evidence/focusIndicator.ts mede). Faz parte do check `structure` do scan.
  *
  * Norma (D-27): fica FORA de `CHECK_GROUNDING` como as verificações contextuais — o achado cita o id
- * normativo diretamente (`emag-4.4`, como `structure-accessible-name` cita `emag-2.2`), então não há
+ * normativo diretamente (`emag-4.4`, como `structure-accessible-name` cita `emag-1.1`), então não há
  * ponte de vocabulário a gerar e o gerador de aliases do eval não muda.
  */
 import type { Finding } from "../schema/finding.js";

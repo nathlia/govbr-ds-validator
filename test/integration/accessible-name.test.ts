@@ -51,12 +51,12 @@ async function decide(body: string, button = "button.br-button") {
   const evidence = await inspectPageComputedStyles(page, URL, ".br-button", []);
   const element = evidence.elements.find((e) => e.classes.includes("br-button"));
   if (!element) throw new Error("fixture sem .br-button");
-  const findings = checkComponentStructure({ url: URL }, [element], buttonSpec).filter((f) => f.rule.id === "emag-2.2");
+  const findings = checkComponentStructure({ url: URL }, [element], buttonSpec).filter((f) => f.rule.id === "emag-1.1");
   const snapshot = await page.locator(button).ariaSnapshot();
   return { element, findings, snapshot };
 }
 
-describe("emag-2.2 decide pelo nome acessível calculado pelo Chromium", () => {
+describe("emag-1.1 (era 2.2) decide pelo nome acessível calculado pelo Chromium", () => {
   it("sem nome nenhum: acusa", async () => {
     const r = await decide(`<button class="br-button circle">${ICON}</button>`);
     expect(r.snapshot).toBe("- button");

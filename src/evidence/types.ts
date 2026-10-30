@@ -71,6 +71,12 @@ export interface ElementEvidence {
     descendantAlt?: string | null;
     /** Texto do `<label for>` (mesma árvore) ou do `<label>` ancestral. Ausente antes da 2.8.0. */
     labelText?: string | null;
+    /**
+     * 3.5.0 (C03): em controle (button, a, role=button) com nome pelo conteúdo e texto próprio, quantos ícones
+     * (i, svg, span .fa-/icon) sem texto estão expostos à tecnologia assistiva (sem aria-hidden="true" nem role
+     * none/presentation até o controle, sem nome próprio). Só aparece quando > 0.
+     */
+    exposedIcons?: number;
   };
   /**
    * Nome acessível do elemento (2.8.0), colhido só para elemento interativo apenas com ícone — o
@@ -117,6 +123,14 @@ export interface ElementEvidence {
   origin?: "flatpickr" | "ds-web-component";
   /** 3.4.4 (C3): com origin "ds-web-component", a tag do host (ex.: br-breadcrumb). */
   originHost?: string;
+  /**
+   * 3.5.0 (D-155): só em campo de formulário (input/select/textarea) com origin "ds-web-component" — o host
+   * recebeu da página `label`, `aria-label` ou `aria-labelledby` não vazio. Com o host nomeado, um rótulo
+   * interno que falte é defeito do componente, não da página.
+   */
+  originHostNamed?: boolean;
+  /** 3.5.0 (D-155): o elemento ou um ancestral (atravessando shadow roots) tem aria-hidden="true" ou inert. */
+  axHidden?: boolean;
   /** 3.4.0 (B9): medição de foco visível, preenchida só pelo portão para o predicado focus-indicator. */
   focusIndicator?: { focused: boolean; changed: string[]; complete?: boolean; discounted?: string[] };
 }

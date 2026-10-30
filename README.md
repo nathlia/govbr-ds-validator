@@ -83,6 +83,91 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.5.0 — o silêncio do scan não é cobertura (D-155 + revisão Fable de 2026-10-30)
+
+Motivo: no `ensaio-trio-b-03` (3.4.4) o braço com oráculo mediu e descartou fatos que nenhum check julgou
+(título "PNIP", campo de busca só com placeholder), citou uma cláusula de força "recomendação" como norma
+violada, e nunca leu a regra dos componentes encontrados (`mecanismo-oraculo-tela-b-ensaio-b-03-2026-10-30.md`,
+`revisao-fable-melhorias-oraculo-2026-10-30.md`). Tudo genérico: nada é chaveado por tela, seletor ou texto.
+
+- **Pendências do scan (D-155 item 1; P8):** `scan_page` traz `checksRun.pageLevel {measured, notMeasured}`.
+  `notMeasured` nasce do que está na página e nenhum check julga: adequação do `<title>` (com o título, o nome
+  do sítio no cabeçalho e o h1 para comparar), campo com nome só pelo `title`, tabela sem
+  caption/aria-label/aria-labelledby/title, adequação do `lang` e das regiões — cada uma com a cláusula
+  obrigatória que a base serve (lida das unidades literais do e-MAG) e o que medir. Escrito como pendência,
+  nunca veredito. Só encolhe como último recurso do teto (fica a lista de códigos); inteiro no ledger
+  (`get_finding_details(scanId)` → `ledger.notJudged`). O perfil knowledge-free não muda.
+- **Placeholder no lugar do rótulo (item 4a; P6):** detector determinístico no check `structure`: campo
+  exibido, exposto à árvore de acessibilidade e habilitado com `placeholder` e nenhum rótulo associado
+  (`<label>` com texto, `aria-labelledby` que resolve, `aria-label`) → achado `emag-6.2` (wcag 3.3.2),
+  `implements` = cláusula obrigatória do e-MAG 6.2 (`…25887e6e360f`) + proibição do padrão Formulário
+  (`…aabbc9b63402`). Nome só pelo `title` não é achado (H65) e vira pendência. Dentro de `<br-*>` do DS: host
+  sem nome da página → achado; host nomeado → observação (é do componente); flatpickr → observação.
+  `verify_finding` decide com `expectedCondition: form-field-label-not-placeholder-only` (predicado
+  `placeholder-label`). Camada de relações **kb-relations-1.2.0** (R-05..R-07): Input/Textarea → as duas
+  cláusulas "placeholder não substitui rótulo" e a do e-MAG 6.2, que agora aparecem em `related` na busca
+  natural (q033 da NAT-97). O título pobre (item 4b) **não** virou detector: "genérico" não se mede sem
+  julgamento, e ficou como pendência.
+- **Ícone decorativo e title que repete o link (C03 da auditoria de mensurabilidade):** no check `structure`,
+  (a) ícone com glifo (`::before`/`::after` ou `svg`), sem texto, sem nome próprio e sem `aria-hidden="true"`/role
+  none, ao lado do texto de um controle nomeado pelo conteúdo → achado `…foundation-global-e0e913d352f3`
+  (Iconografia, required; wcag 1.1.1); (b) `title` de link igual ao texto do link → `…global-3f41d7ddc85a`
+  (e-MAG 3.5, prohibited). Invólucros (`<span class="icon"><i aria-hidden>`) não contam. Nenhum check novo se
+  apoia na cláusula do Button "o rótulo é obrigatório" (`…7ef75d42ac65`), que perdeu na base literal a exceção
+  do botão circular (teste negativo). Nas telas e nos 80 controles: zero disparo.
+- **Lista de verificação por componente (item 2; P1/P9):** `get_component_spec{component, view:"checklist",
+  cursor}` lista as obrigações e proibições do componente na base (id citável, força, texto), cada uma com
+  `measure`: `automatic:true` + o check do `scan_page` ou a `expectedCondition` do `verify_finding` que a mede,
+  ou `automatic:false` + o que medir no navegador pela estratégia da base (propriedades CSS citadas no texto,
+  teclado, árvore de acessibilidade…); `related` traz as obrigações de fora ligadas pela camada de relações.
+  O `investigate` do scan lista **todos** os componentes encontrados, ordenados pelas obrigações sem medida
+  automática (`requiredUnmeasured`), com o passo da checklist; nunca encolhe abaixo da lista de nomes + `next`.
+- **Força da norma citada (item 3; P11):** `verify_finding` com regra da base de força recomendação,
+  desaconselhado, permissão, informativa ou indefinida traz `citationForce` (aviso + `requiredNorms`: a
+  cláusula obrigatória da mesma recomendação e-MAG, os critérios WCAG/e-MAG que a regra cita e o registro WCAG
+  ligado aos termos `aria-*`/`role` da cláusula). Não muda o veredito nem recusa.
+- **Citações dos checks (P2/P5):** o tabindex positivo antes do salto (C12) virou a restrição
+  `ds-page-focus-order` (Skip Link "primeiro elemento a receber o foco" `…b0641993618f`, `…02c2e513d936`,
+  e-MAG 1.4, wcag 2.4.3); `ds-page-skip-link` ("primeiro link", e-MAG 1.5) para esse caso fica
+  `rule-not-applicable` apontando a restrição nova. Botão só com ícone sem nome: `emag-1.1` / wcag 4.1.2 (era
+  e-MAG 2.2, que trata de scripts; 10 vereditos de erro normativo); quando o axe já reprova o mesmo elemento por
+  regra de nome (`button-name` e afins), fica só o achado do axe; `button-name` anota e-MAG 1.1. Teste novo
+  confere, por tabela, que o texto de cada cláusula em `implements` descreve a condição medida.
+- **Teto: achados primeiro.** Na 1ª página do scan, os blocos novos cedem antes de qualquer outra parte: o
+  `investigate` vira lista de nomes com contagens + `next`, e o `pageLevel` vira códigos + contagem + `next`
+  (inteiros no ledger). Só depois vem a ordem antiga, agora com os ids do diff e a deduplicação também cedendo.
+  Famílias na 1ª página (padrão 8.000): fluxo 5→6, A 5→5, B 5→5. Na reexecução das 50 chamadas reais de
+  29/10: 8 melhores, 42 iguais, 0 piores.
+- **Revisão independente (mesma versão):** o predicado de placeholder só decide e-MAG 6.2, WCAG 3.3.2 e as cláusulas
+  do DS sobre placeholder (4.1.2/1.3.1 aceitam o placeholder como nome → `unverifiable` com o porquê); o de title que
+  repete o link só a cláusula do e-MAG 3.5 (não a WCAG 2.4.4); ícone com localizador no próprio ícone, interno de
+  `<br-*>` ou flatpickr → sem decisão (como no scan); papéis ARIA interativos contam como controle. **Exceção perdida**
+  (`data/lostExceptions.ts`, detecção genérica no legado substituído): `…button-7ef75d42ac65` ("O rótulo é um
+  elemento obrigatório.") sai com `condition` = a exceção do botão circular do legado `…4d7b5f978df1` na checklist,
+  na spec, nos cartões/listagens e na leitura por id do `get_ds_rules`. As pendências saem do cabeçalho do ledger
+  (só códigos + contagem) e paginam inteiras como observações `not-judged` (`get_finding_details` view observations,
+  cursor). `aria-labelledby` para elemento só com `aria-label` nomeia; placeholder + title é pendência (o title é
+  fonte de nome); `pageLevel.measured` com `components` restrito lista só o que rodou. 777 testes.
+- **instructions (P1/P7/P9):** pendências do `pageLevel`; "antes de descartar por falta de norma, pergunte uma
+  vez ao get_ds_rules"; norma de violação tem de obrigar ou proibir; antes de encerrar, checklist de cada
+  componente com estado medida/violada/não se aplica.
+- **Superfície:** `tools/list` do perfil evaluation `adc42661…` → `61177aa7…` (`get_component_spec` ganha
+  `view`/`cursor`; descrições de `verify_finding` e `get_page_rules`); knowledge-free igual (`f358152a…`). O CLI
+  de linha de base imprime os mesmos campos (as pendências ficam fora; `GOVBR_SCAN_CLI_NOT_JUDGED=1` as mostra).
+- **Medido sem modelo** (todos os checks, estado inicial, 1280×720): fluxo 17→17; A 7→7 (o mesmo fato do
+  tabindex passa de `ds-page-skip-link` a `ds-page-focus-order`); B 55→46 (+1 `emag-6.2` no campo de busca
+  só com placeholder, −10 `emag-2.2` duplicados do `button-name` do axe nos mesmos botões). Controles
+  `controles/a` (80 páginas): +1 achado, `emag-6.2` no gêmeo defeituoso F5-03-D (esperado), −1 duplicado
+  (`emag-2.2` = `button-name` em T-01); zero achado novo em gêmeo conforme. Guarda da busca (qrels 1.0.4)
+  igual à 3.4.4/3.2.0: 78,6% / P@5 45,7% / 9 enganosas / 28 nos estratos sem resposta. Portão NAT-86 (`npm run
+  portao:oraculo -- --divisao desenvolvimento`, arquivado em `govbr-eval/portao-nat86/medicoes/2026-10-30T06-37-25Z`
+  = 3.4.4 e `…T06-45-20Z` = 3.5.0): D2 idêntico, TN 116 · TP 7 · FP 0, GO. Linha de base sem modelo
+  (`baselines:fluxo:dev`, pares julgados de `linha-de-base-por-versao-2026-10-30.md`): A [4, 6] → [4, 7] de 14
+  specs (A-02 pendente via `ds-page-focus-order`; 1 cartão em par recusado → 0); B [2, 7] → [2, 11] de 29 (B-04 via
+  `emag-6.2` e os botões via `emag-1.1` pendentes; 10 cartões `emag-2.2` recusados → 0); fluxo sem par julgado
+  (0 aceitos, 10 pendentes nas duas). A-04 (foco visível) não sai na linha de base da A porque a única cena do
+  plano abre o diálogo de descarte e os selects ficam atrás dele (o scan no estado inicial acha os dois). 773 testes.
+
 ## 3.4.4 — correções da auditoria com agente de 2026-10-29 (lista única C1–C14)
 
 - **C1 (scan_page):** a 1ª página enche o teto com famílias (o cabeçalho encolhe só o que tem continuação no
@@ -472,7 +557,7 @@ fixam os sha novos do `tools/list`.
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines; without a category, also the citable page constraints `ds-page-header`, `ds-page-footer`, `ds-page-skip-link` (2.7.0)
-- `list_components ()` / `get_component_spec (component, include_examples?, example?)` — canonical structure contracts; HTML examples are opt-in, one per call (3.0.0). Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
+- `list_components ()` / `get_component_spec (component, include_examples?, example?, view?, cursor?)` — canonical structure contracts (3.5.0: `view:"checklist"` = obrigações/proibições do componente com como medir cada uma, por cursor); HTML examples are opt-in, one per call (3.0.0). Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
 
 **Evidence (C5 phase 1)**:
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence

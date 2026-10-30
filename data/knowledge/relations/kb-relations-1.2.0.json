@@ -1,0 +1,171 @@
+{
+ "version": "kb-relations-1.2.0",
+ "knowledgeVersion": "3.7.0-literal-2026-10-15",
+ "date": "2026-10-28",
+ "decision": "D-153, lista única 3.4.0 item A12 (NAT-104)",
+ "note": "Camada curada de LIGAÇÕES entre regras que a base já serve; não reescreve nem acrescenta texto da base (rules.jsonl fica byte a byte). Cada ligação cita, em `basis`, as cláusulas da base que a sustentam com um trecho literal (`quote`, conferido na carga contra o originalText sem marcadores markdown); uma ligação sem cláusula que a sustente não entra. Uma ligação diz 'leia também esta regra', nunca que ela se aplica ao caso. `relatedComponents` é somado ao campo de mesmo nome do registro (que nesta versão da base está vazio em todos os 2.971) só na cópia carregada: entra no modo context como 'relação documentada' (related-component-observed) e nos blocos `related`. `topics`: termos da consulta (dobrados) que trazem a ligação no bloco `related` da busca; `markupOnly` exige que a consulta fale de marcação (atributo, papel, `<tag>`, `=`). `registryRoutes`: termo sem correspondência na base → referências do registro WCAG 2.2 (só número e nome, texto não servido). Desligável: GOVBR_KB_RELATIONS=off. 1.1.0 (revisão 3.4.0): cada ligação declara `kind` — `documented` quando a própria cláusula citada nomeia o alvo, `inferred` quando a ligação é do projeto (a cláusula não a declara) e o bloco servido diz isso; o trecho do Button cita a frase inteira, com a alternativa <a>. 1.2.0 (3.5.0, revisão Fable P6): R-05..R-07 ligam o Input (e consultas sobre placeholder/rótulo) às cláusulas \"placeholder não substitui rótulo\" do padrão Formulário e à cláusula obrigatória do e-MAG 6.2; motivo: a busca natural sobre um campo só com placeholder não trazia nenhuma delas (q033 da NAT-97).",
+ "links": [
+  {
+   "id": "R-01",
+   "rule": "govbr-3.7.0-accessibility-global-5817ddd685a6",
+   "relatedComponents": [
+    "pagination"
+   ],
+   "why": "a paginação tem um estado de página ativa; a regra global pede que states/properties WAI-ARIA acompanhem o ciclo de vida dos elementos",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-development-pagination-ea455e768955",
+     "quote": "Página ativa"
+    },
+    {
+     "id": "govbr-3.7.0-accessibility-global-5817ddd685a6",
+     "quote": "aos states e properties apropriados"
+    },
+    {
+     "id": "govbr-3.7.0-accessibility-global-5817ddd685a6",
+     "quote": "durante o ciclo de vida dos elementos"
+    }
+   ],
+   "evidence": "uso direto (A-12) e reexecução 3.3.0: {component:'pagination'} e a spec não apontavam a regra de estados WAI-ARIA",
+   "kind": "inferred"
+  },
+  {
+   "id": "R-02",
+   "rule": "govbr-3.7.0-accessibility-global-0fb088a47830",
+   "relatedComponents": [
+    "button"
+   ],
+   "why": "a página do Button pede a tag <button> como marcação semântica; a recomendação e-MAG 1.2 trata da organização semântica do HTML",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-accessibility-button-d8448a18814b",
+     "quote": "Recomenda-se utilizar a tag <button> como marcação semântica para construção do componente, apesar de existirem alternativas como <a> ou <input type=\"button\">"
+    },
+    {
+     "id": "govbr-3.7.0-accessibility-global-0fb088a47830",
+     "quote": "Organizar o código HTML de forma lógica e semântica"
+    }
+   ],
+   "evidence": "uso direto (A-06): 'div com role=button em vez de button' só trazia a permissão do Tab",
+   "kind": "inferred"
+  },
+  {
+   "id": "R-03",
+   "rule": "govbr-3.7.0-accessibility-button-d8448a18814b",
+   "topics": [
+    "button",
+    "botao"
+   ],
+   "markupOnly": true,
+   "why": "consulta sobre a marcação de um botão: a cláusula do Button recomenda a tag <button> e registra que <a> e <input type=\"button\"> existem como alternativas",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-accessibility-button-d8448a18814b",
+     "quote": "Recomenda-se utilizar a tag <button> como marcação semântica para construção do componente, apesar de existirem alternativas como <a> ou <input type=\"button\">"
+    }
+   ],
+   "evidence": "uso direto (A-06)",
+   "kind": "documented"
+  },
+  {
+   "id": "R-04",
+   "rule": "govbr-3.7.0-foundation-global-21b1a2733f7b",
+   "topics": [
+    "cor",
+    "cores",
+    "color",
+    "paleta"
+   ],
+   "why": "consulta sobre cor: o princípio do fundamento Cores",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-foundation-global-21b1a2733f7b",
+     "quote": "Interfaces digitais do governo devem utilizar sempre as cores pré-definidas"
+    }
+   ],
+   "evidence": "reexecução (A-03): {query:'cor'} perdeu a regra de paleta 21b1a2733f7b (3/3 no t7)",
+   "kind": "documented"
+  },
+  {
+   "id": "R-05",
+   "rule": "govbr-3.7.0-pattern-global-aabbc9b63402",
+   "relatedComponents": [
+    "input",
+    "textarea"
+   ],
+   "topics": [
+    "placeholder",
+    "placeholders"
+   ],
+   "why": "campo de entrada com placeholder: o padrão Formulário proíbe usar o placeholder no lugar do rótulo",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-pattern-global-aabbc9b63402",
+     "quote": "não utilize placeholders no lugar de rótulos"
+    }
+   ],
+   "evidence": "revisão Fable 2026-10-30 P6 / q033 (NAT-97): get_ds_rules{query:\"campo de busca rotulado só pelo placeholder\", component:\"input\"} não trazia nenhuma das três",
+   "kind": "inferred"
+  },
+  {
+   "id": "R-06",
+   "rule": "govbr-3.7.0-pattern-global-62888bfde020",
+   "relatedComponents": [
+    "input",
+    "textarea"
+   ],
+   "topics": [
+    "placeholder",
+    "placeholders",
+    "rotulo",
+    "rotulos"
+   ],
+   "why": "rótulos dos componentes de entrada: o padrão Formulário diz para nunca substituí-los por placeholders",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-pattern-global-62888bfde020",
+     "quote": "Nunca os substitua por placeholders"
+    }
+   ],
+   "evidence": "revisão Fable 2026-10-30 P6 / q033 (NAT-97): get_ds_rules{query:\"campo de busca rotulado só pelo placeholder\", component:\"input\"} não trazia nenhuma das três",
+   "kind": "inferred"
+  },
+  {
+   "id": "R-07",
+   "rule": "govbr-3.7.0-accessibility-global-25887e6e360f",
+   "relatedComponents": [
+    "input",
+    "select",
+    "textarea"
+   ],
+   "topics": [
+    "placeholder",
+    "rotulo",
+    "rotulos",
+    "label",
+    "etiqueta"
+   ],
+   "why": "campo de formulário: a cláusula obrigatória do e-MAG 6.2 pede a etiqueta (label) associada ao campo",
+   "basis": [
+    {
+     "id": "govbr-3.7.0-accessibility-global-25887e6e360f",
+     "quote": "As etiquetas de texto (elemento LABEL) devem estar associadas aos seus campos"
+    }
+   ],
+   "evidence": "revisão Fable 2026-10-30 P6 / q033 (NAT-97): get_ds_rules{query:\"campo de busca rotulado só pelo placeholder\", component:\"input\"} não trazia nenhuma das três",
+   "kind": "documented"
+  }
+ ],
+ "registryRoutes": [
+  {
+   "id": "RR-01",
+   "pattern": "^(aria-[a-z]+|role)$",
+   "refs": [
+    "4.1.2",
+    "1.3.1"
+   ],
+   "why": "atributo WAI-ARIA ou papel: Name, Role, Value (4.1.2) e Info and Relationships (1.3.1) são os critérios do registro WCAG 2.2 que tratam de papel/estado/propriedade expostos programaticamente",
+   "evidence": "reexecução (A-12): 'aria-current' sem correspondência não apontava a WCAG"
+  }
+ ]
+}
