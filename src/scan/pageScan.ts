@@ -455,6 +455,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     // 3.6.1 (D-155, item 3): elementos ocultos num scan anterior. Os renderizados agora têm medido o check de
     // tokens que os marcou (só esse subcheck, como na passada original), mesmo com `checks` sem tokens.
     let revisited: RevisitItem[] | undefined;
+    /** 3.6.2: os achados da revisita entram DEPOIS dos achados dos checks pedidos (são extra; não deslocam famílias). */
+    const revisitFindings: Finding[] = [];
     if (revisit.length) {
       const covered = (r: (typeof revisit)[number]) =>
         checks.includes("tokens") && activeTokenChecks.includes(TOKEN_CHECK_OF[r.checker]) && tokenMeasured.has(r.locator);
@@ -471,7 +473,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         const own = ownershipOf(element);
         if (own !== "page") return { ...base, now: own === "not-rendered" ? ("hidden" as const) : ("outside" as const) };
         const found = checkTokenCompliance({ url: request.url }, [element], getTokenRegistry(), [TOKEN_CHECK_OF[r.checker]]);
-        rawFindings.push(...found);
+        revisitFindings.push(...found);
         return { ...base, now: "measured" as const, findings: found.map((f) => f.id) };
       });
     }
@@ -563,6 +565,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       rawFindings.push(...(await focusIndicatorFindings(page, request.url, normalized.selectors)));
     }
 
+    rawFindings.push(...revisitFindings);
     const deduplicated = deduplicateFindings(rawFindings);
     const notJudged = notJudgedFor({
       facts,

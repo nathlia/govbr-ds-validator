@@ -83,6 +83,42 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.2 — a 1ª página de todo scan monta por prioridade: famílias primeiro, teto garantido (D-155)
+
+Motivo: a reexecução sem modelo de 128 chamadas reais do braço com (3.5.0 × 3.6.0 × 3.6.1,
+`thesis-workspace/planejamento/atual/reexecucao-3.6.1-2026-10-31`) mostrou que as correções da 3.6.1 funcionam (o `hr`
+revisitado, a pendência do título, o contraste não decidido), mas em 9 scans POSTERIORES ao 1º uma família de achados
+saía da 1ª página frente à 3.6.0 — a busca gulosa da 1ª página guardava a 1ª tentativa que ganhava família e deixava
+`state`/`coverage`/`revisited` inteiros (tela A p03 #21: a ordem de foco e a família da cor; tela B p02 #11:
+aria-required-children) — e um scan com `maxChars` 3000 voltava com 3.191 caracteres.
+
+- **Montagem por prioridade (`assembleFirstScanPage`).** As famílias são fatos medidos e vencem: o cabeçalho encolhe
+  por etapas, cada uma até o seu piso (o inteiro fica no ledger), e só quando tudo está no piso uma família sai da 1ª
+  página. Ordem: pendências de outras rotas → ids; `revisited` → contagem + seletores; pendências desta página →
+  forma curta; investigate → nomes; observações → contagem; chaves constantes; cobertura → contagens; estado →
+  essencial (`state.recipe` {viewport, viewportSource} fica — o runner do govbr-eval lê); ids do diff; deduplicação;
+  pendências de outras rotas → contagem; `units` → código; textos de limits → códigos; pendências → códigos →
+  contagem. Vale para o 1º scan e os posteriores; continuações seguem como antes. Ficam FORA dessas etapas (revisão):
+  os textos de `checksRun.limits` (D-154: a orientação de honestidade cede por último, como na 3.4.2), a separação por
+  rota/estado (`units`) e os ids das pendências de outras rotas (`sessionPending` não desce abaixo de `P-NN:código`);
+  `revisited` fica com contagem + seletores. O orçamento das famílias é achado por busca binária sobre a resposta
+  inteira, e `compacted` lista só as partes encolhidas.
+- **Teto garantido:** a 1ª página de um `scan_page` nunca passa de `maxChars` (nem de 8.000): sem família que caiba,
+  a página começa na continuação (cursor 0) e cada bloco desce ao mínimo (código, contagem ou `next`; os limits por
+  último, a códigos), até o envelope mínimo — que mantém pendências (ids), revisitados, investigate e a separação por
+  rota. No mínimo do esquema (1.000) o envelope pode não caber: volta assim mesmo, com `exceedsMaxChars`.
+- **Achados da revisita** (elementos antes ocultos) entram depois dos achados dos checks pedidos: são extra e não
+  deslocam famílias.
+- **Teste novo** `test/unit/firstPageReplay.test.ts`: as entradas reais do assembleScan das chamadas A p03 #21 e
+  B p02 #11/#13 (`test/fixtures/replay-3.6.1/`) — famílias da 1ª página ⊇ as da 3.6.0 e tamanho ≤ maxChars.
+- **Medido:** reexecução das 128 chamadas reais neste build: perdas de família na 1ª página frente à 3.6.0 = 0 (8
+  ganhos), nenhuma resposta acima do `maxChars` pedido; as linhas honest-gap de A-11/A-12 iguais às da 3.6.0 (os
+  textos de limits ficam); o `hr` revisitado (B-15) em 7 respostas da tela B, a pendência do título (B-25) e o
+  contraste não decidido (B-14) em 20 cada — iguais à 3.6.1. Duas verificações de A p02 (#18/#19) que citam o
+  excerto herdado `…19f93475dc5e` com `ds-page-header` ficam `unverifiable` com a nota "cite …c21ff1c7eefc" (já na
+  3.6.1: a citação do check mudou para a unidade literal). `tools/list` e instructions iguais à 3.6.1. 814 testes; CLI de linha de base fluxo/A/B/controles a/ 17/7/46/18 (os mesmos fatos da 3.6.0);
+  guarda da busca 78,6% / 45,7% / 9 / 28; portão NAT-86 GO (D2 TN 116 · TP 7); knowledge-free 0 ocorrências.
+
 ## 3.6.1 — a sessão lembra o que o oráculo já disse (D-155, trace dev-350-b-01 da tela B em 3.5.0)
 
 Motivo: no trace da campanha dev-350-b-01 (`thesis-workspace/planejamento/atual/mecanismo-oraculo-tela-b-dev-350-b-01-2026-10-31.md`)

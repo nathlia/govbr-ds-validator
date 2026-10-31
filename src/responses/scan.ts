@@ -9,6 +9,7 @@ import { pageLevelCodes, pageLevelShort, type NotJudgedItem } from "../scan/notJ
 import { sessionPendingCodes } from "../scan/session.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 export const OBSERVATION_PAGE_MAX_CHARS = 8_000;
 
 const CHECK_OMISSION_WHY = {
@@ -461,7 +462,7 @@ export function diffSummary(diff: Diff, scanId: string) {
       ? {
           notRemeasured: notRemeasured.length,
           notRemeasuredIds: notRemeasured.slice(0, sample).map((n) => n.id),
-          notRemeasuredNote: `Não medidos de novo neste scan (${[...new Set(notRemeasured.map((n) => (n.reason === "scope" ? "fora dos seletores" : `${n.check} não rodou`)))].join("; ")}): não sumiram — continuam valendo no scan anterior.`,
+          notRemeasuredNote: `Não medidos de novo (${[...new Set(notRemeasured.map((n) => (n.reason === "scope" ? "fora dos seletores" : `${n.check} não rodou`)))].join("; ")}): não sumiram.`,
         }
       : {}),
     ...(truncated || diff.evidenceChanged.length
@@ -512,8 +513,10 @@ export function assembleScan(
   page: (familyBudget: number) => Record<string, unknown>,
   options: { firstScanPage?: boolean } = {},
 ) {
-  let response = assembleScanPage(head, observations, scanId, maxChars, page, options);
-  if (options.firstScanPage) response = ensureFirstPageFamilies(response, head, observations, scanId, maxChars, page);
+  // 3.6.2: a 1ª página de um scan_page (1º scan ou posterior) monta por prioridade — famílias antes de tudo — e nunca
+  // passa do teto pedido. Continuações seguem o caminho de sempre (≥ 1 item para o cursor andar).
+  if (options.firstScanPage) return assembleFirstScanPage(head, observations, scanId, maxChars, page);
+  const response = assembleScanPage(head, observations, scanId, maxChars, page, options);
   const ceiled = enforceCeiling(response, maxChars, scanId);
   const sized = withResponseSize(ceiled);
   // O campo de tamanho não pode ser o que estoura o teto.
@@ -551,84 +554,74 @@ const listedItems = (r: Record<string, unknown>) =>
   Array.isArray(r.families) ? r.families.length : Array.isArray(r.findings) ? r.findings.length : 0;
 
 /**
- * 3.4.0 (B6, N-05): na 1ª página o cabeçalho cedia o orçamento e voltava 1 de 5 famílias (tela A),
- * 1 de 6 (fluxo), 1 de 15 (tela B). Enquanto a página traz menos de FIRST_PAGE_MIN_FAMILIES e há mais,
- * o cabeçalho encolhe por etapas — só o que tem continuação ou é constante —, e para na primeira que
- * atinge a meta. O que encolheu fica em `compacted`; o inteiro continua no ledger (get_finding_details).
+ * 3.6.2 (D-155; reexecução sem modelo de 128 chamadas reais, 3.5.0 × 3.6.0 × 3.6.1): a 1ª página de um scan_page —
+ * do 1º scan ou de um posterior — monta por PRIORIDADE. As famílias de achados são fatos medidos e vencem: o
+ * cabeçalho encolhe por etapas (cada uma até o seu piso, o inteiro fica no ledger), e uma família só sai da 1ª página
+ * quando todo o resto já está no piso. Na 3.6.1 a busca gulosa guardava a 1ª tentativa que ganhava família e, em 9
+ * scans posteriores, deixava `state`/`coverage`/`revisited` inteiros e cortava uma família (A p03 #21: a ordem de
+ * foco e a família da cor; B p02 #11: aria-required-children). E o teto pedido é garantia: a resposta nunca passa
+ * de `maxChars` (B p02 #13 voltava 3.191 para 3.000).
+ *
+ * Ordem das etapas (o que tem continuação ou é constante cede antes): pendências de outras rotas → ids; revisitados →
+ * contagem + seletores; pendências desta página → forma curta; investigate → nomes; observações → contagem; chaves
+ * constantes das famílias; cobertura → contagens; estado → essencial (a janela da receita e a fonte ficam: o runner
+ * do govbr-eval as lê, 3.4.3); ids do diff → continuação; deduplicação; pendências de outras rotas → contagem;
+ * separação por rota → código; textos de limits → códigos; pendências → códigos → contagem. Só então famílias.
  */
-function ensureFirstPageFamilies(
-  response: Record<string, unknown>,
-  head: Record<string, unknown>,
-  observations: Observation[] | null,
-  scanId: string,
-  maxChars: number,
-  page: (familyBudget: number) => Record<string, unknown>,
-): Record<string, unknown> {
-  const total = Number(response.totalFamilies ?? response.total ?? 0);
-  const want = total;
-  if (response.nextCursor === undefined || listedItems(response) >= want) return response;
+type FirstPageState = {
+  head: Record<string, unknown>;
+  obs: Observation[] | null;
+  pager: (budget: number) => Record<string, unknown>;
+  labels: string[];
+};
+
+function firstPageStages(scanId: string, page: (budget: number) => Record<string, unknown>): Array<[string, (s: FirstPageState) => FirstPageState | null]> {
+  const onHead = (f: (h: Record<string, unknown>) => Record<string, unknown> | null) => (s: FirstPageState) => {
+    const next = f(s.head);
+    return next ? { ...s, head: next } : null;
+  };
   const constants = (p: Record<string, unknown>) => {
     const { familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, ...rest } = p;
     return { ...rest, familyHint: "Mais famílias: get_finding_details(scanId, cursor=nextCursor); membros: get_finding_details(scanId, familyId, cursor=nextMemberCursor)." };
   };
-  let h = head;
-  let obs = observations;
-  let pager = page;
-  const done: string[] = [];
-  const stages: Array<[string, () => boolean]> = [
-    // 3.5.0 (revisão do coordenador): os blocos novos cedem antes de tudo; os achados têm prioridade.
-    // 3.6.1 (revisão H1): famílias primeiro. As pendências cedem logo para a forma curta (`P-NN:código⇒emag-x.y`,
-    // a cláusula em full), que é o piso desta busca: nenhuma família sai da 1ª página por causa delas.
-    ["sessionPending → ids", () => {
-      const next = sessionPendingStep(h);
-      if (!next) return false;
-      h = next;
-      return true;
-    }],
-    ["checksRun.pageLevel → curto (P-NN:código⇒norma)", () => {
-      const next = pageLevelShortStep(h);
-      if (!next) return false;
-      h = next;
-      return true;
-    }],
-    ["investigate → nomes + contagens", () => {
-      const next = investigateNames(h);
-      if (!next) return false;
-      h = next;
-      return true;
-    }],
-    ["observations → contagem + get_finding_details(view:observations)", () => {
-      if (!obs?.length) return false;
-      h = { ...h, observations: minimalObservations(obs, scanId) };
-      obs = null;
-      return true;
-    }],
-    ["investigate.items > 1 → investigate.more", () => {
-      const inv = h.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
-      if (!inv?.items || inv.items.length <= 1) return false;
-      const moved = inv.items.slice(1).map((i) => i.component);
-      h = { ...h, investigate: { ...inv, items: inv.items.slice(0, 1), more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] } } };
-      return true;
-    }],
-    ["familyKey/evidenceSignatureKey → removidos (constantes)", () => {
-      pager = (b) => constants(page(b));
-      return true;
-    }],
-    ["coverage → contagens (inteira no ledger)", () => {
+  const pageLevelOf = (h: Record<string, unknown>) =>
+    (h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown; lowSignal?: number } } | undefined)?.pageLevel;
+  return [
+    ["sessionPending → ids", onHead(sessionPendingStep)],
+    ["revisited → contagem + seletores", onHead((h) => {
+      const rv = h.revisited as { items?: Array<{ locator: string }>; count?: number } | undefined;
+      if (!rv?.items) return null;
+      return { ...h, revisited: { count: rv.items.length, selectors: rv.items.map((i) => clip(i.locator, 80)) } };
+    })],
+    ["pageLevel → curto", onHead(pageLevelShortStep)],
+    ["investigate → nomes", onHead(investigateNames)],
+    ["observations → contagem", (s) => (s.obs?.length ? { ...s, head: { ...s.head, observations: minimalObservations(s.obs, scanId) }, obs: null } : null)],
+    ["familyKey → removido", (s) => (s.pager === page ? { ...s, pager: (b) => constants(page(b)) } : null)],
+    ["coverage → contagens", onHead((h) => {
       const c = h.coverage as Record<string, unknown> | undefined;
-      if (!c) return false;
+      if (!c || c.compact) return null;
       const count = (k: string) => (Array.isArray(c[k]) ? (c[k] as unknown[]).length : undefined);
-      const { componentsRequested: _r, evidenceSelectors: _e, ...rest } = c;
-      h = { ...h, coverage: { ...rest, componentsRequested: count("componentsRequested"), evidenceSelectors: count("evidenceSelectors") } };
-      return true;
-    }],
-    ["state → essencial (inteiro no ledger)", () => {
-      const st = h.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown }; recipe?: { viewport?: unknown; viewportSource?: unknown } } | undefined;
-      if (!st) return false;
+      const axe = c.axe as { engine?: unknown; passes?: unknown; incomplete?: unknown } | undefined;
+      return {
+        ...h,
+        coverage: {
+          compact: true,
+          checks: c.checks,
+          elementsInspected: c.elementsInspected,
+          componentsFound: count("componentsFound"),
+          actionsApplied: count("actionsApplied"),
+          ...(axe ? { axe: { passes: axe.passes, incomplete: axe.incomplete } } : {}),
+          full: { tool: "get_finding_details", arguments: { scanId } },
+        },
+      };
+    })],
+    ["state → essencial", onHead((h) => {
+      const st = h.state as { observed?: Record<string, unknown>; reached?: unknown; settle?: { settled?: unknown }; replay?: { status?: unknown }; recipe?: { viewport?: unknown; viewportSource?: unknown }; full?: unknown } | undefined;
+      if (!st || st.full) return null;
       const o = st.observed ?? {};
-      // 3.4.4: como no enforceCeiling (D-154), a janela da receita e a fonte dela ficam (atestação do harness).
+      // 3.4.3/3.4.4: a janela da receita e a fonte dela ficam — é a atestação que o runner do govbr-eval confere.
       const recipe = st.recipe?.viewportSource !== undefined ? { recipe: { viewport: st.recipe.viewport, viewportSource: st.recipe.viewportSource } } : {};
-      h = {
+      return {
         ...h,
         state: {
           reached: st.reached,
@@ -639,53 +632,157 @@ function ensureFirstPageFamilies(
           full: { tool: "get_finding_details", arguments: { scanId } },
         },
       };
-      return true;
-    }],
-    // 3.5.0 (revisão do coordenador): mais duas partes com continuação cedem antes de a página perder família —
-    // os ids do diff (get_finding_details view:diff) e as contagens de deduplicação (no ledger).
-    ["stateDiff.findings ids → get_finding_details(view:diff)", () => {
-      const diff = h.stateDiff as { findings?: { addedIds?: unknown[]; removedIds?: unknown[] } } | undefined;
-      if (!diff?.findings || ((diff.findings.addedIds?.length ?? 0) + (diff.findings.removedIds?.length ?? 0)) === 0) return false;
-      const { addedIds: _a, removedIds: _r, ...counts } = diff.findings as Record<string, unknown>;
-      h = { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
-      return true;
-    }],
-    ["deduplication → removido (no ledger)", () => {
-      if (!h.deduplication) return false;
-      const { deduplication: _d, ...rest } = h;
-      h = rest;
-      return true;
-    }],
-    ["investigate.items → investigate.more", () => {
-      const inv = h.investigate as { items?: Array<{ component: string }>; more?: { remaining: number; components: string[] } } | undefined;
-      if (!inv?.items?.length) return false;
-      const moved = inv.items.map((i) => i.component);
-      h = { ...h, investigate: { ...inv, items: [], more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] } } };
-      return true;
-    }],
-    // 3.6.1 (revisão H1): famílias vencem. Só se ainda faltar família, as pendências vão à contagem + next (como na
-    // 3.6.0); a etapa só fica se trouxer família (a busca guarda a melhor tentativa).
-    ["checksRun.pageLevel → contagem + next", () => {
-      const cr = h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown; lowSignal?: number } } | undefined;
-      const pl = cr?.pageLevel;
-      if (!pl || pl.notMeasured === undefined) return false;
-      h = { ...h, checksRun: { ...cr, pageLevel: { count: (pl.count ?? pl.notMeasured.length) + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
-      return true;
-    }],
+    })],
+    ["stateDiff ids → view:diff", onHead((h) => {
+      const diff = h.stateDiff as { findings?: Record<string, unknown> } | undefined;
+      const f = diff?.findings;
+      if (!f || (!(f.addedIds as unknown[] | undefined)?.length && !(f.removedIds as unknown[] | undefined)?.length && !(f.notRemeasuredIds as unknown[] | undefined)?.length)) return null;
+      const { addedIds: _a, removedIds: _r, notRemeasuredIds: _n, ...counts } = f;
+      return { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
+    })],
+    ["deduplication → ledger", onHead((h) => (h.deduplication ? (({ deduplication: _d, ...rest }) => rest)(h) : null))],
+    // 3.6.2 (revisão): os textos de checksRun.limits (D-154/3.4.2: a orientação de honestidade), a separação por
+    // rota/estado e os ids das pendências de outras rotas NÃO entram aqui — ficam inteiros enquanto houver família
+    // a cortar; só o teto rígido (hardFloor) os reduz, e a códigos/ids, nunca a nada.
+    ["pageLevel → códigos", onHead((h) => pageLevelCompact(h, scanId))],
+    ["pageLevel → contagem", onHead((h) => {
+      const pl = pageLevelOf(h);
+      if (!pl || pl.notMeasured === undefined) return null;
+      return { ...h, checksRun: { ...(h.checksRun as object), pageLevel: { count: (pl.count ?? pl.notMeasured.length) + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
+    })],
   ];
-  let best = response;
-  for (const [label, apply] of stages) {
-    if (!apply()) continue;
-    done.push(label);
-    // O orçamento interno desconta a lista `compacted` que vai junto (senão a página enche o teto e a lista estoura).
-    const raw = assembleScanPage(h, obs, scanId, maxChars - textSize({ compacted: done }) - 40, pager, { firstScanPage: true });
-    // 3.4.4: o tamanho conferido é o da resposta COM a lista `compacted` (antes ela entrava depois do teste).
-    const trial = { ...raw, compacted: [...done, ...((raw.compacted as string[] | undefined) ?? [])] };
-    if (textSize(trial) > maxChars || listedItems(trial) <= listedItems(best)) continue;
-    best = trial;
-    if (listedItems(best) >= want) break;
+}
+
+/**
+ * O mínimo de cada bloco, para o teto rígido (só quando nem a página começando na continuação cabe). Nada some:
+ * cada bloco fica como código, contagem ou `next`; os textos de checksRun.limits viram códigos por último (D-154).
+ */
+function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record<string, unknown>> {
+  const full = { tool: "get_finding_details", arguments: { scanId } };
+  const spIds = (sp: { ids?: string[]; items?: Array<{ code: string; ids: string[] }> }) => sp.ids ?? (sp.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
+  return [
+    (x) => (x.compacted ? { ...x, compacted: (x.compacted as unknown[]).length } : x),
+    (x) => (x.investigate ? { ...x, investigate: { next: (x.investigate as { next?: unknown }).next } } : x),
+    (x) => (x.stateDiff ? { ...x, stateDiff: { previousScanId: (x.stateDiff as { previousScanId?: unknown }).previousScanId, stateChanged: (x.stateDiff as { stateChanged?: unknown }).stateChanged, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } : x),
+    (x) => (x.summary ? { ...x, summary: { total: (x.summary as { total?: unknown }).total } } : x),
+    (x) => (x.coverage ? { ...x, coverage: { checks: (x.coverage as { checks?: unknown }).checks, full } } : x),
+    (x) => (x.familyHint ? (({ familyHint: _h, ...rest }) => rest)(x) : x),
+    (x) => (x.cacheMissReason ? (({ cacheMissReason: _c, ...rest }) => rest)(x) : x),
+    (x) => (x.observations ? { ...x, observations: { total: (x.observations as { total?: unknown }).total, next: { tool: "get_finding_details", arguments: { scanId, view: "observations" } } } } : x),
+    (x) => (x.sessionPending ? { ...x, sessionPending: { count: (x.sessionPending as { count?: unknown }).count, ids: spIds(x.sessionPending as never) } } : x),
+    (x) => (x.revisited ? { ...x, revisited: { count: (x.revisited as { count?: unknown; items?: unknown[] }).count ?? (x.revisited as { items?: unknown[] }).items?.length, next: full } } : x),
+    (x) => (x.units ? { ...x, units: { routes: (x.units as { routes?: unknown }).routes, states: (x.units as { states?: unknown }).states, rule: "um achado por rota/estado" } } : x),
+    (x) => {
+      const cr = x.checksRun as { executed?: Array<{ check?: string } | string>; limits?: Array<{ code: string } | string>; pageLevel?: unknown } | undefined;
+      return cr ? { ...x, checksRun: { executed: (cr.executed ?? []).map((e) => (typeof e === "string" ? e : e.check)), limits: (cr.limits ?? []).map((l) => (typeof l === "string" ? l : l.code)), pageLevel: cr.pageLevel } } : x;
+    },
+    // Último recurso: o envelope mínimo — o lote inteiro está no ledger pelo scanId; códigos, contagens e continuações ficam.
+    (x) => {
+      const st = x.state as { recipe?: unknown; reached?: unknown } | undefined;
+      const cr = x.checksRun as { limits?: unknown; pageLevel?: { count?: unknown; notMeasured?: unknown[]; next?: unknown; full?: unknown } } | undefined;
+      const pl = cr?.pageLevel;
+      return {
+        contract: x.contract, kind: x.kind, status: x.status, scanId: x.scanId, stateFingerprint: x.stateFingerprint,
+        ...(st ? { state: { reached: st.reached, ...(st.recipe ? { recipe: st.recipe } : {}) } } : {}),
+        ...(cr ? { checksRun: { limits: cr.limits, ...(pl ? { pageLevel: { count: pl.count ?? pl.notMeasured?.length, next: pl.next ?? pl.full } } : {}) } } : {}),
+        ...(x.sessionPending ? { sessionPending: x.sessionPending } : {}),
+        ...(x.revisited ? { revisited: { count: (x.revisited as { count?: unknown }).count } } : {}),
+        ...(x.investigate ? { investigate: x.investigate } : {}),
+        ...(x.units ? { units: x.units } : {}),
+        ...(x.summary ? { summary: x.summary } : {}),
+        totalFindings: x.totalFindings, totalFamilies: x.totalFamilies, families: x.families, count: x.count, cursor: x.cursor,
+        complete: x.complete, partial: x.partial, nextCursor: x.nextCursor, next: x.next, absenceNote: x.absenceNote,
+        compacted: "tudo (inteiro no ledger: get_finding_details)",
+      };
+    },
+  ];
+}
+
+function assembleFirstScanPage(
+  head: Record<string, unknown>,
+  observations: Observation[] | null,
+  scanId: string,
+  maxChars: number,
+  page: (familyBudget: number) => Record<string, unknown>,
+): Record<string, unknown> {
+  // O campo de tamanho conta: a página só é aceita com ele dentro do teto (a busca de orçamento mede a resposta final).
+  const finish = (r: Record<string, unknown>, labels: string[]) => withResponseSize(labels.length ? { ...r, compacted: [...labels] } : r);
+  const target = listedItems(page(1_000_000));
+  const obsShare = Math.max(300, Math.floor(maxChars * 0.1));
+  /** A melhor página para este cabeçalho: o maior orçamento de famílias que ainda cabe no teto. */
+  const fill = (s: FirstPageState): Record<string, unknown> | null => {
+    const fixed = { ...s.head, ...(s.obs ? { observations: observationsBlock(s.obs, scanId, obsShare) } : {}) };
+    const build = (b: number) => finish({ ...fixed, ...s.pager(b) }, s.labels);
+    // Busca binária do maior orçamento de famílias cuja resposta inteira (com `compacted` e o campo de tamanho) cabe:
+    // a estimativa do construtor de páginas não é exata, e um passo fixo deixava família de fora por poucos caracteres.
+    let lo = 200;
+    let r = build(lo);
+    if (textSize(r) > maxChars) return null;
+    let hi = Math.max(lo, 2 * maxChars);
+    for (let i = 0; i < 16 && hi - lo > 20; i++) {
+      const mid = Math.floor((lo + hi) / 2);
+      const trial = build(mid);
+      if (textSize(trial) <= maxChars) {
+        lo = mid;
+        r = trial;
+        if (listedItems(r) >= target) break;
+      } else hi = mid;
+    }
+    return r;
+  };
+  let state: FirstPageState = { head, obs: observations, pager: page, labels: [] };
+  let best: Record<string, unknown> | null = null;
+  /** A página completa (todas as famílias que o pedido traria sem teto) encerra; senão guarda a que tem mais famílias. */
+  const consider = (s: FirstPageState): Record<string, unknown> | null => {
+    const r = fill(s);
+    if (!r) return null;
+    if (listedItems(r) >= target) return r;
+    if (listedItems(r) > 0 && (!best || listedItems(r) > listedItems(best))) best = r;
+    return null;
+  };
+  let done = consider(state);
+  if (done) return done;
+  for (const [label, apply] of firstPageStages(scanId, page)) {
+    const next = apply(state);
+    if (!next) continue;
+    // 3.6.2: `compacted` lista só a PARTE encolhida (cada bloco mostra a sua forma e a continuação); etapas da mesma
+    // parte não se repetem — a lista custava até ~350 caracteres, o espaço de uma família.
+    const part = label.split(" → ")[0];
+    state = { ...next, labels: [...state.labels.filter((l) => l !== part), part] };
+    done = consider(state);
+    if (done) return done;
   }
-  return best;
+  if (best) return best;
+  // Nem uma família cabe com o cabeçalho no piso: a página de famílias começa na continuação (cursor 0) — um único
+  // cursor, coerente — e, se nem assim couber, cada bloco desce ao mínimo (fica a contagem ou o next), nunca acima do teto.
+  const p = page(200);
+  const listKey = (["families", "findings"] as const).find((k) => Array.isArray(p[k])) ?? "families";
+  const items = Array.isArray(p[listKey]) ? (p[listKey] as unknown[]).length : 0;
+  const totalItems = Number(p.totalFamilies ?? p.total ?? items);
+  const totalFindings = Number(p.totalFindings ?? p.total ?? items);
+  const labels = [...state.labels, `${listKey} → get_finding_details(scanId, cursor:0)`];
+  let out: Record<string, unknown> = {
+    ...state.head,
+    ...(state.obs ? { observations: minimalObservations(state.obs, scanId) } : {}),
+    ...p,
+    [listKey]: [],
+    count: 0,
+    cursor: 0,
+    truncated: true,
+    complete: false,
+    partial: { reasons: ["char-budget"], ...(listKey === "families" ? { familiesNotReturned: totalItems, membersNotReturned: totalFindings } : { notReturned: totalItems }), nextCursor: 0 },
+    nextCursor: 0,
+    next: { tool: "get_finding_details", arguments: { scanId, cursor: 0 } },
+  };
+  out = finish(out, labels);
+  if (textSize(out) > maxChars && typeof out.responseCharsEstimate === "number") out = (({ responseCharsEstimate: _r, itemsChars: _i, ...rest }) => rest)(out);
+  for (const f of hardFloor(scanId)) {
+    if (textSize(out) <= maxChars) break;
+    out = f(out);
+  }
+  // Nem o envelope mínimo cabe (teto muito baixo para o que o scan precisa dizer): devolvido assim mesmo, e dito.
+  if (textSize(out) > maxChars) out = { ...out, exceedsMaxChars: { maxChars, note: "O mínimo desta resposta não cabe no orçamento pedido; peça maxChars maior." } };
+  return out;
 }
 
 function assembleScanPage(

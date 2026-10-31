@@ -288,7 +288,7 @@ export class ScanSession {
 
 /** 3.6.1 (item 6): texto genérico da separação por rota/estado. */
 export const UNITS_NOTE =
-  "Achados de rotas ou estados diferentes são achados separados: um cartão por rota/estado, cada um com a evidência (scanId) do seu. Não junte num achado membros de rotas/estados diferentes — a evidência de um não vale pelo outro.";
+  "Rotas/estados diferentes = achados separados: um cartão por rota/estado, com o scanId do seu; não junte membros de rotas/estados diferentes.";
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
