@@ -313,6 +313,12 @@ export const TOOL_FIELDS: Record<string, ToolFields> = {
       `${CONTEXT}.trace[*].subjects[*].classes[*]`,
       `${CONTEXT}.accessibility[*].ax.name`,
       `${CONTEXT}.accessibility[*].ax.description`,
+      // 1.3.0 (dev-350-b-01 p01-ferramentas): nome da tag do elemento medido no DOM; na tela B os componentes
+      // são custom elements (<br-input>), e a tag é fato da página, não conhecimento da base. Idem os ids que
+      // os atributos de referência (aria-labelledby…) apontam, existentes ou faltando.
+      `${CONTEXT}.accessibility[*].tag`,
+      `${CONTEXT}.accessibility[*].idrefs[*].ids[*]`,
+      `${CONTEXT}.accessibility[*].idrefs[*].missing[*]`,
       `${CONTEXT}.anatomy[*].classes[*]`,
       `${CONTEXT}.anatomy[*].messageText[*]`,
       `${CONTEXT}.anatomy[*].header.titleText`,
