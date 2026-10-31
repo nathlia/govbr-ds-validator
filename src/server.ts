@@ -86,6 +86,7 @@ import {
   type StyleProperty,
 } from "./evidence/inspect.js";
 import { verifyFinding } from "./verify/gate.js";
+import { mixedStateVerdict, routeOfUrl, stateReferences, type ScanStateInfo } from "./verify/mixedStates.js";
 import { VerificationStore } from "./verify/store.js";
 import { ArrivalSchema, PageActionsSchema } from "./scan/actions.js";
 import type { StateAttestation } from "./scan/pageScan.js";
@@ -144,7 +145,7 @@ export function startupChecks(): Promise<void> {
 }
 import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
-import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock } from "./scan/session.js";
+import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock, slotOf } from "./scan/session.js";
 import { componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
@@ -775,6 +776,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const inspectSnapshots = new Map<string, { id: string; takenAt: string; evidence: Record<string, unknown>; elements: unknown[] }>();
   let inspectSnapshotCounter = 0;
   const verificationFor = (finding: Finding) => verificationStore.lookup(finding)?.verification;
+  /** 3.6.3: os scans de página desta sessão com o estado de cada um (para recusar evidência de estados misturados). */
+  const pageScanStates = (): ScanStateInfo[] =>
+    findingStore.batchIds().flatMap((id) => {
+      const ledger = findingStore.getBatchMetadata(id);
+      const state = ledger?.state as StateAttestation | undefined;
+      if (!state?.observed?.url || typeof ledger?.stateFingerprint !== "string") return [];
+      return [{
+        scanId: id,
+        url: state.observed.url,
+        // 3.6.3 (revisão LOW 1): a mesma chave de rota das pendências (routeKeyOf); a query fica na receita.
+        page: routeOfUrl(state.observed.url),
+        fingerprint: ledger.stateFingerprint,
+        recipeKey: JSON.stringify({ url: state.recipe?.url ?? state.observed.url, actions: state.recipe?.actions ?? [], arrival: state.recipe?.arrival ?? null }),
+        findings: findingStore.getBatch(id) ?? [],
+      }];
+    });
 
   /**
    * 2.11.0 (NAT-84): visão de um lote — a página de findings de sempre ou a página de famílias.
@@ -816,7 +833,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
     // 3.3.0 (B-18): procedimento de uso das ferramentas deste perfil, sem conhecimento do DS.
     instructions: instructionsForProfile(toolProfile),
   });
-  installContractInputValidation(server);
+  // 3.6.3: toda recusa de entrada também vira um evento de telemetria (eventos = chamadas, nos dois perfis).
+  installContractInputValidation(server, (name, args, result, errorCode) => telemetry.rejected(name, args, result, errorCode));
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
   // the same DS release (logs to stderr — stdout is the MCP transport). Sem base no knowledge-free.
@@ -1670,7 +1688,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
     const entries = session.registerPending(scanId, route, items, (item) => (item.examples ?? []).slice());
     return items.map((item, i) => {
       const e = entries[i];
-      return { ...item, pendingId: e.id, ...(e.status === "resolved" ? { resolved: e.resolution?.status ?? e.resolution?.by ?? true } : {}) };
+      // 3.6.3 (revisão HIGH 1): resolvida NESTA rota (a mesma pendência pode seguir aberta noutra).
+      const slot = slotOf(e, route);
+      return { ...item, pendingId: e.id, ...(slot?.status === "resolved" ? { resolved: slot.resolution?.status ?? slot.resolution?.by ?? true } : {}) };
     });
   };
 
@@ -1820,7 +1840,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (compareToScanId && !previousFindings) {
           return sessionFailure(`compareToScanId '${compareToScanId}' não existe nesta sessão MCP.`, "unknown-scan", "compareToScanId");
         }
-        const pendingResolution = pendingResolved?.length ? session.resolveExplicit(pendingResolved) : undefined;
+        const pendingResolution = pendingResolved?.length ? session.resolveExplicit(pendingResolved, routeKeyOf(url)) : undefined;
         // 3.6.1 (item 3): elementos que um scan anterior desta página viu ocultos.
         const revisit = session.hiddenFor(url).map((h) => ({ locator: h.locator, checker: h.checker, fromScan: h.scanId, n: h.n }));
         const result = await scanPage(
@@ -1893,7 +1913,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const pageItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
-          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true)
+          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route)
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
         session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks });
@@ -2002,7 +2022,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const first = !cursor;
       const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
       const sessionPending = first
-        ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), () => true, false)
+        ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), () => true, false, route)
         : undefined;
       const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
       session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title: null, checks: ["axe"] });
@@ -2423,6 +2443,28 @@ export function createServer(options: ServerOptions = {}): McpServer {
           fingerprint: ledger.stateFingerprint,
         };
       }
+      // 3.6.3 (D-155; rastreio dev-362-b-01 §1; revisão MEDIUM 1): um fato por rota/estado. Recusa a evidência que afirma
+      // um fato com membros de rotas diferentes, ou membros de estados diferentes sem relação antes/depois declarada; o
+      // achado de outro estado da mesma rota e a relação declarada passam, com stateWarning.
+      const sessionScans = pageScanStates();
+      const states = mixedStateVerdict(stateReferences(finding as Finding, scanId, sessionScans, (id) => findingStore.get([id]).found[0]), sessionScans);
+      if (states.refuse) {
+        const groups = states.refuse.groups;
+        return fail({
+          error: states.refuse.reason === "routes"
+            ? `O achado afirma um fato com evidência de ${groups.length} rotas diferentes: um achado é de uma rota só, e a evidência de uma não vale pela outra. Nada foi verificado.`
+            : `Os membros em evidence.data são de ${groups.length} estados diferentes, sem relação antes/depois declarada (before/after): um achado é de um estado só. Nada foi verificado.`,
+          errorCode: "mixed-states",
+          field: states.refuse.reason === "routes" && scanId ? "scanId" : "finding.evidence.data",
+          groups,
+          next: groups.map((g) =>
+            step("request-detail", `um achado só com o que é de ${g.route} (${g.cited.join(", ")}), verificado com scanId ${g.scanIds[0]}`, "verify_finding", { scanId: g.scanIds[0] }),
+          ),
+        });
+      }
+      const stateWarning = states.warning
+        ? { note: "A evidência cita mais de um estado da mesma rota (ou uma relação antes/depois declarada): a verificação vale para o estado reproduzido (scanId/actions), não para os outros.", groups: states.warning }
+        : undefined;
       // 3.4.4 (C9): o achado do próprio scanner volta sem edição. A projeção compacta do scan não traz
       // evidence.data (expectedCondition e os campos da condição); com o id de um achado do ledger desta
       // sessão — mesma norma e mesmo localizador —, os campos que faltam são herdados do achado guardado
@@ -2474,7 +2516,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(inherited ? { inheritedFromLedger: { ...inherited, note: "Campos que faltavam no payload (evidence.data; 3.6.0: rule.checker) foram herdados do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
           ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
         }),
+        ...(stateWarning ? { stateWarning } : {}),
         ...(pendingResolved.length ? { pendingResolved } : {}),
+        // 3.6.3 (revisão HIGH 1): a mesma pendência em outras rotas segue aberta até ser medida lá.
+        ...(pendingResolved.length && session.stillOpen(pendingResolved).length ? { pendingStillOpen: session.stillOpen(pendingResolved) } : {}),
       });
     })
   );

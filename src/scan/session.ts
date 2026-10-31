@@ -56,12 +56,32 @@ export interface PendingRule {
   text: string;
 }
 
+export type PendingResolution = { by: "verify_finding" | "pendingResolved"; status?: string; ref?: string; reason?: string };
+
+/**
+ * 3.6.3 (revisão HIGH 1): o estado da pendência em UMA rota. O id e o rótulo podem ser compartilhados entre rotas (o mesmo
+ * conjunto de elementos), mas a resolução é por rota: o que foi medido numa rota não fecha a mesma pendência noutra.
+ */
+export interface PendingSlot {
+  route: string;
+  status: "open" | "resolved";
+  resolution?: PendingResolution;
+  /** Elementos citados nesta rota. */
+  locators: string[];
+  scans: string[];
+}
+
 export interface PendingEntry {
   id: string;
   key: string;
   code: string;
   subject: string;
+  /** A rota em que a pendência abriu. */
   route: string;
+  /** 3.6.3: todas as rotas em que a mesma pendência (mesmo código + conjunto de elementos) apareceu. */
+  routes: string[];
+  /** 3.6.3: o estado por rota (a resolução é por rota). */
+  slots: PendingSlot[];
   scans: string[];
   norms: string[];
   rule?: PendingRule;
@@ -69,8 +89,27 @@ export interface PendingEntry {
   locators: string[];
   /** 3.6.1 (revisão M1): pendência sem sinal medido (idioma, regiões) — em sessionPending só como contagem. */
   low: boolean;
+  /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
-  resolution?: { by: "verify_finding" | "pendingResolved"; status?: string; ref?: string; reason?: string };
+  /** A última resolução (de qualquer rota). */
+  resolution?: PendingResolution;
+}
+
+/** 3.6.3: o estado da pendência nesta rota. */
+export function slotOf(entry: PendingEntry, route: string): PendingSlot | undefined {
+  return entry.slots.find((x) => x.route === route);
+}
+
+/** Rótulo de uma rota da pendência: o id sozinho quando ela é de uma rota só; `P-NN@/caminho` quando é de várias. */
+export function slotLabel(entry: PendingEntry, route: string): string {
+  return entry.slots.length > 1 ? `${entry.id}@${routeLabel(route)}` : entry.id;
+}
+
+function resolveSlot(entry: PendingEntry, slot: PendingSlot, resolution: PendingResolution): void {
+  slot.status = "resolved";
+  slot.resolution = resolution;
+  entry.resolution = resolution;
+  entry.status = entry.slots.some((x) => x.status === "open") ? "open" : "resolved";
 }
 
 export interface SessionScan {
@@ -112,6 +151,7 @@ export function citedNorms(rule: Finding["rule"]): Set<string> {
 
 export class ScanSession {
   private readonly scans: SessionScan[] = [];
+  /** Índice chave → pendência (3.6.3: a mesma entrada sob a chave da rota e a do elemento). */
   private readonly pending = new Map<string, PendingEntry>();
   private readonly byId = new Map<string, PendingEntry>();
   private readonly hidden = new Map<string, HiddenEntry>();
@@ -170,13 +210,31 @@ export class ScanSession {
   }
 
   /**
-   * Abre (ou reencontra) uma pendência por código + assunto + rota. Uma pendência já resolvida não reabre:
-   * a mesma rota volta com o id e a resolução.
+   * Abre (ou reencontra) uma pendência. Uma pendência já resolvida não reabre: volta com o id e a resolução.
+   *
+   * 3.6.3 (D-155; rastreio dev-362-b-01 §4): a pendência de um ELEMENTO é chaveada por código + assunto + o(s)
+   * localizador(es) que ela cita (+ o que já foi medido neles, quando há) — não pela rota. O mesmo componente que
+   * reaparece em outra rota (o menu do avatar no cabeçalho, reaberto a cada rota) é a mesma pendência, com o mesmo id
+   * (na 3.6.2 cada rota abria um id novo: P-05/P-10/P-14/P-18). A pendência do DOCUMENTO (sem localizador: título,
+   * idioma, regiões) continua por rota — o título de cada rota é um item próprio. A rota nova entra em `routes`.
+   * Na mesma rota, a chave de sempre (código + assunto + rota) continua valendo: o mesmo código com outros exemplos
+   * depois de uma ação não abre id novo (reexecução 3.6.3: sem isso as sessões ganhavam ids, não perdiam).
    */
   registerPending(scanId: string, route: string, items: NotJudgedItem[], locatorsOf: (item: NotJudgedItem) => string[]): PendingEntry[] {
     return items.map((item) => {
-      const key = `${item.code}|${item.subject}|${route}`;
-      let entry = this.pending.get(key);
+      const locators = locatorsOf(item);
+      const routeKey = `${item.code}|${item.subject}|${route}`;
+      // 3.6.3 (revisão HIGH 2): só o conjunto INTEIRO de elementos (hash de todos os localizadores e medidas) com a mesma
+      // contagem junta rotas; sem o conjunto inteiro conhecido (`elementSet` ausente), a pendência fica por rota.
+      const elemKey = item.elementSet && locators.length ? `${item.code}|${item.subject}|#${item.count ?? ""}|${item.elementSet}` : null;
+      const key = elemKey ?? routeKey;
+      // A chave da rota primeiro (na mesma rota, o mesmo código é a mesma pendência, como na 3.6.2); depois o conjunto.
+      let entry = this.pending.get(routeKey) ?? (elemKey ? this.pending.get(elemKey) : undefined);
+      // 3.6.3 (revisão LOW 2): achada por qualquer chave, a entrada passa a responder pelas duas nesta rota.
+      if (entry) {
+        if (elemKey && !this.pending.has(elemKey)) this.pending.set(elemKey, entry);
+        if (!this.pending.has(routeKey)) this.pending.set(routeKey, entry);
+      }
       if (!entry) {
         this.counter += 1;
         entry = {
@@ -185,6 +243,8 @@ export class ScanSession {
           code: item.code,
           subject: item.subject,
           route,
+          routes: [],
+          slots: [],
           scans: [],
           norms: [...(item.norms ?? [])],
           ...(item.rule ? { rule: item.rule } : {}),
@@ -192,36 +252,67 @@ export class ScanSession {
           low: item.signal === "low",
           status: "open",
         };
-        this.pending.set(key, entry);
+        this.pending.set(routeKey, entry);
+        if (elemKey) this.pending.set(elemKey, entry);
         this.byId.set(entry.id, entry);
       }
+      if (!entry.routes.includes(route)) entry.routes.push(route);
+      let slot = slotOf(entry, route);
+      if (!slot) {
+        // Rota nova: abre aberta, mesmo que outra rota da mesma pendência já esteja resolvida.
+        slot = { route, status: "open", locators: [], scans: [] };
+        entry.slots.push(slot);
+        entry.status = "open";
+      }
+      if (!slot.scans.includes(scanId)) slot.scans.push(scanId);
       if (!entry.scans.includes(scanId)) entry.scans.push(scanId);
-      for (const l of locatorsOf(item)) if (!entry.locators.includes(l)) entry.locators.push(l);
+      for (const l of locators) {
+        if (!slot.locators.includes(l)) slot.locators.push(l);
+        if (!entry.locators.includes(l)) entry.locators.push(l);
+      }
       return entry;
     });
   }
 
   open(): PendingEntry[] {
-    return [...this.pending.values()].filter((e) => e.status === "open");
+    // 3.6.3: `pending` indexa a mesma entrada por rota e por elemento; a lista sai de byId (uma vez cada, na ordem dos ids).
+    return [...this.byId.values()].filter((e) => e.status === "open");
   }
 
   /**
    * verify_finding sobre uma norma da pendência resolve a pendência — qualquer veredito: o agente mediu e decidiu.
    * 3.6.1 (revisão M2): vale na mesma rota (qualquer elemento: o localizador do axe e o do agente raramente
    * coincidem) ou, em outra rota, no mesmo elemento (o mesmo cabeçalho em todas as rotas).
+   * 3.6.3 (revisão HIGH 1): resolve só a ROTA do achado — a mesma pendência noutra rota continua aberta. Fora das rotas
+   * dela, só fecha a rota cuja pendência é exatamente esse elemento (um localizador só, o mesmo). Devolve rótulos
+   * (`P-NN` ou `P-NN@/rota`).
    */
   resolveByVerify(finding: Finding, verificationId: string, verdict: string): string[] {
     const route = routeKeyOf(finding.element.page);
     const cited = citedNorms(finding.rule);
     const resolved: string[] = [];
+    const resolution: PendingResolution = { by: "verify_finding", ref: verificationId, status: verdict };
     for (const entry of this.open()) {
       if (!entry.norms.some((n) => cited.has(n))) continue;
-      if (entry.route !== route && !entry.locators.includes(finding.element.locator)) continue;
-      entry.status = "resolved";
-      entry.resolution = { by: "verify_finding", ref: verificationId, status: verdict };
-      resolved.push(entry.id);
+      const here = slotOf(entry, route);
+      const targets = here
+        ? here.status === "open" ? [here] : []
+        : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
+      for (const slot of targets) {
+        resolveSlot(entry, slot, resolution);
+        resolved.push(slotLabel(entry, slot.route));
+      }
     }
     return resolved;
+  }
+
+  /** 3.6.3: as rotas ainda abertas das pendências citadas (rótulos `P-NN@/rota`). */
+  stillOpen(labels: string[]): string[] {
+    const ids = new Set(labels.map((l) => l.split("@")[0]));
+    return [...ids].flatMap((id) => {
+      const entry = this.byId.get(id);
+      return entry ? entry.slots.filter((x) => x.status === "open").map((x) => `${entry.id}@${routeLabel(x.route)}`) : [];
+    });
   }
 
   /**
@@ -229,7 +320,7 @@ export class ScanSession {
    * exigem `reason` (sem ela a pendência continua aberta); "violada" fecha a pendência e volta como instrução de
    * registrar o achado, com a cláusula a citar — nunca em silêncio.
    */
-  resolveExplicit(list: Array<{ id: string; status: string; reason?: string }>) {
+  resolveExplicit(list: Array<{ id: string; status: string; reason?: string }>, currentRoute?: string) {
     const resolved: string[] = [];
     const unknown: string[] = [];
     const needsReason: string[] = [];
@@ -244,15 +335,22 @@ export class ScanSession {
         needsReason.push(entry.id);
         continue;
       }
-      entry.status = "resolved";
-      entry.resolution = { by: "pendingResolved", status: r.status, ...(r.reason ? { reason: r.reason.slice(0, 200) } : {}) };
-      resolved.push(entry.id);
+      // 3.6.3 (revisão HIGH 1): na rota deste scan, só ela; o id de outra rota (sessionPending), as rotas abertas dele.
+      const resolution: PendingResolution = { by: "pendingResolved", status: r.status, ...(r.reason ? { reason: r.reason.slice(0, 200) } : {}) };
+      const here = currentRoute ? slotOf(entry, currentRoute) : undefined;
+      const targets = here ? [here] : entry.slots.filter((x) => x.status === "open");
+      for (const slot of targets) {
+        resolveSlot(entry, slot, resolution);
+        resolved.push(slotLabel(entry, slot.route));
+      }
       if (r.status === "violada") {
         recordAsFinding.push({ id: entry.id, code: entry.code, route: routeLabel(entry.route), cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3) });
       }
     }
+    const open = this.stillOpen(resolved);
     return {
       resolved,
+      ...(open.length ? { stillOpen: open, stillOpenNote: "A mesma pendência continua aberta nestas rotas: cada rota se resolve medindo nela." } : {}),
       ...(unknown.length ? { unknown } : {}),
       ...(needsReason.length ? { needsReason, needsReasonNote: "'conforme' e 'não se aplica' exigem reason (o que você mediu): estas continuam abertas." } : {}),
       ...(recordAsFinding.length
@@ -297,19 +395,32 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…`
  * 3.6.1 (revisão M1/H1): uma entrada por código (rotas contadas, até 3 ids); a cláusula com texto só enquanto o
  * código não teve o texto entregue nesta sessão (depois, só o id); as sem sinal medido (idioma, regiões) só contadas.
  */
-export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string>, delivered: (code: string) => boolean, withText: boolean) {
-  const others = open.filter((e) => !currentIds.has(e.id));
+export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string>, delivered: (code: string) => boolean, withText: boolean, currentRoute?: string) {
+  // 3.6.3 (revisão HIGH 1): por rota — a pendência deste scan conta aqui só pelas OUTRAS rotas em que segue aberta.
+  const openSlots = (e: PendingEntry) => e.slots.filter((x) => x.status === "open" && !(currentIds.has(e.id) && (currentRoute === undefined || x.route === currentRoute)));
+  const others = open.filter((e) => openSlots(e).length > 0);
   if (!others.length) return undefined;
+  // 3.6.3 (revisão HIGH 1, custo): o id sozinho quando a pendência segue aberta em todas as suas rotas e não é desta página;
+  // senão `P-NN×n` = aberta em n outras rotas (quais: `openOn`, que sai primeiro no teto). Rótulos de rota inteiros
+  // custavam ~80 caracteres cada (caminhos com uuid) e tiravam famílias da 1ª página.
+  const label = (e: PendingEntry) => {
+    const slots = openSlots(e);
+    return slots.length === e.slots.length && !currentIds.has(e.id) ? e.id : `${e.id}×${slots.length}`;
+  };
+  const shortRoute = (route: string) => clip(routeLabel(route).replace(/[^/]{13,}/g, (seg) => `…${seg.slice(-4)}`), 48);
   const low = others.filter((e) => e.low).length;
   const byCode = new Map<string, PendingEntry[]>();
   for (const e of others.filter((x) => !x.low)) byCode.set(e.code, [...(byCode.get(e.code) ?? []), e]);
   const items = [...byCode.entries()].map(([code, entries]) => {
     const rule = entries[0].rule;
+    const labels = entries.map(label);
+    const partial = entries.filter((e) => label(e).includes("×")).slice(0, 3);
     return {
       code,
-      routes: new Set(entries.map((e) => e.route)).size,
-      ids: entries.slice(0, 3).map((e) => e.id),
-      ...(entries.length > 3 ? { more: entries.length - 3 } : {}),
+      routes: new Set(entries.flatMap((e) => openSlots(e).map((x) => x.route))).size,
+      ids: labels.slice(0, 3),
+      ...(labels.length > 3 ? { more: labels.length - 3 } : {}),
+      ...(partial.length ? { openOn: Object.fromEntries(partial.map((e) => [e.id, openSlots(e).slice(0, 3).map((x) => shortRoute(x.route))])) } : {}),
       ...(rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });

@@ -124,6 +124,11 @@ export class FindingStore {
     return batch ? [...batch.findings] : undefined;
   }
 
+  /** 3.6.3: os ids dos lotes desta sessão, na ordem em que foram gravados. */
+  batchIds(): string[] {
+    return [...this.batches.keys()];
+  }
+
   getBatchMetadata(scanId: string): Record<string, unknown> | undefined {
     const metadata = this.batches.get(scanId)?.metadata;
     return metadata ? { ...metadata } : undefined;

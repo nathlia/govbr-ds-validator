@@ -141,6 +141,8 @@ export type ErrorCode =
   | "unknown-scan"
   | "unknown-family"
   | "scan-page-mismatch"
+  // 3.6.3: verify_finding com evidência de rotas/estados diferentes (um achado por rota/estado).
+  | "mixed-states"
   | "not-a-page-scan"
   | "query-too-long"
   | "no-content-terms"
@@ -404,7 +406,22 @@ const INVALID_INPUT = Symbol("invalid-input");
  * -32602 text. Hooks the McpServer's input validation and handler dispatch (SDK 1.29.x, pinned by
  * the lockfile; test/integration/input-contract.test.ts fails if an SDK upgrade changes them).
  */
-export function installContractInputValidation(server: object): void {
+/**
+ * 3.6.3: quem quer saber de toda recusa de entrada (a telemetria): ferramenta, argumentos, a resposta de erro devolvida
+ * e o código. Chamado uma vez por chamada recusada, nunca para uma chamada que chega ao handler.
+ */
+export type InputRejectionListener = (tool: string, args: unknown, result: unknown, errorCode: string) => void;
+
+const errorCodeOf = (result: unknown): string => {
+  try {
+    const text = (result as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? "";
+    return String((JSON.parse(text) as { errorCode?: unknown }).errorCode ?? "invalid-input");
+  } catch {
+    return "invalid-input";
+  }
+};
+
+export function installContractInputValidation(server: object, onRejected?: InputRejectionListener): void {
   type Tool = { inputSchema?: unknown };
   const sdk = server as {
     validateToolInput?: (tool: Tool, args: unknown, name: string) => Promise<unknown>;
@@ -421,11 +438,15 @@ export function installContractInputValidation(server: object): void {
     const parsed = await schema.safeParseAsync(args ?? {});
     if (parsed.success) return parsed.data;
     const accepted = schema instanceof z.ZodObject ? Object.keys(schema.shape as object) : [];
-    return { [INVALID_INPUT]: inputFailure(name, args, parsed.error, accepted) };
+    return { [INVALID_INPUT]: { name, args, result: inputFailure(name, args, parsed.error, accepted) } };
   };
-  sdk.executeToolHandler = async (tool, args, extra) =>
-    args && typeof args === "object" && INVALID_INPUT in args ? (args as Record<symbol, unknown>)[INVALID_INPUT] : execute(tool, args, extra);
-  installPrototypeKeyGuard(server);
+  sdk.executeToolHandler = async (tool, args, extra) => {
+    if (!(args && typeof args === "object" && INVALID_INPUT in args)) return execute(tool, args, extra);
+    const rejected = (args as Record<symbol, { name: string; args: unknown; result: unknown }>)[INVALID_INPUT];
+    onRejected?.(rejected.name, rejected.args, rejected.result, errorCodeOf(rejected.result));
+    return rejected.result;
+  };
+  installPrototypeKeyGuard(server, onRejected);
 }
 
 /**
@@ -434,7 +455,7 @@ export function installContractInputValidation(server: object): void {
  * tools/call, com o mesmo `unknown-parameter` das outras chaves desconhecidas. Depende dos internos do
  * SDK 1.29.x (fixado), como o gancho acima; sem eles, não instala (o resto do contrato continua).
  */
-function installPrototypeKeyGuard(server: object): void {
+function installPrototypeKeyGuard(server: object, onRejected?: InputRejectionListener): void {
   type Handler = (request: unknown, extra: unknown) => unknown;
   const inner = (server as { server?: { _requestHandlers?: Map<string, Handler> } }).server;
   const handlers = inner?._requestHandlers;
@@ -448,16 +469,25 @@ function installPrototypeKeyGuard(server: object): void {
       const tools = registered();
       const schema = Object.hasOwn(tools, name) ? tools[name].inputSchema : undefined;
       const accepted = schema instanceof z.ZodObject ? Object.keys(schema.shape as object) : [];
-      return Promise.resolve(
-        fail({
-          error: unknownFieldsMessage(name, ["constructor"], accepted),
-          errorCode: "unknown-parameter",
-          field: "constructor",
-          accepted,
-          next: [step("request-detail", "repetir sem o campo desconhecido 'constructor' (inputSchema no tools/list)", name)],
-        }),
-      );
+      const result = fail({
+        error: unknownFieldsMessage(name, ["constructor"], accepted),
+        errorCode: "unknown-parameter",
+        field: "constructor",
+        accepted,
+        next: [step("request-detail", "repetir sem o campo desconhecido 'constructor' (inputSchema no tools/list)", name)],
+      });
+      onRejected?.(name, args, result, "unknown-parameter");
+      return Promise.resolve(result);
     }
+    // 3.6.3 (revisão LOW 3): argumentos que não são objeto (null, lista, texto) — o esquema de protocolo do SDK os recusa
+    // adiante (-32602, sem resultado de ferramenta); a telemetria registra a recusa uma vez. Pela ponte do runner não
+    // chegam (o tool_use do agente é sempre objeto), mas um cliente MCP qualquer pode mandá-los.
+    if (args !== undefined && (args === null || typeof args !== "object" || Array.isArray(args))) {
+      onRejected?.(typeof params?.name === "string" ? params.name : "?", args, undefined, "invalid-arguments");
+      return handler(request, extra);
+    }
+    // 3.6.3: ferramenta que não existe neste perfil — o SDK recusa adiante (sem handler); a telemetria registra a recusa.
+    if (typeof params?.name === "string" && !Object.hasOwn(registered(), params.name)) onRejected?.(params.name, args, undefined, "unknown-tool");
     return handler(request, extra);
   };
   const current = handlers.get("tools/call");

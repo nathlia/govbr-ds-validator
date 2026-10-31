@@ -83,6 +83,56 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.3 — pendência curta que ainda serve, um achado por estado, telemetria na recusa (D-155)
+
+Motivo: o rastreio das perdas do com na tela B com a 3.6.2 (`dev-362-b-01`,
+`thesis-workspace/planejamento/atual/mecanismo-oraculo-tela-b-dev-362-b-01-2026-10-31.md`). O `tools/list` não muda
+em nenhum perfil (sha256 fixados nos testes).
+
+- **Forma curta da pendência guarda a medida e a tarefa** (`notJudged.pendingLine`): `P-NN:código[:n]⇒wcag-x,emag-y
+  @localizador fg … bg … ratio … · tarefa` (WCAG antes do e-MAG; sem medida, até 2 localizadores e o valor observado).
+  Na 3.6.2 era `P-05:contrast-incomplete:1⇒emag-4.1`: o agente que só recebeu isso não resolveu a pendência, e as três
+  execuções que receberam a forma inteira resolveram. Na 1ª página, `pageLevel → curto` vem agora DEPOIS de
+  investigate, observações, chaves, cobertura, estado, ids do diff e deduplicação (antes era a 3ª etapa). Escada das
+  pendências: inteira → linha → mínima (`pendingLineMinimal`: uma norma, um lugar com o valor, a tarefa em poucas
+  palavras — `P-05:contrast-incomplete:1⇒wcag-1.4.3 @.content #ffffff/#ff8c00 2.33:1 · decida o contraste`) →
+  `código⇒norma` (a forma curta da 3.6.2) → códigos → só os ids (`{ids:["P-05",…], count, next}`). Revisão: os ids são
+  o piso da 1ª página enquanto uma família puder sair no lugar — a etapa "pendências → contagem" saiu da escada (só o
+  teto rígido, sem família nenhuma, desce à contagem, e antes dos textos de limits). Os textos de `checksRun.limits`
+  continuam fora das etapas (D-154).
+- Reexecução sem modelo das 198 chamadas reais do com (3.6.2 × 3.6.3, `reexecucao-3.6.3-2026-10-31`, inclui
+  `dev-362-b-01` p01–p03; final no README da pasta): 0 de 72 chamadas com famílias perdem família da 1ª página; 0
+  acima do teto; erros iguais (1 `invalid-combination` original); 0 recusas `mixed-states` em 63 verificações. Forma
+  das pendências na 1ª página (63 scans): 3.6.2 código⇒norma 40, contagem 10; 3.6.3 inteira 23, linha/mínima 19, ids 9,
+  contagem 1 (bloco sem pendência). No `dev-362-b-01` p02 o 1º scan traz a de contraste inteira (2,33:1 e a tarefa).
+- **`verify_finding` recusa o fato com membros de rotas/estados diferentes** (`errorCode: "mixed-states"`,
+  `verify/mixedStates.ts`). Referências só estruturadas: `scanId`, o `finding.id` de um achado guardado, a página do
+  elemento, ids de scan/achado desta sessão em `evidence.data` (menos os que o próprio oráculo pôs na evidência de um
+  achado da mesma norma, como os scans das outras rotas no título repetido). Recusa quando o fato não cabe numa rota só
+  (`routeKeyOf`, a mesma chave das pendências), ou quando os membros em `evidence.data` são de estados diferentes da
+  mesma rota sem relação declarada; a resposta traz `groups` (scanIds, url, rota, o que foi citado) e um `next` por
+  grupo. Aceita, com `stateWarning`, o achado citado de outro estado da mesma rota (re-scan com menos checks/seletores,
+  modal cobrindo) e a relação antes/depois declarada (`evidence.data.before`/`after`/`antes`/`depois`/`previous`/
+  `baseline`/`from`/`to`…). Mesmo estado = mesma rota e mesmo fingerprint ou mesma receita (url com query, ações,
+  chegada). Texto livre não é lido. Não há caminho de verificação em lote.
+- **Telemetria na recusa de entrada:** enum ou tipo errado, campo desconhecido, a chave `constructor`, ferramenta
+  inexistente e argumentos que não são objeto (recusados pelo protocolo do SDK, -32602) geram exatamente um evento
+  (`status: "rejected"`, `error` = errorCode; no knowledge-free com o contador da trava, sem carregar nada). Antes a
+  recusa respondia sem passar pelo handler instrumentado (20 eventos para 21 chamadas no p01-ferramentas de
+  `dev-362-b-01`: falso positivo do isolamento). Argumentos não-objeto não chegam pela ponte do runner (o `tool_use` do
+  agente é sempre objeto), mas um cliente MCP qualquer pode mandá-los.
+- **Pendências da sessão por código + conjunto de elementos, resolução por rota:** só o conjunto INTEIRO de elementos
+  (hash de todos os localizadores e medidas, `elementSet`, nunca na resposta) com a mesma contagem junta rotas num id
+  só; sem o conjunto inteiro conhecido (ex.: o axe devolveu só 5 de 9 nós), por rota. Na mesma rota a chave de sempre
+  vale (outros exemplos depois de uma ação não abrem id novo), e a rota que entrou pelo conjunto ganha a dela. A
+  resolução é por ROTA: `verify_finding` fecha só a rota do achado (`pendingResolved: ["P-05@/b"]`,
+  `pendingStillOpen: ["P-05@/a"]`), `pendingResolved` do scan só a rota do scan (`stillOpen` diz o resto), rota nova
+  abre aberta; em `sessionPending`, `P-NN×n` = aberta em n outras rotas (quais: `openOn`). Pendências do documento
+  (título, idioma, regiões) seguem por rota.
+- **Não entrou:** promover a achado o contraste `incomplete` com fundo sólido medido. Nos 80 controles `a/` e nos
+  estados iniciais do fluxo, da A e da B, o axe deixa um único nó incomplete — o próprio caso motivador (motivo
+  `shortTextContent`, dúvida sobre ser texto, não sobre o fundo). Sem nenhum caso fora dele, a regra não teria validação.
+
 ## 3.6.2 — a 1ª página de todo scan monta por prioridade: famílias primeiro, teto garantido (D-155)
 
 Motivo: a reexecução sem modelo de 128 chamadas reais do braço com (3.5.0 × 3.6.0 × 3.6.1,

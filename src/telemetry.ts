@@ -8,7 +8,8 @@ export interface ToolTelemetryEvent {
   tool: string;
   startedAt: string;
   durationMs: number;
-  status: "ok" | "error";
+  /** 3.6.3: "rejected" = a entrada foi recusada pelo contrato antes do handler (esquema, campo desconhecido, ferramenta inexistente). */
+  status: "ok" | "error" | "rejected";
   requestBytes: number;
   responseBytes: number;
   inputRecords?: number;
@@ -154,6 +155,27 @@ export class ToolTelemetry {
       });
       throw error;
     }
+  }
+
+  /**
+   * 3.6.3 (D-155; rastreio dev-362-b-01 §3): uma chamada recusada pela validação de entrada (enum ou tipo errado,
+   * campo desconhecido, chave `constructor`, ferramenta inexistente) também gera exatamente UM evento — antes a
+   * recusa respondia sem passar pelo handler instrumentado e o runner via 20 eventos para 21 chamadas (falso
+   * positivo do isolamento). Nada é carregado aqui: o contador da trava vai como está (perfil knowledge-free).
+   */
+  rejected(tool: string, args: unknown, result: unknown, errorCode: string): void {
+    const text = textPayload(result);
+    this.emit({
+      runId: this.runId,
+      tool,
+      startedAt: new Date().toISOString(),
+      durationMs: 0,
+      status: "rejected",
+      requestBytes: byteLength(args),
+      inputRecords: inputRecordCount(args),
+      responseBytes: byteLength(text),
+      error: errorCode.slice(0, 80),
+    });
   }
 
   private emit(event: ToolTelemetryEvent): void {

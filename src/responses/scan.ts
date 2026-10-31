@@ -5,7 +5,7 @@
  */
 import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
-import { pageLevelCodes, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
+import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
 import { sessionPendingCodes } from "../scan/session.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
@@ -233,6 +233,36 @@ function sessionPendingStep(r: Record<string, unknown>): Record<string, unknown>
   return { ...r, sessionPending: sessionPendingCodes(sp) };
 }
 
+/** 3.6.3: pendências curtas → mínimas (uma norma, um lugar com o valor medido, a tarefa em poucas palavras). */
+function pageLevelMinimalStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number } } | undefined;
+  if (!cr?.pageLevel || cr.pageLevel.count !== undefined) return null;
+  const next = pageLevelMinimal(cr.pageLevel);
+  return next ? { ...r, checksRun: { ...cr, pageLevel: next } } : null;
+}
+
+/** 3.6.3 (revisão MEDIUM 2): pendências mínimas → `código⇒norma`. */
+function pageLevelNormStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number } } | undefined;
+  if (!cr?.pageLevel || cr.pageLevel.count !== undefined) return null;
+  const next = pageLevelNorm(cr.pageLevel);
+  return next ? { ...r, checksRun: { ...cr, pageLevel: next } } : null;
+}
+
+/** 3.6.3 (revisão MEDIUM 2): pendências em códigos → só os ids (`P-NN`), contagem e continuação. */
+function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown } } | undefined;
+  const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number } | undefined;
+  // Sem pendência com sinal nesta página (lista vazia, ou só as sem sinal, contadas): não há id a guardar — fica a contagem.
+  if (pl && Array.isArray(pl.notMeasured) && pl.notMeasured.every((i) => typeof i === "object" && (i as { signal?: string }).signal === "low")) {
+    return { ...r, checksRun: { ...cr, pageLevel: { count: pl.notMeasured.length + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
+  }
+  if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
+  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+$/.test(i));
+  if (!ids.length) return null;
+  return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
+}
+
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; count?: number } } | undefined;
   if (!cr?.pageLevel?.notMeasured?.length || cr.pageLevel.count !== undefined) return null;
@@ -248,7 +278,6 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["investigate → nomes + next", investigateNames],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
-    ["checksRun.pageLevel → curto", pageLevelShortStep],
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
@@ -282,6 +311,10 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["familyHint/chaves → removidos", (r) => (({ familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, detailHint: _d, ...rest }) => rest)(r)],
     // 3.5.0: contagens de deduplicação têm outra fonte (o ledger) e saem antes dos textos de honestidade.
     ["deduplication → removido (no ledger)", (r) => (r.deduplication ? (({ deduplication: _d, ...rest }) => rest)(r) : null)],
+    // 3.6.3: as pendências cedem para a forma curta (com localizador, medida e tarefa) depois de estado e cobertura.
+    ["checksRun.pageLevel → curto", pageLevelShortStep],
+    ["checksRun.pageLevel → mínimo", pageLevelMinimalStep],
+    ["checksRun.pageLevel → código⇒norma", pageLevelNormStep],
     [
       "checksRun → códigos",
       (r) => {
@@ -563,9 +596,10 @@ const listedItems = (r: Record<string, unknown>) =>
  * de `maxChars` (B p02 #13 voltava 3.191 para 3.000).
  *
  * Ordem das etapas (o que tem continuação ou é constante cede antes): pendências de outras rotas → ids; revisitados →
- * contagem + seletores; pendências desta página → forma curta; investigate → nomes; observações → contagem; chaves
- * constantes das famílias; cobertura → contagens; estado → essencial (a janela da receita e a fonte ficam: o runner
- * do govbr-eval as lê, 3.4.3); ids do diff → continuação; deduplicação; pendências de outras rotas → contagem;
+ * contagem + seletores; investigate → nomes; observações → contagem; chaves constantes das famílias; cobertura →
+ * contagens; estado → essencial (a janela da receita e a fonte ficam: o runner do govbr-eval as lê, 3.4.3); ids do diff
+ * → continuação; deduplicação; 3.6.3: só então pendências desta página → forma curta (com medida e tarefa) → mínima
+ * (uma norma, um lugar com o valor, a tarefa em poucas palavras);
  * separação por rota → código; textos de limits → códigos; pendências → códigos → contagem. Só então famílias.
  */
 type FirstPageState = {
@@ -584,8 +618,6 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     const { familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, ...rest } = p;
     return { ...rest, familyHint: "Mais famílias: get_finding_details(scanId, cursor=nextCursor); membros: get_finding_details(scanId, familyId, cursor=nextMemberCursor)." };
   };
-  const pageLevelOf = (h: Record<string, unknown>) =>
-    (h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown; lowSignal?: number } } | undefined)?.pageLevel;
   return [
     ["sessionPending → ids", onHead(sessionPendingStep)],
     ["revisited → contagem + seletores", onHead((h) => {
@@ -593,7 +625,6 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
       if (!rv?.items) return null;
       return { ...h, revisited: { count: rv.items.length, selectors: rv.items.map((i) => clip(i.locator, 80)) } };
     })],
-    ["pageLevel → curto", onHead(pageLevelShortStep)],
     ["investigate → nomes", onHead(investigateNames)],
     ["observations → contagem", (s) => (s.obs?.length ? { ...s, head: { ...s.head, observations: minimalObservations(s.obs, scanId) }, obs: null } : null)],
     ["familyKey → removido", (s) => (s.pager === page ? { ...s, pager: (b) => constants(page(b)) } : null)],
@@ -641,15 +672,20 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
       return { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
     })],
     ["deduplication → ledger", onHead((h) => (h.deduplication ? (({ deduplication: _d, ...rest }) => rest)(h) : null))],
+    // 3.6.3 (rastreio dev-362-b-01 §1): as pendências desta página só encolhem depois de observações, cobertura, estado,
+    // ids do diff e deduplicação — e a forma curta guarda o localizador, o valor medido e a tarefa (notJudged.pendingLine).
+    ["pageLevel → curto", onHead(pageLevelShortStep)],
+    ["pageLevel → mínimo", onHead(pageLevelMinimalStep)],
+    ["pageLevel → código⇒norma", onHead(pageLevelNormStep)],
     // 3.6.2 (revisão): os textos de checksRun.limits (D-154/3.4.2: a orientação de honestidade), a separação por
     // rota/estado e os ids das pendências de outras rotas NÃO entram aqui — ficam inteiros enquanto houver família
     // a cortar; só o teto rígido (hardFloor) os reduz, e a códigos/ids, nunca a nada.
     ["pageLevel → códigos", onHead((h) => pageLevelCompact(h, scanId))],
-    ["pageLevel → contagem", onHead((h) => {
-      const pl = pageLevelOf(h);
-      if (!pl || pl.notMeasured === undefined) return null;
-      return { ...h, checksRun: { ...(h.checksRun as object), pageLevel: { count: (pl.count ?? pl.notMeasured.length) + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
-    })],
+    // 3.6.3 (revisão MEDIUM 2): o piso da 1ª página enquanto uma família puder sair no lugar — só os ids das pendências
+    // (P-NN), com a contagem e a continuação; nunca a contagem sozinha.
+    ["pageLevel → ids", onHead(pageLevelIdsStep)],
+    // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
+    // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
   ];
 }
 
@@ -672,6 +708,13 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
     (x) => (x.sessionPending ? { ...x, sessionPending: { count: (x.sessionPending as { count?: unknown }).count, ids: spIds(x.sessionPending as never) } } : x),
     (x) => (x.revisited ? { ...x, revisited: { count: (x.revisited as { count?: unknown; items?: unknown[] }).count ?? (x.revisited as { items?: unknown[] }).items?.length, next: full } } : x),
     (x) => (x.units ? { ...x, units: { routes: (x.units as { routes?: unknown }).routes, states: (x.units as { states?: unknown }).states, rule: "um achado por rota/estado" } } : x),
+    // 3.6.3: sem família nenhuma na 1ª página, as pendências descem à contagem ANTES dos textos de limits (D-154: eles por último).
+    (x) => {
+      const cr = x.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown; lowSignal?: number } } | undefined;
+      const pl = cr?.pageLevel;
+      if (!pl || pl.notMeasured === undefined) return x;
+      return { ...x, checksRun: { ...cr, pageLevel: { count: (pl.count ?? pl.notMeasured.length) + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
+    },
     (x) => {
       const cr = x.checksRun as { executed?: Array<{ check?: string } | string>; limits?: Array<{ code: string } | string>; pageLevel?: unknown } | undefined;
       return cr ? { ...x, checksRun: { executed: (cr.executed ?? []).map((e) => (typeof e === "string" ? e : e.check)), limits: (cr.limits ?? []).map((l) => (typeof l === "string" ? l : l.code)), pageLevel: cr.pageLevel } } : x;

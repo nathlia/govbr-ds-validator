@@ -273,15 +273,24 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
     expect(r.checksRun.coverageNote).toBe(MESSAGES["scan-coverage"]);
     expect(r.checksRun.limits.map((l: { code: string }) => l.code)).toEqual(expect.arrayContaining(["no-state-semantics", "single-state"]));
     expect(r.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: recipe.url, actions: recipe.actions, arrival: recipe.arrival, checks: ["tokens", "page"] } });
-    expect(r.investigate.doNotRepeat).toBe(MESSAGES["scan-no-repeat"]);
-    expect(r.investigate.items.length).toBeLessThanOrEqual(5);
-    // 3.3.0 (N-05): famílias antes de investigate — os componentes que cedem espaço vão para investigate.more, na ordem.
-    // 3.5.0 (revisão Fable P1): todos os encontrados, ordenados por obrigações sem medida (empate: DOM).
-    const listedComponents = [...r.investigate.items.map((i: { component: string }) => i.component), ...(r.investigate.more?.components ?? [])];
-    expect([...listedComponents].sort()).toEqual([...r.coverage.componentsFound].sort());
-    for (const item of r.investigate.items) {
-      expect(Object.keys(item)).toEqual(["component", "stateRef", "requiredUnmeasured", "unmeasured", "next"]);
-      expect(item.stateRef).toBe(r.scanId);
+    // 3.6.3: as pendências desta página só encolhem depois de investigate/observações/cobertura/estado; no aperto da 1ª
+    // página o investigate pode vir só com os nomes (componente:requiredUnmeasured) + next — nunca some.
+    if (r.investigate.components) {
+      expect(r.compacted).toEqual(expect.arrayContaining(["investigate"]));
+      expect(r.investigate.next).toMatchObject({ tool: "get_component_spec", arguments: { view: "checklist" } });
+      const names = (r.investigate.components as string[]).map((c) => c.split(":")[0]);
+      expect([...names].sort()).toEqual([...(r.coverage.componentsFound ?? [])].sort());
+    } else {
+      expect(r.investigate.doNotRepeat).toBe(MESSAGES["scan-no-repeat"]);
+      expect(r.investigate.items.length).toBeLessThanOrEqual(5);
+      // 3.3.0 (N-05): famílias antes de investigate — os componentes que cedem espaço vão para investigate.more, na ordem.
+      // 3.5.0 (revisão Fable P1): todos os encontrados, ordenados por obrigações sem medida (empate: DOM).
+      const listedComponents = [...r.investigate.items.map((i: { component: string }) => i.component), ...(r.investigate.more?.components ?? [])];
+      expect([...listedComponents].sort()).toEqual([...r.coverage.componentsFound].sort());
+      for (const item of r.investigate.items) {
+        expect(Object.keys(item)).toEqual(["component", "stateRef", "requiredUnmeasured", "unmeasured", "next"]);
+        expect(item.stateRef).toBe(r.scanId);
+      }
     }
     // A chamada que completa roda e não repete os checks executados.
     const completed = await call(r.checksRun.completeOmitted.tool, r.checksRun.completeOmitted.arguments);

@@ -15,6 +15,12 @@ import type { Observation } from "../schema/finding.js";
 import type { LabelSource } from "../checkers/formLabels.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import type { ContrastIncompleteNode } from "../checkers/axe.js";
+import { createHash } from "node:crypto";
+
+/** 3.6.3: o hash de um conjunto de elementos (ordem não importa). */
+function setHash(parts: string[]): string {
+  return createHash("sha256").update([...new Set(parts)].sort().join("\u0001")).digest("hex").slice(0, 16);
+}
 
 export interface NotJudgedItem {
   code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete";
@@ -37,6 +43,12 @@ export interface NotJudgedItem {
    */
   signal?: "low";
   measure: string;
+  /**
+   * 3.6.3 (revisão HIGH 2): hash do conjunto INTEIRO de elementos da pendência (todos os localizadores, e as medidas
+   * quando há), só quando o conjunto inteiro é conhecido. Fica na sessão (junta rotas só com conjuntos iguais); nunca
+   * sai numa resposta.
+   */
+  elementSet?: string;
 }
 
 export interface NotJudgedInput {
@@ -98,6 +110,7 @@ export function contrastPending(contrast: { nodes: number; items: ContrastIncomp
     subject: "contraste que o axe não decidiu",
     count: contrast.nodes,
     examples: contrast.items.slice(0, EXAMPLES).map((n) => n.locator),
+    ...(contrast.items.length === contrast.nodes ? { elementSet: setHash(contrast.items.map((n) => `${n.locator}=${n.fgColor ?? ""}/${n.bgColor ?? ""}/${n.contrastRatio ?? ""}`)) } : {}),
     measured: contrast.items.slice(0, 2).map((n) => ({ locator: clip(n.locator, 120), fg: n.fgColor, bg: n.bgColor, ratio: n.contrastRatio, reason: n.reason })),
     todo: "decida o contraste: o axe não concluiu (fundo não sólido, sobreposição, pseudo-elemento ou cor incerta)",
     ...(knowledgeFree ? { norms: ["wcag-1.4.3"] } : grounded("4.1", ["wcag-1.4.3"])),
@@ -146,6 +159,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       subject: "campos com nome só pelo title",
       count: titleOnly.length,
       examples: titleOnly.slice(0, EXAMPLES).map((f) => clip(f.locator, 120)),
+      elementSet: setHash(titleOnly.map((f) => f.locator)),
       todo: "rótulo associado (o axe aceita o title como nome)",
       ...grounded("6.2", ["wcag-3.3.2"]),
       measure: "label/aria-labelledby/aria-label",
@@ -158,6 +172,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       subject: "campos com nome só pelo placeholder",
       count: placeholderOnly.length,
       examples: placeholderOnly.slice(0, EXAMPLES).map((f) => clip(f.locator, 120)),
+      elementSet: setHash(placeholderOnly.map((f) => f.locator)),
       todo: "rótulo associado (structure não rodou inteiro; o axe aceita o placeholder)",
       ...grounded("6.2", ["wcag-3.3.2"]),
       measure: "label/aria-labelledby/aria-label",
@@ -170,6 +185,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       subject: "campos sem nome acessível",
       count: unnamed.length,
       examples: unnamed.slice(0, EXAMPLES).map((f) => clip(f.locator, 120)),
+      elementSet: setHash(unnamed.map((f) => f.locator)),
       todo: "axe não rodou: campo sem nome não virou achado",
       ...grounded("6.2", ["wcag-4.1.2"]),
       measure: "nome acessível do campo",
@@ -182,6 +198,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       subject: "tabelas sem caption/aria-label/aria-labelledby/title",
       count: input.unnamedTables.length,
       examples: input.unnamedTables.slice(0, EXAMPLES).map((l) => clip(l, 120)),
+      elementSet: setHash(input.unnamedTables),
       todo: "título da tabela (o axe não exige caption)",
       ...grounded("3.9", ["wcag-1.3.1"]),
       measure: "<caption> 1º filho",
@@ -218,7 +235,7 @@ export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unkno
 
 /** Na resposta: até 2 exemplos (o item inteiro fica no ledger); 3.6.1: com o id da pendência da sessão. */
 function compactItem(item: PendingItem, withText: (code: string) => boolean = () => true) {
-  const { examples, subject: _subject, measured, norms, signal, measure, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -254,7 +271,7 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string): Obse
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
     whyNotAFinding: `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: { ...item },
+    data: (({ elementSet: _set, ...rest }) => rest)(item),
   }));
 }
 
@@ -281,16 +298,48 @@ export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
   };
 }
 
-/** A norma curta de uma pendência: o 1º e-MAG; senão o 1º WCAG; senão a 1ª da lista. */
-function shortNorm(norms: string[] | undefined, rule?: { id: string }): string | null {
+/**
+ * As normas curtas de uma pendência. 3.6.3: o critério WCAG antes do e-MAG quando os dois existem (o WCAG é o que o
+ * agente consegue medir e citar nos dois perfis); senão a 1ª da lista.
+ */
+function shortNorms(norms: string[] | undefined, rule?: { id: string }): string[] {
   const all = [...(norms ?? []), ...(rule ? [rule.id] : [])];
-  return all.find((n) => n.startsWith("emag-")) ?? all.find((n) => n.startsWith("wcag-")) ?? all[0] ?? null;
+  const wcag = all.find((n) => n.startsWith("wcag-"));
+  const emag = all.find((n) => n.startsWith("emag-"));
+  const out = [wcag, emag].filter((n): n is string => Boolean(n));
+  return out.length ? out : all.slice(0, 1);
+}
+
+const SHORT_TASK_MAX = 72;
+const SHORT_LOCATOR_MAX = 60;
+
+/** Um valor medido, em texto curto: `.x fg #fff bg #ff8c00 ratio 2.33`. */
+function measuredText(m: NonNullable<NotJudgedItem["measured"]>[number]): string {
+  return [clip(m.locator, SHORT_LOCATOR_MAX), m.fg ? `fg ${m.fg}` : "", m.bg ? `bg ${m.bg}` : "", m.ratio !== null && m.ratio !== undefined ? `ratio ${m.ratio}` : ""].filter(Boolean).join(" ");
+}
+
+/**
+ * 3.6.3 (D-155; rastreio dev-362-b-01 §1): uma pendência numa linha que ainda serve para agir — código, localizador(es),
+ * o valor que o oráculo JÁ mediu e a tarefa. Na 3.6.2 a forma curta era `P-05:contrast-incomplete:1⇒emag-4.1`: sem a
+ * tarefa e sem o 2,33:1 já medido, o agente que só a recebeu não resolveu a pendência (as três que receberam a forma
+ * inteira resolveram). Formato: `P-NN:código[:n]⇒wcag-x,emag-y @onde-e-quanto · tarefa`.
+ */
+export function pendingLine(i: PendingItem): string {
+  const norms = shortNorms(i.norms, i.rule);
+  const where = i.measured?.length
+    ? i.measured.slice(0, 2).map(measuredText).join("; ")
+    : [
+        ...(i.examples ?? []).slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX)),
+        ...(i.observed ? [clip(i.observed, SHORT_TASK_MAX)] : []),
+      ].join("; ");
+  return `${i.pendingId ? `${i.pendingId}:` : ""}${i.code}${i.count !== undefined ? `:${i.count}` : ""}${norms.length ? `⇒${norms.join(",")}` : ""}${i.resolved !== undefined ? "✓" : ""}${where ? ` @${where}` : ""} · ${clip(i.todo, SHORT_TASK_MAX)}`;
 }
 
 /**
  * 3.6.1 (revisão H1): a forma curta das pendências — o piso antes de qualquer família sair da 1ª página. Uma linha
- * por pendência com sinal (`P-NN:código[:n]⇒emag-x.y`, ~35 caracteres); as sem sinal (idioma, regiões) só contadas.
- * A cláusula inteira está em `full` (get_finding_details) e no scan seguinte (sessionPending) enquanto não foi entregue.
+ * por pendência com sinal (3.6.3: `pendingLine`, com o localizador, o valor medido e a tarefa); as sem sinal (idioma,
+ * regiões) só contadas. A cláusula inteira está em `full` (get_finding_details) e no scan seguinte (sessionPending)
+ * enquanto não foi entregue.
  */
 export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown }) {
   let low = 0;
@@ -304,8 +353,7 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
       low += 1;
       continue;
     }
-    const norm = shortNorm(i.norms, i.rule);
-    items.push(`${i.pendingId ? `${i.pendingId}:` : ""}${i.code}${i.count !== undefined ? `:${i.count}` : ""}${norm ? `⇒${norm}` : ""}${i.resolved !== undefined ? "✓" : ""}`);
+    items.push(pendingLine(i));
   }
   return {
     notMeasured: items,
@@ -314,10 +362,58 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
   };
 }
 
+const splitOnce = (s: string, sep: string): [string, string] => {
+  const i = s.indexOf(sep);
+  return i < 0 ? [s, ""] : [s.slice(0, i), s.slice(i + sep.length)];
+};
+
+/**
+ * 3.6.3 (reexecução): o degrau entre a linha e o código — a mesma pendência com uma norma, um localizador com o valor
+ * medido e a tarefa em poucas palavras: `P-05:contrast-incomplete:1⇒wcag-1.4.3 @.content #ffffff/#ff8c00 2.33:1 ·
+ * decida o contraste`. Sem ele, num teto apertado a linha inteira caía direto para o código e a medida sumia.
+ */
+export function pendingLineMinimal(line: string): string {
+  const [left, task] = splitOnce(line, " · ");
+  const [headNorms, where] = splitOnce(left, " @");
+  const [head, norms] = splitOnce(headNorms, "⇒");
+  const done = norms.endsWith("✓");
+  const norm = norms.replace(/✓$/, "").split(",")[0];
+  const place = where
+    .split("; ")[0]
+    .replace(/ fg (\S+) bg (\S+)/, " $1/$2")
+    .replace(/ ratio (\S+)/, " $1:1");
+  const shortTask = task.split(/[:(;]/)[0].trim();
+  return `${head}${norm ? `⇒${norm}` : ""}${done ? "✓" : ""}${place ? ` @${clip(place, 56)}` : ""}${shortTask ? ` · ${clip(shortTask, 32)}` : ""}`;
+}
+
+/** 3.6.3: a forma curta → a mínima (uma norma, um lugar, a tarefa em poucas palavras); null se já é mínima. */
+export function pageLevelMinimal<T extends { notMeasured?: Array<unknown> }>(block: T): T | null {
+  if (!block.notMeasured?.length || !block.notMeasured.every((i) => typeof i === "string")) return null;
+  const next = (block.notMeasured as string[]).map(pendingLineMinimal);
+  if (next.every((l, i) => l === block.notMeasured![i])) return null;
+  return { ...block, notMeasured: next };
+}
+
+/**
+ * 3.6.3 (revisão MEDIUM 2): o degrau entre a mínima e o código — `P-NN:código[:n]⇒norma` (~35 caracteres, a forma
+ * curta da 3.6.2), para que num teto apertado a norma não suma antes do código.
+ */
+export function pendingLineNorm(line: string): string {
+  return line.split(" @")[0].split(" · ")[0];
+}
+
+/** 3.6.3: a forma mínima → `código⇒norma`; null se já está nela. */
+export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block: T): T | null {
+  if (!block.notMeasured?.length || !block.notMeasured.every((i) => typeof i === "string")) return null;
+  const next = (block.notMeasured as string[]).map(pendingLineNorm);
+  if (next.every((l, i) => l === block.notMeasured![i])) return null;
+  return { ...block, notMeasured: next };
+}
+
 /** Último recurso do teto: só os códigos das pendências (inteiras no ledger: get_finding_details(scanId)). */
 export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown }, scanId = "") {
   const codes = (block.notMeasured ?? []).map((i) => {
-    if (typeof i === "string") return i.split("⇒")[0];
+    if (typeof i === "string") return i.split(/[⇒ ]/)[0];
     const pid = (i as PendingItem).pendingId;
     return `${pid ? `${pid}:` : ""}${i.count !== undefined ? `${i.code}:${i.count}` : i.code}`;
   });
