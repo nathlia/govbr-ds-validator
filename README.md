@@ -83,6 +83,10 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.4 — mistura de rotas citada só por ids de achado (teste à mão, D-155)
+
+No teste ao vivo da 3.6.3 na tela B, um achado de rodapé ausente com `evidence.data.members` = [F-017 (lista), F-066 (agendamento)] foi **confirmado**: achados de página têm localizador `html` em toda rota, e o `verify_finding` localizava cada id citado também pelo casamento regra + localizador, pondo F-066 nas duas rotas. Agora o id exato manda; regra + localizador só vale quando o id não está em scan nenhum. Teste: `fix363.test.ts` (falha na 3.6.3, passa na 3.6.4).
+
 ## 3.6.3 — pendência curta que ainda serve, um achado por estado, telemetria na recusa (D-155)
 
 Motivo: o rastreio das perdas do com na tela B com a 3.6.2 (`dev-362-b-01`,

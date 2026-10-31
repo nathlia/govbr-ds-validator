@@ -84,8 +84,14 @@ export function stateReferences(
 ): StateReference[] {
   const refs: StateReference[] = [];
   const known = new Set(scans.map((s) => s.scanId));
-  const scansWith = (f: Finding) =>
-    scans.filter((s) => s.findings.some((x) => x.id === f.id || (x.rule.id === f.rule.id && x.rule.source === f.rule.source && x.element.locator === f.element.locator))).map((s) => s.scanId);
+  // 3.6.3 (teste à mão): o id exato manda. Regra + localizador só quando o id não está em scan nenhum — achado de
+  // página tem localizador `html` em toda rota, e o casamento frouxo punha F-066 (rota 2) também na rota 1, apagando
+  // a mistura de rotas citada só por ids de achado.
+  const scansWith = (f: Finding) => {
+    const exact = scans.filter((s) => s.findings.some((x) => x.id === f.id)).map((s) => s.scanId);
+    if (exact.length) return exact;
+    return scans.filter((s) => s.findings.some((x) => x.rule.id === f.rule.id && x.rule.source === f.rule.source && x.element.locator === f.element.locator)).map((s) => s.scanId);
+  };
   if (scanId && known.has(scanId)) refs.push({ label: `scanId ${scanId}`, kind: "anchor", scans: [scanId] });
   if (typeof finding.id === "string") {
     const stored = storedFinding(finding.id);

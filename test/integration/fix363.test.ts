@@ -278,6 +278,22 @@ describe("3.6.3 item 3 — verify_finding recusa o fato com membros de rotas/est
       const crossId = await call("verify_finding", { finding: elsewhere, scanId: s2.data.scanId, live: true });
       expect(crossId.data.errorCode).toBe("scan-page-mismatch");
 
+      // teste à mão (3.6.3): achado de página tem localizador `html` em toda rota; citado só pelos ids, o de outra rota
+      // não pode casar por regra + localizador com o desta (era aceito como "confirmed")
+      const pa = await call("scan_page", { url, view: "findings", detail: "full", maxChars: 100_000, limit: 200 });
+      const pb = await call("scan_page", { url: `${base}/reservas`, view: "findings", detail: "full", maxChars: 100_000, limit: 200 });
+      const fa = pa.data.findings as Array<Record<string, any>>, fb = pb.data.findings as Array<Record<string, any>>;
+      const htmlA = fa.find((f) => fb.some((g) => g.rule.id === f.rule.id && g.element.locator === f.element.locator));
+      const htmlB = htmlA && fb.find((g) => g.rule.id === htmlA.rule.id && g.element.locator === htmlA.element.locator);
+      expect(htmlA, "achado com a mesma regra e o mesmo localizador em /acervo e /reservas").toBeDefined();
+      expect(htmlB!.id).not.toBe(htmlA!.id);
+      const pageMerged = { ...htmlA, id: "C-5", evidence: { ...htmlA!.evidence, data: { ...htmlA!.evidence.data, members: [htmlA!.id, htmlB!.id] } } };
+      const pageCross = await call("verify_finding", { finding: pageMerged, scanId: pa.data.scanId, live: true });
+      expect(pageCross.data.errorCode).toBe("mixed-states");
+      const byRoute = Object.fromEntries((pageCross.data.groups as Array<{ route: string; cited: string[] }>).map((g) => [g.route, g.cited.join(" ")]));
+      expect(byRoute["/reservas"]).toContain(htmlB!.id);
+      expect(byRoute["/acervo"]).not.toContain(htmlB!.id);
+
       // o mesmo estado: segue para o portão, sem aviso
       const same = await call("verify_finding", { finding: inS2, scanId: s2.data.scanId, live: true });
       expect(same.isError).toBe(false);
