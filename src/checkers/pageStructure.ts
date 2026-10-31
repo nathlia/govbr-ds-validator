@@ -21,7 +21,12 @@
  *
  * O que fica fora, de propósito: Área de Localização e de Navegação são opcionais; "breadcrumb
  * primeiro na área de conteúdo" depende de saber onde a área de conteúdo começa, e o oráculo não
- * decide isso mecanicamente; título e `lang` já são do axe (`document-title`, `html-has-lang`).
+ * decide isso mecanicamente; `lang` já é do axe (`html-has-lang`).
+ *
+ * 3.6.1 (D-155, item 2): o título do documento (`ds-page-title`, e-MAG 3.3 / WCAG 2.4.2) — só o que é medível:
+ * vazio/ausente (o axe também acusa: com o axe no mesmo scan, fica o do axe) e, como heurística entre scans da
+ * mesma sessão, o mesmo título em rotas de assuntos diferentes que ele não contém (`titleDuplicateFinding`). Se o
+ * título "descreve a página" ninguém mede: continua pendência (`document-title-adequacy`).
  */
 import type { Finding } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
@@ -31,7 +36,7 @@ import { PAGE_REGION_SELECTORS } from "../evidence/pageFacts.js";
 import { checkerRule, groundingFor, type CheckKind } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
-export type PageConstraintKind = "page-region" | "page-skip-link" | "page-focus-order";
+export type PageConstraintKind = "page-region" | "page-skip-link" | "page-focus-order" | "page-title";
 
 export interface PageConstraint {
   /** Id do check, ex.: `ds-page-header` (3.6.0: vai em `rule.checker` — não é citação). */
@@ -40,7 +45,7 @@ export interface PageConstraint {
   citeAs: string | null;
   kind: PageConstraintKind;
   /** Região do Template Base (`header`, `footer`), `skip-link` ou (3.5.0) `focus-order`. */
-  region: PageRegion | "skip-link" | "focus-order";
+  region: PageRegion | "skip-link" | "focus-order" | "title";
   selector: string | null;
   description: string;
   force: "required";
@@ -95,6 +100,7 @@ function pageConstraintList(): Array<Omit<PageConstraint, "citeAs">> {
   }));
   return [
     ...regions,
+    titleConstraint(),
     {
       id: "ds-page-focus-order",
       kind: "page-focus-order",
@@ -152,11 +158,100 @@ export const FOCUS_ORDER_IMPLEMENTS = [
   "emag-1.4",
 ];
 
+/**
+ * 3.6.1 (D-155, item 2): a cláusula obrigatória do e-MAG 3.3 — "O título da página deve ser descritivo e
+ * informativo, devendo representar o conteúdo principal da página" — é a citação (rule.id); o e-MAG 3.3 vem
+ * junto, WCAG 2.4.2 na referência cruzada. Fora de CHECK_GROUNDING (como o foco): sem tipo novo no gerador de
+ * aliases do eval.
+ */
+export const TITLE_IMPLEMENTS = ["govbr-3.7.0-accessibility-global-9a6edd7d551e", "emag-3.3"];
+export const TITLE_WCAG = "2.4.2";
+
+function titleConstraint(): Omit<PageConstraint, "citeAs"> {
+  return {
+    id: "ds-page-title",
+    kind: "page-title",
+    region: "title",
+    selector: "title",
+    description:
+      "O título do documento (<title>) deve existir, não ser vazio e representar o conteúdo principal da página (e-MAG 3.3 / WCAG 2.4.2). " +
+      "Medido: título vazio ou ausente. Heurístico (sessão): o mesmo título em rotas de modelos diferentes cujos assuntos principais diferem e não estão nele. Se descreve a página é pendência do agente.",
+    force: "required",
+    implements: [...TITLE_IMPLEMENTS],
+    claim: { expectedCondition: EXPECTED_CONDITIONS.documentTitle, fields: ["region", "observedTitle", "expectedCondition"] },
+    source: {
+      url: "https://emag.governoeletronico.gov.br/",
+      scrapedAt: pageSource().scrapedAt,
+      excerpt: "Recomendação 3.3 – Oferecer um título descritivo e informativo à página",
+    },
+  };
+}
+
+/**
+ * 3.6.1 (item 2; revisão M4): a cláusula do e-MAG 3.3 diz que o título deve representar o conteúdo principal da
+ * página — não que títulos sejam distintos. O sinal só dispara quando o MESMO `<title>` está em duas rotas de
+ * modelos diferentes (não só um segmento de id: `/x/3028` e `/x/3038` são a mesma página-modelo), os assuntos
+ * principais exibidos (h1; sem h1, o 1º título em main) das duas DIFEREM, e o título não contém nenhum deles:
+ * então ele não representa o conteúdo de pelo menos uma. É inferência (heurística), não medida exata.
+ */
+export function titleDuplicateFinding(
+  page: { url: string; route: string; heading: string },
+  title: string,
+  others: Array<{ route: string; scanId: string; heading: string }>,
+): Finding {
+  const constraint = titleConstraint();
+  const clipH = (h: string) => `"${h.slice(0, 50)}"`;
+  return {
+    id: nextFindingId(),
+    rule: { ...checkerRule(constraint.id, constraint.implements, TITLE_WCAG), description: constraint.description },
+    element: { locator: "html", page: page.url },
+    evidence: {
+      observed: `<title> "${title.slice(0, 80)}" é o mesmo nesta rota (${page.route}, assunto ${clipH(page.heading)}) e em ${others
+        .slice(0, 3)
+        .map((o) => `${o.route} (${o.scanId}, assunto ${clipH(o.heading)})`)
+        .join(", ")}; os assuntos diferem e o título não contém nenhum deles.`,
+      expected: "O título da página deve ser descritivo e informativo, devendo representar o conteúdo principal da página (e-MAG 3.3; WCAG 2.4.2).",
+      data: {
+        region: "title",
+        observedTitle: title,
+        route: page.route,
+        mainHeading: page.heading,
+        sameTitleRoutes: others.slice(0, 5).map((o) => o.route),
+        sameTitleScans: others.slice(0, 5).map((o) => o.scanId),
+        expectedCondition: EXPECTED_CONDITIONS.documentTitle,
+      },
+    },
+    severity: "moderate",
+    nature: "semantic",
+    mode: "display",
+    pathway: "heuristic",
+  };
+}
+
 export function checkPageStructure(page: { url: string }, facts: PageFacts): Finding[] {
   const findings: Finding[] = [];
   const element = { locator: "html", page: page.url };
 
   for (const constraint of pageConstraints()) {
+    if (constraint.kind === "page-title") {
+      // 3.6.1 (item 2): vazio ou ausente. (Duplicado entre rotas é da sessão: titleDuplicateFinding.)
+      if ((facts.title ?? "").trim() !== "") continue;
+      findings.push({
+        id: nextFindingId(),
+        rule: { ...checkerRule(constraint.id, constraint.implements, TITLE_WCAG), description: constraint.description },
+        element: { locator: "html", page: page.url },
+        evidence: {
+          observed: "O documento não tem <title> ou o título é vazio.",
+          expected: "Um <title> não vazio que represente o conteúdo principal da página (e-MAG 3.3; WCAG 2.4.2).",
+          data: { region: "title", observedTitle: "", expectedCondition: EXPECTED_CONDITIONS.documentTitle },
+        },
+        severity: "serious",
+        nature: "syntactic",
+        mode: "display",
+        pathway: "deterministic",
+      });
+      continue;
+    }
     if (constraint.kind === "page-region") {
       const region = constraint.region as "header" | "footer";
       const count = facts.regions[region];

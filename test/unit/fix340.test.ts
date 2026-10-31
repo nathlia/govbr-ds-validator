@@ -21,7 +21,8 @@ describe("kb-relations-1.2.0 (A12): cada ligação com cláusula literal da base
   it("valida na carga: regra e cláusulas existem e cada trecho está no texto", () => {
     const relations = getRelations()!;
     expect(relations.version).toBe("kb-relations-1.2.0");
-    expect(relations.knowledgeVersion).toBe(getKnowledgeBase().meta.knowledgeVersion);
+    // 3.6.1: a camada vale para a pasta da versão (a emenda só acrescenta unidades).
+    expect(relations.knowledgeVersion).toBe(getKnowledgeBase().meta.knowledgeDir);
     for (const link of relations.links) expect(link.basis.length).toBeGreaterThan(0);
   });
   it("trecho que não está na cláusula derruba a carga (nada inventado)", () => {

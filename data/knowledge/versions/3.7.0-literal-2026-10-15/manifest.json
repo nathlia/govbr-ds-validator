@@ -81,19 +81,19 @@
   ],
   "legacyIds": "normalized/legacy-ids.json",
   "counts": {
-    "totalRecords": 3038,
-    "literalRules": 2971,
-    "literalRulesSha256": "ef113237bb6bd1870978a5709314d8593fcf90d8fa4b5fe349f3edf9626a659e",
+    "totalRecords": 3041,
+    "literalRules": 2974,
+    "literalRulesSha256": "c8c4327d3b4c9eea173f96ce2ee72d0eeddbb534f5da6409627c921d30879a0f",
     "normalizationOutputSha256": "408402bd14f62571759a437e56cacc8bb7b811ade0dc2d09fea83ef6593b430a",
     "idsReassigned": 43,
     "carriedOverRecords": 67,
     "carriedOverNormative": 33,
     "carriedOverExamples": 34,
-    "normativeRecords": 3004,
+    "normativeRecords": 3007,
     "evidenceRecords": 34,
     "literalByForce": {
       "recommended": 1112,
-      "required": 1082,
+      "required": 1085,
       "permitted": 496,
       "prohibited": 154,
       "discouraged": 112,
@@ -282,7 +282,7 @@
     "normalized/accessibility/emag-validation-templates.json": "660653f4050b012580e7d173739b9cd8d80657007b21e02c6e5cb2bf42d0af81",
     "normalized/carried-over.jsonl": "16e0a764e4a0f05b3f116df83f1400598a95173f5dec34f775c0a9b843cade19",
     "normalized/legacy-ids.json": "3f85974355af8b4f402666f20c35a732478c5988dfd2e39aa739d457a883ef8b",
-    "normalized/rules.jsonl": "ef113237bb6bd1870978a5709314d8593fcf90d8fa4b5fe349f3edf9626a659e",
+    "normalized/rules.jsonl": "c8c4327d3b4c9eea173f96ce2ee72d0eeddbb534f5da6409627c921d30879a0f",
     "reports/auditoria/amostra.json": "6d8f26725b8fa84f490b4ea98a0e3c5ba51267df43f4b9372e5f07fde18f83c1",
     "reports/auditoria/relatorio.md": "57a9b948d8ba41350ff31550d36c8ff78fcebece6fe68eade79ab3746ee5911a",
     "reports/auditoria/vereditos.jsonl": "bd8845e48f08b4a33eb92059fa5f2acfb9ce6ed60eee5946aa127dc30045bd63",
@@ -295,5 +295,21 @@
     "reports/normalizacao/resumo.md": "70c6ad14a3e39087ac2d7ac39e7a3e15b746d0e1563dc3262b30867d43734125",
     "reports/official-package-audit.json": "cfc2bcc1243ab159a2dd65907aa87ea23bcc35fc9f646532b48039099d615273",
     "reports/regras-antigas.md": "eab254e409e54205120eb15e482ff113defcb10a708cd62c204768ee125b2f27"
-  }
+  },
+  "amendments": [
+    {
+      "label": "emenda-1",
+      "validator": "3.6.1",
+      "decision": "D-155 (NAT-104, classe 'texto truncado')",
+      "added": [
+        "govbr-3.7.0-template-global-c21ff1c7eefc",
+        "govbr-3.7.0-template-global-10b091d3e7d1",
+        "govbr-3.7.0-template-global-79cf9ea963ee"
+      ],
+      "what": "3 unidades literais (força required pelo rótulo '(Obrigatório)') das áreas obrigatórias do Template Base: Cabeçalho, Conteúdo e Rodapé. O excerto herdado govbr-3.7.0-template-global-19f93475dc5e truncava a página e não dizia que as áreas são obrigatórias.",
+      "provenance": "texto literal de data/ds-page-rules.json, categories.page_structure.sections.visao-geral (https://www.gov.br/ds/templates/base, raspagem 2026-04-16T05:31:03.314Z); source.captureType = literal-archived-page-rules, charRange nesse texto. A página não está em corpus/ (o corpus literal não coletou templates).",
+      "previousRulesSha256": "ef113237bb6bd1870978a5709314d8593fcf90d8fa4b5fe349f3edf9626a659e",
+      "reproduce": "scripts/build-kb-literal.mjs aplica scripts/kb-amendments/3.7.0-literal-2026-10-15.json (entrada declarada) depois do rules.jsonl da normalização: a saída é byte a byte este rules.jsonl."
+    }
+  ]
 }

@@ -14,7 +14,7 @@ import { collectAnatomy } from "../evidence/context.js";
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
-import { notJudgedFor, type NotJudgedItem } from "./notJudged.js";
+import { contrastPending, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
@@ -53,6 +53,23 @@ export interface PageScanRequest {
    * schema does not expose it, so the agent-facing surface is unchanged.
    */
   viewport?: { width: number; height: number };
+  /**
+   * 3.6.1 (D-155, item 3): elementos que um scan ANTERIOR da sessão viu ocultos (observação `hiddenInState` de
+   * tokens). Interno — o servidor preenche a partir da sessão; não está no esquema MCP. Os que estiverem
+   * renderizados agora têm o check que os marcou medido, mesmo que `checks` exclua tokens.
+   */
+  revisit?: Array<{ locator: string; checker: string; fromScan: string; n: number }>;
+}
+
+/** 3.6.1 (item 3): o que aconteceu com cada elemento antes oculto neste estado. */
+export interface RevisitItem {
+  locator: string;
+  checker: string;
+  fromScan: string;
+  n: number;
+  /** measured: renderizado e autoral, medido agora; hidden: segue oculto; outside: fora da autoria; absent: não existe; covered: o scan de tokens já o mediu. */
+  now: "measured" | "hidden" | "outside" | "absent" | "covered";
+  findings?: string[];
 }
 
 /**
@@ -119,6 +136,10 @@ export interface PageScanResult {
    * Ausente no perfil knowledge-free.
    */
   notJudged?: NotJudgedItem[];
+  /** 3.6.1 (item 2): título do documento e 1º h1 exibido, lidos no estado do scan (ausente no knowledge-free). */
+  document?: { title: string; h1: string | null; mainHeading: string | null };
+  /** 3.6.1 (item 3): elementos antes ocultos, revisitados neste estado. */
+  revisited?: RevisitItem[];
 }
 
 /**
@@ -324,6 +345,13 @@ function normalizedRequest(request: PageScanRequest) {
   };
 }
 
+const TOKEN_CHECK_OF: Record<string, TokenCheck> = {
+  "ds-token-color": "color",
+  "ds-token-font-family": "font",
+  "ds-token-radius": "radius",
+  "ds-token-spacing": "spacing",
+};
+
 export interface PageScanOptions {
   /**
    * 2.14.0 (NAT-61): perfil sem conhecimento do DS/e-MAG. Só o axe roda (as checagens de tokens,
@@ -349,8 +377,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       return { status: "state-not-reached", url: request.url, stateFingerprint: null, state, limitation: unreachedLimitation(state) };
     }
     const normalized = normalizedRequest(request);
+    const revisit = (request.revisit ?? []).filter((r) => TOKEN_CHECK_OF[r.checker]);
     // A chegada é medida de novo a cada chamada (acima); o cache guarda só o que o estado exato determina.
-    const cacheKey = hash({ stateFingerprint, ...normalized });
+    // 3.6.1: a lista de revisita entra na chave só quando existe (as chaves de sempre não mudam).
+    const cacheKey = hash({ stateFingerprint, ...normalized, ...(revisit.length ? { revisit: revisit.map((r) => [r.locator, r.checker, r.fromScan, r.n]) } : {}) });
     const cached = cache.get(cacheKey);
     if (cached) return { ...cached, state, cacheHit: true };
 
@@ -363,6 +393,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const observations: Observation[] = [];
     let elementsInspected = 0;
     let componentsFound: string[] = [];
+    /** 3.6.1: localizadores que o check de tokens mediu neste scan (para não revisitar o que já foi medido). */
+    const tokenMeasured = new Set<string>();
 
     if (checks.includes("tokens") || checks.includes("structure")) {
       const properties = checks.includes("tokens") ? tokenProperties(activeTokenChecks) : [];
@@ -380,6 +412,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         // 3.4.4 (C3/C4/C5): internos de web component do DS, terceiros embutidos pelo DS e elementos não
         // renderizados não geram achado de estilo — viram observação com o motivo (ownership.ts).
         const tokenScope = partitionByOwnership(evidence.elements, true);
+        for (const element of tokenScope.page) tokenMeasured.add(element.locator);
         rawFindings.push(
           ...checkTokenCompliance({ url: request.url }, tokenScope.page, getTokenRegistry(), activeTokenChecks)
         );
@@ -397,6 +430,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           const known = new Set(evidence.elements.map((element) => element.locator));
           const authoredText = text.elements.filter((element) => ownershipOf(element) === "page" && !known.has(element.locator));
           elementsInspected += authoredText.length;
+          for (const element of authoredText) tokenMeasured.add(element.locator);
           rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
           // 3.4.4 (revisão, L6): o texto fora da autoria da página (dentro de componente do DS, de terceiros ou
           // oculto neste estado) não some em silêncio — vira observação com o motivo, como nos outros checks.
@@ -416,6 +450,30 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
       }
+    }
+
+    // 3.6.1 (D-155, item 3): elementos ocultos num scan anterior. Os renderizados agora têm medido o check de
+    // tokens que os marcou (só esse subcheck, como na passada original), mesmo com `checks` sem tokens.
+    let revisited: RevisitItem[] | undefined;
+    if (revisit.length) {
+      const covered = (r: (typeof revisit)[number]) =>
+        checks.includes("tokens") && activeTokenChecks.includes(TOKEN_CHECK_OF[r.checker]) && tokenMeasured.has(r.locator);
+      const todo = revisit.filter((r) => !covered(r));
+      const evidence = todo.length
+        ? await inspectPageComputedStyles(page, request.url, [...new Set(todo.map((r) => r.locator))], ["backgroundColor", "color", "borderColor", "fontFamily", "fontSize", "borderRadius", "padding", "margin"])
+        : { elements: [] as Awaited<ReturnType<typeof inspectPageComputedStyles>>["elements"] };
+      const byLocator = new Map(evidence.elements.map((element) => [element.locator, element]));
+      revisited = revisit.map((r) => {
+        const base = { locator: r.locator, checker: r.checker, fromScan: r.fromScan, n: r.n };
+        if (covered(r)) return { ...base, now: "covered" as const };
+        const element = byLocator.get(r.locator);
+        if (!element) return { ...base, now: "absent" as const };
+        const own = ownershipOf(element);
+        if (own !== "page") return { ...base, now: own === "not-rendered" ? ("hidden" as const) : ("outside" as const) };
+        const found = checkTokenCompliance({ url: request.url }, [element], getTokenRegistry(), [TOKEN_CHECK_OF[r.checker]]);
+        rawFindings.push(...found);
+        return { ...base, now: "measured" as const, findings: found.map((f) => f.id) };
+      });
     }
 
     // 2.13.0 (NAT-85 P2): anatomia obrigatória ausente — parte do check de estrutura. Lê as raízes
@@ -469,6 +527,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       : tableEvidence.filter((_, i) => tableFacts[i].rendered && !tableFacts[i].presentational && !tableFacts[i].named).map((el) => el.locator);
 
     let axe: PageScanResult["coverage"]["axe"];
+    let contrastIncomplete: Awaited<ReturnType<typeof runAxeScanOnPage>>["contrastIncomplete"] | undefined;
     if (checks.includes("axe")) {
       const result = await runAxeScanOnPage(
         page,
@@ -479,6 +538,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       // 3.5.0 (revisão Fable P5): o mesmo controle sem nome visto pelo axe (button-name & cia.) e pela
       // estrutura (só ícone) é um defeito só — fica o do axe; o da estrutura sai do lote.
       const duplicates = await sameElementDuplicates(page, rawFindings);
+      // 3.6.1 (item 2): título vazio visto pelo axe (document-title) e pelo check de página é um defeito só — fica o do axe.
+      if (result.findings.some((f) => f.rule.id === "document-title")) {
+        for (const f of rawFindings) if (f.rule.checker === "ds-page-title") duplicates.add(f);
+      }
       if (duplicates.size) {
         const kept = rawFindings.filter((f) => !duplicates.has(f));
         rawFindings.length = 0;
@@ -490,6 +553,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         incomplete: result.incompleteCount,
         ...(result.incompleteRules.length ? { incompleteRules: result.incompleteRules } : {}),
       };
+      contrastIncomplete = result.contrastIncomplete;
     }
 
     // 3.4.0 (B9): foco visível — por último, porque dar foco pode disparar reações da página (abrir um
@@ -507,6 +571,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       unnamedTables,
       placeholderChecked,
       axeRan: checks.includes("axe"),
+      ...(contrastIncomplete ? { contrastIncomplete } : {}),
     });
     const value: CachedScan = {
       status: "scanned",
@@ -515,6 +580,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       findings: pageLevelFirst(deduplicated.findings),
       observations,
       ...(notJudged.length ? { notJudged } : {}),
+      document: { title: facts.title ?? "", h1: facts.h1 ?? null, mainHeading: facts.mainHeading ?? null },
+      ...(revisited ? { revisited } : {}),
       coverage: {
         checks,
         selectors: normalized.selectors,
@@ -574,12 +641,15 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
     const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);
+    // 3.6.1 (item 5): contraste que o axe não decidiu, como pendência — só o critério WCAG, nada da base.
+    const contrast = contrastPending(result.contrastIncomplete, true);
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
       stateFingerprint,
       findings: pageLevelFirst(deduplicated.findings),
       observations: [],
+      ...(contrast ? { notJudged: [contrast] } : {}),
       coverage: {
         checks,
         selectors,

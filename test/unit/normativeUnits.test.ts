@@ -15,7 +15,7 @@ describe("NAT-96 derived source context", () => {
     expect(context.clauses.some((c) => c.force === "required")).toBe(true);
     expect(context.clauses.every((c) => c.applicability === "unknown" && c.source.url)).toBe(true);
     const section = context.sourceContext!;
-    const snapshot = readFileSync(join(import.meta.dirname, "../../data/knowledge/versions", context.knowledgeVersion, section.source.snapshotFile), "utf8").replace(/\r\n/g, "\n");
+    const snapshot = readFileSync(join(import.meta.dirname, "../../data/knowledge/versions", context.knowledgeVersion.replace(/\+emenda-\d+$/, ""), section.source.snapshotFile), "utf8").replace(/\r\n/g, "\n");
     const [start, end] = section.source.snapshotCharRange;
     expect(snapshot.slice(start, end)).toBe(section.text);
     expect(section.source.snapshotSha256).toMatch(/^[a-f0-9]{64}$/);

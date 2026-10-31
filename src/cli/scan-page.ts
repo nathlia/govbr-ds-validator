@@ -21,7 +21,8 @@ try {
   }
   const result = await scanPage(request, new PageScanCache(1));
   // 3.5.0: as pendências (notJudged) são do ledger do MCP; a saída da linha de base fica com os mesmos campos.
-  const printed = result.status === "scanned" ? (({ notJudged: _pending, ...rest }) => rest)(result) : result;
+  // 3.6.1: `document` (título/h1, para a sessão MCP) e `revisited` (só com sessão) também não saem.
+  const printed = result.status === "scanned" ? (({ notJudged: _pending, document: _document, revisited: _revisited, ...rest }) => rest)(result) : result;
   process.stdout.write(JSON.stringify(process.env.GOVBR_SCAN_CLI_NOT_JUDGED === "1" ? result : printed));
   // 2.10.0: até a 2.9.0 um passo que falhava lançava e o processo saía com erro. A linha de base
   // continua sem aceitar estado não alcançado como resultado: o JSON sai (com o motivo) e o código é 3.

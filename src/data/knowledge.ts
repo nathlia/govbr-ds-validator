@@ -89,8 +89,15 @@ export interface KnowledgeRule {
 export interface KnowledgeBase {
   meta: {
     dsVersion: string;
-    /** Folder under data/knowledge/versions/ actually served (2.12.0). */
+    /**
+     * Version label served (2.12.0: the folder under data/knowledge/versions/). 3.6.1: with declared amendments
+     * (versions/<v>/manifest.json `amendments`), `<folder>+emenda-<n>` — the folder alone no longer names the content.
+     */
     knowledgeVersion: string;
+    /** 3.6.1: the folder under data/knowledge/versions/ (paths, and layers written against that folder's ids). */
+    knowledgeDir: string;
+    /** 3.6.1: amendments declared on the served version (what was added, by which validator, under which decision). */
+    amendments: Array<{ label: string; validator: string; decision: string; added: string[] }>;
     extractionTimestamp: string;
     totalRules: number;
     normativeRules: number;
@@ -111,6 +118,7 @@ interface VersionManifest {
   extractionTimestamp: string;
   ruleFiles?: string[];
   legacyIds?: string;
+  amendments?: Array<{ label?: string; validator: string; decision: string; added: string[] }>;
 }
 
 let versionOverride: string | undefined;
@@ -247,7 +255,9 @@ export function getKnowledgeBase(): KnowledgeBase {
   kb = {
     meta: {
       dsVersion: manifest.designSystemVersion,
-      knowledgeVersion: version,
+      knowledgeVersion: manifest.amendments?.length ? `${version}+emenda-${manifest.amendments.length}` : version,
+      knowledgeDir: version,
+      amendments: (manifest.amendments ?? []).map((a, i) => ({ label: a.label ?? `emenda-${i + 1}`, validator: a.validator, decision: a.decision, added: [...a.added] })),
       extractionTimestamp: manifest.extractionTimestamp,
       totalRules: rules.length,
       normativeRules: rules.filter((r) => r.force !== "example").length,

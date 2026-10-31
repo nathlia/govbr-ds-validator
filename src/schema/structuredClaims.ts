@@ -14,6 +14,8 @@ export const EXPECTED_CONDITIONS = {
   skipLink: "first-link-skips-to-content",
   /** 3.5.0 (revisão Fable P2): o salto é o primeiro elemento a receber o foco (nenhum tabindex>0 antes). */
   skipLinkFirstFocus: "skip-link-first-to-receive-focus",
+  /** 3.6.1 (D-155, item 2): o documento tem título não vazio e distinto do de outras rotas da sessão (e-MAG 3.3 / WCAG 2.4.2). */
+  documentTitle: "document-title-present-and-distinct",
   /** 3.5.0 (D-155): campo de formulário cujo único "rótulo" é o placeholder (e-MAG 6.2; DS Formulário). */
   placeholderOnlyLabel: "form-field-label-not-placeholder-only",
   /** 3.5.0 (C03): ícone decorativo ao lado do rótulo escondido da tecnologia assistiva (aria-hidden). */

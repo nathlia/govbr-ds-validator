@@ -52,7 +52,8 @@ const validated = new Set<string>();
 
 /** A orientação vale só para a versão da base em que foi escrita (ids e frases). */
 function appliesToActiveKb(g: Guidance): boolean {
-  return getKnowledgeBase().meta.knowledgeVersion === g.knowledgeVersion;
+  // 3.6.1: pela pasta da versão (uma emenda só acrescenta unidades; os ids e frases da orientação continuam os mesmos).
+  return getKnowledgeBase().meta.knowledgeDir === g.knowledgeVersion;
 }
 
 export function getGuidance(): Guidance {

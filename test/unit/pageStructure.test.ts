@@ -27,7 +27,7 @@ function facts(overrides: Partial<PageFacts> = {}): PageFacts {
 describe("pageConstraints — o que get_page_rules publica", () => {
   it("publica cabeçalho, rodapé e salto para o conteúdo, cada um com norma existente (D-27)", () => {
     const constraints = pageConstraints();
-    expect(constraints.map((c) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-focus-order", "ds-page-skip-link"]);
+    expect(constraints.map((c) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-title", "ds-page-focus-order", "ds-page-skip-link"]);
     for (const constraint of constraints) {
       expect(constraint.implements.length).toBeGreaterThan(0);
       for (const id of constraint.implements) {
@@ -56,8 +56,8 @@ describe("checkPageStructure", () => {
     const findings = checkPageStructure(page, facts({ regions: { header: 0, footer: 0, breadcrumb: 0, cookiebar: 0, menu: 0 } }));
     expect(findings.map((f) => f.rule.checker)).toEqual(["ds-page-header", "ds-page-footer"]);
     for (const finding of findings) {
-      // 3.6.0: cita a norma (Template Base), não o check.
-      expect(finding.rule).toMatchObject({ id: "govbr-3.7.0-template-global-19f93475dc5e", source: "govbr-ds-kb" });
+      // 3.6.0: cita a norma, não o check. 3.6.1: a unidade literal da área obrigatória (não o excerto truncado).
+      expect(finding.rule).toMatchObject({ id: finding.rule.checker === "ds-page-header" ? "govbr-3.7.0-template-global-c21ff1c7eefc" : "govbr-3.7.0-template-global-79cf9ea963ee", source: "govbr-ds-kb" });
       expect(finding.pathway).toBe("deterministic");
       expect(finding.element.locator).toBe("html");
       expect(finding.rule.implements).toContain("govbr-3.7.0-template-global-19f93475dc5e");

@@ -85,6 +85,8 @@ interface AxeNodeResult {
   target: (string | string[])[];
   html: string;
   failureSummary?: string;
+  /** Checks do nó; no `incomplete` de color-contrast, `any[0].data` traz as cores medidas e o motivo. */
+  any?: Array<{ id?: string; data?: unknown }>;
 }
 
 /**
@@ -162,9 +164,45 @@ export interface AxeScanResult {
   incompleteCount: number;
   /** 3.4.4 (C11): o que o axe não decidiu — regra, quantos elementos e um exemplo (até AXE_INCOMPLETE_DETAIL). */
   incompleteRules: Array<{ rule: string; nodes: number; example: string | null; help?: string }>;
+  /**
+   * 3.6.1 (D-155, item 5): os nós de `color-contrast` que o axe deixou `incomplete` (não decidiu), com o que ele
+   * mediu — cores, razão (quando calculou) e o motivo (fundo em imagem, sobreposição…). Até AXE_CONTRAST_DETAIL.
+   */
+  contrastIncomplete: { nodes: number; items: ContrastIncompleteNode[] };
+}
+
+export interface ContrastIncompleteNode {
+  locator: string;
+  fgColor: string | null;
+  bgColor: string | null;
+  contrastRatio: number | null;
+  expected: string | null;
+  reason: string | null;
 }
 
 export const AXE_INCOMPLETE_DETAIL = 5;
+export const AXE_CONTRAST_DETAIL = 5;
+
+/** 3.6.1: o que o axe mediu num nó `incomplete` de color-contrast (any[0].data), sem interpretar. */
+export function contrastIncompleteOf(incomplete: AxeResults["incomplete"]): AxeScanResult["contrastIncomplete"] {
+  const rule = incomplete.find((r) => r.id === "color-contrast");
+  const nodes = rule?.nodes ?? [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : null);
+  const items = nodes.slice(0, AXE_CONTRAST_DETAIL).map((node) => {
+    const check = (node.any ?? []).find((c) => c.id === "color-contrast") ?? node.any?.[0];
+    const data = (check?.data && typeof check.data === "object" ? check.data : {}) as Record<string, unknown>;
+    const ratio = typeof data.contrastRatio === "number" && data.contrastRatio > 0 ? Math.round(data.contrastRatio * 100) / 100 : null;
+    return {
+      locator: axeLocator(node.target).slice(0, 160),
+      fgColor: str(data.fgColor),
+      bgColor: str(data.bgColor),
+      contrastRatio: ratio,
+      expected: str(data.expectedContrastRatio),
+      reason: str(data.messageKey),
+    };
+  });
+  return { nodes: nodes.length, items };
+}
 
 export async function runAxeScan(url: string, selector?: string): Promise<AxeScanResult> {
   return withPage(url, (page) => runAxeScanOnPage(page, url, selector));
@@ -308,6 +346,7 @@ export async function runAxeScanOnPage(
       example: r.nodes?.[0] ? axeLocator(r.nodes[0].target).slice(0, 160) : null,
       ...(r.help ? { help: r.help.slice(0, 120) } : {}),
     })),
+    contrastIncomplete: contrastIncompleteOf(axeResults.incomplete),
   };
 }
 

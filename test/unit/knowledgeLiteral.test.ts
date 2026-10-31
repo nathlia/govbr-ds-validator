@@ -47,7 +47,8 @@ describe("served version", () => {
       ...readJsonl(join(KNOWLEDGE, `versions/${LITERAL}/normalized/rules.jsonl`)),
       ...readJsonl(join(KNOWLEDGE, `versions/${LITERAL}/normalized/carried-over.jsonl`)),
     ];
-    expect(records).toHaveLength(3038);
+    // 3.6.1: + 3 unidades literais das áreas obrigatórias do Template Base (manifest.amendments).
+    expect(records).toHaveLength(3041);
     expect(records.filter((r) => !validate(r)).map((r) => r.id)).toEqual([]);
     expect(new Set(records.map((r) => r.id)).size).toBe(records.length);
     expect(getKnowledgeBase().meta.schemaErrors).toEqual([]);
@@ -58,7 +59,7 @@ describe("served version", () => {
     const byForce = (rules: Array<{ force: string }>) =>
       rules.reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.force]: (acc[r.force] ?? 0) + 1 }), {});
     expect(byForce(literal)).toEqual({
-      required: 1082,
+      required: 1085,
       prohibited: 154,
       recommended: 1112,
       discouraged: 112,
@@ -66,7 +67,7 @@ describe("served version", () => {
       unclear: 15,
     });
     expect(byForce(getKnowledgeBase().rules)).toEqual({
-      required: 1102,
+      required: 1105,
       prohibited: 155,
       recommended: 1117,
       discouraged: 113,
@@ -81,7 +82,20 @@ describe("served version", () => {
   it("every literal rule's originalText is a literal substring of its corpus file", () => {
     const literal = readJsonl(join(KNOWLEDGE, `versions/${LITERAL}/normalized/rules.jsonl`));
     const cache = new Map<string, string>();
-    const missing = literal.filter((r) => {
+    // 3.6.1: as unidades acrescentadas de página fora do corpus (captureType literal-archived-page-rules) são
+    // literais do texto arquivado em data/ que a source aponta (archivedFile/archivedPath), no charRange declarado.
+    const archived = literal.filter((r) => r.source.captureType === "literal-archived-page-rules");
+    expect(archived.map((r) => r.id).sort()).toEqual(["govbr-3.7.0-template-global-10b091d3e7d1", "govbr-3.7.0-template-global-c21ff1c7eefc", "govbr-3.7.0-template-global-79cf9ea963ee"].sort());
+    for (const r of archived) {
+      const doc = JSON.parse(readFileSync(join(KNOWLEDGE, "..", "ds-page-rules.json"), "utf8"));
+      const text = (r.source.archivedPath as string).split(".").reduce((o: any, k: string) => o[k], doc) as string;
+      const [a, b] = r.source.charRange as [number, number];
+      expect(text.slice(a, b), r.id).toBe(r.originalText);
+      expect(r.force).toBe("required");
+      expect(text.lastIndexOf(r.title, a), r.id).toBeGreaterThanOrEqual(0);
+      expect(r.title).toMatch(/\(Obrigatório\)$/);
+    }
+    const missing = literal.filter((r) => r.source.captureType !== "literal-archived-page-rules").filter((r) => {
       const file = r.source.corpusFile as string;
       if (!cache.has(file)) cache.set(file, readFileSync(join(KNOWLEDGE, `versions/${LITERAL}/corpus`, file), "utf8"));
       return !cache.get(file)!.includes(r.originalText);
@@ -149,7 +163,9 @@ describe("previous-version ids stay resolvable", () => {
     const ids = new Set(Object.values(CHECK_GROUNDING).flatMap((g) => g.implements).filter((id) => id.startsWith("govbr-")));
     // 3.5.0 (revisão Fable P5): o nome acessível passa a citar emag-1.1 (id e-MAG, fora desta contagem).
     // 3.6.0: a tag raiz semântica trocada cita o e-MAG 1.2 (…7c91abad32ce), ao lado da anatomia.
-    expect(ids.size).toBe(7);
+    // 3.6.1: + as áreas obrigatórias de cabeçalho e rodapé do Template Base (unidades literais).
+    // 3.6.1 (revisão): + o contexto do nome acessível de botão só com ícone (Button, recomendada).
+    expect(ids.size).toBe(10);
     for (const id of ids) {
       const rule = getRuleById(id);
       expect(rule, id).toBeDefined();

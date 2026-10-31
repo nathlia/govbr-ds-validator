@@ -259,9 +259,14 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
     const r = JSON.parse(text);
     expect(r).toMatchObject({ contract: CONTRACT, kind: "scan", status: "scanned", absenceNote: ABSENCE_NOTE });
     // 3.5.0 (D-155 item 1, revisão Fable P8): pageLevel = o medido e o que nenhum check julgou nesta página.
-    expect(Object.keys(r.checksRun)).toEqual(["executed", "omitted", "limits", "coverageNote", "completeOmitted", "pageLevel"]);
-    expect(r.checksRun.pageLevel.measured).toEqual(expect.arrayContaining(["placeholder-label", "focus-visible"]));
-    expect(r.checksRun.pageLevel.notMeasured.map((i: { code: string }) => i.code)).toEqual(expect.arrayContaining(["document-title-adequacy"]));
+    // 3.6.1 (D-155, item 3): com checks parciais, omittedNote diz que check omitido não é conformidade.
+    expect(Object.keys(r.checksRun)).toEqual(["executed", "omitted", "omittedNote", "limits", "coverageNote", "completeOmitted", "pageLevel"]);
+    // 3.6.1: na forma curta (aperto da 1ª página) `measured` sai — é derivado de checksRun.executed.
+    if (typeof r.checksRun.pageLevel.notMeasured[0] !== "string") expect(r.checksRun.pageLevel.measured).toEqual(expect.arrayContaining(["placeholder-label", "focus-visible"]));
+    else expect(r.checksRun.pageLevel.full).toMatchObject({ tool: "get_finding_details", arguments: { view: "observations" } });
+    // 3.6.1: no aperto da 1ª página o item vem na forma curta ("P-NN:código⇒norma").
+    const codeOf = (i: string | { code: string }) => (typeof i === "string" ? i.replace(/^P-\d+:/, "").split(/[: ⇒]/)[0] : i.code);
+    expect(r.checksRun.pageLevel.notMeasured.map(codeOf)).toEqual(expect.arrayContaining(["document-title-adequacy"]));
     expect(r.checksRun.executed.map((e: { check: string }) => e.check)).toEqual(["axe", "structure"]);
     expect(r.checksRun.executed[0].engine).toMatch(/^axe-core /);
     expect(r.checksRun.omitted.map((o: { check: string }) => o.check)).toEqual(["tokens", "page"]);
@@ -330,7 +335,8 @@ describe("contrato — orçamento, continuação, ausência, erro", () => {
       args = page.next?.arguments;
     }
     // 3.5.0 (revisão, MED): depois das observações do scan vêm as pendências do pageLevel como observações not-judged.
-    const pending = scan.checksRun.pageLevel?.count ?? scan.checksRun.pageLevel?.notMeasured?.length ?? 0;
+    // 3.6.1: na forma curta as pendências sem sinal medido vêm só contadas (lowSignal).
+    const pending = scan.checksRun.pageLevel?.count ?? (scan.checksRun.pageLevel?.notMeasured?.length ?? 0) + (scan.checksRun.pageLevel?.lowSignal ?? 0);
     expect(seen).toBe(obs.total + pending);
   });
 

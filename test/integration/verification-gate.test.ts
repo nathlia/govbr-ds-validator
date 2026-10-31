@@ -487,8 +487,9 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
     }
     const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } })));
     const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-page-footer");
-    expect(footer?.rule.id).toBe("govbr-3.7.0-template-global-19f93475dc5e");
-    expect(footer?.rule.implements).toBeUndefined();
+    // 3.6.1: cita a área de rodapé obrigatória (unidade literal); o excerto herdado vem em implements como contexto.
+    expect(footer?.rule.id).toBe("govbr-3.7.0-template-global-79cf9ea963ee");
+    expect(footer?.rule.implements).toEqual(["govbr-3.7.0-template-global-79cf9ea963ee", "govbr-3.7.0-template-global-19f93475dc5e"]);
     // 3.4.4 (C1): a norma do exemplo é a da família — não se repete no exemplo.
     expect(footer?.example.rule).toBeUndefined();
   });

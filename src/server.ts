@@ -14,6 +14,7 @@
  *   C5  evidence tools separated from judgment
  *   D2–D4  finding schema, dual-format report, persisted traces
  */
+import { createHash } from "node:crypto";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -78,7 +79,7 @@ const VERSAO: string = JSON.parse(
 ).version;
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
 import { runAxeScan } from "./checkers/axe.js";
-import { pageConstraints } from "./checkers/pageStructure.js";
+import { pageConstraints, titleDuplicateFinding } from "./checkers/pageStructure.js";
 import {
   inspectComputedStyles,
   STYLE_PROPERTIES,
@@ -103,7 +104,7 @@ import {
   PAGE_CONTENT_NOTE,
 } from "./responses/findings.js";
 import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
-import { PageScanCache, scanPage } from "./scan/pageScan.js";
+import { PageScanCache, pageLevelFirst, scanPage, type RevisitItem } from "./scan/pageScan.js";
 import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.js";
 import {
   CONTRACT,
@@ -142,9 +143,10 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, pageLevelBlock } from "./scan/notJudged.js";
+import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock } from "./scan/session.js";
 import { componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
-import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
+import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
 import { ANATOMY_PARTS } from "./verify/contextual.js";
@@ -170,6 +172,28 @@ export class UnknownToolProfileError extends Error {
 }
 
 /** Perfil efetivo: vazio/ausente = `full` (padrão de sempre); qualquer outro nome fora da lista lança. */
+/**
+ * 3.6.1 (revisão L2): as `instructions` do initialize de um perfil — fora do hash do tools/list, então o braço que
+ * as recebe muda sem o sha do tools/list mudar. `instructionsSha256(perfil)` dá o valor para o govbr-eval fixar.
+ */
+export function instructionsForProfile(profile: ToolProfile): string {
+  const hasNorms = profile === "full" || profile === "evaluation" || profile === "normative";
+  const hasDeterministic = profile === "full" || profile === "evaluation" || profile === "deterministic";
+  const hasEvidence = profile === "full" || profile === "evidence";
+  const hasCombinedGate = profile === "full" || profile === "evaluation";
+  const knowledgeFree = profile === "knowledge-free";
+  return serverInstructions(new Set([
+    ...(hasNorms ? ["get_ds_rules", "get_component_spec"] : []),
+    ...(hasEvidence ? ["inspect_computed_styles"] : []),
+    ...(hasDeterministic || knowledgeFree ? ["scan_page", "get_finding_details"] : []),
+    ...(hasCombinedGate || knowledgeFree ? ["verify_finding"] : []),
+  ]));
+}
+
+export function instructionsSha256(profile: ToolProfile): string {
+  return createHash("sha256").update(instructionsForProfile(profile)).digest("hex");
+}
+
 export function resolveToolProfile(requested: string | undefined | null): ToolProfile {
   if (requested === undefined || requested === null || requested === "") return "full";
   if ((TOOL_PROFILES as readonly string[]).includes(requested)) return requested as ToolProfile;
@@ -674,7 +698,9 @@ function contextResponse(
             "Checks de página (get_page_rules; o achado cita a norma em citeAs, não o id): valem para página " +
             "completa no Template Base, independentemente dos componentes; se a avaliada é completa ou " +
             "fragmento não é informado.",
-          ids: pageConstraints().map((c) => c.id),
+          // 3.6.1: ds-page-title (e-MAG 3.3, documento) não é região do Template Base: fica fora desta lista, e o
+          // contexto do get_ds_rules continua byte a byte o da 3.6.0 (guarda da busca intocada).
+          ids: pageConstraints().filter((c) => c.kind !== "page-title").map((c) => c.id),
         },
         ...(pointers.length
           ? {
@@ -739,18 +765,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const findingStore = new FindingStore();
   const verificationStore = new VerificationStore();
   const pageScanCache = new PageScanCache();
+  /** 3.6.1 (D-155): memória da sessão entre scans — rotas, títulos, pendências abertas, elementos ocultos. */
+  const session = new ScanSession();
   /** 3.0.0 (S-03): observações por scanId, fora da resposta inicial e pagináveis (get_finding_details view=observations). */
   const observationStore = new Map<string, Observation[]>();
   /** Revisão da 3.0.0: diff completo de findings por scanId (o cabeçalho leva só contagens). */
-  const diffStore = new Map<string, { previousScanId: string; diff: ReturnType<typeof diffFindings> }>();
+  const diffStore = new Map<string, { previousScanId: string; diff: ReturnType<typeof diffFindings> & { notRemeasured?: Array<{ id: string; reason: "check-not-run" | "scope"; check: string }> } }>();
   /** 3.3.0 (N-04): coletas do inspect_computed_styles por argumentos, para paginar sem recarregar. */
   const inspectSnapshots = new Map<string, { id: string; takenAt: string; evidence: Record<string, unknown>; elements: unknown[] }>();
   let inspectSnapshotCounter = 0;
-  const recordDiff = (scanId: string, previousScanId: string, previous: Finding[], current: Finding[]) => {
-    const diff = diffFindings(previous, current);
-    diffStore.set(scanId, { previousScanId, diff });
-    return diff;
-  };
   const verificationFor = (finding: Finding) => verificationStore.lookup(finding)?.verification;
 
   /**
@@ -791,12 +814,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     description: `toolProfile=${toolProfile}`,
   }, {
     // 3.3.0 (B-18): procedimento de uso das ferramentas deste perfil, sem conhecimento do DS.
-    instructions: serverInstructions(new Set([
-      ...(hasNorms ? ["get_ds_rules", "get_component_spec"] : []),
-      ...(hasEvidence ? ["inspect_computed_styles"] : []),
-      ...(hasDeterministic || knowledgeFree ? ["scan_page", "get_finding_details"] : []),
-      ...(hasCombinedGate || knowledgeFree ? ["verify_finding"] : []),
-    ])),
+    instructions: instructionsForProfile(toolProfile),
   });
   installContractInputValidation(server);
 
@@ -1260,7 +1278,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order: regiões obrigatórias do Template Base, salto para o conteúdo e o salto como primeiro a receber o foco), cada uma com a norma que o achado cita (citeAs), verificáveis pelo scan_page e pelo verify_finding.",
+        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order, ds-page-title: regiões obrigatórias do Template Base, salto para o conteúdo, o salto como primeiro a receber o foco e o título do documento), cada uma com a norma que o achado cita (citeAs), verificáveis pelo scan_page e pelo verify_finding.",
       inputSchema: strictInput("get_page_rules", {
         category: z
           .enum([
@@ -1626,6 +1644,75 @@ export function createServer(options: ServerOptions = {}): McpServer {
     return { urlChanged: true, previousUrl, warning: "O scan comparado é de outra página: o diff compara páginas diferentes, não estados da mesma página." };
   };
 
+  /**
+   * 3.6.1 (D-155, item 4): o diff de findings com os "removidos" que só não foram medidos de novo separados —
+   * achado cujo check não rodou neste scan (ou que pode estar fora dos seletores deste scan) não sumiu.
+   */
+  const stateDiffFindings = (
+    scanId: string,
+    previousScanId: string,
+    previous: Finding[],
+    current: Finding[],
+    previousLedger: Record<string, unknown> | undefined,
+    currentChecks: string[],
+    currentSelectors: string[],
+  ) => {
+    const prevSelectors = ((previousLedger?.coverage as { selectors?: string[] } | undefined)?.selectors ?? []).slice().sort();
+    const now = [...currentSelectors].sort();
+    const scopeNarrowed = now.length > 0 && JSON.stringify(now) !== JSON.stringify(prevSelectors);
+    const diff = refineDiff(diffFindings(previous, current), previous, currentChecks, scopeNarrowed);
+    diffStore.set(scanId, { previousScanId, diff });
+    return diffSummary(diff, scanId);
+  };
+
+  /** 3.6.1 (item 1): itens do notJudged com o id da pendência da sessão (e a resolução, se já houver). */
+  const withPendingIds = (scanId: string, route: string, items: NotJudgedItem[]): PendingItem[] => {
+    const entries = session.registerPending(scanId, route, items, (item) => (item.examples ?? []).slice());
+    return items.map((item, i) => {
+      const e = entries[i];
+      return { ...item, pendingId: e.id, ...(e.status === "resolved" ? { resolved: e.resolution?.status ?? e.resolution?.by ?? true } : {}) };
+    });
+  };
+
+  /** 3.6.1 (revisão H1): os códigos cuja cláusula com texto saiu nesta resposta não repetem o texto na sessão. */
+  const markDeliveredTexts = (response: Record<string, unknown>) => {
+    const pl = (response.checksRun as { pageLevel?: { notMeasured?: unknown[] } } | undefined)?.pageLevel;
+    for (const i of pl?.notMeasured ?? []) {
+      const item = i as { code?: string; rule?: { text?: string } };
+      if (item && typeof item === "object" && item.code && item.rule?.text) session.markDelivered(item.code);
+    }
+    for (const i of ((response.sessionPending as { items?: unknown[] } | undefined)?.items ?? [])) {
+      const item = i as { code?: string; rule?: { text?: string } };
+      if (item.code && item.rule?.text) session.markDelivered(item.code);
+    }
+  };
+
+  /** 3.6.1 (item 6): a separação por rota/estado, só quando a sessão já viu outra rota ou outro estado. */
+  const unitsBlock = (route: string, fingerprint: string) => {
+    const u = session.units(route, fingerprint);
+    if (u.routes.length < 2 && u.states < 2) return undefined;
+    return { routes: u.routes.length, states: u.states, thisRoute: routeLabel(route), note: UNITS_NOTE };
+  };
+
+  /** 3.6.1 (item 3): o que aconteceu com os elementos antes ocultos (só os que estão visíveis agora, até 5). */
+  const revisitedBlock = (items: RevisitItem[] | undefined) => {
+    if (!items?.length) return undefined;
+    const visible = items.filter((i) => i.now === "measured" || i.now === "outside");
+    const stillHidden = items.filter((i) => i.now === "hidden").length;
+    if (!visible.length) return undefined;
+    return {
+      note: "Elementos ocultos num scan anterior e visíveis agora: o subcheck de tokens que os marcou foi medido neles neste estado, mesmo fora de checks. O resto da página segue com o que checks pediu.",
+      items: visible.slice(0, 5).map((i) => ({
+        locator: clip(i.locator, 120),
+        check: i.checker,
+        from: `${i.fromScan} n${i.n}`,
+        now: i.now === "measured" ? (i.findings?.length ? i.findings : "medido: sem achado") : "fora da autoria da página",
+      })),
+      ...(visible.length > 5 ? { more: visible.length - 5 } : {}),
+      ...(stillHidden ? { stillHidden } : {}),
+    };
+  };
+
   /** Estado não alcançado: nada foi varrido; o próximo passo é reproduzir o estado. */
   function unreachedResponse(url: string, result: { status: string; limitation: unknown; state: unknown }) {
     return ok({
@@ -1703,6 +1790,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .string()
           .optional()
           .describe("Scan anterior da sessão; devolve diff de fingerprint e findings após a nova varredura"),
+        // 3.6.1 (D-155, item 1): a única entrada nova — o agente fecha pendências que mediu e decidiu.
+        pendingResolved: z
+          .array(
+            z
+              .object({
+                id: z.string().describe("pendingId (P-NN) de checksRun.pageLevel ou sessionPending"),
+                status: z.enum(["violada", "conforme", "não se aplica"]),
+                reason: z.string().max(300).optional().describe("O que você mediu; obrigatório para conforme e não se aplica (sem ele a pendência continua aberta)"),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(50)
+          .optional()
+          .describe("Pendências que você mediu e decidiu; saem de sessionPending nos próximos scans"),
         ...FindingPageInputShape,
         maxChars: ScanMaxChars,
         ...FamilyViewInputShape,
@@ -1712,20 +1814,41 @@ export function createServer(options: ServerOptions = {}): McpServer {
     instrumentTool(
       telemetry,
       "scan_page",
-      async ({ url, selectors, checks, tokenChecks, components, actions, arrival, compareToScanId, detail, cursor, limit, maxChars, view, memberLimit }) => {
+      async ({ url, selectors, checks, tokenChecks, components, actions, arrival, compareToScanId, pendingResolved, detail, cursor, limit, maxChars, view, memberLimit }) => {
         const previousFindings = compareToScanId ? findingStore.getBatch(compareToScanId) : undefined;
         const previousLedger = compareToScanId ? findingStore.getBatchMetadata(compareToScanId) : undefined;
         if (compareToScanId && !previousFindings) {
           return sessionFailure(`compareToScanId '${compareToScanId}' não existe nesta sessão MCP.`, "unknown-scan", "compareToScanId");
         }
+        const pendingResolution = pendingResolved?.length ? session.resolveExplicit(pendingResolved) : undefined;
+        // 3.6.1 (item 3): elementos que um scan anterior desta página viu ocultos.
+        const revisit = session.hiddenFor(url).map((h) => ({ locator: h.locator, checker: h.checker, fromScan: h.scanId, n: h.n }));
         const result = await scanPage(
-          { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
+          { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}), ...(revisit.length ? { revisit } : {}) },
           pageScanCache
         );
         // 2.10.0: estado não alcançado não vira lote — sem scanId, sem findings, sem cobertura; zero
         // achados aqui seria lido como "sem defeito" num estado que ninguém viu.
         if (result.status === "state-not-reached") return unreachedResponse(url, result);
-        const scanId = findingStore.putBatch("page", result.findings, {
+        const executedChecks = (checks ?? ["tokens", "structure", "axe", "page"]) as string[];
+        const route = routeKeyOf(result.state.observed.url);
+        const pageWide = !selectors?.length;
+        const title = pageWide && result.document ? result.document.title.trim() : null;
+        const heading = pageWide && result.document ? result.document.mainHeading : null;
+        // 3.6.1 (item 2; revisão M4): o mesmo <title> em rotas de outro modelo cujo assunto principal difere e não está
+        // nele (heurística, check de página, scan da página inteira).
+        const sameTitle = title && executedChecks.includes("page") ? session.sameTitleElsewhere(route, title, heading) : [];
+        const findings = sameTitle.length
+          ? pageLevelFirst([
+              ...result.findings,
+              titleDuplicateFinding(
+                { url, route: routeLabel(route), heading: heading as string },
+                title as string,
+                sameTitle.map((s) => ({ route: routeLabel(s.route), scanId: s.scanId, heading: s.heading ?? "" })),
+              ),
+            ])
+          : result.findings;
+        const scanId = findingStore.putBatch("page", findings, {
           stateFingerprint: result.stateFingerprint,
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
@@ -1736,6 +1859,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(result.notJudged?.length ? { notJudged: { count: result.notJudged.length, codes: result.notJudged.map((i) => i.code), next: { view: "observations", cursor: result.observations.length, note: "get_finding_details(scanId, view:'observations', cursor) traz os itens inteiros" } } } : {}),
         });
         observationStore.set(scanId, [...result.observations, ...notJudgedObservations(result.notJudged ?? [], url)]);
+        // 3.6.1 (item 3): o que está oculto neste estado volta como revisita no próximo scan desta página;
+        // o que foi medido visível sai da lista.
+        for (const r of result.revisited ?? []) {
+          if (r.now === "measured" || r.now === "outside" || r.now === "covered") {
+            for (const h of session.hiddenFor(url, 1_000)) if (h.locator === r.locator && h.checker === r.checker) session.forgetHidden(h);
+          }
+        }
+        session.recordHidden(scanId, url, result.observations);
         const stateDiff = compareToScanId && previousFindings
           ? {
               previousScanId: compareToScanId,
@@ -1743,7 +1874,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               currentFingerprint: result.stateFingerprint,
               stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
               ...comparePage(previousLedger, url),
-              findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
+              findings: stateDiffFindings(scanId, compareToScanId, previousFindings, findings, previousLedger, executedChecks, selectors ?? []),
               elementsInspectedDelta:
                 typeof (previousLedger?.coverage as { elementsInspected?: unknown } | undefined)?.elementsInspected === "number"
                   ? result.coverage.elementsInspected -
@@ -1751,12 +1882,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
                   : null,
             }
           : undefined;
-        const summary = summarize(result.findings);
+        const summary = summarize(findings);
         const first = !cursor;
         // §10 + §15.8: investigate na ordem do DOM (coverage.componentsFound não é ordenado), 1ª página.
         // 3.5.0 (revisão Fable P1): todos os componentes encontrados, por obrigações/proibições sem medida.
         const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount) : undefined;
-        const executedChecks = (checks ?? ["tokens", "structure", "axe", "page"]) as string[];
+        // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
+        const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
+        const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
+        const pageItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
+        const currentCodes = new Set<string>(pageItems.map((i) => i.code));
+        const sessionPending = hasNorms && first
+          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true)
+          : undefined;
+        const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
+        session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks });
+        const revisited = first ? revisitedBlock(result.revisited) : undefined;
         const head = {
           contract: CONTRACT,
           kind: "scan",
@@ -1768,6 +1909,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           cacheHit: result.cacheHit,
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: boundStrings(result.coverage),
+          ...(pendingResolution ? { pendingResolution } : {}),
           checksRun: {
             ...checksRunFor(
               { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
@@ -1776,22 +1918,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
               false,
             ),
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
-            // nenhum check julgou — pendências, nunca veredito. Só encolhe como último recurso do teto.
-            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, result.notJudged ?? [], Boolean(components?.length)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
+            // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).
+            // 3.6.1 (revisão H1): o texto da cláusula só enquanto não foi entregue nesta sessão; depois, só o id.
+            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, pageItems, Boolean(components?.length), (c) => !session.textDelivered(c)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
           },
+          ...(sessionPending ? { sessionPending } : {}),
+          ...(revisited ? { revisited } : {}),
           summary,
           deduplication: result.deduplication,
           ...(stateDiff ? { stateDiff } : {}),
+          ...(units ? { units } : {}),
           ...(investigate ? { investigate } : {}),
           // S-09: zero achados (ou poucos) nunca é conformidade.
           absenceNote: ABSENCE_NOTE,
         };
-        return ok(
-          assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
-            batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
-            { firstScanPage: first },
-          ),
+        const response = assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
+          batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+          { firstScanPage: first },
         );
+        markDeliveredTexts(response);
+        return ok(response);
       }
     )
   );
@@ -1847,9 +1993,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
             currentFingerprint: result.stateFingerprint,
             stateChanged: previousLedger?.stateFingerprint !== result.stateFingerprint,
             ...comparePage(previousLedger, url),
-            findings: diffSummary(recordDiff(scanId, compareToScanId, previousFindings, result.findings), scanId),
+            findings: stateDiffFindings(scanId, compareToScanId, previousFindings, result.findings, previousLedger, ["axe"], selectors ?? []),
           }
         : undefined;
+      // 3.6.1 (itens 1, 5, 6): pendências do axe (contraste não decidido, só o critério WCAG), repetidas até a
+      // resolução por verify_finding, e a separação por rota/estado. Nada da base de conhecimento.
+      const route = routeKeyOf(result.state.observed.url);
+      const first = !cursor;
+      const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
+      const sessionPending = first
+        ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), () => true, false)
+        : undefined;
+      const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
+      session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title: null, checks: ["axe"] });
       const head = {
         contract: CONTRACT,
         kind: "scan",
@@ -1861,10 +2017,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
         cacheHit: result.cacheHit,
         ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
         coverage: boundStrings(result.coverage),
-        checksRun: checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
+        checksRun: {
+          ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
+          ...(first && pageItems.length ? { pageLevel: pageLevelBlockKnowledgeFree(pageItems) } : {}),
+        },
+        ...(sessionPending ? { sessionPending } : {}),
         summary: summarize(result.findings),
         deduplication: result.deduplication,
         ...(stateDiff ? { stateDiff } : {}),
+        ...(units ? { units } : {}),
         absenceNote: ABSENCE_NOTE_KNOWLEDGE_FREE,
       };
       return ok(
@@ -2300,18 +2461,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(knowledgeFree ? { knowledgeFree: true } : {}),
       });
       const stored = verificationStore.record(candidate, verification);
+      // 3.6.1 (D-155, item 1): verificar uma das normas de uma pendência, na rota dela, a resolve (qualquer veredito).
+      const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict);
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
       // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
-      return ok(
-        verificationEnvelope(candidate, verification, {
+      return ok({
+        ...verificationEnvelope(candidate, verification, {
           verificationId: stored.verificationId,
           knowledgeFree,
           ...(scanId ? { scanId } : {}),
           ...(inherited ? { inheritedFromLedger: { ...inherited, note: "Campos que faltavam no payload (evidence.data; 3.6.0: rule.checker) foram herdados do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
           ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
         }),
-      );
+        ...(pendingResolved.length ? { pendingResolved } : {}),
+      });
     })
   );
 

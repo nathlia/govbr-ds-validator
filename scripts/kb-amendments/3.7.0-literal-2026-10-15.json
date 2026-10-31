@@ -1,0 +1,155 @@
+{
+  "version": "3.7.0-literal-2026-10-15",
+  "label": "emenda-1",
+  "validator": "3.6.1",
+  "decision": "D-155 (NAT-104, classe 'texto truncado')",
+  "what": "3 unidades literais (força required pelo rótulo '(Obrigatório)') das áreas obrigatórias do Template Base: Cabeçalho, Conteúdo e Rodapé. O excerto herdado govbr-3.7.0-template-global-19f93475dc5e truncava a página e não dizia que as áreas são obrigatórias.",
+  "provenance": "texto literal de data/ds-page-rules.json, categories.page_structure.sections.visao-geral (https://www.gov.br/ds/templates/base, raspagem 2026-04-16T05:31:03.314Z); source.captureType = literal-archived-page-rules, charRange nesse texto. A página não está em corpus/ (o corpus literal não coletou templates).",
+  "units": [
+    {
+      "id": "govbr-3.7.0-template-global-c21ff1c7eefc",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "1. Área de Cabeçalho (Obrigatório)",
+      "originalText": "Esta é uma área essencial e obrigatória no template base. Nesta região deve-se utilizar apenas o componente header com suas variações.",
+      "originalTextMode": "verbatim",
+      "normalizedRule": "Esta é uma área essencial e obrigatória no template base. Nesta região deve-se utilizar apenas o componente header com suas variações.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "header"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "força pelo rótulo '(Obrigatório)' do título da área na página oficial do Template Base",
+        "3.6.1 (D-155): unidade acrescentada à versão literal — o Template Base não está no corpus literal; o texto é literal do arquivo data/ds-page-rules.json (page_structure, seção visao-geral), a mesma página oficial que o excerto herdado govbr-3.7.0-template-global-19f93475dc5e trunca"
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base",
+        "pageTitle": "Template Base",
+        "tab": null,
+        "section": "1. Área de Cabeçalho (Obrigatório)",
+        "sectionPath": "Visão Geral > 1. Área de Cabeçalho (Obrigatório)",
+        "retrievedAt": "2026-04-16",
+        "contentHash": "95f3c3aa17fbb570cb09ecd7d84e79791ee476c1fcbf33e42b6938224819b743",
+        "locator": "data/ds-page-rules.json#categories.page_structure.sections.visao-geral",
+        "archivedFile": "data/ds-page-rules.json",
+        "archivedPath": "categories.page_structure.sections.visao-geral",
+        "charRange": [
+          1094,
+          1228
+        ],
+        "captureType": "literal-archived-page-rules"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-template-global-10b091d3e7d1",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "2. Área de Conteúdo (Obrigatório)",
+      "originalText": "Esta é uma área essencial no template base. Esta região contém todo conteúdo específico de uma página.",
+      "originalTextMode": "verbatim",
+      "normalizedRule": "Esta é uma área essencial no template base. Esta região contém todo conteúdo específico de uma página.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "semantic",
+      "automatable": false,
+      "automationConfidence": "low",
+      "relatedTokens": [],
+      "relatedComponents": [],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "força pelo rótulo '(Obrigatório)' do título da área na página oficial do Template Base",
+        "3.6.1 (D-155): unidade acrescentada à versão literal — o Template Base não está no corpus literal; o texto é literal do arquivo data/ds-page-rules.json (page_structure, seção visao-geral), a mesma página oficial que o excerto herdado govbr-3.7.0-template-global-19f93475dc5e trunca"
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base",
+        "pageTitle": "Template Base",
+        "tab": null,
+        "section": "2. Área de Conteúdo (Obrigatório)",
+        "sectionPath": "Visão Geral > 2. Área de Conteúdo (Obrigatório)",
+        "retrievedAt": "2026-04-16",
+        "contentHash": "95f3c3aa17fbb570cb09ecd7d84e79791ee476c1fcbf33e42b6938224819b743",
+        "locator": "data/ds-page-rules.json#categories.page_structure.sections.visao-geral",
+        "archivedFile": "data/ds-page-rules.json",
+        "archivedPath": "categories.page_structure.sections.visao-geral",
+        "charRange": [
+          1559,
+          1661
+        ],
+        "captureType": "literal-archived-page-rules"
+      }
+    },
+    {
+      "id": "govbr-3.7.0-template-global-79cf9ea963ee",
+      "dsVersion": "3.7.0",
+      "status": "stable",
+      "standard": "gov.br Design System",
+      "standardVersion": "3.7.0",
+      "category": "template",
+      "subcategory": "base",
+      "component": null,
+      "title": "5. Área de Rodapé (Obrigatório)",
+      "originalText": "Esta é uma área essencial do template base onde é utilizado o componente Footer com suas variações e tipos.",
+      "originalTextMode": "verbatim",
+      "normalizedRule": "Esta é uma área essencial do template base onde é utilizado o componente Footer com suas variações e tipos.",
+      "force": "required",
+      "rationale": null,
+      "conditions": [],
+      "exceptions": [],
+      "expectedEvidence": [],
+      "validationStrategy": "dom",
+      "automatable": true,
+      "automationConfidence": "high",
+      "relatedTokens": [],
+      "relatedComponents": [
+        "footer"
+      ],
+      "wcagReferences": [],
+      "emagReferences": [],
+      "notes": [
+        "força pelo rótulo '(Obrigatório)' do título da área na página oficial do Template Base",
+        "3.6.1 (D-155): unidade acrescentada à versão literal — o Template Base não está no corpus literal; o texto é literal do arquivo data/ds-page-rules.json (page_structure, seção visao-geral), a mesma página oficial que o excerto herdado govbr-3.7.0-template-global-19f93475dc5e trunca"
+      ],
+      "source": {
+        "url": "https://www.gov.br/ds/templates/base",
+        "pageTitle": "Template Base",
+        "tab": null,
+        "section": "5. Área de Rodapé (Obrigatório)",
+        "sectionPath": "Visão Geral > 5. Área de Rodapé (Obrigatório)",
+        "retrievedAt": "2026-04-16",
+        "contentHash": "95f3c3aa17fbb570cb09ecd7d84e79791ee476c1fcbf33e42b6938224819b743",
+        "locator": "data/ds-page-rules.json#categories.page_structure.sections.visao-geral",
+        "archivedFile": "data/ds-page-rules.json",
+        "archivedPath": "categories.page_structure.sections.visao-geral",
+        "charRange": [
+          3599,
+          3706
+        ],
+        "captureType": "literal-archived-page-rules"
+      }
+    }
+  ]
+}

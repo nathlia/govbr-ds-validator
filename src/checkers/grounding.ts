@@ -121,25 +121,31 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
     // (WCAG 4.1.1/4.1.2) à Recomendação 1.1 do e-MAG pelo registro 7e6420514860; esse id é LEGADO na base literal
     // (substituído pelo título f12b1bae5784, força recommended), por isso a norma nomeada é a recomendação e-MAG
     // inteira (emag-1.1), citada com wcag 4.1.2 — o critério que o achado mede.
-    implements: ["emag-1.1"],
+    // 3.6.1 (revisão): as cláusulas literais do e-MAG 1.1 tratam de separar camadas, não de nome acessível; o achado
+    // cita a WCAG 4.1.2 (resolvida pelo registro WCAG) e a cláusula do Button "botões com apenas ícones… title ou
+    // aria-label" (recomendada) fica como contexto. Sai o emag-1.1.
+    implements: ["wcag-4.1.2", "govbr-3.7.0-accessibility-button-6b76377297eb"],
     basis:
-      "e-MAG 1.1 'Respeitar os Padrões Web', que a base liga à WCAG 4.1.2 (Name, Role, Value; registro " +
-      "7e6420514860, hoje legado): controle interativo sem nome acessível não expõe o nome. Citada com wcag 4.1.2.",
+      "WCAG 4.1.2 (Name, Role, Value): o nome de todo componente de interface pode ser determinado por programa — " +
+      "controle interativo só com ícone e sem nome acessível calculado não o expõe. Contexto: Button 'Ao utilizar botões " +
+      "com apenas ícones, certifique-se de usar os atributos title ou aria-label' (recomendada; não é a citação).",
   },
+  // 3.6.1 (D-155, NAT-104 "texto truncado"): a citação é a unidade literal da área obrigatória do Template Base
+  // (acrescentada à base a partir de data/ds-page-rules.json, ver manifest.amendments), que DIZ que a área é
+  // obrigatória; o excerto herdado …19f93475dc5e ("ponto de partida") fica como contexto.
   "page-header": {
-    implements: ["govbr-3.7.0-template-global-19f93475dc5e"],
+    implements: ["govbr-3.7.0-template-global-c21ff1c7eefc", "govbr-3.7.0-template-global-19f93475dc5e"],
     basis:
-      "'Use o Template Base como ponto de partida para páginas' (required), lido junto com o texto " +
-      "integral da página oficial do Template Base (data/ds-page-rules.json, page_structure): " +
-      "'1. Área de Cabeçalho (Obrigatório) — Esta é uma área essencial e obrigatória no template " +
-      "base. Nesta região deve-se utilizar apenas o componente header'. O D-29 vetava inferir áreas " +
-      "do excerto truncado; a fonte agora é o texto integral, e o trecho é conferido em teste.",
+      "'1. Área de Cabeçalho (Obrigatório) — Esta é uma área essencial e obrigatória no template base. Nesta " +
+      "região deve-se utilizar apenas o componente header com suas variações.' (required, unidade literal da página " +
+      "oficial do Template Base, data/ds-page-rules.json page_structure). Contexto: 'Use o Template Base como ponto " +
+      "de partida para páginas' (excerto herdado). O D-29 vetava inferir áreas do excerto truncado; a fonte é o texto integral.",
   },
   "page-footer": {
-    implements: ["govbr-3.7.0-template-global-19f93475dc5e"],
+    implements: ["govbr-3.7.0-template-global-79cf9ea963ee", "govbr-3.7.0-template-global-19f93475dc5e"],
     basis:
-      "Mesma regra e mesma fonte integral do Template Base: '5. Área de Rodapé (Obrigatório) — Esta " +
-      "é uma área essencial do template base onde é utilizado o componente Footer'. O Padrão Mínimo " +
+      "'5. Área de Rodapé (Obrigatório) — Esta é uma área essencial do template base onde é utilizado o componente " +
+      "Footer com suas variações e tipos.' (required, unidade literal da mesma página oficial). O Padrão Mínimo " +
       "lista Cabeçalho e Rodapé entre os pontos de aderência mínima.",
   },
   "page-skip-link": {
@@ -285,9 +291,12 @@ export function structureTagWcag(expectedTags: string[]): string | undefined {
 }
 
 /** A unidade que o achado de um check cita: o 1º id de `implements`. Sem norma → null (o check não produz achado). */
-export function citationFor(implementsIds: string[]): { id: string; source: "govbr-ds-kb" | "emag" } | null {
+export function citationFor(implementsIds: string[]): { id: string; source: "govbr-ds-kb" | "emag" | "wcag" } | null {
   const first = implementsIds[0];
   if (!first) return null;
+  // 3.6.1: critério WCAG (`wcag-n.n.n`) cita como `wcag:n.n.n` — a forma que o resolvedor da passada cega aceita
+  // (o agente copia rule.id para o cartão); o portão aceita as duas (wcagMembership tira o prefixo).
+  if (first.startsWith("wcag-")) return { id: `wcag:${first.slice(5)}`, source: "wcag" };
   return first.startsWith("emag-") ? { id: first, source: "emag" } : { id: first, source: "govbr-ds-kb" };
 }
 

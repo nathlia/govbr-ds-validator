@@ -345,9 +345,10 @@ describe("3.5.0 P5 — botão só com ícone: e-MAG 1.1 / WCAG 4.1.2, um achado 
   it("sem axe, a estrutura acusa com emag-1.1; com axe, fica só o button-name", async () => {
     const semAxe = await scan("/botao-sem-nome", { checks: ["structure"] });
     const est = semAxe.findings.find((f) => f.element.locator === "#apagar" && f.evidence.data?.hasIconOnly);
-    expect(est?.rule).toMatchObject({ id: "emag-1.1", wcag: "4.1.2", implements: ["emag-1.1"] });
+    // 3.6.1 (revisão): cita a WCAG 4.1.2; a cláusula do Button (só ícone) fica como contexto.
+    expect(est?.rule).toMatchObject({ id: "wcag:4.1.2", source: "wcag", wcag: "4.1.2", implements: ["wcag-4.1.2", "govbr-3.7.0-accessibility-button-6b76377297eb"] });
     const comAxe = await scan("/botao-sem-nome", { checks: ["structure", "axe"] });
-    const onButton = comAxe.findings.filter((f) => f.element.locator === "#apagar" && (f.rule.id === "emag-1.1" || f.rule.id === "button-name"));
+    const onButton = comAxe.findings.filter((f) => f.element.locator === "#apagar" && (f.rule.id === "wcag:4.1.2" || f.rule.id === "button-name"));
     expect(onButton.map((f) => f.rule.id)).toEqual(["button-name"]);
   });
 });
@@ -370,7 +371,7 @@ describe("3.5.0 C03 — ícone decorativo exposto e title que repete o link (aud
     const r = await scan("/icones", { checks: ["structure", "page"] });
     const onCircular = r.findings.filter((f) => /#circular/.test(f.element.locator));
     // o circular SEM nome continua só com o achado de nome acessível (e-MAG 1.1 / 4.1.2); o nomeado, com nada
-    expect(onCircular.map((f) => `${f.rule.id}@${f.element.locator}`)).toEqual(["emag-1.1@#circular"]);
+    expect(onCircular.map((f) => `${f.rule.id}@${f.element.locator}`)).toEqual(["wcag:4.1.2@#circular"]);
     const all = JSON.stringify([CHECK_GROUNDING, FOCUS_INDICATOR_GROUNDING, PLACEHOLDER_LABEL_GROUNDING, pageConstraints().map((c) => c.implements)]);
     expect(all).not.toContain("component-button-7ef75d42ac65");
     const { DECORATIVE_ICON_GROUNDING, LINK_TITLE_GROUNDING } = await import("../../src/checkers/decorativeIcons.js");
@@ -452,6 +453,9 @@ describe("3.5.0 P2 — o texto de cada cláusula que um check implementa descrev
     "govbr-3.7.0-accessibility-global-7c91abad32ce": /Cada elemento HTML deve ser utilizado\s+para o fim que ele foi criado/,
     "govbr-3.7.0-accessibility-global-fb9dfcacbb34": /sequência lógica de leitura para percorrer links/,
     "govbr-3.7.0-template-global-19f93475dc5e": /template base/i,
+    // 3.6.1: as áreas obrigatórias do Template Base (unidades literais acrescentadas).
+    "govbr-3.7.0-template-global-c21ff1c7eefc": /área essencial e obrigatória no template base.*componente header/,
+    "govbr-3.7.0-template-global-79cf9ea963ee": /área essencial do template base onde é utilizado o componente Footer/,
     "govbr-3.7.0-accessibility-global-538e57855252": /primeiro link da página/,
     "govbr-3.7.0-accessibility-skiplink-b0641993618f": /primeiro elemento a receber o foco/,
     "govbr-3.7.0-component-skiplink-02c2e513d936": /primeira coisa que um usuário de teclado/,
@@ -460,8 +464,12 @@ describe("3.5.0 P2 — o texto de cada cláusula que um check implementa descrev
     "govbr-3.7.0-pattern-global-aabbc9b63402": /placeholders\*? no lugar de rótulos/,
     "govbr-3.7.0-foundation-global-e0e913d352f3": /decorativos.*aria-hidden/,
     "govbr-3.7.0-accessibility-global-3f41d7ddc85a": /repita o conteúdo do link no atributo title/,
+    // 3.6.1 (item 2): título do documento (ds-page-title).
+    "govbr-3.7.0-accessibility-global-9a6edd7d551e": /título da página deve ser descritivo e informativo/,
+    // 3.6.1 (revisão): contexto do nome acessível de botão só com ícone.
+    "govbr-3.7.0-accessibility-button-6b76377297eb": /botões com apenas ícones.*title.*aria-label/,
   };
-  const EMAG: Record<string, RegExp> = { "3.5": /links/i, "1.1": /padrões web/i, "1.4": /tabulação/i, "1.5": /âncoras/i, "4.4": /foco/i, "6.2": /etiquetas/i };
+  const EMAG: Record<string, RegExp> = { "3.3": /título/i, "3.5": /links/i, "1.1": /padrões web/i, "1.4": /tabulação/i, "1.5": /âncoras/i, "4.4": /foco/i, "6.2": /etiquetas/i };
   it("cada id govbr- e emag- dos checks do scan está na tabela e casa com o texto servido", async () => {
     const checks: Array<[string, string[]]> = [
       ...Object.entries(CHECK_GROUNDING).map(([k, g]) => [k, g.implements] as [string, string[]]),
@@ -473,6 +481,7 @@ describe("3.5.0 P2 — o texto de cada cláusula que um check implementa descrev
     ];
     for (const [check, ids] of checks) {
       for (const id of ids) {
+        if (id.startsWith("wcag-")) continue; // registro WCAG (conferido em grounding.test)
         if (id.startsWith("emag-")) {
           const n = id.slice(5);
           expect(EMAG[n], `${check}: ${id} sem linha na tabela`).toBeDefined();

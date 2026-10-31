@@ -41,7 +41,7 @@ export function locateLiteralParagraph(text: string, rule: KnowledgeRule) {
 
 /** Coordinates below belong to the LF-normalized snapshot, NOT upstream source.charRange. */
 function literalSection(rule: KnowledgeRule) {
-  const version = getKnowledgeBase().meta.knowledgeVersion;
+  const version = getKnowledgeBase().meta.knowledgeDir;
   const file = rule.source.corpusFile;
   if (typeof file !== "string") return null;
   const base = resolve(ROOT, version, "corpus");

@@ -3,9 +3,10 @@
  * (perfis com normas, 1ª página, ordem do DOM, §15.8), observações limitadas com continuação (S-03)
  * e a montagem da resposta inteira dentro do orçamento (padrão 8.000 caracteres).
  */
-import type { Observation } from "../schema/finding.js";
+import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
-import { pageLevelCodes, type NotJudgedItem } from "../scan/notJudged.js";
+import { pageLevelCodes, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
+import { sessionPendingCodes } from "../scan/session.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 export const OBSERVATION_PAGE_MAX_CHARS = 8_000;
@@ -118,7 +119,15 @@ export function checksRunFor(
             ...(omittedTokens.length ? { tokenChecks: omittedTokens } : {}),
           },
         };
-  return { executed, omitted, limits: limits(actionsApplied, viewport, false), coverageNote: MESSAGES["scan-coverage"], completeOmitted };
+  return {
+    executed,
+    omitted,
+    // 3.6.1 (item 3): o mínimo — pular um check não é conformidade.
+    ...(omitted.length ? { omittedNote: "Omitido ≠ conforme: sem medida neste estado; achados dele não sumiram (stateDiff.notRemeasured)." } : {}),
+    limits: limits(actionsApplied, viewport, false),
+    coverageNote: MESSAGES["scan-coverage"],
+    completeOmitted,
+  };
 }
 
 /**
@@ -209,6 +218,20 @@ function investigateNames(r: Record<string, unknown>): Record<string, unknown> |
   return { ...r, investigate: { components: names, next: inv.next } };
 }
 
+/** 3.6.1 (revisão H1): pendências → forma curta (`P-NN:código⇒emag-x.y`); a cláusula inteira em full. */
+function pageLevelShortStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { notMeasured?: Array<NotJudgedItem | string>; count?: number } } | undefined;
+  if (!cr?.pageLevel?.notMeasured?.length || cr.pageLevel.count !== undefined || cr.pageLevel.notMeasured.every((i) => typeof i === "string")) return null;
+  return { ...r, checksRun: { ...cr, pageLevel: pageLevelShort(cr.pageLevel as never) } };
+}
+
+/** 3.6.1: sessionPending → ids:código (as normas e os textos estão nos scans que as abriram). */
+function sessionPendingStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const sp = r.sessionPending as { items?: Array<{ code: string; ids: string[] }>; count?: number; ids?: unknown; lowSignal?: number } | undefined;
+  if (!sp || sp.ids) return null;
+  return { ...r, sessionPending: sessionPendingCodes(sp) };
+}
+
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; count?: number } } | undefined;
   if (!cr?.pageLevel?.notMeasured?.length || cr.pageLevel.count !== undefined) return null;
@@ -222,7 +245,9 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
     // 3.5.0: os blocos novos cedem primeiro.
     ["investigate → nomes + next", investigateNames],
-    ["checksRun.pageLevel → códigos (inteiro no ledger)", (r) => pageLevelCompact(r, scanId)],
+    // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
+    ["sessionPending → ids", sessionPendingStep],
+    ["checksRun.pageLevel → curto", pageLevelShortStep],
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
@@ -265,6 +290,23 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
         return { ...r, checksRun: { ...rest, limits: (cr.limits ?? []).map((l) => l.code) } };
       },
     ],
+    ["revisited → contagem", (r) => {
+      const rv = r.revisited as { items?: unknown[]; count?: number } | undefined;
+      if (!rv?.items) return null;
+      return { ...r, revisited: { count: rv.items.length, next: { tool: "get_finding_details", arguments: { scanId } } } };
+    }],
+    // 3.6.1: a separação por rota/estado e as pendências de outras rotas cedem por último, sem sumir.
+    ["units → códigos", (r) => {
+      const u = r.units as { routes?: number; states?: number; note?: string } | undefined;
+      if (!u?.note) return null;
+      return { ...r, units: { routes: u.routes, states: u.states, rule: "um achado por rota/estado" } };
+    }],
+    ["sessionPending → contagem", (r) => {
+      const sp = r.sessionPending as { count?: number; ids?: string[]; items?: unknown[] } | undefined;
+      if (!sp || (sp.ids === undefined && sp.items === undefined)) return null;
+      return { ...r, sessionPending: { count: sp.count ?? sp.ids?.length ?? 0 } };
+    }],
+    ["checksRun.pageLevel → códigos (inteiro no ledger)", (r) => pageLevelCompact(r, scanId)],
     // 3.5.0 (D-155): as pendências (notJudged) são a outra metade da honestidade do scan — encolhem só
     // depois de tudo, e só para códigos, assunto e contagem (inteiras no ledger).
     // 3.5.0: último recurso — as pendências ficam só como contagem + next (nunca somem).
@@ -277,6 +319,15 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
         return { ...r, checksRun: { ...cr, pageLevel: { count: pl.count ?? pl.notMeasured?.length ?? 0, next: pl.next ?? pl.full } } };
       },
     ],
+    // 3.6.1: último recurso — as observações ficam na contagem + continuação (a página inteira pela view).
+    [
+      "observations → contagem",
+      (r) => {
+        const o = r.observations as { total?: number; note?: string; next?: unknown; byKind?: unknown } | undefined;
+        if (!o || (o.note === undefined && o.byKind === undefined)) return null;
+        return { ...r, observations: { total: o.total, ...(o.next ? { next: o.next } : {}) } };
+      },
+    ],
   ];
   for (const [label, transform] of steps) {
     // 3.5.0: a lista `squeezed`, que vai junto, também conta (antes ela podia ser o que estourava o teto).
@@ -284,6 +335,9 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     const next = transform(out);
     if (!next) continue;
     out = next;
+    // 3.6.1: etapas da mesma parte se sucedem (pageLevel curto → códigos → contagem): fica só a última.
+    const part = label.split(" → ")[0];
+    for (let i = squeezed.length - 1; i >= 0; i--) if (squeezed[i].split(" → ")[0] === part) squeezed.splice(i, 1);
     squeezed.push(label);
   }
   out = { ...out, squeezed };
@@ -352,7 +406,41 @@ export function observationPage(observations: Observation[], scanId: string, cur
   );
 }
 
-type Diff = { added: string[]; removed: string[]; unchanged: number; evidenceChanged: Array<{ previousId: string; currentId: string }> };
+type Diff = {
+  added: string[];
+  removed: string[];
+  unchanged: number;
+  evidenceChanged: Array<{ previousId: string; currentId: string }>;
+  /** 3.6.1 (item 4): achados do scan anterior que este scan não mediu de novo (check fora de `checks` ou fora dos seletores). */
+  notRemeasured?: Array<{ id: string; reason: "check-not-run" | "scope" ; check: string }>;
+};
+
+/** 3.6.1: a família de check que produz um achado do scan_page (axe, tokens, page; o resto é do check structure). */
+export function checkFamilyOf(f: Finding): "axe" | "tokens" | "page" | "structure" {
+  if (f.rule.source === "axe-core") return "axe";
+  const checker = f.rule.checker ?? (f.rule.source.startsWith("govbr-ds-") ? f.rule.id : "");
+  if (checker.startsWith("ds-token-")) return "tokens";
+  if (checker.startsWith("ds-page-")) return "page";
+  return "structure";
+}
+
+/**
+ * 3.6.1 (D-155, item 4): "removido" só é o que foi medido de novo e não apareceu. O achado anterior cujo check não
+ * rodou neste scan, ou (com seletores diferentes) que pode estar fora do escopo, vai para `notRemeasured`.
+ */
+export function refineDiff<T extends Diff>(diff: T, previous: Finding[], currentChecks: string[], scopeNarrowed: boolean): T & { notRemeasured: NonNullable<Diff["notRemeasured"]> } {
+  const byId = new Map(previous.map((f) => [f.id, f]));
+  const removed: string[] = [];
+  const notRemeasured: NonNullable<Diff["notRemeasured"]> = [];
+  for (const id of diff.removed) {
+    const f = byId.get(id);
+    const check = f ? checkFamilyOf(f) : "structure";
+    if (!currentChecks.includes(check)) notRemeasured.push({ id, reason: "check-not-run", check });
+    else if (scopeNarrowed) notRemeasured.push({ id, reason: "scope", check });
+    else removed.push(id);
+  }
+  return { ...diff, removed, notRemeasured };
+}
 
 /**
  * Revisão da 3.0.0: o diff de findings entre dois scans sai em contagens + poucos ids no cabeçalho
@@ -360,7 +448,8 @@ type Diff = { added: string[]; removed: string[]; unchanged: number; evidenceCha
  */
 export function diffSummary(diff: Diff, scanId: string) {
   const sample = 10;
-  const truncated = diff.added.length > sample || diff.removed.length > sample || diff.evidenceChanged.length > sample;
+  const notRemeasured = diff.notRemeasured ?? [];
+  const truncated = diff.added.length > sample || diff.removed.length > sample || diff.evidenceChanged.length > sample || notRemeasured.length > sample;
   return {
     added: diff.added.length,
     removed: diff.removed.length,
@@ -368,6 +457,13 @@ export function diffSummary(diff: Diff, scanId: string) {
     evidenceChanged: diff.evidenceChanged.length,
     addedIds: diff.added.slice(0, sample),
     removedIds: diff.removed.slice(0, sample),
+    ...(notRemeasured.length
+      ? {
+          notRemeasured: notRemeasured.length,
+          notRemeasuredIds: notRemeasured.slice(0, sample).map((n) => n.id),
+          notRemeasuredNote: `Não medidos de novo neste scan (${[...new Set(notRemeasured.map((n) => (n.reason === "scope" ? "fora dos seletores" : `${n.check} não rodou`)))].join("; ")}): não sumiram — continuam valendo no scan anterior.`,
+        }
+      : {}),
     ...(truncated || diff.evidenceChanged.length
       ? { next: { tool: "get_finding_details", arguments: { scanId, view: "diff", cursor: 0 } } }
       : {}),
@@ -379,6 +475,7 @@ export function diffPage(diff: Diff, scanId: string, previousScanId: string, cur
   const rows: Array<Record<string, unknown>> = [
     ...diff.added.map((id) => ({ change: "added", id })),
     ...diff.removed.map((id) => ({ change: "removed", id })),
+    ...(diff.notRemeasured ?? []).map((n) => ({ change: "not-remeasured", id: n.id, reason: n.reason, check: n.check })),
     ...diff.evidenceChanged.map((e) => ({ change: "evidence-changed", ...e })),
   ];
   return budgetPage(
@@ -480,23 +577,24 @@ function ensureFirstPageFamilies(
   const done: string[] = [];
   const stages: Array<[string, () => boolean]> = [
     // 3.5.0 (revisão do coordenador): os blocos novos cedem antes de tudo; os achados têm prioridade.
+    // 3.6.1 (revisão H1): famílias primeiro. As pendências cedem logo para a forma curta (`P-NN:código⇒emag-x.y`,
+    // a cláusula em full), que é o piso desta busca: nenhuma família sai da 1ª página por causa delas.
+    ["sessionPending → ids", () => {
+      const next = sessionPendingStep(h);
+      if (!next) return false;
+      h = next;
+      return true;
+    }],
+    ["checksRun.pageLevel → curto (P-NN:código⇒norma)", () => {
+      const next = pageLevelShortStep(h);
+      if (!next) return false;
+      h = next;
+      return true;
+    }],
     ["investigate → nomes + contagens", () => {
       const next = investigateNames(h);
       if (!next) return false;
       h = next;
-      return true;
-    }],
-    ["checksRun.pageLevel → códigos + next (inteiro no ledger)", () => {
-      const next = pageLevelCompact(h, scanId);
-      if (!next) return false;
-      h = next;
-      return true;
-    }],
-    ["checksRun.pageLevel → contagem + next", () => {
-      const cr = h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown } } | undefined;
-      const pl = cr?.pageLevel;
-      if (!pl || pl.notMeasured === undefined) return false;
-      h = { ...h, checksRun: { ...cr, pageLevel: { count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
       return true;
     }],
     ["observations → contagem + get_finding_details(view:observations)", () => {
@@ -563,6 +661,15 @@ function ensureFirstPageFamilies(
       if (!inv?.items?.length) return false;
       const moved = inv.items.map((i) => i.component);
       h = { ...h, investigate: { ...inv, items: [], more: { remaining: (inv.more?.remaining ?? 0) + moved.length, components: [...moved, ...(inv.more?.components ?? [])] } } };
+      return true;
+    }],
+    // 3.6.1 (revisão H1): famílias vencem. Só se ainda faltar família, as pendências vão à contagem + next (como na
+    // 3.6.0); a etapa só fica se trouxer família (a busca guarda a melhor tentativa).
+    ["checksRun.pageLevel → contagem + next", () => {
+      const cr = h.checksRun as { pageLevel?: { count?: number; notMeasured?: unknown[]; next?: unknown; full?: unknown; lowSignal?: number } } | undefined;
+      const pl = cr?.pageLevel;
+      if (!pl || pl.notMeasured === undefined) return false;
+      h = { ...h, checksRun: { ...cr, pageLevel: { count: (pl.count ?? pl.notMeasured.length) + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
       return true;
     }],
   ];

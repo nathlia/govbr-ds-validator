@@ -83,6 +83,91 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.1 — a sessão lembra o que o oráculo já disse (D-155, trace dev-350-b-01 da tela B em 3.5.0)
+
+Motivo: no trace da campanha dev-350-b-01 (`thesis-workspace/planejamento/atual/mecanismo-oraculo-tela-b-dev-350-b-01-2026-10-31.md`)
+o braço com oráculo perdeu fatos que o oráculo já tinha entregado — o sinal era opcional (pendência em texto que
+sumia no scan seguinte, observação de estado oculto, `incomplete` do axe só em `coverage`) ou o agente fundiu
+estados num cartão. Correções genéricas, nada por tela (seção "candidatos genéricos" do trace, itens 1–6):
+
+- **Pendências com cláusula e id de sessão (item 1).** Cada item de `checksRun.pageLevel.notMeasured` traz `pendingId`
+  (`P-NN`, por código + assunto + rota) e `rule` = a 1ª cláusula obrigatória (id, força; o texto ≤ 100 só na 1ª vez
+  que o código sai numa resposta da sessão — depois, só o id). As abertas de outras rotas/estados voltam em todo scan
+  em `sessionPending`: uma entrada por código (rotas contadas, até 3 ids), as sem sinal medido (idioma, regiões) só
+  como `lowSignal`. Resolução: `verify_finding` com uma das normas da pendência na mesma rota (qualquer elemento) ou
+  no mesmo elemento noutra rota — qualquer veredito; a resposta traz `pendingResolved` — ou a entrada nova do
+  `scan_page` `pendingResolved: [{id, status, reason}]`: `conforme`/`não se aplica` exigem `reason` (sem ela fica
+  aberta, `needsReason`); `violada` fecha e volta em `recordAsFinding` com a cláusula a citar (registre o achado e
+  verifique). Na 1ª página as **famílias vencem**: as pendências cedem logo para a forma curta
+  (`P-NN:código[:n]⇒emag-x.y`, a cláusula em `full`) e, só se ainda faltar família, para contagem + next.
+- **Título do documento, `ds-page-title` (item 2).** Restrição de página nova (e-MAG 3.3, cita
+  `…accessibility-global-9a6edd7d551e` "O título da página deve ser descritivo e informativo, devendo representar o
+  conteúdo principal da página", WCAG 2.4.2; fora de CHECK_GROUNDING, como o foco). Medido: título vazio/ausente (com
+  o axe no mesmo scan fica só o `document-title` dele; o predicado confirma). Heurístico (`pathway: heuristic`,
+  `moderate`), entre scans da sessão: o mesmo `<title>` em rotas de outro modelo (segmento só de id não conta: `/x/1` =
+  `/x/2`) cujos assuntos principais exibidos (h1; sem h1, o 1º título em main) diferem e não estão no título — ele não
+  representa o conteúdo de pelo menos uma; o predicado não o refaz (sem decisão). Título presente numa rota só: o
+  predicado não decide (adequação não é medida). "Descreve a página" segue pendência (`document-title-adequacy`).
+- **Elemento antes oculto (item 3).** Observação `hiddenInState` de tokens num scan fica na sessão; no próximo scan da
+  mesma página, se o elemento está renderizado, o subcheck que o marcou é medido nele mesmo com `checks` sem tokens
+  (bloco `revisited`, achados no lote). Com `checks` restrito, `checksRun.omittedNote`: omitido ≠ conforme.
+- **`stateDiff` sem falso "removido" (item 4).** Achado anterior cujo check não rodou (ou, com seletores diferentes,
+  que pode estar fora do escopo) vai para `notRemeasured` (ids, motivo); `view:"diff"` pagina as linhas `not-remeasured`.
+- **Contraste que o axe não decidiu (item 5).** `incomplete` de `color-contrast` vira pendência `contrast-incomplete`
+  com o que o axe mediu (cores, razão, motivo). Knowledge-free: só `wcag-1.4.3`, nenhum texto/id da base.
+- **Um achado por rota/estado (item 6).** Com a sessão já tendo visto outra rota ou outro estado, o scan traz `units`
+  (rotas, estados, a regra); as instruções ganham o passo "um achado por rota/estado" (os dois perfis).
+- **Tratamento do braço ferramentas (knowledge-free) muda** sem o `tools/list` mudar: instruções com dois passos novos
+  (pendências do axe; um achado por rota/estado) e, nas respostas do `scan_page`, `checksRun.pageLevel` (só
+  `contrast-incomplete`, `wcag-1.4.3`), `sessionPending` e `units`; `verify_finding` traz `pendingResolved`. Para fixar:
+  `instructionsSha256(perfil)` (exportado de `src/server.ts`) — knowledge-free `a8f6db52…` → `1a10c763…`, evaluation
+  `fbe55223…` → `ace27ba8…`.
+- **Superfície:** `tools/list` evaluation `cbfffb0d…` → `3807ad95…`, full `c9848723…` → `575634a0…`, deterministic
+  `145b51e4…` → `af7f8264…` (entrada `pendingResolved`; descrição de `get_page_rules` com `ds-page-title`), normative
+  `0a0c7626…` → `4ad616d8…` (só a descrição); knowledge-free `f358152a…` e evidence `4b4f8249…` iguais. O contexto do
+  `get_ds_rules` (lista `pageConstraints.ids`) fica sem `ds-page-title` (não é região do Template Base): byte a byte.
+  O CLI de linha de base não imprime `document`/`revisited`.
+- **Medido sem modelo:** CLI de linha de base fluxo 17→17, A 7→7, B 46→46, controles `controles/a` (80) 18→18, os
+  mesmos achados. 1ª página do 1º scan (evaluation): famílias fluxo 6, A 5, B 5 — iguais à 3.6.0, com as pendências na
+  forma curta. Na tela B, menu do avatar aberto com `checks:["axe"]`: o `hr` antes oculto sai medido
+  (`ds-token-color`) e os 5 achados de page/tokens/structure vão para `notRemeasured` (antes: `removed`). Guarda da
+  busca (qrels 1.0.4) idêntica à 3.6.0 (fora latência): 78,6% / P@5 45,7% / 9 enganosas. Portão NAT-86
+  (`--divisao desenvolvimento`): D1/D2 iguais à 3.6.0 (D2 TN 116 · TP 7), GO. Inventário knowledge-free: 0
+  ocorrências sem explicação, trava 0 (a paridade do axe acusa 5 páginas também na 3.6.0: o `strip` do script não
+  remove a anotação best-practice da 3.4.4). 808 testes (13 novos em `test/integration/fix361.test.ts`, 3 em `test/unit/kbAmendments.test.ts`, 4 em `test/unit/blindResolverIds.test.ts`; fixtures de busca `changed361`: rótulos de versão e motor, cursores, totais e as 3 unidades novas nos contextos header/obrigatório; nenhuma ordem de resultado muda).
+- **Base: áreas obrigatórias do Template Base (NAT-104, "texto truncado").** `ds-page-header`/`ds-page-footer` citavam
+  `…template-global-19f93475dc5e`, excerto herdado ("Template Base como ponto de partida") que não diz que as áreas são
+  obrigatórias — o juiz cego as marcava incertas. A versão literal ganha 3 unidades (`manifest.amendments`), com o texto
+  literal de `data/ds-page-rules.json` (`page_structure`, `visao-geral`; `source.captureType`
+  `literal-archived-page-rules`, `archivedPath`, `charRange`), uma por área marcada "(Obrigatório)", força `required`:
+  `…c21ff1c7eefc` "1. Área de Cabeçalho (Obrigatório)", `…10b091d3e7d1` "2. Área de Conteúdo (Obrigatório)",
+  `…79cf9ea963ee` "5. Área de Rodapé (Obrigatório)" (id = sha256(locator + texto), como os demais). Cabeçalho e rodapé
+  citam essas unidades; o excerto fica como contexto em `implements`. Registros 3038 → 3041 (required 1102 → 1105);
+  O resolvedor da 1ª passada cega (`normasDaCampanha`) serve título + texto inteiro da obrigação, força obrigatório.
+  `checker-aliases.json` do govbr-eval (gerado de CHECK_GROUNDING) precisa ser regerado para os ids novos. A unidade
+  da Área de Conteúdo (`…10b091d3e7d1`) é descritiva (força só pelo rótulo do título): fica na base, literal, e nenhum
+  check a cita. A versão servida passa a se chamar `3.7.0-literal-2026-10-15+emenda-1` (`meta.knowledgeVersion`;
+  `meta.knowledgeDir` = a pasta; `meta.amendments` declara a emenda); orientação e relações, escritas para a pasta,
+  continuam valendo (a emenda só acrescenta). A emenda é entrada declarada (`scripts/kb-amendments/<versão>.json`,
+  conferida por `scripts/lib/kb-amendments.mjs`): `build-kb-literal.mjs` a aplica depois do rules.jsonl da
+  normalização, e o teste `test/unit/kbAmendments.test.ts` reproduz o rules.jsonl servido byte a byte.
+- **Busca, motor `govbr-lexical/1.3.1`:** o rótulo de força no fim de um título de seção ("(Obrigatório)", "(Opcional)",
+  "(Recomendado)") é metadado, não palavra do assunto: sai do índice do título e da seção (antes, `{query:"obrigatório",
+  component:"input"}` punha as 3 unidades do Template Base em 2º–4º). Guarda (qrels 1.0.4) 78,6% / P@5 45,7% / 9
+  enganosas / 28 nos estratos sem resposta, iguais; nDCG@5 médio 0,4246 → 0,4252 (uma consulta sobe); nenhum rótulo
+  novo a julgar (0 sem julgamento).
+- **`rule.id` resolve como veio no resolvedor da passada cega.** O agente copia `rule.id` para o cartão; as formas
+  emitidas são id KB nu (`govbr-3.7.0-…`), `emag-N.N`, `wcag:N.N.N` e o id da regra do axe sem prefixo — todas na
+  gramática de `normasDaCampanha` (govbr-eval, `scripts/reanalise-nat74/e14-fila.ts`), espelhada em
+  `test/unit/blindResolverIds.test.ts`, que percorre cada produtor de achado. O `verify_finding` aceita `wcag:N.N.N`
+  e `N.N.N`.
+- **Nome acessível de botão só com ícone:** cita `wcag:4.1.2` (`source: wcag`, resolvida pelo registro WCAG); a cláusula
+  do Button "botões com apenas ícones… title ou aria-label" (`…button-6b76377297eb`, recomendada) fica como contexto.
+  Sai o `emag-1.1` (as cláusulas literais do e-MAG 1.1 tratam de separar camadas, não de nome).
+- `data/` sha256 da árvore (o `dataSha256` da campanha): 3.6.0 `abfd2b0a…` → 3.6.1 `ffe79da7…`.
+- **Limites conhecidos (citação fraca, como o resolvedor serve):** `ds-token-radius`/`ds-token-spacing` →
+  "Consumo correto dos tokens" (genérica); anatomia do Message `…d0c7ed3f91af` → linha de tabela.
+
 ## 3.6.0 — o achado de um check cita a norma, não o check (D-155, trios da tela A em 3.5.0)
 
 Motivo: em 3 trios na tela A com a 3.5.0 o braço com oráculo achou dois fatos verdadeiros e o juiz cego não

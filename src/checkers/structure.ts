@@ -127,15 +127,15 @@ export function checkComponentStructure(
     if (isInteractiveEvidence(el) && el.content.hasIconOnly) {
       const accessibleName = resolvedAccessibleName(el);
       if (accessibleName.name === "") {
-        // 3.5.0 (revisão Fable P5): e-MAG 1.1 / WCAG 4.1.2 (era e-MAG 2.2, que trata de scripts).
-        const emag = findEmagRule("1.1");
+        // 3.5.0 (revisão Fable P5): era e-MAG 2.2 (scripts). 3.6.1 (revisão): cita a WCAG 4.1.2 — o e-MAG 1.1 trata de
+        // separar camadas, não de nome acessível; a cláusula do Button (botão só com ícone) fica como contexto.
         findings.push({
           id: nextFindingId(),
           rule: {
-            id: "emag-1.1",
-            source: "emag",
-            description:
-              `${emag?.title ?? "Respeitar os padrões web"} — WCAG 4.1.2 (Name, Role, Value): elemento interativo precisa de nome acessível.`,
+            // `wcag:n.n.n`: a forma que o resolvedor da passada cega aceita (o agente copia rule.id).
+            id: "wcag:4.1.2",
+            source: "wcag",
+            description: "WCAG 4.1.2 (Name, Role, Value): elemento interativo precisa de nome acessível.",
             wcag: "4.1.2",
             implements: groundingFor("structure-accessible-name"),
           },

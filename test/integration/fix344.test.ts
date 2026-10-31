@@ -150,9 +150,9 @@ describe("3.4.4 C3/C4/C5 — o que não é autoria da página vira observação,
     expect(radius.map((f) => f.element.locator).some((l) => l.includes("#menu"))).toBe(false);
     expect(radius.filter((f) => !/projetado|br-mural|em-contents/.test(f.element.locator)).length).toBe(1);
     // C5: botão só ícone do calendário embutido não é achado
-    expect(locs.some((l) => l.startsWith("emag-1.1") && !l.includes(">>>"))).toBe(false);
+    expect(locs.some((l) => l.startsWith("wcag:4.1.2") && !l.includes(">>>"))).toBe(false);
     // o nome acessível vem do que a página passa ao host: <br-acao> sem rótulo continua achado
-    expect(r.findings.some((f) => f.rule.id === "emag-1.1" && f.element.locator.includes("br-button >>> button"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.id === "wcag:4.1.2" && f.element.locator.includes("br-button >>> button"))).toBe(true);
 
     const outside = r.observations.filter((o) => o.kind === "outside-page-authorship");
     const reasons = new Set(outside.map((o) => o.data?.reason));

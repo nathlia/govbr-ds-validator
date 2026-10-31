@@ -36,7 +36,15 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Engine version: any change to tokenization, fields, weights or floor is a new version. */
-export const RANKING_VERSION = "govbr-lexical/1.3.0";
+export const RANKING_VERSION = "govbr-lexical/1.3.1";
+
+/**
+ * 1.3.1 (3.6.1, revisão): o rótulo de força no fim de um título de seção — "(Obrigatório)", "(Opcional)",
+ * "(Recomendado)" — é metadado de força (já em `force`), não palavra do assunto: fica fora do índice do título e da
+ * seção. Sem isso, "obrigatório" numa consulta casava qualquer unidade sob um título "… (Obrigatório)".
+ */
+const FORCE_LABEL = /\s*\((?:obrigat[óo]ri[oa]|opcional|recomendad[oa])\)\s*$/i;
+const unlabel = (heading: string | null | undefined) => (heading ?? "").split(" > ").map((part) => part.replace(FORCE_LABEL, "")).join(" > ");
 
 /**
  * Declared weights. General, not per query: field weights say how much a term occurrence in that
@@ -427,14 +435,14 @@ function buildIndex(kb: KnowledgeBase): Index {
       exceptions: rule.exceptions.join(" "),
       expectedEvidence: rule.expectedEvidence.join(" "),
       component: rule.component ? names.get(rule.component) ?? rule.component : "",
-      section: typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : String(rule.source.section ?? ""),
+      section: unlabel(typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : String(rule.source.section ?? "")),
       legacy: (predecessors.get(rule.id) ?? [])
         .flatMap((old) => [old.title, ...old.wcagReferences, ...old.emagReferences])
         .join(" "),
     };
     const exact = new Map<Field, Map<string, number>>();
     const stem = new Map<Field, Map<string, number>>();
-    const literal = [rule.title, rule.originalText];
+    const literal = [unlabel(rule.title), rule.originalText];
     exact.set("text", textCounts(rule, (t) => t.key, literal));
     stem.set("text", textCounts(rule, (t) => t.stem, literal));
     const paraExact = textCounts(rule, (t) => t.key, [rule.normalizedRule]);
@@ -453,7 +461,7 @@ function buildIndex(kb: KnowledgeBase): Index {
     for (const k of paraExact.keys()) keysExact.add(k);
     for (const k of paraStem.keys()) keysStem.add(k);
     // Length over the three text values (as in 1.1.0), so BM25 normalization does not move.
-    const len = [...textCounts(rule, (t) => t.key).values()].reduce((a, b) => a + b, 0);
+    const len = [...textCounts(rule, (t) => t.key, [unlabel(rule.title), rule.normalizedRule, rule.originalText]).values()].reduce((a, b) => a + b, 0);
     const tableRow = isTableRow(rule.originalText ?? "");
     docs.push({ rule, order, exact, stem, paraExact, paraStem, keysExact, keysStem, pairs, folded: foldText(rule.originalText || rule.normalizedRule || ""), len, tableRow });
   });

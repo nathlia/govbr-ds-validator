@@ -462,6 +462,46 @@ export function selectPredicate(finding: Finding): PredicateSelection {
     const constraint = pageConstraints().find((candidate) => candidate.id === id);
     if (!constraint) return none(generic);
     const condition = constraint.claim.expectedCondition;
+    // 3.6.1 (D-155, item 2): título do documento. O predicado confere ESTE documento: vazio/ausente confirma;
+    // o mesmo título em outra rota é evidência da sessão (dois scans), que o predicado de um documento não refaz —
+    // não desmente o fato, fica sem decisão.
+    if (constraint.kind === "page-title") {
+      if (data.region === undefined || data.observedTitle === undefined || data.expectedCondition === undefined) {
+        return none(`${id} só é verificável com evidence.data.region='title', observedTitle e expectedCondition ('${condition}').`, "missing");
+      }
+      if (data.region !== "title" || typeof data.observedTitle !== "string" || data.expectedCondition !== condition) {
+        return none(`Dados estruturados contraditórios para ${id}: region deve ser 'title', observedTitle texto e expectedCondition '${condition}'.`, "contradicted");
+      }
+      const claimed = data.observedTitle.trim();
+      const sameAs = Array.isArray(data.sameTitleRoutes) ? data.sameTitleRoutes.filter((r): r is string => typeof r === "string") : [];
+      return {
+        predicate: {
+          id: "page-title",
+          properties: [],
+          needsPageFacts: true,
+          verifyClaim: (_elements, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-title." };
+            const live = (facts.title ?? "").trim();
+            return live === claimed
+              ? { status: "consistent", detail: `Dados estruturados conferidos: o <title> do documento é "${live.slice(0, 80)}".` }
+              : { status: "contradicted", detail: `O <title> do documento é "${live.slice(0, 80)}", não "${claimed.slice(0, 80)}".` };
+          },
+          evaluate: (_elements, _url, facts) => {
+            if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-title." };
+            const live = (facts.title ?? "").trim();
+            if (live === "") return { status: "verified", detail: "Violação recalculada no documento: <title> ausente ou vazio." };
+            if (sameAs.length) {
+              return {
+                status: "undetermined",
+                detail: `O <title> "${live.slice(0, 80)}" está presente; ser o mesmo de ${sameAs.slice(0, 3).join(", ")} é evidência entre scans desta sessão (sameTitleScans), que o predicado de um documento não refaz. Não desmente o fato.`,
+              };
+            }
+            // 3.6.1 (revisão M5): título presente não prova adequação — o predicado não mede se ele representa o conteúdo.
+            return { status: "undetermined", detail: `O documento tem <title> "${live.slice(0, 80)}" (não vazio). Se ele representa o conteúdo principal da página o predicado não mede: não desmente nem confirma.` };
+          },
+        },
+      };
+    }
     if (constraint.kind === "page-region") {
       if (data.region === undefined || data.observedCount === undefined || data.expectedCondition === undefined) {
         return none(`${id} só é verificável com evidence.data.region, observedCount e expectedCondition ('${condition}').`, "missing");

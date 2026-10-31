@@ -99,7 +99,8 @@ export function validateRelations(relations: KbRelations): void {
 export function getRelations(): KbRelations | null {
   if (!relationsEnabled()) return null;
   const relations = raw();
-  const kv = getKnowledgeBase().meta.knowledgeVersion;
+  // 3.6.1: a camada vale para a pasta da versão (emendas só acrescentam unidades; ids existentes não mudam).
+  const kv = getKnowledgeBase().meta.knowledgeDir;
   if (kv !== relations.knowledgeVersion) return null;
   if (validatedFor !== kv) {
     validateRelations(relations);

@@ -51,7 +51,7 @@ async function decide(body: string, button = "button.br-button") {
   const evidence = await inspectPageComputedStyles(page, URL, ".br-button", []);
   const element = evidence.elements.find((e) => e.classes.includes("br-button"));
   if (!element) throw new Error("fixture sem .br-button");
-  const findings = checkComponentStructure({ url: URL }, [element], buttonSpec).filter((f) => f.rule.id === "emag-1.1");
+  const findings = checkComponentStructure({ url: URL }, [element], buttonSpec).filter((f) => f.rule.id === "wcag:4.1.2");
   const snapshot = await page.locator(button).ariaSnapshot();
   return { element, findings, snapshot };
 }

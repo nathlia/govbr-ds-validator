@@ -50,7 +50,10 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "f358152ab77b8b6930687c1b12206f3821170600d52
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "cbfffb0deee45e1df35d2c1d44738f2a2065abd3385d467adbb252f79dc022f0";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "3807ad9534e64155cc8d38bdcdfb16413ec195d482d119cedb16776420aa8063";
+// 3.6.0: cbfffb0deee45e1df35d2c1d44738f2a2065abd3385d467adbb252f79dc022f0. 3.6.1 (D-155) muda de propósito: scan_page
+// ganha a entrada opcional pendingResolved (o agente fecha pendências da sessão) e a descrição de get_page_rules lista
+// ds-page-title. O perfil knowledge-free não muda (f358152a…).
 // 3.5.0: 61177aa7f89b77801e4d8236a376361ffe4c57d574e3e67bf23678174b397f38. 3.6.0 (D-155) muda de propósito: o esquema de
 // Finding (verify_finding/save_report) ganha rule.checker (o check que mediu; a citação é rule.id) e as descrições de
 // rule.id e evidence.data dizem isso; get_page_rules diz que cada restrição traz citeAs. O perfil knowledge-free não muda.

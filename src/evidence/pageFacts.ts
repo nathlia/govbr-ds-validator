@@ -55,6 +55,11 @@ export interface PageFacts {
    * `inspectPageComputedStyles("table")`, com `named` = caption, aria-label, aria-labelledby ou title com texto.
    */
   h1?: string | null;
+  /**
+   * 3.6.1 (D-155, item 2): o assunto principal exibido — o 1º h1; sem h1, o 1º título (h2–h6, role=heading) dentro
+   * de main/[role=main] (DOM claro e shadow roots abertos). Só para comparar o <title> entre rotas, nunca achado sozinho.
+   */
+  mainHeading?: string | null;
   siteTitle?: string | null;
   tables?: Array<{ rendered: boolean; presentational: boolean; named: boolean }>;
 }
@@ -143,6 +148,16 @@ export async function inspectPageStructure(page: Page, url: string): Promise<Pag
     const shown = (el: Element) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
     const clean = (value: string | null | undefined) => (value ?? "").trim().replace(/\s+/g, " ");
     const h1El = deepAll("h1").find(shown);
+    const inMain = (el: Element): boolean => {
+      let node: Element | null = el;
+      while (node) {
+        if (node.tagName === "MAIN" || node.getAttribute("role") === "main") return true;
+        const root = node.getRootNode();
+        node = node.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+      }
+      return false;
+    };
+    const headingEl = h1El ?? deepAll("h2, h3, h4, h5, h6, [role='heading']").find((el) => shown(el) && inMain(el) && clean(el.textContent));
     const siteEl = deepAll(".br-header .header-title, .header-title").find((el) => clean(el.textContent));
     const brHeader = deepAll("br-header").find((el) => clean(el.getAttribute("title")));
     const tables = deepAll("table").map((t) => {
@@ -161,6 +176,7 @@ export async function inspectPageStructure(page: Page, url: string): Promise<Pag
     });
     return {
       h1: h1El ? clean(h1El.textContent).slice(0, 120) : null,
+      mainHeading: headingEl ? clean(headingEl.textContent).slice(0, 120) : null,
       siteTitle: siteEl ? clean(siteEl.textContent).slice(0, 120) : brHeader ? clean(brHeader.getAttribute("title")).slice(0, 120) : null,
       tables,
       lang: document.documentElement.getAttribute("lang"),

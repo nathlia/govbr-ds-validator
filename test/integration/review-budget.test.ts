@@ -83,7 +83,8 @@ describe("revisão: toda resposta inicial no teto de 8.000, em todos os perfis",
       const compare = await call("scan_page", { url, checks: ["tokens"], tokenChecks: ["color"], compareToScanId: scan.data.scanId });
       within("scan_page compare", compare.text);
       expect(compare.data.stateDiff.findings).toMatchObject({ added: expect.any(Number), removed: expect.any(Number) });
-      expect(compare.data.stateDiff.findings.addedIds.length).toBeLessThanOrEqual(10);
+      // 3.6.1: no aperto da 1ª página os ids do diff podem ir para a continuação (view:diff), antes das pendências.
+      expect(compare.data.stateDiff.findings.addedIds?.length ?? 0).toBeLessThanOrEqual(10);
       if (compare.data.stateDiff.findings.next) {
         let args = compare.data.stateDiff.findings.next.arguments;
         let seen = 0;
@@ -93,7 +94,8 @@ describe("revisão: toda resposta inicial no teto de 8.000, em todos os perfis",
           seen += page.data.count;
           args = page.data.next?.arguments;
         }
-        expect(seen).toBe(compare.data.stateDiff.findings.added + compare.data.stateDiff.findings.removed + compare.data.stateDiff.findings.evidenceChanged);
+        // 3.6.1 (item 4): as linhas "not-remeasured" (check que não rodou neste scan) também paginam.
+        expect(seen).toBe(compare.data.stateDiff.findings.added + compare.data.stateDiff.findings.removed + compare.data.stateDiff.findings.evidenceChanged + (compare.data.stateDiff.findings.notRemeasured ?? 0));
       }
       for (const [name, args] of [
         ["check_component_structure", { url }],

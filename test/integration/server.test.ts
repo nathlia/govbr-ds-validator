@@ -125,13 +125,15 @@ describe("surface", () => {
 
   it("get_page_rules publishes the citable page constraints with their norms and source excerpts (2.7.0)", async () => {
     const index = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: {} })));
-    expect(index.constraints.map((c: { id: string }) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-focus-order", "ds-page-skip-link"]);
+    expect(index.constraints.map((c: { id: string }) => c.id)).toEqual(["ds-page-header", "ds-page-footer", "ds-page-title", "ds-page-focus-order", "ds-page-skip-link"]);
     const footer = index.constraints.find((c: { id: string }) => c.id === "ds-page-footer");
-    expect(footer.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+    // 3.6.1: a área de rodapé obrigatória (unidade literal) é a citação; o excerto "ponto de partida" fica como contexto.
+    expect(footer.implements).toEqual(["govbr-3.7.0-template-global-79cf9ea963ee", "govbr-3.7.0-template-global-19f93475dc5e"]);
+    expect(footer.citeAs).toBe("govbr-3.7.0-template-global-79cf9ea963ee");
     expect(footer.source.excerpt).toContain("Área de Rodapé (Obrigatório)");
     expect(footer.claim.expectedCondition).toBe("template-base-region-present");
     const structure = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "page_structure" } })));
-    expect(structure.constraints).toHaveLength(4);
+    expect(structure.constraints).toHaveLength(5);
     const forms = JSON.parse(textOf(await client.callTool({ name: "get_page_rules", arguments: { category: "form_patterns" } })));
     expect(forms.constraints).toBeUndefined();
   });
@@ -379,7 +381,7 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     expect(data.results[0].caveats).toContainEqual(expect.stringMatching(/não derive obrigatoriedade/i));
   });
 
-  it("force=required lists the 1102 required rules (2.12.0, literal version), within the budget, by cursor", async () => {
+  it("force=required lists the 1105 required rules (3.6.1: +3 áreas do Template Base) (2.12.0, literal version), within the budget, by cursor", async () => {
     const res = await client.callTool({
       name: "get_ds_rules",
       arguments: { force: "required", limit: 200 },
@@ -388,7 +390,7 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     expect(text.length).toBeLessThanOrEqual(8_000);
     const data = JSON.parse(text);
     expect(data.kind).toBe("listing");
-    expect(data.total).toBe(1102);
+    expect(data.total).toBe(1105);
     expect(data.page.limit).toEqual({ requested: 200, applied: 50, ceiling: 50 });
     expect(data.items.length).toBeGreaterThan(0);
     expect(data.items.every((r: { force: string }) => r.force === "required")).toBe(true);
@@ -439,7 +441,7 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
     const res = await client.callTool({ name: "get_ds_rules", arguments: {} });
     const data = JSON.parse(textOf(res));
     expect(data.kind).toBe("index");
-    expect(data.kb.totalNormative).toBe(3004);
+    expect(data.kb.totalNormative).toBe(3007);
     expect(data.items).toBeUndefined();
     expect(data.facets.force.example).toBeUndefined();
     expect(data.note).toContain("Índice, não listagem");
@@ -448,7 +450,7 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
   it("explicit limit with no other filter pages the whole normative base by cursor, without loops (2.9.0 fix)", async () => {
     const first = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { limit: 50 } })));
     expect(first.facets).toBeDefined();
-    expect(first.total).toBe(3004);
+    expect(first.total).toBe(3007);
     expect(first.page.offset).toBe(0);
     const ids: string[] = first.items.map((r: { id: string }) => r.id);
     let cursor = first.page.cursor;
@@ -463,8 +465,8 @@ describe("get_ds_rules — the KB rule store (D-11)", () => {
       pages += 1;
       expect(pages).toBeLessThan(200);
     }
-    expect(ids).toHaveLength(3004);
-    expect(new Set(ids).size).toBe(3004);
+    expect(ids).toHaveLength(3007);
+    expect(new Set(ids).size).toBe(3007);
     // Só offset (legado) também é pedido de listagem, com aviso de depreciação.
     const tail = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: { offset: 2990 } })));
     expect(tail.items.map((r: { id: string }) => r.id)).toEqual(ids.slice(2990));
@@ -598,7 +600,7 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
 
   it("kb names the served knowledge version", async () => {
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: {} })));
-    expect(data.kb).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15" });
+    expect(data.kb).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15+emenda-1" });
   });
 
   it("context page 1 interleaves the observed components; the continuation does not repeat the header", async () => {

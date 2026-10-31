@@ -250,6 +250,7 @@ const CHECKER_FAMILIES: readonly CheckerFamily[] = ["govbr-ds-token", "govbr-ds-
 /** Critério WCAG que a base liga à norma citada pelo check (só onde o achado o declara). */
 function checkerWcag(family: CheckerFamily, checker: string): string | undefined {
   if (checker === "ds-page-focus-order") return "2.4.3";
+  if (checker === "ds-page-title") return "2.4.2";
   if (family === "govbr-ds-structure") {
     const spec = Object.values(getComponentSpecs().components).find((candidate) => `ds-structure-${candidate.name}-tag` === checker);
     const grounded = spec ? structureTagGrounding(expectedRootTags(spec)) : [];
@@ -307,6 +308,8 @@ function checkerFromCondition(data: Record<string, unknown>): string | null {
       return "ds-page-skip-link";
     case EXPECTED_CONDITIONS.skipLinkFirstFocus:
       return "ds-page-focus-order";
+    case EXPECTED_CONDITIONS.documentTitle:
+      return "ds-page-title";
     default:
       return null;
   }

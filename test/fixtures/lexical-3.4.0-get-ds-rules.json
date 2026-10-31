@@ -8,7 +8,7 @@
       },
       "isError": false,
       "chars": 2383,
-      "sha256": "f5109ebfa870616bef78146fcf395b885bc7198e83774a65ec0234b6821f5960"
+      "sha256": "f8ef4d5ed84203338f2d4e75c13c1aa9445f0fe63a882a3ef3c19728881702ac"
     },
     {
       "args": {
@@ -18,7 +18,7 @@
       },
       "isError": false,
       "chars": 5067,
-      "sha256": "410bba5912f555e39c3e8b598f8ee74ab96639cbf5a373e63eb4b7d66e1b0d6f"
+      "sha256": "68926c822b692b560e4d28b06f260320bda7f33e7ba805d5a32143638090af9d"
     },
     {
       "args": {
@@ -29,7 +29,7 @@
       "cursorFrom": 1,
       "isError": false,
       "chars": 4374,
-      "sha256": "aca274d268df6e40c186c90284ea9914ee9cfe9686ce090675f7e43348069baa"
+      "sha256": "eae7994d112237c2bf0b46c508425be8b8aa915814afb0f97c8eebc1158a42a2"
     },
     {
       "args": {
@@ -38,7 +38,7 @@
       },
       "isError": false,
       "chars": 7634,
-      "sha256": "0b66190a57ed28345333bf5cb892acb6fc8f53c89c5c73a0ffc9f2c97928bd13"
+      "sha256": "06426e3b09a8997920e9cd16db1d8db985cc8853ce11717b929cb1cd60430c00"
     },
     {
       "args": {
@@ -48,7 +48,7 @@
       },
       "isError": false,
       "chars": 6526,
-      "sha256": "f156d81d5c9037318160b7c3cf70ff151fb27616d684846398da68dff08d3010"
+      "sha256": "2ca401a954e1741c97ed1c2af6a5d3cbccddfb9ae53c4665f11bda1d671c256b"
     },
     {
       "args": {
@@ -58,7 +58,7 @@
       },
       "isError": false,
       "chars": 6236,
-      "sha256": "33d4505507cad021e7778369f2d38cecf7db038646142825d2cb6ad7d84a911b"
+      "sha256": "eea4bd4edc0c2d37a3859f706ee68b42860ca1fe1cd0c61188d5fcb2ec802410"
     },
     {
       "args": {
@@ -66,7 +66,7 @@
       },
       "isError": false,
       "chars": 6764,
-      "sha256": "453536255ab5cd62a37e257d317e413bf5ec392641bfb48bd22c57c082533d6c"
+      "sha256": "2f08d7dfc376778450e0ff1414b83a7c1c836fe83fbbfef52a6a66fd35f724bc"
     },
     {
       "args": {
@@ -75,7 +75,7 @@
       },
       "isError": false,
       "chars": 6565,
-      "sha256": "8934aac5afd267f2d43febb0584da91f3f4f6427d4932d8803a5e6d351332686"
+      "sha256": "2d5db8f0253c49ae2926a4fb9355a8c79c1d8ae84dabd4d1a43d11df3de1b96b"
     },
     {
       "args": {
@@ -83,7 +83,7 @@
       },
       "isError": false,
       "chars": 5301,
-      "sha256": "bec7e319360c2b6097615a9bd99fc9f3402895f831a89a9d81971ac72d0f9334"
+      "sha256": "45d68634ffcea1b7ebabbdeef475ceb486d82f68a4860526e78d7b98ee6523c4"
     },
     {
       "args": {
@@ -92,7 +92,7 @@
       },
       "isError": false,
       "chars": 6368,
-      "sha256": "872eb89b001b0998bb8cda1fb6181fac7da9676bf8c68e53e786b6c8f25bd0ff"
+      "sha256": "ed4609ccef728d902aecb5a1d9b710430b8decf1b39d291475124b363489ee2c"
     },
     {
       "args": {
@@ -101,7 +101,7 @@
       },
       "isError": false,
       "chars": 5931,
-      "sha256": "ce747c4b60c79349cf26bdb4700ff99a627944c4ff1608ecc6a9d184ec709b02"
+      "sha256": "22c7493301be4582b27fc3dd8158a6719c3ab89eaa5724f6639f763c54aeec59"
     },
     {
       "args": {
@@ -110,7 +110,7 @@
       },
       "isError": false,
       "chars": 6259,
-      "sha256": "75a13738d8cce59bd258071e916d7825354d41433df25f5353d2a12f14b040ff"
+      "sha256": "c69a726e07523fd09d4a77d4e9cc9cc9aa5b3b20382a2831f51bc6a755213a0d"
     },
     {
       "args": {
@@ -118,7 +118,7 @@
       },
       "isError": false,
       "chars": 3179,
-      "sha256": "0a2331f933148217e15ca8766871114d0c3317dd9fe845accc76d2266f703deb"
+      "sha256": "4900a7f364ea310b593bb6fabdfd6458ed3a41969c9688fe815094c8b7d28310"
     },
     {
       "args": {
@@ -126,7 +126,7 @@
       },
       "isError": false,
       "chars": 5906,
-      "sha256": "2f7fbff0ef19b069e460cbb8e6d7cdfcc1febbc5a8331527a59eb558aa15b59a"
+      "sha256": "9791d36bbfe3bddef07ff1609087d5a5e9a411f6efebe206fd669dc598121750"
     },
     {
       "args": {
@@ -135,7 +135,7 @@
       },
       "isError": false,
       "chars": 1650,
-      "sha256": "343bfb425e410a85001cfd277f9e08567ed1029f9c656c9671d994074cecce39"
+      "sha256": "829405b49f4842fac48a428f9519441e51d5bfb650d012c74e32cd541d81f2e2"
     },
     {
       "args": {
@@ -143,7 +143,7 @@
       },
       "isError": false,
       "chars": 1466,
-      "sha256": "720f5df47e14dedccb761732ee5e834fa14a0ccb2d9fce330394a74604f29cf8"
+      "sha256": "8e5aaa020fc35f385d1b546aaa02b97f3d6a26cdbd2206e071396ef3514efc9f"
     },
     {
       "args": {
@@ -152,7 +152,7 @@
       },
       "isError": false,
       "chars": 2615,
-      "sha256": "6b053e891a42e05a8c8086ac5dc57dd591639d9a87c073f0a541bb2ec5586d8b"
+      "sha256": "9e173f60c4fa98f9e7464f1fe8dc3e2b06ec89cdcc66f925400560e1925e3aba"
     },
     {
       "args": {
@@ -169,7 +169,7 @@
       },
       "isError": false,
       "chars": 5447,
-      "sha256": "144c69c1291b51fb9b8c7f31ac52b3b6e4240ce9c203297678eb150f43a3b040"
+      "sha256": "4985971d26d55f26fe7a20473fdfcba2741694b055c8a49322114ed9747269f8"
     },
     {
       "args": {
@@ -178,7 +178,7 @@
       },
       "isError": false,
       "chars": 5575,
-      "sha256": "a89f3edfa77afcf51614af87c1be49bd95ccb987eb1e9c0e74d3976e3f64eabc"
+      "sha256": "505463d37df48932108b3ecbae269ce1de726434ca9dc5b67e4c2ec6ca516890"
     },
     {
       "args": {
@@ -188,7 +188,7 @@
       "cursorFrom": 19,
       "isError": false,
       "chars": 3552,
-      "sha256": "62d03e3d702143b056406d8656885dbf52d69eb98926b8cb061edb46cca7fcd6"
+      "sha256": "5e293d56550da7a7a275c9eb7f1e1056f33f6b0f42e8ffe96a933c14ffd01aae"
     },
     {
       "args": {
@@ -203,7 +203,7 @@
       },
       "isError": false,
       "chars": 6036,
-      "sha256": "d79e977e9b3f924bf0a4ac369be220e3dac16b6fffed6d75f31184fbccf8adb7"
+      "sha256": "d0a69f35daaf98748db4ad4e48f44254638850b3d2cd237d6f241889ef6b2b3c"
     },
     {
       "args": {
@@ -217,7 +217,7 @@
       },
       "isError": false,
       "chars": 6513,
-      "sha256": "601a49632012abff359c6c9ed74eddd6bd7331809cf1d0aac764403971500b6a"
+      "sha256": "165aa4aca42ea2599c9039add60d539c9064e998ff5ba4e1a7798f1920fe0d59"
     },
     {
       "args": {
@@ -225,7 +225,7 @@
       },
       "isError": false,
       "chars": 5885,
-      "sha256": "2bf3c9fda9a83e95931999e5a13b2e9118fe6862f1a320f261bd7b6fde48bd7e"
+      "sha256": "6d26a8177f70ee34404e44ff7e1efd2d735747fc9537f97c244639e5a9d9339d"
     },
     {
       "args": {
@@ -245,7 +245,7 @@
       },
       "isError": false,
       "chars": 2204,
-      "sha256": "37fe1069ffe7b7a36891b6f5f833b2a1be63c7fec5d7f6d6e5b8bb561a37ca40"
+      "sha256": "6132952594b3a1951a9a1dc2ab013b0f4f94322f44f6cc7b626dd6d6cfb393e2"
     },
     {
       "args": {
@@ -256,13 +256,13 @@
       },
       "isError": false,
       "chars": 3671,
-      "sha256": "7bd4b5de7b7f4eb9be093e9fda16be508a29762a3f4099bdbd8130545dc574c2"
+      "sha256": "fd1d4d44c9441365b871a8e26e3546ffd208bef979e271f3eb7ce4d017f43299"
     },
     {
       "args": {},
       "isError": false,
       "chars": 1505,
-      "sha256": "8c7301892dff5a90e5764caf7a5ff1cf2ab20c18304aad8d6853773580baccc3"
+      "sha256": "c63c23f83db9b865a6d7dd9c7ca228145a605d166c43e0bdc815ef7b14f2ba29"
     },
     {
       "args": {
@@ -271,7 +271,7 @@
       },
       "isError": false,
       "chars": 31438,
-      "sha256": "cb6436cba7ee065b0da359666afe5c964e4dee9dc27d88c4e06281996586fb1e"
+      "sha256": "aa9409a680307195caf3e8aa5255f25aa5455622b941d7d75bed0131de16fdd6"
     },
     {
       "args": {
@@ -312,5 +312,125 @@
       "detail": "brief",
       "limit": 5
     }
-  ]
+  ],
+  "changed361": {
+    "note": "3.6.1 (D-155, NAT-104 + revisão): a versão literal ganha 3 unidades (áreas obrigatórias do Template Base, manifest.amendments) e passa a se chamar 3.7.0-literal-2026-10-15+emenda-1; o motor vira govbr-lexical/1.3.1 (rótulo de força no fim de título/seção fora do índice). Diferenças contra a 3.6.0, conferidas campo a campo: kb.knowledgeVersion e kb.ranking, cursores (a chave inclui versão e motor), totais (totalNormative 3004→3007, required 1102→1105, facets), contagens de grupo/matched e as unidades novas nos contextos de região header e de termos obrigatorio/cabeçalho; nenhuma ordem de resultado muda.",
+    "steps": [
+      {
+        "query": "foco visível ao navegar pelo teclado"
+      },
+      {
+        "query": "foco",
+        "component": "modal",
+        "limit": 4
+      },
+      {
+        "query": "foco",
+        "component": "modal",
+        "limit": 4
+      },
+      {
+        "query": "contraste do texto sobre fundo colorido",
+        "limit": 10
+      },
+      {
+        "query": "rótulo do campo",
+        "component": "input",
+        "include_evidence": true
+      },
+      {
+        "query": "rotulo do campo",
+        "component": "br-input",
+        "vocabulary": false
+      },
+      {
+        "query": "aria-current na página ativa"
+      },
+      {
+        "query": "aria-label",
+        "component": "global"
+      },
+      {
+        "query": "WCAG 1.4.3"
+      },
+      {
+        "query": "tabela com cabeçalho de coluna",
+        "component": "table"
+      },
+      {
+        "query": "botão primário único por tela",
+        "component": "button"
+      },
+      {
+        "query": "mensagem de erro abaixo do campo",
+        "component": "message"
+      },
+      {
+        "query": "menu lateral recolhido no celular"
+      },
+      {
+        "query": "imagens sem texto alternativo"
+      },
+      {
+        "query": "xyzzy quux",
+        "component": "modal"
+      },
+      {
+        "query": "xyzzy plugh"
+      },
+      {
+        "query": "futebol campeonato brasileiro",
+        "component": "header"
+      },
+      {
+        "query": "foco",
+        "offset": 2
+      },
+      {
+        "query": "cor",
+        "limit": 3
+      },
+      {
+        "query": "cor",
+        "limit": 3
+      },
+      {
+        "context": {
+          "components": [
+            "button"
+          ],
+          "terms": [
+            "foco"
+          ]
+        }
+      },
+      {
+        "context": {
+          "components": [
+            "breadcrumb",
+            "header"
+          ]
+        },
+        "query": "link"
+      },
+      {
+        "id": "govbr-3.7.0-accessibility-modal-f36c91d7073c"
+      },
+      {
+        "component": "button",
+        "limit": 5
+      },
+      {
+        "component": "button",
+        "force": "required",
+        "detail": "brief",
+        "limit": 5
+      },
+      {},
+      {
+        "query": "foco",
+        "match": "literal"
+      }
+    ]
+  }
 }

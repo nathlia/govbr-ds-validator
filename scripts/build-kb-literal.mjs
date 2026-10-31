@@ -21,6 +21,7 @@ import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { applyAmendment, readAmendment } from "./lib/kb-amendments.mjs";
 
 const VERSION = "3.7.0-literal-2026-10-15";
 /** Como a versão anterior é nomeada para quem recebe um id legado. */
@@ -95,11 +96,16 @@ const reassigned = new Map(); // id antigo → id novo
     r.id = id;
   }
 }
-const literalOut = literal.map((r) => JSON.stringify(r)).join("\n") + "\n";
+// 3.6.1 (D-155, NAT-104): a emenda declarada (scripts/kb-amendments/<versão>.json) entra depois das regras da
+// normalização — conferida contra o texto arquivado em data/ — e conta como regra literal.
+const amendment = readAmendment(VERSION);
+const literalOut = applyAmendment(literal.map((r) => JSON.stringify(r)).join("\n") + "\n", amendment);
+if (amendment) literal.push(...amendment.units);
 write(join(OUT, "normalized/rules.jsonl"), literalOut);
 const literalIds = new Set(literal.map((r) => r.id));
 const mapNovo = (id) => reassigned.get(id)?.id ?? id;
 for (const r of literal) {
+  if (r.source.captureType === "literal-archived-page-rules") continue; // emenda: conferida em applyAmendment
   const file = join(corpusDir, r.source.corpusFile ?? "");
   if (!r.source.corpusFile || !readFileSync(file, "utf8").includes(r.originalText)) {
     throw new Error(`originalText não é literal do corpus: ${r.id}`);
@@ -401,6 +407,10 @@ const versionManifest = {
   ],
   files,
 };
+if (amendment) {
+  const { units, version: _v, ...meta } = amendment;
+  versionManifest.amendments = [{ ...meta, added: units.map((u) => u.id) }];
+}
 write(join(OUT, "manifest.json"), JSON.stringify(versionManifest, null, 2) + "\n");
 
 console.log(

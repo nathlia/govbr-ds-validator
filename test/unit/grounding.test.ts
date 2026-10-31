@@ -10,13 +10,15 @@ import { describe, it, expect } from "vitest";
 import { CHECK_GROUNDING, type CheckKind } from "../../src/checkers/grounding.js";
 import { getRuleById } from "../../src/data/knowledge.js";
 import { findEmagRule } from "../../src/data/load.js";
+import { wcagMembership } from "../../src/verify/registries.js";
 
 const kinds = Object.keys(CHECK_GROUNDING) as CheckKind[];
 
 describe("fundamentação das verificações determinísticas", () => {
   it.each(kinds)("%s declara ids que existem no oráculo", (kind) => {
     for (const id of CHECK_GROUNDING[kind].implements) {
-      const existe = id.startsWith("emag-") ? !!findEmagRule(id.replace(/^emag-/, "")) : !!getRuleById(id);
+      // 3.6.1: critério WCAG (wcag-n.n.n) pelo registro WCAG.
+      const existe = id.startsWith("wcag-") ? wcagMembership(id.slice(5)).status === "member" : id.startsWith("emag-") ? !!findEmagRule(id.replace(/^emag-/, "")) : !!getRuleById(id);
       expect(existe, `${kind} declara implementar '${id}', que não existe no oráculo`).toBe(true);
     }
   });
