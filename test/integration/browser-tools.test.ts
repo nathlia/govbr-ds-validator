@@ -165,23 +165,23 @@ describe("check_token_compliance (V1, V2, V6)", () => {
     expect(byLocator("#btn-danger")).toEqual([]);
 
     const colorFindings = byLocator("#btn-arbitrary-color");
-    expect(colorFindings.some((f: { rule: { id: string } }) => f.rule.id === "ds-token-color")).toBe(true);
-    const colorFinding = colorFindings.find((f: { rule: { id: string } }) => f.rule.id === "ds-token-color");
+    expect(colorFindings.some((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-token-color")).toBe(true);
+    const colorFinding = colorFindings.find((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-token-color");
     expect(colorFinding.evidence.data.observedHex).toBe("#ff5733");
     expect(colorFinding.evidence.data.nearestToken).toBeTruthy();
 
     expect(
-      byLocator("#btn-wrong-font").some((f: { rule: { id: string } }) => f.rule.id === "ds-token-font-family")
+      byLocator("#btn-wrong-font").some((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-token-font-family")
     ).toBe(true);
 
     // V6: the off-scale radius is flagged — and it is the ONLY finding there
     const radiusFindings = byLocator("#btn-bad-radius");
-    expect(radiusFindings.map((f: { rule: { id: string } }) => f.rule.id)).toEqual(["ds-token-radius"]);
+    expect(radiusFindings.map((f: { rule: { id: string; checker?: string } }) => f.rule.checker)).toEqual(["ds-token-radius"]);
     expect(radiusFindings[0].evidence.data.observed).toBe("6px");
 
     // No pill false positives anywhere: every ds-token-radius finding on this
     // page must be the injected 6px one
-    const allRadius = data.findings.filter((f: { rule: { id: string } }) => f.rule.id === "ds-token-radius");
+    const allRadius = data.findings.filter((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-token-radius");
     expect(allRadius.map((f: { element: { locator: string } }) => f.element.locator)).toEqual(["#btn-bad-radius"]);
   });
 });
@@ -195,7 +195,7 @@ describe("check_component_structure (V3, V4)", () => {
     const data = JSON.parse(textOf(res));
     expect(data.componentsFound).toContain("button");
 
-    const ruleIds = data.findings.map((f: { rule: { id: string }; element: { locator: string } }) => `${f.rule.id}@${f.element.locator}`);
+    const ruleIds = data.findings.map((f: { rule: { id: string; checker?: string }; element: { locator: string } }) => `${f.rule.checker ?? f.rule.id}@${f.element.locator}`);
     expect(ruleIds).toContain("ds-structure-button-tag@#link-as-button");
     expect(ruleIds).toContain("emag-1.1@#btn-icon-only");
     // The compliant twins produce nothing — including the danger status
@@ -277,7 +277,7 @@ describe("scan_page aggregate fast path", () => {
     }));
     expect(first.coverage.elementsInspected).toBeGreaterThan(7);
     expect(first.coverage.axe.engine.name).toBe("axe-core");
-    const ruleIds = first.findings.map((finding: { rule: { id: string } }) => finding.rule.id);
+    const ruleIds = first.findings.map((finding: { rule: { id: string; checker?: string } }) => finding.rule.checker ?? finding.rule.id);
     expect(ruleIds).toContain("ds-token-color");
     expect(ruleIds).toContain("ds-structure-button-tag");
     expect(ruleIds).toContain("button-name");

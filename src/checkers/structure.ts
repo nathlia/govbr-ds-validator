@@ -9,7 +9,7 @@ import { nextFindingId } from "../schema/finding.js";
 import type { ComponentSpec } from "../data/load.js";
 import { findEmagRule, ownAndBorrowedTags } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
-import { CHECK_GROUNDING, groundingFor } from "./grounding.js";
+import { CHECK_GROUNDING, checkerRule, groundingFor, semanticRootTags, structureTagGrounding, structureTagWcag } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 import { isInteractiveEvidence, resolvedAccessibleName } from "../evidence/accessibleName.js";
 
@@ -94,11 +94,13 @@ export function checkComponentStructure(
     if (spec.tags.length > 0 && !tagAccepted(el, spec) && !isSemanticDividerException(el, spec) && !scriptDependentAnchor(el, spec)) {
       findings.push({
         id: nextFindingId(),
+        // 3.6.0: cita a norma — e-MAG 1.2 quando o exemplo oficial é elemento semântico, anatomia quando é
+        // genérico —; o id do check vai em `checker`.
         rule: {
-          id: `ds-structure-${spec.name}-tag`,
-          source: "govbr-ds-structure",
-          description: `Nos exemplos oficiais do gov.br DS, ${spec.rootClass} é aplicado a <${expectedTags.join(">/<")}>${borrowed.includes("a") ? "; <a> só aparece como link que navega" : ""}.`,
-          implements: groundingFor("structure-tag"),
+          ...checkerRule(`ds-structure-${spec.name}-tag`, structureTagGrounding(expectedTags), structureTagWcag(expectedTags)),
+          description: semanticRootTags(expectedTags)
+            ? `Cada elemento HTML deve ser utilizado para o fim que ele foi criado (e-MAG 1.2): nos exemplos oficiais do gov.br DS, ${spec.rootClass} é <${expectedTags.join(">/<")}>${borrowed.includes("a") ? "; <a> só aparece como link que navega" : ""}.`
+            : `Nos exemplos oficiais do gov.br DS, ${spec.rootClass} é aplicado a <${expectedTags.join(">/<")}>${borrowed.includes("a") ? "; <a> só aparece como link que navega" : ""}.`,
         },
         ...base,
         evidence: {

@@ -54,7 +54,7 @@ export const MESSAGES = {
   "fact-contradicted": "O predicado mediu o contrário do alegado neste estado: a afirmação está desmentida.",
   "fact-verified": "O predicado recalculou a violação em cada elemento do localizador, no estado do scan citado.",
   "norm-resolved":
-    "Norma resolvida pelo servidor a partir do id do check; o implements do payload não é necessário e, se divergir, é ignorado.",
+    "Norma resolvida pelo servidor a partir do check (rule.checker); a citação é rule.id. O implements do payload não é necessário e, se divergir, é ignorado.",
   "offset-deprecated":
     "offset está obsoleto desde a 3.0.0 e deixa de ser aceito na 4.0.0: continue pelo cursor devolvido em page.cursor. Com cursor, offset é ignorado.",
   "gap-unmatched-context":

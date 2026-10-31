@@ -28,14 +28,16 @@ import { nextFindingId } from "../schema/finding.js";
 import { getPageRules } from "../data/load.js";
 import type { PageFacts, PageRegion } from "../evidence/pageFacts.js";
 import { PAGE_REGION_SELECTORS } from "../evidence/pageFacts.js";
-import { groundingFor, type CheckKind } from "./grounding.js";
+import { checkerRule, groundingFor, type CheckKind } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
 export type PageConstraintKind = "page-region" | "page-skip-link" | "page-focus-order";
 
 export interface PageConstraint {
-  /** Id citável, ex.: `ds-page-header`. */
+  /** Id do check, ex.: `ds-page-header` (3.6.0: vai em `rule.checker` — não é citação). */
   id: string;
+  /** 3.6.0: a unidade normativa que o achado desta restrição cita em `rule.id` (o 1º id de `implements`). */
+  citeAs: string | null;
   kind: PageConstraintKind;
   /** Região do Template Base (`header`, `footer`), `skip-link` ou (3.5.0) `focus-order`. */
   region: PageRegion | "skip-link" | "focus-order";
@@ -72,8 +74,13 @@ function pageSource(): { url: string; scrapedAt: string } {
 
 /** As restrições de página publicadas por `get_page_rules` — as mesmas que o scanner e o portão usam. */
 export function pageConstraints(): PageConstraint[] {
+  // 3.6.0: citeAs = a unidade normativa que o achado cita (rule.id); o id da restrição é o check (rule.checker).
+  return pageConstraintList().map(({ id, ...rest }) => ({ id, citeAs: rest.implements[0] ?? null, ...rest }));
+}
+
+function pageConstraintList(): Array<Omit<PageConstraint, "citeAs">> {
   const source = pageSource();
-  const regions: PageConstraint[] = REGION_CHECKS.map(({ region, kind, heading, component }) => ({
+  const regions: Array<Omit<PageConstraint, "citeAs">> = REGION_CHECKS.map(({ region, kind, heading, component }) => ({
     id: `ds-page-${region}`,
     kind: "page-region",
     region,
@@ -130,8 +137,18 @@ export function pageConstraints(): PageConstraint[] {
  * gerador de aliases do eval.
  */
 export const FOCUS_ORDER_IMPLEMENTS = [
+  // 3.6.0 (D-155, trios da tela A; revisão independente): o que o check MEDE decide a citação. Ele só dispara
+  // quando o 1º link É o salto válido e um elemento com tabindex positivo recebe o foco antes dele; o predicado
+  // (verify/predicates.ts, page-focus-order) dá rule-not-applicable sem salto e contradicted sem esse tabindex. Isto
+  // é exatamente "o 1º a receber o foco pelo Tab não é o salto" — a cláusula obrigatória do Skip Link "O skip link
+  // deve ser o primeiro elemento a receber o foco na navegação por teclado", que vem primeiro e é a citação
+  // (rule.id). O check NÃO mede tabindex positivo nem ordem DOM × foco em geral (sem salto fica calado), então a
+  // cláusula geral do e-MAG 1.4 ("sequência lógica de leitura para percorrer links, controles…"; WCAG 1.3.2/2.4.3)
+  // fica como contexto, com wcag 2.4.3 na referência cruzada, e não há o que dividir. Saiu "logo após a tag body"
+  // (…02c2e513d936): posição no DOM não é medida. Até a 3.5.0 o achado citava o id do check (ds-page-focus-order),
+  // que nenhuma base resolve, e o juiz cego via "texto não localizado".
   "govbr-3.7.0-accessibility-skiplink-b0641993618f",
-  "govbr-3.7.0-component-skiplink-02c2e513d936",
+  "govbr-3.7.0-accessibility-global-fb9dfcacbb34",
   "emag-1.4",
 ];
 
@@ -146,7 +163,7 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
       if (count > 0 || constraint.implements.length === 0) continue;
       findings.push({
         id: nextFindingId(),
-        rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },
+        rule: { ...checkerRule(constraint.id, constraint.implements), description: constraint.description },
         element,
         evidence: {
           observed: `Nenhum elemento ${constraint.selector} nem web component <br-${region}> no documento (DOM claro e shadow roots abertos).`,
@@ -172,7 +189,7 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
       if (!(first.skipsToContent && before && !before.isFirstLink)) continue;
       findings.push({
         id: nextFindingId(),
-        rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, wcag: "2.4.3", implements: constraint.implements },
+        rule: { ...checkerRule(constraint.id, constraint.implements, "2.4.3"), description: constraint.description },
         element,
         evidence: {
           observed: `O salto para o conteúdo (href="${first.href}") é o primeiro link, mas não o primeiro a receber foco: <${before.tag}${before.id ? ` id="${before.id}"` : ""}> com tabindex=${before.tabindex}${before.text ? ` ("${before.text}")` : ""} vem antes na ordem do Tab.`,
@@ -195,7 +212,7 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
     if (first.skipsToContent) continue;
     findings.push({
       id: nextFindingId(),
-      rule: { id: constraint.id, source: "govbr-ds-page", description: constraint.description, implements: constraint.implements },
+      rule: { ...checkerRule(constraint.id, constraint.implements), description: constraint.description },
       element,
       evidence: {
         observed: first.targetId === null

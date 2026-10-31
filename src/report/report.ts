@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { FindingSchema, type Finding, type Verification } from "../schema/finding.js";
-import { groundingForCheckId } from "../verify/registries.js";
+import { checkerOf, groundingForCheckId } from "../verify/registries.js";
 import { findingSha256 } from "../verify/store.js";
 import { sameScanPage } from "../scan/state.js";
 import { getRuleById } from "../data/knowledge.js";
@@ -64,17 +64,17 @@ export interface ValidationOptions {
   reportUrl?: string;
 }
 
-const ORACLE_SOURCES = new Set(["govbr-ds-token", "govbr-ds-structure", "govbr-ds-page"]);
-
 /**
  * 3.3.0 (S-06): a norma que o achado diz implementar não é aceita como veio. Fonte do próprio oráculo:
  * vale a norma que o servidor resolve pelo id da verificação. Outras fontes: só ids que existem na base
  * (KB ou e-MAG) ficam. Devolve o valor final, ou `undefined` para "sem implements".
  */
 function resolvedImplements(finding: Finding): string[] | undefined {
-  const { source, id, implements: declared } = finding.rule;
-  if (ORACLE_SOURCES.has(source)) {
-    const grounded = groundingForCheckId(source, id);
+  const { implements: declared } = finding.rule;
+  // 3.6.0: o check vem de rule.checker (a citação é rule.id); na forma antiga, do id do check.
+  const checker = checkerOf(finding).ref;
+  if (checker) {
+    const grounded = groundingForCheckId(checker.family, checker.checker);
     if (grounded) return grounded.length ? [...grounded] : undefined;
   }
   if (!declared) return undefined;
@@ -176,6 +176,19 @@ export function validateFindings(raw: unknown[], options: ValidationOptions = {}
       const { implements: _drop, ...rule } = finding.rule;
       finding = { ...finding, rule: implementsFinal ? { ...rule, implements: implementsFinal } : rule };
     }
+    // 3.6.0 (revisão independente): a forma antiga (id do check em rule.id, source da família do check) continua
+    // verificável, mas não entra no relatório como citação — vira a norma que o check cita, com o check em
+    // rule.checker. A troca é registrada em `normalized`; a verificação guardada é a do payload enviado.
+    const legacy = checkerOf(finding).ref;
+    if (legacy?.how === "legacy-id") {
+      const grounded = groundingForCheckId(legacy.family, legacy.checker);
+      if (grounded && grounded.length > 0) {
+        const cited = grounded[0];
+        const to = { id: cited, source: cited.startsWith("emag-") ? ("emag" as const) : ("govbr-ds-kb" as const), checker: legacy.checker };
+        normalized.push({ index, field: "rule.id", from: { id: finding.rule.id, source: finding.rule.source }, to });
+        finding = { ...finding, rule: { ...finding.rule, ...to } };
+      }
+    }
     const withVerification = { ...finding, verification };
     if (verification.verdict === "confirmed") accepted.push(withVerification);
     else reviewItems.push(withVerification);
@@ -237,7 +250,7 @@ function inline(text: string, max = 600): string {
 
 function renderFinding(f: Finding): string[] {
   const lines = [
-    `### ${inline(f.id, 80)} — [${f.severity}] ${inline(f.rule.id, 120)}`,
+    `### ${inline(f.id, 80)} — [${f.severity}] ${inline(f.rule.id, 120)}${f.rule.checker ? ` (verificação ${inline(f.rule.checker, 80)})` : ""}`,
     "",
     `- **Regra:** ${inline(f.rule.description)}${f.rule.wcag ? ` (WCAG ${inline(f.rule.wcag, 20)})` : ""} — fonte: ${f.rule.source}`,
     `- **Elemento:** ${inline(f.element.locator, 300)} em ${inline(f.element.page, 300)}`,

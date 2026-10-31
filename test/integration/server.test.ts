@@ -316,6 +316,8 @@ describe("oracle knowledge tools", () => {
     expect(data.tagSources.a).toEqual(["breadcrumb", "footer", "menu"]);
     expect(data.constraints).toContainEqual({
       id: "ds-structure-button-tag",
+      // 3.6.0: o id é o check; o achado cita o e-MAG 1.2 (tag raiz semântica).
+      citeAs: "govbr-3.7.0-accessibility-global-7c91abad32ce",
       kind: "root-tag",
       description: "br-button deve ser aplicado a <button>. <a> vale quando o link navega (href real), como nos exemplos oficiais de outros componentes.",
       rootClass: "br-button",

@@ -148,7 +148,8 @@ describe("previous-version ids stay resolvable", () => {
   it("every id the deterministic checkers implement resolves to a listed (non-legacy) rule", () => {
     const ids = new Set(Object.values(CHECK_GROUNDING).flatMap((g) => g.implements).filter((id) => id.startsWith("govbr-")));
     // 3.5.0 (revisão Fable P5): o nome acessível passa a citar emag-1.1 (id e-MAG, fora desta contagem).
-    expect(ids.size).toBe(6);
+    // 3.6.0: a tag raiz semântica trocada cita o e-MAG 1.2 (…7c91abad32ce), ao lado da anatomia.
+    expect(ids.size).toBe(7);
     for (const id of ids) {
       const rule = getRuleById(id);
       expect(rule, id).toBeDefined();

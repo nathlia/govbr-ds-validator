@@ -326,7 +326,7 @@ describe("3.5.0 item 3 / P11 — verify_finding avisa quando a regra citada não
 describe("3.5.0 P2 — tabindex positivo antes do salto é ds-page-focus-order, e o verify não aceita ds-page-skip-link para ele", () => {
   it("o scan cita a cláusula de 'primeiro a receber o foco'; verify confirma focus-order e deixa skip-link sem decisão (rule-not-applicable)", async () => {
     const r = await scan("/tabindex", { checks: ["page"] });
-    expect(r.findings.map((f) => f.rule.id)).toEqual(["ds-page-focus-order"]);
+    expect(r.findings.map((f) => f.rule.checker)).toEqual(["ds-page-focus-order"]);
     const f = r.findings[0];
     const { verifyFinding } = await import("../../src/verify/gate.js");
     const ok = await verifyFinding({ finding: f, live: true });
@@ -448,6 +448,9 @@ describe("3.5.0 P2 — o texto de cada cláusula que um check implementa descrev
     "govbr-3.7.0-development-global-137c50bea6ca": /tokens/,
     "govbr-3.7.0-development-global-406774b1cb87": /Rawline/,
     "govbr-3.7.0-component-global-e30aab6e9a68": /anatomia/i,
+    // 3.6.0: tag raiz semântica trocada (e-MAG 1.2) e ordem de tabulação (e-MAG 1.4), as citações novas.
+    "govbr-3.7.0-accessibility-global-7c91abad32ce": /Cada elemento HTML deve ser utilizado\s+para o fim que ele foi criado/,
+    "govbr-3.7.0-accessibility-global-fb9dfcacbb34": /sequência lógica de leitura para percorrer links/,
     "govbr-3.7.0-template-global-19f93475dc5e": /template base/i,
     "govbr-3.7.0-accessibility-global-538e57855252": /primeiro link da página/,
     "govbr-3.7.0-accessibility-skiplink-b0641993618f": /primeiro elemento a receber o foco/,

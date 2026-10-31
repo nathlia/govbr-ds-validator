@@ -200,7 +200,7 @@ describe("revisão: leitura do verify_finding", () => {
     const { client, call } = await connect("evaluation");
     try {
       const scan = await call("scan_page", { url: `${base}/big`, checks: ["structure"], view: "findings", detail: "full", limit: 50, maxChars: 100_000 });
-      const own = scan.data.findings.find((f: { rule: { id: string } }) => f.rule.id === "ds-structure-button-tag");
+      const own = scan.data.findings.find((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-structure-button-tag");
       const notRun = await call("verify_finding", { finding: own });
       expect(notRun.data.reasons[0].code).toBe("predicate-not-run");
       expect(notRun.data.about).toBe("none");

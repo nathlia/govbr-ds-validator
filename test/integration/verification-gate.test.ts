@@ -430,12 +430,13 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
 
   it("scan → verify round trip: the scanner's own findings confirm without implements in the payload", async () => {
     const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100, maxChars: 100_000 } })));
-    const own = (scan.findings as Array<Record<string, any>>).filter((f) =>
-      ["govbr-ds-structure", "govbr-ds-page"].includes(f.rule.source)
-    );
-    const ids = own.map((f) => f.rule.id);
+    // 3.6.0: os achados de estrutura e página citam a norma (rule.id KB) e nomeiam o check em rule.checker.
+    const own = (scan.findings as Array<Record<string, any>>).filter((f) => /^ds-(structure|page)-/.test(f.rule.checker ?? ""));
+    const ids = own.map((f) => f.rule.checker);
     expect(ids).toEqual(expect.arrayContaining(["ds-structure-button-tag", "ds-page-header", "ds-page-footer", "ds-page-skip-link"]));
     for (const finding of own) {
+      expect(finding.rule.source, finding.rule.checker).toBe("govbr-ds-kb");
+      expect(finding.rule.id, finding.rule.checker).toMatch(/^govbr-3.7.0-/);
       expect(finding.rule.implements?.length, finding.rule.id).toBeGreaterThan(0);
       const res = await verify(withoutImplements(finding), { live: true, scanId: scan.scanId });
       expect(res.verification.verdict, finding.rule.id).toBe("confirmed");
@@ -446,8 +447,8 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
 
   it("controls without implements never confirm: invented id, forged payload, corrected fact, unreached state", async () => {
     const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, view: "findings", detail: "full", limit: 100, maxChars: 100_000 } })));
-    const tag = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag")!);
-    const footer = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer")!);
+    const tag = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-structure-button-tag")!);
+    const footer = withoutImplements((scan.findings as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-page-footer")!);
 
     // Id de regra inventado na mesma forma: não existe → rejected.
     const invented = await verify({ ...tag, rule: { ...tag.rule, id: "ds-structure-botaozao-tag" } }, { live: true, scanId: scan.scanId });
@@ -476,15 +477,18 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
     expect(otherState.verification.verdict).toBe("unverifiable");
   });
 
-  it("the summary and evidence projections the agent reads carry implements", async () => {
+  it("the summary and evidence projections the agent reads carry the cited norm (implements only when it adds to rule.id)", async () => {
     for (const detail of ["summary", "evidence"]) {
       const scan = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["structure", "page"], view: "findings", detail, maxChars: 100_000 } })));
-      const tag = (scan.findings as Array<Record<string, any>>).find((f) => f.rule.id === "ds-structure-button-tag");
-      expect(tag?.rule.implements, detail).toEqual(["govbr-3.7.0-component-global-e30aab6e9a68"]);
+      const tag = (scan.findings as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-structure-button-tag");
+      // 3.6.0: <button> trocado cita o e-MAG 1.2; implements = [rule.id] não se repete na projeção.
+      expect(tag?.rule.id, detail).toBe("govbr-3.7.0-accessibility-global-7c91abad32ce");
+      expect(tag?.rule.implements, detail).toBeUndefined();
     }
     const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } })));
-    const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.id === "ds-page-footer");
-    expect(footer?.rule.implements).toEqual(["govbr-3.7.0-template-global-19f93475dc5e"]);
+    const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-page-footer");
+    expect(footer?.rule.id).toBe("govbr-3.7.0-template-global-19f93475dc5e");
+    expect(footer?.rule.implements).toBeUndefined();
     // 3.4.4 (C1): a norma do exemplo é a da família — não se repete no exemplo.
     expect(footer?.example.rule).toBeUndefined();
   });

@@ -12,7 +12,7 @@ import { nextFindingId } from "../schema/finding.js";
 import type { TokenRegistry } from "../data/load.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import { normalizeColor, nearestToken, parsePx } from "./color.js";
-import { CHECK_GROUNDING, groundingFor, podeVirarAchado } from "./grounding.js";
+import { CHECK_GROUNDING, checkerRule, groundingFor, podeVirarAchado } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
 export type TokenCheck = "color" | "font" | "radius" | "spacing";
@@ -184,9 +184,7 @@ export function checkTokenCompliance(
         findings.push({
           id: nextFindingId(),
           rule: {
-            id: "ds-token-color",
-              implements: groundingFor("token-color"),
-            source: "govbr-ds-token",
+            ...checkerRule("ds-token-color", groundingFor("token-color")),
             description:
               "Cores devem usar valores do registro de tokens do gov.br DS (Padrão Digital de Governo); valores arbitrários quebram a identidade visual e o theming.",
           },
@@ -222,9 +220,7 @@ export function checkTokenCompliance(
         findings.push({
           id: nextFindingId(),
           rule: {
-            id: "ds-token-font-family",
-              implements: groundingFor("token-font-family"),
-            source: "govbr-ds-token",
+            ...checkerRule("ds-token-font-family", groundingFor("token-font-family")),
             description: "A tipografia do gov.br DS usa Rawline (com Raleway como alternativa).",
           },
           ...base,
@@ -265,9 +261,7 @@ export function checkTokenCompliance(
             findings.push({
               id: nextFindingId(),
               rule: {
-                id: "ds-token-radius",
-              implements: groundingFor("token-radius"),
-                source: "govbr-ds-token",
+                ...checkerRule("ds-token-radius", groundingFor("token-radius")),
                 description: "Cantos arredondados devem usar os tokens de superfície (--surface-rounder-sm/md/lg) ou o pill (--button-radius/--surface-rounder-pill).",
               },
               ...base,
@@ -320,9 +314,7 @@ export function checkTokenCompliance(
           findings.push({
             id: nextFindingId(),
             rule: {
-              id: "ds-token-spacing",
-              implements: groundingFor("token-spacing"),
-              source: "govbr-ds-token",
+              ...checkerRule("ds-token-spacing", groundingFor("token-spacing")),
               description: `Espaçamentos devem seguir a escala do DS (múltiplos de ${spacingBase / 2}px, base ${spacingBase}px).`,
             },
             ...base,

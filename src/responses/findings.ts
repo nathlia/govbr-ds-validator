@@ -28,13 +28,15 @@ export interface FindingPageOptions {
 }
 
 export const FINDING_DEDUPLICATION_KEY =
-  "rule.source + rule.id + element.page + element.locator + evidence.data.property/evidence.observed";
+  "rule.source + rule.id + rule.checker + element.page + element.locator + evidence.data.property/evidence.observed";
 
 export function findingIdentity(finding: Finding): string {
   const property = finding.evidence.data?.property;
   return [
     finding.rule.source,
     finding.rule.id,
+    // 3.6.0: dois checks podem citar a mesma norma (a regra geral de tokens); o check separa as identidades.
+    finding.rule.checker ?? "",
     finding.element.page,
     finding.element.locator,
     typeof property === "string" ? property : finding.evidence.observed,
@@ -128,6 +130,16 @@ export class FindingStore {
   }
 }
 
+/**
+ * 3.6.0: `implements` só aparece nas projeções quando diz algo além da citação — o achado de um check cita a
+ * norma em rule.id, e `implements: [rule.id]` repetiria o mesmo id (custava uma família na 1ª página do fluxo).
+ * O Finding inteiro (detail full, ledger, save_report) mantém o campo como foi produzido.
+ */
+export function implementsBeyondCitation(rule: Finding["rule"]): boolean {
+  const list = rule.implements ?? [];
+  return list.length > 1 || (list.length === 1 && list[0] !== rule.id);
+}
+
 function truncate(value: string, max = 240): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
@@ -140,9 +152,11 @@ export function projectFinding(finding: Finding, detail: FindingDetail): unknown
     rule: {
       id: finding.rule.id,
       source: finding.rule.source,
+      // 3.6.0: o check que mediu (não é citação; escolhe o predicado do verify_finding).
+      ...(finding.rule.checker ? { checker: finding.rule.checker } : {}),
       // 2.15.0: a norma que a verificação do oráculo implementa, visível em toda projeção — o agente
       // reescrevia o achado sem ela e o portão o rejeitava (tela A, ensaio 03).
-      ...(finding.rule.implements?.length ? { implements: [...finding.rule.implements] } : {}),
+      ...(implementsBeyondCitation(finding.rule) ? { implements: [...finding.rule.implements!] } : {}),
       ...(detail === "evidence"
         ? { description: finding.rule.description, wcag: finding.rule.wcag }
         : {}),

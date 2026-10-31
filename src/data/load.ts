@@ -8,6 +8,7 @@ import type { DsStylesheetIndex } from "../evidence/cssProvenance.js";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { guardKnowledge } from "./lock.js";
+import { structureTagGrounding } from "../checkers/grounding.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Works from both src/ (tsx) and dist/ (compiled) since data/ sits at package root.
@@ -52,8 +53,10 @@ export interface ComponentSpec {
 }
 
 export interface ComponentConstraint {
-  /** Stable checker/specification id shared by normative and deterministic profiles. */
+  /** Stable checker/specification id shared by normative and deterministic profiles (3.6.0: `rule.checker`, not a citation). */
   id: string;
+  /** 3.6.0: the normative unit a finding of this constraint cites in `rule.id` (e-MAG 1.2 for semantic roots, anatomy otherwise). */
+  citeAs: string;
   kind: "root-tag";
   description: string;
   rootClass: string;
@@ -77,11 +80,18 @@ export function ownAndBorrowedTags(spec: ComponentSpec): { own: string[]; borrow
   return { own, borrowed: spec.tags.filter((tag) => !own.includes(tag)) };
 }
 
+/** Tags do exemplo oficial que a verificação da tag raiz espera: as próprias do componente (ou todas, sem origem). */
+export function expectedRootTags(spec: ComponentSpec): string[] {
+  const { own } = ownAndBorrowedTags(spec);
+  return own.length > 0 ? own : spec.tags;
+}
+
 export function constraintsForComponent(spec: ComponentSpec): ComponentConstraint[] {
   const { own, borrowed } = ownAndBorrowedTags(spec);
   const ressalva = borrowed.includes("a") ? " <a> vale quando o link navega (href real), como nos exemplos oficiais de outros componentes." : "";
   return spec.tags.length === 0 ? [] : [{
     id: `ds-structure-${spec.name}-tag`,
+    citeAs: structureTagGrounding(expectedRootTags(spec))[0],
     kind: "root-tag",
     description: `${spec.rootClass} deve ser aplicado a <${(own.length ? own : spec.tags).join("> ou <")}>.${ressalva}`,
     rootClass: spec.rootClass,

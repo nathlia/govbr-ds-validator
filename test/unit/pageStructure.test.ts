@@ -54,9 +54,10 @@ describe("checkPageStructure", () => {
 
   it("acusa a ausência de cabeçalho e de rodapé com a alegação estruturada que o predicado exige", () => {
     const findings = checkPageStructure(page, facts({ regions: { header: 0, footer: 0, breadcrumb: 0, cookiebar: 0, menu: 0 } }));
-    expect(findings.map((f) => f.rule.id)).toEqual(["ds-page-header", "ds-page-footer"]);
+    expect(findings.map((f) => f.rule.checker)).toEqual(["ds-page-header", "ds-page-footer"]);
     for (const finding of findings) {
-      expect(finding.rule.source).toBe("govbr-ds-page");
+      // 3.6.0: cita a norma (Template Base), não o check.
+      expect(finding.rule).toMatchObject({ id: "govbr-3.7.0-template-global-19f93475dc5e", source: "govbr-ds-kb" });
       expect(finding.pathway).toBe("deterministic");
       expect(finding.element.locator).toBe("html");
       expect(finding.rule.implements).toContain("govbr-3.7.0-template-global-19f93475dc5e");
@@ -66,12 +67,13 @@ describe("checkPageStructure", () => {
 
   it("acusa quando o primeiro link não é âncora interna, ou aponta para alvo inexistente", () => {
     const externo = checkPageStructure(page, facts({ firstLink: { href: "/inicio", text: "Início", targetId: null, targetExists: false, skipsToContent: false } }));
-    expect(externo.map((f) => f.rule.id)).toEqual(["ds-page-skip-link"]);
+    expect(externo.map((f) => f.rule.checker)).toEqual(["ds-page-skip-link"]);
     expect(externo[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-global-538e57855252", "emag-1.5"]);
+    expect(externo[0].rule.id).toBe("govbr-3.7.0-accessibility-global-538e57855252");
     expect(externo[0].evidence.data).toMatchObject({ region: "skip-link", firstLinkHref: "/inicio", expectedCondition: EXPECTED_CONDITIONS.skipLink });
 
     const quebrado = checkPageStructure(page, facts({ firstLink: { href: "#conteudo", text: "Pular", targetId: "conteudo", targetExists: false, skipsToContent: false } }));
-    expect(quebrado.map((f) => f.rule.id)).toEqual(["ds-page-skip-link"]);
+    expect(quebrado.map((f) => f.rule.checker)).toEqual(["ds-page-skip-link"]);
     expect(quebrado[0].evidence.observed).toContain("#conteudo");
   });
 

@@ -75,7 +75,7 @@ export function buildValidatePagePrompt({ url, scope, max_iterations, tools = FU
     has("get_ds_rules") ? "   - get_ds_rules(ids) quando várias regras candidatas já estiverem identificadas" : false,
     has("get_design_tokens") ? "   - get_design_tokens() para os tokens semânticos" : false,
     has("get_page_rules")
-      ? '   - get_page_rules() sem categoria para as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link — regiões obrigatórias do Template Base e salto para o conteúdo); o scan_page já as verifica quando checks inclui "page" (padrão)'
+      ? '   - get_page_rules() sem categoria para as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order — regiões obrigatórias do Template Base e salto para o conteúdo), cada uma com a norma a citar (citeAs); o scan_page já as verifica quando checks inclui "page" (padrão)'
       : false,
     has("get_page_rules")
       ? '   - get_page_rules("page_structure") e get_page_rules("minimum_standard") quando a página for uma página completa (cabeçalho, conteúdo, rodapé), e get_page_rules(<categoria>) quando tiver formulários/navegação/estrutura relevante'

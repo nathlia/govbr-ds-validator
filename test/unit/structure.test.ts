@@ -19,7 +19,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
   it("flags br-button applied to a non-canonical tag", () => {
     const el = makeElement({ tagName: "a", outerHTML: '<a class="br-button primary">Enviar</a>' });
     const findings = checkComponentStructure(page, [el], buttonSpec);
-    const tagFinding = findings.find((f) => f.rule.id === "ds-structure-button-tag");
+    const tagFinding = findings.find((f) => f.rule.checker === "ds-structure-button-tag");
     expect(tagFinding).toBeDefined();
     expect(tagFinding?.severity).toBe("serious");
     expect(tagFinding?.evidence.observed).toContain("<a>");
@@ -32,14 +32,14 @@ describe("checkComponentStructure (against the real button spec)", () => {
       attributes: { ...makeElement().attributes, href: "/solicitacao" },
       outerHTML: '<a class="br-button circle" href="/solicitacao"></a>',
     });
-    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.checker === "ds-structure-button-tag")).toEqual([]);
   });
 
   it("still flags an anchor doing a button's job (no href, role=button)", () => {
     const cases: Array<[string | null, string | null]> = [[null, null], ["#", "button"], ["/x", "button"]];
     for (const [href, role] of cases) {
       const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href, role }, outerHTML: `<a class="br-button primary">Excluir</a>` });
-      const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.id === "ds-structure-button-tag");
+      const finding = checkComponentStructure(page, [el], buttonSpec).find((f) => f.rule.checker === "ds-structure-button-tag");
       expect(finding?.evidence.expected).toBe("Elemento <button>");
     }
   });
@@ -47,7 +47,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
   it("3.4.1: href '#', empty or javascript: depends on script — no structural finding", () => {
     for (const href of ["#", "", "javascript: void(0)"]) {
       const el = makeElement({ tagName: "a", attributes: { ...makeElement().attributes, href }, outerHTML: '<a class="br-button primary">Excluir</a>' });
-      expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+      expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.checker === "ds-structure-button-tag")).toEqual([]);
     }
   });
 
@@ -58,12 +58,12 @@ describe("checkComponentStructure (against the real button spec)", () => {
       attributes: { ...makeElement().attributes, href: "#" },
       outerHTML: '<a class="br-button secondary" href="#">Voltar</a>',
     });
-    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+    expect(checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.checker === "ds-structure-button-tag")).toEqual([]);
   });
 
   it("flags br-button on a <div role=button>", () => {
     const el = makeElement({ tagName: "div", attributes: { ...makeElement().attributes, role: "button" }, outerHTML: '<div class="br-button circle" role="button"></div>' });
-    expect(checkComponentStructure(page, [el], buttonSpec).some((f) => f.rule.id === "ds-structure-button-tag")).toBe(true);
+    expect(checkComponentStructure(page, [el], buttonSpec).some((f) => f.rule.checker === "ds-structure-button-tag")).toBe(true);
   });
 
   it("keeps semantic <hr class=br-divider> as an observation, not a finding (D-28)", () => {
@@ -166,7 +166,7 @@ describe("checkComponentStructure (against the real button spec)", () => {
         outerHTML: `<button class="br-button ${variant}" type="button">Enviar</button>`,
       });
       expect(
-        checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.id === "ds-structure-button-variant")
+        checkComponentStructure(page, [el], buttonSpec).filter((f) => f.rule.checker === "ds-structure-button-variant")
       ).toEqual([]);
     }
   });

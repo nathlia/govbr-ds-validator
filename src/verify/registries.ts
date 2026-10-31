@@ -8,9 +8,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { constraintsForComponent, findEmagRule, getComponentSpecs, getEmag, type EmagRule } from "../data/load.js";
+import { constraintsForComponent, expectedRootTags, findEmagRule, getComponentSpecs, getEmag, type EmagRule } from "../data/load.js";
 import { getKnowledgeBase, getRuleById, type KnowledgeRule } from "../data/knowledge.js";
-import { CHECK_GROUNDING, groundingFor, type CheckKind } from "../checkers/grounding.js";
+import { CHECK_GROUNDING, STRUCTURE_SEMANTICS, checkerFamily, structureTagGrounding, type CheckerFamily, type CheckKind } from "../checkers/grounding.js";
+import type { Finding } from "../schema/finding.js";
+import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 import { pageConstraints, type PageConstraint } from "../checkers/pageStructure.js";
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../data");
@@ -172,8 +174,11 @@ export function groundingForCheckId(source: string, id: string): string[] | null
   switch (source) {
     case "govbr-ds-token":
       return tokenRuleMembership(id).entry?.implements ?? null;
-    case "govbr-ds-structure":
-      return structureRuleMembership(id).status === "member" ? groundingFor("structure-tag") : null;
+    case "govbr-ds-structure": {
+      // 3.6.0: a norma da tag raiz é por componente (e-MAG 1.2 para raiz semântica, anatomia para genérica).
+      const spec = Object.values(getComponentSpecs().components).find((candidate) => `ds-structure-${candidate.name}-tag` === id);
+      return spec && structureRuleMembership(id).status === "member" ? structureTagGrounding(expectedRootTags(spec)) : null;
+    }
     case "govbr-ds-page":
       return pageConstraintMembership(id).entry?.implements ?? null;
     default:
@@ -227,4 +232,125 @@ export function registryVersionsKnowledgeFree(): Record<string, string> {
     wcag: `${wcagMeta.standard} · ${wcagMeta.inWcag22} critérios · ${wcagMeta.source} (${wcagMeta.retrievedAt})`,
     contextual: CONTEXT_CONDITIONS_VERSION_KNOWLEDGE_FREE,
   };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 3.6.0 (D-155): o check por trás de um achado que cita a norma
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Como o check foi identificado: campo `rule.checker`; id do check em `rule.id` (forma até a 3.5.0); ou pela condição estruturada. */
+export interface CheckerRef {
+  checker: string;
+  family: CheckerFamily;
+  how: "field" | "legacy-id" | "inferred";
+}
+
+const CHECKER_FAMILIES: readonly CheckerFamily[] = ["govbr-ds-token", "govbr-ds-structure", "govbr-ds-page"];
+
+/** Critério WCAG que a base liga à norma citada pelo check (só onde o achado o declara). */
+function checkerWcag(family: CheckerFamily, checker: string): string | undefined {
+  if (checker === "ds-page-focus-order") return "2.4.3";
+  if (family === "govbr-ds-structure") {
+    const spec = Object.values(getComponentSpecs().components).find((candidate) => `ds-structure-${candidate.name}-tag` === checker);
+    const grounded = spec ? structureTagGrounding(expectedRootTags(spec)) : [];
+    return grounded.includes(STRUCTURE_SEMANTICS) ? "1.3.1" : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * A norma citada (`rule.source` + `rule.id`) é a que o check decide? 3.6.0 (revisão independente): só a citação
+ * do check (citeAs = 1º id de `implements`) e o critério WCAG que ele declara selecionam o predicado. Os demais ids
+ * de `implements` são contexto ("context"): o check não mede o que eles dizem, então não confirmam.
+ */
+function citesCheckerNorm(finding: Finding, family: CheckerFamily, checker: string): "cite" | "context" | "other" {
+  const grounded = groundingForCheckId(family, checker);
+  if (!grounded || grounded.length === 0) return "other";
+  const { source, id } = finding.rule;
+  let cited: string | null = null;
+  if (source === "govbr-ds-kb") cited = id;
+  else if (source === "emag") {
+    const membership = emagMembership(id);
+    cited = membership.status === "member" ? `emag-${membership.normalizedId}` : null;
+  } else if (source === "wcag") {
+    const membership = wcagMembership(id);
+    return membership.status === "member" && checkerWcag(family, checker) === membership.normalizedId ? "cite" : "other";
+  }
+  if (cited === null) return "other";
+  if (cited === grounded[0]) return "cite";
+  return grounded.includes(cited) ? "context" : "other";
+}
+
+function contextNote(checker: string, finding: Finding, family: CheckerFamily): string {
+  const grounded = groundingForCheckId(family, checker) ?? [];
+  const wcag = checkerWcag(family, checker);
+  return `A verificação '${checker}' decide só a cláusula que mede (${grounded[0]}${wcag ? ` ou WCAG ${wcag}` : ""}); ` +
+    `${finding.rule.source} '${finding.rule.id}' está em implements como contexto, não como o que o check mede: sem predicado do check. Cite ${grounded[0]}.`;
+}
+
+/** O check que a condição estruturada nomeia (o agente copiou a norma e deixou `checker` de fora). */
+function checkerFromCondition(data: Record<string, unknown>): string | null {
+  switch (data.expectedCondition) {
+    case EXPECTED_CONDITIONS.tokenColor:
+      return "ds-token-color";
+    case EXPECTED_CONDITIONS.tokenFontFamily:
+      return "ds-token-font-family";
+    case EXPECTED_CONDITIONS.tokenRadius:
+      return "ds-token-radius";
+    case EXPECTED_CONDITIONS.tokenSpacing:
+      return "ds-token-spacing";
+    case EXPECTED_CONDITIONS.structureTag:
+      return typeof data.component === "string" && /^[a-z0-9-]+$/.test(data.component) ? `ds-structure-${data.component}-tag` : null;
+    case EXPECTED_CONDITIONS.pageRegion:
+      return data.region === "header" || data.region === "footer" ? `ds-page-${data.region}` : null;
+    case EXPECTED_CONDITIONS.skipLink:
+      return "ds-page-skip-link";
+    case EXPECTED_CONDITIONS.skipLinkFirstFocus:
+      return "ds-page-focus-order";
+    default:
+      return null;
+  }
+}
+
+/**
+ * 3.6.0: a verificação do oráculo por trás de um achado. Os achados dos checks citam a norma em `rule.id` e
+ * nomeiam o check em `rule.checker`; o check só escolhe o predicado e a norma que o servidor resolve — e só
+ * quando a norma citada é uma das que ele implementa (um check não decide outra norma). A forma até a 3.5.0
+ * (id do check em `rule.id`, `source` govbr-ds-token|structure|page) continua aceita. Sem `checker`, a condição
+ * estruturada exata (com component/region) identifica o check, sob a mesma exigência de norma.
+ */
+export function checkerOf(finding: Finding): { ref: CheckerRef | null; note?: string } {
+  const { source, id, checker } = finding.rule;
+  const legacy = CHECKER_FAMILIES.find((family) => family === source);
+  if (legacy) return { ref: { checker: id, family: legacy, how: "legacy-id" } };
+  if (checker !== undefined) {
+    const family = checkerFamily(checker);
+    const grounded = family ? groundingForCheckId(family, checker) : null;
+    if (!family || grounded === null) {
+      return { ref: null, note: `rule.checker '${checker}' não é verificação publicada do oráculo: ignorado (a citação é rule.id).` };
+    }
+    const match = citesCheckerNorm(finding, family, checker);
+    if (match === "context") return { ref: null, note: contextNote(checker, finding, family) };
+    if (match !== "cite") {
+      return {
+        ref: null,
+        note: `rule.checker '${checker}' ignorado: a norma citada (${source} '${id}') não é a que essa verificação implementa (${grounded.join(", ") || "nenhuma"}); o predicado do check não decide outra norma.`,
+      };
+    }
+    return { ref: { checker, family, how: "field" } };
+  }
+  const inferred = checkerFromCondition((finding.evidence.data ?? {}) as Record<string, unknown>);
+  const family = inferred ? checkerFamily(inferred) : null;
+  if (inferred && family && groundingForCheckId(family, inferred) !== null) {
+    const match = citesCheckerNorm(finding, family, inferred);
+    if (match === "cite") return { ref: { checker: inferred, family, how: "inferred" } };
+    if (match === "context") return { ref: null, note: contextNote(inferred, finding, family) };
+  }
+  return { ref: null };
+}
+
+/** O achado na forma do check (id do check em `rule.id`, família em `rule.source`) — só para escolher e rodar o predicado. */
+export function asCheckerForm(finding: Finding, ref: CheckerRef): Finding {
+  if (ref.how === "legacy-id") return finding;
+  return { ...finding, rule: { ...finding.rule, id: ref.checker, source: ref.family } };
 }

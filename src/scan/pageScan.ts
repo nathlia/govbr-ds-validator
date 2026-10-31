@@ -222,7 +222,7 @@ export async function reproduceState(
  * muda: ids, contagens e conteúdo dos achados são os mesmos.
  */
 export function pageLevelFirst(findings: Finding[]): Finding[] {
-  const rank = (f: Finding) => (f.rule.source === "govbr-ds-page" ? 0 : f.element.locator === "html" ? 1 : 2);
+  const rank = (f: Finding) => (f.rule.checker?.startsWith("ds-page-") || f.rule.source === "govbr-ds-page" ? 0 : f.element.locator === "html" ? 1 : 2);
   return findings.map((f, i) => ({ f, i })).sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i).map(({ f }) => f);
 }
 

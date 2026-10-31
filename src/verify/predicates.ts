@@ -372,7 +372,7 @@ export function selectPredicate(finding: Finding): PredicateSelection {
             (element) => normalizeFontFamily(element.computed.fontFamily ?? "") === normalizeFontFamily(observed)
               ? null
               : `${element.locator}: font-family vivo é ${element.computed.fontFamily ?? "(ausente)"}, não ${observed}`,
-            (f) => f.rule.id === "ds-token-font-family" && f.evidence.data?.property === "font-family" &&
+            (f) => f.rule.checker === "ds-token-font-family" && f.evidence.data?.property === "font-family" &&
               typeof f.evidence.data?.observed === "string" && normalizeFontFamily(f.evidence.data.observed) === normalizeFontFamily(observed)),
         };
       }
@@ -390,7 +390,7 @@ export function selectPredicate(finding: Finding): PredicateSelection {
             (element) => normalizeCssValue(element.computed.borderRadius ?? "") === normalizeCssValue(observed)
               ? null
               : `${element.locator}: border-radius vivo é ${element.computed.borderRadius ?? "(ausente)"}, não ${observed}`,
-            (f) => f.rule.id === "ds-token-radius" && f.evidence.data?.property === "border-radius" &&
+            (f) => f.rule.checker === "ds-token-radius" && f.evidence.data?.property === "border-radius" &&
               typeof f.evidence.data?.observed === "string" && normalizeCssValue(f.evidence.data.observed) === normalizeCssValue(observed)),
         };
       }
@@ -409,7 +409,7 @@ export function selectPredicate(finding: Finding): PredicateSelection {
             (element) => normalizeCssValue(element.computed[computedProperty] ?? "") === normalizeCssValue(observed)
               ? null
               : `${element.locator}: ${property} vivo é ${element.computed[computedProperty] ?? "(ausente)"}, não ${observed}`,
-            (f) => f.rule.id === "ds-token-spacing" && f.evidence.data?.property === property &&
+            (f) => f.rule.checker === "ds-token-spacing" && f.evidence.data?.property === property &&
               typeof f.evidence.data?.observed === "string" && normalizeCssValue(f.evidence.data.observed) === normalizeCssValue(observed)),
         };
       }
@@ -449,7 +449,7 @@ export function selectPredicate(finding: Finding): PredicateSelection {
             };
           }
           return onEveryElement(elements, `tag raiz de ${spec.rootClass}`, (element) =>
-            checkComponentStructure({ url }, [element], spec).some((f) => f.rule.id === id)
+            checkComponentStructure({ url }, [element], spec).some((f) => f.rule.checker === id)
               ? null
               : `${element.locator} (<${element.tagName}>) não viola neste estado`
           );
@@ -485,7 +485,7 @@ export function selectPredicate(finding: Finding): PredicateSelection {
           },
           evaluate: (_elements, url, facts) => {
             if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-region." };
-            return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+            return checkPageStructure({ url }, facts).some((f) => f.rule.checker === id)
               ? { status: "verified", detail: `Violação recalculada no documento: nenhum ${constraint.selector} (${region} do Template Base).` }
               : { status: "contradicted", detail: `O documento tem ${facts.regions[region]} elemento(s) ${constraint.selector}; não viola neste estado.` };
           },
@@ -515,9 +515,9 @@ export function selectPredicate(finding: Finding): PredicateSelection {
           evaluate: (_elements, url, facts) => {
             if (!facts) return { status: "contradicted", detail: "Fatos de página indisponíveis para o predicado page-focus-order." };
             if (!facts.firstLink?.skipsToContent) {
-              return { status: "undetermined", code: "rule-not-applicable", detail: "O primeiro link não é um salto válido: a regra de ordem de foco do salto não se aplica; o caso é ds-page-skip-link (e-MAG 1.5)." };
+              return { status: "undetermined", code: "rule-not-applicable", detail: "O primeiro link não é um salto válido: a regra de ordem de foco do salto não se aplica; o caso é o do primeiro link (cite govbr-3.7.0-accessibility-global-538e57855252, e-MAG 1.5, com rule.checker ds-page-skip-link)." };
             }
-            return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+            return checkPageStructure({ url }, facts).some((f) => f.rule.checker === id)
               ? { status: "verified", detail: "Violação recalculada no documento: um elemento com tabindex positivo recebe o foco antes do salto para o conteúdo." }
               : { status: "contradicted", detail: "Nenhum elemento exibido com tabindex positivo recebe o foco antes do salto; não viola neste estado." };
           },
@@ -552,10 +552,10 @@ export function selectPredicate(finding: Finding): PredicateSelection {
             return {
               status: "undetermined",
               code: "rule-not-applicable",
-              detail: `O primeiro link é o salto (e-MAG 1.5 cumprida), mas <${before.tag}> com tabindex=${before.tabindex} recebe o foco antes dele: cite ds-page-focus-order (Skip Link "primeiro elemento a receber o foco"; e-MAG 1.4 / WCAG 2.4.3).`,
+              detail: `O primeiro link é o salto (e-MAG 1.5 cumprida), mas <${before.tag}> com tabindex=${before.tabindex} recebe o foco antes dele: cite govbr-3.7.0-accessibility-skiplink-b0641993618f (Skip Link "primeiro elemento a receber o foco"; WCAG 2.4.3) com rule.checker ds-page-focus-order.`,
             };
           }
-          return checkPageStructure({ url }, facts).some((f) => f.rule.id === id)
+          return checkPageStructure({ url }, facts).some((f) => f.rule.checker === id)
             ? { status: "verified", detail: "Violação recalculada no documento: o primeiro a receber o foco não é o salto para o conteúdo (primeiro link sem âncora válida, ou tabindex positivo antes dele; e-MAG 1.5)." }
             : { status: "contradicted", detail: "O primeiro link do documento é uma âncora interna com alvo existente e nenhum tabindex positivo recebe o foco antes dele; não viola neste estado." };
         },

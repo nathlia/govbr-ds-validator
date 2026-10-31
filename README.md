@@ -83,6 +83,67 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.0 — o achado de um check cita a norma, não o check (D-155, trios da tela A em 3.5.0)
+
+Motivo: em 3 trios na tela A com a 3.5.0 o braço com oráculo achou dois fatos verdadeiros e o juiz cego não
+pôde creditá-los por causa da citação que o oráculo entregou. `ds-page-focus-order` (tabindex positivo antes do
+salto) saía com `rule.id` = id do check, que nenhuma base resolve ("texto não localizado"; o braço sem oráculo
+citou `wcag 2.4.3` e levou o crédito); a tag raiz de `<div role="button">` no lugar de `<button>` citava a
+anatomia do componente, que os juízes recusaram para a semântica do elemento raiz. Genérico: nada por tela.
+
+- **`rule.id` = unidade normativa; `rule.checker` = o check.** Todo achado dos checks de token, estrutura e página
+  cita em `rule.id` (o campo que o agente copia) a 1ª norma de `implements` (`source` `govbr-ds-kb`); o id do check
+  (`ds-token-color`, `ds-structure-button-tag`, `ds-page-focus-order`…) vai no campo novo `rule.checker`, que só
+  escolhe o predicado do `verify_finding`. Check sem norma não produz achado (D-27; `checkerRule` falha alto).
+  Os demais checks já citavam a norma (anatomia, ícone decorativo, title, foco visível, placeholder, nome
+  acessível `emag-1.1`); axe segue `axe-core`.
+
+  | check (era `rule.id`) | cita agora (`rule.id`) | cláusula da base |
+  |---|---|---|
+  | `ds-page-focus-order` | `…accessibility-skiplink-b0641993618f` + wcag 2.4.3 | Skip Link (required): "O skip link deve ser o primeiro elemento a receber o foco na navegação por teclado" |
+  | `ds-structure-<c>-tag`, exemplo semântico (`button`, `breadcrumb`, `pagination`, `skiplink`, `step`, `header`, `footer`) | `…accessibility-global-7c91abad32ce` + wcag 1.3.1 | e-MAG 1.2 (required): "Cada elemento HTML deve ser utilizado para o fim que ele foi criado" (era a anatomia) |
+  | `ds-structure-<c>-tag`, exemplo genérico (`<div>`/`<span>`) | `…component-global-e30aab6e9a68` | "A anatomia do componente segue exatamente o que está previsto na diretriz de Design" (required) |
+  | `ds-token-color` | `…foundation-global-21b1a2733f7b` | "Interfaces digitais do governo devem utilizar sempre as cores pré-definidas" (required) |
+  | `ds-token-font-family` | `…development-global-406774b1cb87` | "A fonte oficial utilizada pelo Governo Federal é a Rawline" (required) |
+  | `ds-token-radius`, `ds-token-spacing` | `…development-global-137c50bea6ca` | "Consumo correto dos tokens" (required; a base não tem regra de raio nem de escala de espaçamento) |
+  | `ds-page-header`, `ds-page-footer` | `…template-global-19f93475dc5e` | "Template Base como ponto de partida" (required), lido com o texto integral da página |
+  | `ds-page-skip-link` | `…accessibility-global-538e57855252` | e-MAG 1.5 (required): "o primeiro link da página deve ser o de ir para o conteúdo" |
+
+- **Ordem de foco: o que o check mede decide a citação.** `ds-page-focus-order` só dispara quando o 1º link é o salto
+  válido e um tabindex positivo recebe o foco antes dele (o predicado dá `rule-not-applicable` sem salto e
+  `contradicted` sem esse tabindex): é "o 1º a receber o foco não é o salto", a cláusula do Skip Link. Não mede
+  tabindex positivo nem ordem DOM × foco em geral (sem salto fica calado), então o e-MAG 1.4 "sequência lógica"
+  (`…fb9dfcacbb34`) fica como contexto em `implements` e não há o que dividir; "logo após a tag body"
+  (`…02c2e513d936`, posição no DOM, não medida) saiu de `implements`.
+- **Portão:** `verify_finding` confere a citação como veio (KB/e-MAG/WCAG) e acha o check por `rule.checker`, pelo
+  id antigo (forma até a 3.5.0, continua aceita, com nota dizendo o que citar) ou pela `expectedCondition` exata
+  (+ `component`/`region`) quando o agente copiou só a norma — e só a citação do check (`citeAs`, 1º id de
+  `implements`) ou o critério WCAG que ele declara escolhem o predicado: outro id de `implements` é contexto
+  (sem predicado, `unverifiable`, nota "cite citeAs") e norma de fora é ignorada com nota; WCAG 2.4.3 com
+  `skip-link-first-to-receive-focus` e WCAG 1.3.1 com a tag raiz semântica escolhem o predicado do check. O
+  achado do ledger herda `rule.checker` como herda `evidence.data`. `normResolution`, `save_report`
+  (`implements` resolvido pelo check; achado na forma antiga entra com `rule.id` = citação do check e o check em
+  `rule.checker`, registrado em `normalized` como `rule.id`) e o relatório markdown (`(verificação ds-…)`) leem o
+  mesmo campo.
+- **Limites conhecidos:** `ds-page-header`/`ds-page-footer` citam o "Template Base como ponto de partida" (registro
+  herdado com texto truncado; a obrigação das áreas está no texto integral da página, em `data/ds-page-rules.json`,
+  sem unidade própria na base) e `ds-token-radius`/`ds-token-spacing` citam a regra geral "Consumo correto dos
+  tokens" — encaixes fracos, mas não há unidade melhor em `data/`.
+- **Superfície:** `get_page_rules` e `get_component_spec` trazem `citeAs` em cada restrição; as projeções
+  (`scan_page`, `get_finding_details`, famílias) trazem `checker` e só repetem `implements` quando ele diz algo além
+  de `rule.id` (o mesmo orçamento: famílias na 1ª página fluxo 6, A 5, B 5, iguais à 3.5.0). Identidade e chave de
+  família incluem `rule.checker`. `tools/list` evaluation `61177aa7…` → `cbfffb0d…` (esquema `rule.checker`,
+  descrições de `rule.id`/`evidence.data` e `get_page_rules`); knowledge-free igual (`f358152a…`, o campo fica fora
+  do esquema do perfil). Fixture do contexto literal 2.16.1: só a nota das restrições de página muda (`changed36`).
+- **Teste novo** (`test/unit/checkerCitation.test.ts`): fixtures fazem cada check do scan emitir achado (tokens, a
+  tag raiz de todo componente com exemplo, nome acessível, regiões, salto, ordem de foco, foco visível,
+  placeholder, ícone, title) e nenhum `rule.id` pode falhar a resolução (KB não legado e obrigatório/proibido,
+  e-MAG ou WCAG 2.2, sem `ds-`), com `checker` coerente com a norma.
+- **Medido sem modelo** (CLI de linha de base, todos os checks, estado inicial): fluxo 17→17, A 7→7, B 46→46,
+  controles `controles/a` (80 páginas) 18→18 — mesmos fatos, mesmos elementos; só a citação muda. Guarda da busca
+  (qrels 1.0.4) igual: 78,6% / P@5 45,7% / 9 enganosas / 28 nos estratos sem resposta. Portão NAT-86
+  (`portao:oraculo -- --divisao desenvolvimento`): D1 e D2 iguais à 3.5.0 (D2 TN 116 · TP 7 · FP 0), GO.
+
 ## 3.5.0 — o silêncio do scan não é cobertura (D-155 + revisão Fable de 2026-10-30)
 
 Motivo: no `ensaio-trio-b-03` (3.4.4) o braço com oráculo mediu e descartou fatos que nenhum check julgou
@@ -557,7 +618,7 @@ fixam os sha novos do `tools/list`.
 - `get_design_tokens (query?)` — semantic highlights + hex→token reverse index, or filtered token list
 - `get_emag_rules (section?, id?)` — complete e-MAG 3.1 (45/45 recommendations) + KB validation template per rule
 - `get_page_rules (category?)` — gov.br DS page-level guidelines; without a category, also the citable page constraints `ds-page-header`, `ds-page-footer`, `ds-page-skip-link` (2.7.0)
-- `list_components ()` / `get_component_spec (component, include_examples?, example?, view?, cursor?)` — canonical structure contracts (3.5.0: `view:"checklist"` = obrigações/proibições do componente com como medir cada uma, por cursor); HTML examples are opt-in, one per call (3.0.0). Every constraint carries a **stable, citable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29). Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
+- `list_components ()` / `get_component_spec (component, include_examples?, example?, view?, cursor?)` — canonical structure contracts (3.5.0: `view:"checklist"` = obrigações/proibições do componente com como medir cada uma, por cursor); HTML examples are opt-in, one per call (3.0.0). Every constraint carries a **stable id** — `get_component_spec("input")` returns `ds-structure-input-tag`, the same id the deterministic checker reports (D-29); since 3.6.0 that id is the check (`rule.checker`) and the constraint also carries `citeAs`, the KB clause a finding cites in `rule.id`. Before this, an agent that described a structural violation correctly had no id to cite and borrowed a generic governance rule, which the scorer then charged as a false positive on top of a false negative.
 
 **Evidence (C5 phase 1)**:
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence

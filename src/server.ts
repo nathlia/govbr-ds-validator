@@ -670,9 +670,10 @@ function contextResponse(
     ? {
         pageConstraints: {
           note:
-            "Restrições citáveis de página (get_page_rules): valem para página completa baseada no " +
-            "Template Base, independentemente dos componentes observados; se a página avaliada é " +
-            "completa ou um fragmento não é informado ao oráculo.",
+            // 3.6.0: os ids são checks, não citação; o tamanho da nota fica o mesmo (o orçamento da 1ª página não muda).
+            "Checks de página (get_page_rules; o achado cita a norma em citeAs, não o id): valem para página " +
+            "completa no Template Base, independentemente dos componentes; se a avaliada é completa ou " +
+            "fragmento não é informado.",
           ids: pageConstraints().map((c) => c.id),
         },
         ...(pointers.length
@@ -1259,7 +1260,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições citáveis de página (ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order: regiões obrigatórias do Template Base, salto para o conteúdo e o salto como primeiro a receber o foco), verificáveis pelo scan_page e pelo verify_finding.",
+        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order: regiões obrigatórias do Template Base, salto para o conteúdo e o salto como primeiro a receber o foco), cada uma com a norma que o achado cita (citeAs), verificáveis pelo scan_page e pelo verify_finding.",
       inputSchema: strictInput("get_page_rules", {
         category: z
           .enum([
@@ -2282,6 +2283,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
             candidate = { ...candidate, evidence: { ...candidate.evidence, data: { ...stored.evidence.data, ...sent } } };
             inherited = { findingId: stored.id, fields };
           }
+          // 3.6.0: o check que mediu (rule.checker) também é herdado quando o agente copiou só a norma citada.
+          if (stored.rule.checker !== undefined && candidate.rule.checker === undefined) {
+            candidate = { ...candidate, rule: { ...candidate.rule, checker: stored.rule.checker } };
+            inherited = { findingId: stored.id, fields: [...(inherited?.fields ?? []), "rule.checker"] };
+          }
         }
       }
       const verification = await verifyFinding({
@@ -2302,7 +2308,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           verificationId: stored.verificationId,
           knowledgeFree,
           ...(scanId ? { scanId } : {}),
-          ...(inherited ? { inheritedFromLedger: { ...inherited, note: "evidence.data que faltava no payload foi herdado do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
+          ...(inherited ? { inheritedFromLedger: { ...inherited, note: "Campos que faltavam no payload (evidence.data; 3.6.0: rule.checker) foram herdados do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
           ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
         }),
       );

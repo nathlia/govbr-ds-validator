@@ -53,6 +53,10 @@ export interface CheckGrounding {
 
 /** A regra geral de tokens, usada quando não há regra mais específica para a propriedade. */
 const TOKENS_EM_GERAL = "govbr-3.7.0-development-global-137c50bea6ca";
+/** e-MAG 1.2 (required, WCAG 1.3.1): "Cada elemento HTML deve ser utilizado para o fim que ele foi criado." */
+export const STRUCTURE_SEMANTICS = "govbr-3.7.0-accessibility-global-7c91abad32ce";
+/** Checklist de componente (required): "A anatomia do componente segue exatamente o que está previsto na diretriz de Design?" */
+export const STRUCTURE_ANATOMY = "govbr-3.7.0-component-global-e30aab6e9a68";
 
 export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
   "token-color": {
@@ -98,10 +102,18 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
       "espaçamento dos componentes; o que sustenta a verificação é o consumo correto de tokens.",
   },
   "structure-tag": {
-    implements: ["govbr-3.7.0-component-global-e30aab6e9a68"],
+    // 3.6.0 (D-155, trios da tela A): a tag raiz de um componente cujo exemplo oficial é um elemento HTML com
+    // semântica própria (<button>, <nav>, <header>, <footer>) trocada por outro elemento é uso de elemento fora
+    // do seu fim — e-MAG 1.2 "Cada elemento HTML deve ser utilizado para o fim que ele foi criado" (required;
+    // a base liga à WCAG 1.3.1). Juízes cegos recusaram a anatomia para a semântica do elemento raiz. A anatomia
+    // continua sendo a norma quando o exemplo oficial é genérico (<div>/<span>): aí a troca não perde semântica,
+    // diverge da diretriz. Por componente: `structureTagGrounding`.
+    implements: [STRUCTURE_SEMANTICS, STRUCTURE_ANATOMY],
     basis:
-      "'A anatomia implementada do componente deve corresponder à diretriz oficial de Design' " +
-      "(required) — a tag raiz é anatomia.",
+      "Exemplo oficial com elemento semântico (<button>, <nav>, <header>, <footer>): e-MAG 1.2 'Cada elemento HTML " +
+      "deve ser utilizado para o fim que ele foi criado' (required; WCAG 1.3.1) — um <div>/<span>/<a> no lugar do " +
+      "<button> usa um elemento fora do seu fim. Exemplo oficial genérico (<div>/<span>): 'A anatomia do componente " +
+      "segue exatamente o que está previsto na diretriz de Design' (required) — a tag raiz é anatomia.",
   },
   "structure-accessible-name": {
     // 3.5.0 (revisão Fable P5): até a 3.4.4 era e-MAG 2.2 ("objetos programáveis"), que trata de scripts, não
@@ -232,3 +244,60 @@ export const CONTEXT_GROUNDING: Record<ContextCheckKind, CheckGrounding> = {
       "Menu: 'Após abertura do menu, o foco deve cair imediatamente sobre o botão fechar, se houver' (obrigatórias).",
   },
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// 3.6.0 (D-155): o achado de um check cita a NORMA, não o check
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Até a 3.5.0, `rule.id` dos checks de token, estrutura e página era o id do próprio check
+// (`ds-token-color`, `ds-structure-button-tag`, `ds-page-focus-order`). É o campo que o agente copia como
+// citação, e nenhuma base o resolve: nos trios da tela A o juiz cego viu "texto não localizado" para
+// `ds-page-focus-order` e deixou o fato pendente, enquanto o braço sem oráculo citava `wcag 2.4.3` e
+// recebia crédito. Agora `rule.id` é a unidade normativa que a base serve (id KB `govbr-3.7.0-…`, `emag-n.n`
+// ou critério WCAG) e o id do check vai para `rule.checker`, que só escolhe o predicado do verify_finding.
+// A citação de cada check é o 1º id de `implements` (por componente, na estrutura).
+
+/** Família de um id de check publicado (o `source` que o id do check tinha até a 3.5.0). */
+export type CheckerFamily = "govbr-ds-token" | "govbr-ds-structure" | "govbr-ds-page";
+
+export function checkerFamily(checker: string): CheckerFamily | null {
+  if (/^ds-token-[a-z-]+$/.test(checker)) return "govbr-ds-token";
+  if (/^ds-structure-[a-z0-9-]+-tag$/.test(checker)) return "govbr-ds-structure";
+  if (/^ds-page-[a-z-]+$/.test(checker)) return "govbr-ds-page";
+  return null;
+}
+
+const GENERIC_TAGS = new Set(["div", "span"]);
+
+/** O exemplo oficial do componente só usa elementos com semântica própria (nenhum <div>/<span>). */
+export function semanticRootTags(expectedTags: string[]): boolean {
+  return expectedTags.length > 0 && expectedTags.every((tag) => !GENERIC_TAGS.has(tag.toLowerCase()));
+}
+
+/** Norma da tag raiz por componente: semântica do elemento (e-MAG 1.2) ou anatomia, conforme o exemplo oficial. */
+export function structureTagGrounding(expectedTags: string[]): string[] {
+  return semanticRootTags(expectedTags) ? [STRUCTURE_SEMANTICS] : [STRUCTURE_ANATOMY];
+}
+
+/** Critério WCAG que a base liga à cláusula citada pela tag raiz (só no caso semântico). */
+export function structureTagWcag(expectedTags: string[]): string | undefined {
+  return semanticRootTags(expectedTags) ? "1.3.1" : undefined;
+}
+
+/** A unidade que o achado de um check cita: o 1º id de `implements`. Sem norma → null (o check não produz achado). */
+export function citationFor(implementsIds: string[]): { id: string; source: "govbr-ds-kb" | "emag" } | null {
+  const first = implementsIds[0];
+  if (!first) return null;
+  return first.startsWith("emag-") ? { id: first, source: "emag" } : { id: first, source: "govbr-ds-kb" };
+}
+
+/**
+ * Os campos de norma de um achado de check: `id`/`source` = a unidade citada, `checker` = o check, `implements`
+ * inteiro. Check sem norma não chega aqui (D-27: vira observação); se chegar, é defeito do oráculo — falha alto
+ * em vez de devolver o id do check como citação.
+ */
+export function checkerRule(checker: string, implementsIds: string[], wcag?: string) {
+  const cited = citationFor(implementsIds);
+  if (!cited) throw new Error(`${checker}: verificação sem norma não produz achado (D-27).`);
+  return { id: cited.id, source: cited.source, checker, implements: [...implementsIds], ...(wcag ? { wcag } : {}) };
+}

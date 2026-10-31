@@ -67,9 +67,16 @@ export const RuleRefSchema = z.object({
   id: z
     .string()
     .describe(
-      "Rule identifier, e.g. 'govbr-3.7.0-…' (KB id — preferred when the rule came from get_ds_rules), 'emag-3.5', 'ds-token-color', 'ds-structure-button-tag', 'color-contrast' (axe)"
+      "The normative unit cited as violated (copy it as the citation): KB id 'govbr-3.7.0-…' (source govbr-ds-kb), 'emag-3.5' (source emag), a WCAG criterion '2.4.3' (source wcag) or an axe rule id 'color-contrast'. Never a check id: that goes in checker"
     ),
   source: RuleSourceSchema,
+  checker: z
+    .string()
+    .optional()
+    .describe(
+      "3.6.0: id of the oracle check that measured the fact (e.g. 'ds-token-color', 'ds-structure-button-tag', 'ds-page-focus-order'). " +
+        "Not a citation; it only selects the verify_finding predicate. Keep it when resubmitting a scan finding."
+    ),
   description: z.string().describe("What the rule requires, quoted or paraphrased from the source"),
   wcag: z.string().optional().describe("Related WCAG success criterion, e.g. '1.4.3'"),
   implements: z
@@ -99,7 +106,7 @@ export const EvidenceSchema = z.object({
     .describe(
       "Machine-readable supporting values. Verifiable token claims require property, observed/observedHex and " +
         "the predicate's exact expectedCondition; verifiable structure-tag claims require component, observedTag " +
-        "and expectedCondition. Exact expectedCondition by predicate: " +
+        "and expectedCondition. Exact expectedCondition by predicate (oracle checks keyed by rule.checker): " +
         `ds-token-color=${EXPECTED_CONDITIONS.tokenColor}; ds-token-font-family=${EXPECTED_CONDITIONS.tokenFontFamily}; ` +
         `ds-token-radius=${EXPECTED_CONDITIONS.tokenRadius}; ds-token-spacing=${EXPECTED_CONDITIONS.tokenSpacing}; ` +
         `ds-structure-<component>-tag=${EXPECTED_CONDITIONS.structureTag}; ` +
@@ -239,7 +246,8 @@ const RuleRefSchemaKnowledgeFree = RuleRefSchema.extend({
     .array(z.string())
     .optional()
     .describe("Rule ids a deterministic check implements (deterministic findings only)."),
-});
+  // 3.6.0: `checker` nomeia checks do DS, que este perfil não tem — fica fora do esquema (tools/list igual).
+}).omit({ checker: true });
 
 const EvidenceSchemaKnowledgeFree = EvidenceSchema.extend({
   data: z

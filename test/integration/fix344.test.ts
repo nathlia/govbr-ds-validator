@@ -135,18 +135,18 @@ async function connect() {
 describe("3.4.4 C3/C4/C5 — o que não é autoria da página vira observação, com o motivo", () => {
   it("internos de web component <br-*>, elemento oculto e calendário embutido saem dos achados; o nome do botão dentro do componente fica", async () => {
     const r = await scan("/origem", ["tokens", "structure"]);
-    const locs = r.findings.map((f) => `${f.rule.id} ${f.element.locator}`);
+    const locs = r.findings.map((f) => `${f.rule.checker ?? f.rule.id} ${f.element.locator}`);
     // C3: tag e espaçamento DENTRO do shadow do componente do DS não são achado de página (a anatomia,
     // que depende do conteúdo que a página passa, continua com o check de anatomia)
     expect(locs.some((l) => /^ds-(structure|token)-/.test(l) && l.includes("br-breadcrumb >>>"))).toBe(false);
     // guarda: filho claro projetado por <slot> num <br-*> continua da página
-    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("#projetado"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.checker === "ds-token-radius" && f.element.locator.includes("#projetado"))).toBe(true);
     // host <br-*> que não é componente do DS: o shadow dele é autoria da página
-    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("br-mural >>>"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.checker === "ds-token-radius" && f.element.locator.includes("br-mural >>>"))).toBe(true);
     // display:contents não é "não renderizado"
-    expect(r.findings.some((f) => f.rule.id === "ds-token-radius" && f.element.locator.includes("#em-contents"))).toBe(true);
+    expect(r.findings.some((f) => f.rule.checker === "ds-token-radius" && f.element.locator.includes("#em-contents"))).toBe(true);
     // C4: o raio do botão no menu oculto não é achado; o mesmo raio visível é
-    const radius = r.findings.filter((f) => f.rule.id === "ds-token-radius");
+    const radius = r.findings.filter((f) => f.rule.checker === "ds-token-radius");
     expect(radius.map((f) => f.element.locator).some((l) => l.includes("#menu"))).toBe(false);
     expect(radius.filter((f) => !/projetado|br-mural|em-contents/.test(f.element.locator)).length).toBe(1);
     // C5: botão só ícone do calendário embutido não é achado
@@ -157,14 +157,14 @@ describe("3.4.4 C3/C4/C5 — o que não é autoria da página vira observação,
     const outside = r.observations.filter((o) => o.kind === "outside-page-authorship");
     const reasons = new Set(outside.map((o) => o.data?.reason));
     expect(reasons).toEqual(new Set(["ds-web-component", "not-rendered", "ds-third-party"]));
-    const tag = outside.find((o) => (o.data?.rule as { id: string }).id === "ds-structure-breadcrumb-tag");
+    const tag = outside.find((o) => (o.data?.rule as { checker?: string }).checker === "ds-structure-breadcrumb-tag");
     expect(tag?.data?.host).toBe("br-breadcrumb");
     // M2: estilo autoral num estado oculto diz que está oculto e como medi-lo
     const hidden = outside.find((o) => o.data?.reason === "not-rendered");
     expect(hidden?.data?.hiddenInState).toBe(true);
     expect((hidden?.data?.next as { hint: string }).hint).toMatch(/meça no estado em que aparece/);
     expect(tag?.whyNotAFinding).toMatch(/shadow root de um web component do próprio DS/);
-    expect(outside.some((o) => o.data?.reason === "ds-web-component" && (o.data?.rule as { id: string }).id === "ds-token-spacing")).toBe(true);
+    expect(outside.some((o) => o.data?.reason === "ds-web-component" && (o.data?.rule as { checker?: string }).checker === "ds-token-spacing")).toBe(true);
   });
 });
 
@@ -197,14 +197,16 @@ describe("3.4.4 C12 — o salto tem de ser o primeiro a receber foco", () => {
     // 3.5.0 (revisão Fable P2): o caso é ds-page-focus-order ("primeiro a receber o foco"), não ds-page-skip-link
     // ("primeiro link", que aqui é cumprida).
     const all = (await scan("/tabindex", ["page"])).findings;
-    expect(all.filter((f) => f.rule.id === "ds-page-skip-link")).toHaveLength(0);
-    const com = all.filter((f) => f.rule.id === "ds-page-focus-order");
+    expect(all.filter((f) => f.rule.checker === "ds-page-skip-link")).toHaveLength(0);
+    const com = all.filter((f) => f.rule.checker === "ds-page-focus-order");
     expect(com).toHaveLength(1);
     expect(com[0].evidence.observed).toMatch(/tabindex=1/);
     expect(com[0].evidence.data?.focusedBefore).toEqual({ tag: "button", tabindex: 1, id: null });
-    expect(com[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-skiplink-b0641993618f", "govbr-3.7.0-component-skiplink-02c2e513d936", "emag-1.4"]);
+    // 3.6.0: cita o que o check mede — o Skip Link "primeiro elemento a receber o foco"; e-MAG 1.4 fica como contexto.
+    expect(com[0].rule.implements).toEqual(["govbr-3.7.0-accessibility-skiplink-b0641993618f", "govbr-3.7.0-accessibility-global-fb9dfcacbb34", "emag-1.4"]);
+    expect(com[0].rule.id).toBe("govbr-3.7.0-accessibility-skiplink-b0641993618f");
     expect(com[0].rule.wcag).toBe("2.4.3");
-    expect((await scan("/sem-tabindex", ["page"])).findings.filter((f) => f.rule.id.startsWith("ds-page-"))).toHaveLength(0);
+    expect((await scan("/sem-tabindex", ["page"])).findings.filter((f) => (f.rule.checker ?? "").startsWith("ds-page-"))).toHaveLength(0);
   });
 });
 

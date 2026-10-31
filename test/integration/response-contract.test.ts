@@ -242,7 +242,7 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
 
   it("06 verify do achado do próprio scan, sem implements: confirmed, norma resolvida pelo servidor", async () => {
     const scan = await call("scan_page", { url: `${base}/oficina`, checks: ["structure"], view: "findings", detail: "full", maxChars: 100_000 });
-    const own = scan.findings.find((f: { rule: { id: string } }) => f.rule.id === "ds-structure-button-tag");
+    const own = scan.findings.find((f: { rule: { id: string; checker?: string } }) => f.rule.checker === "ds-structure-button-tag");
     expect(own).toBeDefined();
     const { implements: _drop, ...rule } = own.rule;
     const r = await call("verify_finding", { finding: { ...own, rule }, live: true, scanId: scan.scanId });

@@ -7,7 +7,7 @@
 import type { Finding } from "../schema/finding.js";
 import type { GateVerification } from "../verify/gate.js";
 import { UNGROUNDED_NEXT } from "../verify/gate.js";
-import { groundingForCheckId } from "../verify/registries.js";
+import { checkerOf, groundingForCheckId } from "../verify/registries.js";
 import { getRuleById } from "../data/knowledge.js";
 import { getEmag } from "../data/load.js";
 import { emagUnits } from "../data/normativeUnits.js";
@@ -25,7 +25,6 @@ interface Reason {
   status: ObservationStatus;
 }
 
-const ORACLE_SOURCES = new Set(["govbr-ds-token", "govbr-ds-structure", "govbr-ds-page"]);
 
 /** Frases que dependem do perfil: o knowledge-free não nomeia fonte que não serve. */
 function texts(knowledgeFree: boolean) {
@@ -260,9 +259,11 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
 }
 
 function normResolutionOf(finding: Finding, knowledgeFree: boolean) {
-  const { source, id } = finding.rule;
-  if (knowledgeFree || !ORACLE_SOURCES.has(source)) return undefined;
-  const grounded = groundingForCheckId(source, id);
+  // 3.6.0: o check vem de rule.checker (a citação é rule.id); na forma antiga, do id do check.
+  const checker = knowledgeFree ? null : checkerOf(finding).ref;
+  if (!checker) return undefined;
+  const id = checker.checker;
+  const grounded = groundingForCheckId(checker.family, id);
   if (grounded === null) return undefined;
   const declared = finding.rule.implements;
   const payloadImplements =

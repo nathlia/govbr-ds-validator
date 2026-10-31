@@ -20,7 +20,7 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     const findings = checkTokenCompliance(page, [el], registry, ["color"]);
     expect(findings).toHaveLength(1);
     const f = findings[0];
-    expect(f.rule.id).toBe("ds-token-color");
+    expect(f.rule.checker).toBe("ds-token-color");
     expect(f.nature).toBe("syntactic");
     expect(f.pathway).toBe("deterministic");
     expect(f.evidence.data?.observedHex).toBe("#1252b3");
@@ -31,7 +31,7 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
   it("flags a non-DS font family", () => {
     const el = makeElement({ computed: { fontFamily: "Arial, sans-serif" } as never });
     const findings = checkTokenCompliance(page, [el], registry, ["font"]);
-    expect(findings.some((f) => f.rule.id === "ds-token-font-family")).toBe(true);
+    expect(findings.some((f) => f.rule.checker === "ds-token-font-family")).toBe(true);
   });
 
   it("tolerates browser rounding of scale font sizes", () => {
@@ -47,7 +47,7 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
     const el = makeElement({ computed: { fontSize: "13px" } as never });
 
     const findings = checkTokenCompliance(page, [el], registry, ["font"]);
-    expect(findings.some((f) => f.rule.id === "ds-token-font-size")).toBe(false);
+    expect(findings.some((f) => f.rule.checker === "ds-token-font-size")).toBe(false);
 
     const observations = collectTokenObservations(page, [el], registry);
     expect(observations).toHaveLength(1);
@@ -112,7 +112,7 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
       computed: { padding: "0px 13px" } as never,
     });
     const findings = checkTokenCompliance(page, [el], registry, ["spacing"]);
-    expect(findings.map((f) => f.rule.id)).toEqual(["ds-token-spacing"]);
+    expect(findings.map((f) => f.rule.checker)).toEqual(["ds-token-spacing"]);
   });
 
   it("does not charge the page for a value only the DS stylesheet declares (D-51)", () => {
@@ -160,7 +160,7 @@ describe("checkTokenCompliance (against the real @govbr-ds/core registry)", () =
       const el = makeElement({ computed: { borderRadius: "30px" } as never });
       const findings = checkTokenCompliance(page, [el], registry, ["radius"]);
       expect(findings).toHaveLength(1);
-      expect(findings[0].rule.id).toBe("ds-token-radius");
+      expect(findings[0].rule.checker).toBe("ds-token-radius");
       expect(findings[0].evidence.data?.pillEmFactors).toContain(100);
     });
   });

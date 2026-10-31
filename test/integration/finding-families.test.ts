@@ -89,10 +89,10 @@ describe("finding families on calendar and table fixtures", () => {
     const families = buildFamilyPage(result.findings, { stateFingerprint: result.stateFingerprint, memberLimit: 500, limit: 200 });
     expect(JSON.stringify(result)).toBe(before);
     expect(summarize(result.findings)).toEqual(summary);
-    const listed = families.families as { count: number; memberIds: string[]; rule: { id: string }; value: string }[];
+    const listed = families.families as { count: number; memberIds: string[]; rule: { id: string; checker?: string }; value: string }[];
     expect(listed.flatMap((f) => f.memberIds).sort()).toEqual(result.findings.map((f) => f.id).sort());
 
-    const radius = listed.filter((f) => f.rule.id === "ds-token-radius");
+    const radius = listed.filter((f) => f.rule.checker === "ds-token-radius");
     expect(radius.map((f) => [f.count, f.value])).toEqual([[40, "border-radius: 6px"], [1, "border-radius: 3px"]]);
     // 3.5.0 (revisão Fable P5): os 10 botões só com ícone que o axe reprova por button-name saem da estrutura
     // (mesmo elemento × mesma condição): fica uma família só, a do axe.

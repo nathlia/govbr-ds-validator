@@ -111,10 +111,11 @@ const claim = (path: string, locator: string, rule: Finding["rule"], data: Recor
 describe("B1 — achados de nível de página primeiro", () => {
   it("pageLevelFirst põe govbr-ds-page e os do documento (html) na frente, estável", async () => {
     const r = await scan("/b1");
-    const sources = r.findings.map((f) => f.rule.source);
-    const firstOther = sources.findIndex((s) => s !== "govbr-ds-page");
-    expect(sources.slice(firstOther).includes("govbr-ds-page")).toBe(false);
-    expect(sources[0]).toBe("govbr-ds-page");
+    // 3.6.0: os achados de página citam a norma; o check de página está em rule.checker.
+    const sources = r.findings.map((f) => (f.rule.checker?.startsWith("ds-page-") ? "page" : "other"));
+    const firstOther = sources.findIndex((s) => s !== "page");
+    expect(sources.slice(firstOther).includes("page")).toBe(false);
+    expect(sources[0]).toBe("page");
     expect(pageLevelFirst(r.findings)).toEqual(r.findings);
   });
 });
@@ -122,7 +123,7 @@ describe("B1 — achados de nível de página primeiro", () => {
 describe("B3 — <a class=br-button href> é link; div role=button continua acusado", () => {
   it("F4-06-C: Voltar com href='#' não é achado; o A-06 (div role=button) é", async () => {
     const r = await scan("/b3", { checks: ["structure"] });
-    const tags = r.findings.filter((f) => f.rule.id === "ds-structure-button-tag").map((f) => f.element.locator);
+    const tags = r.findings.filter((f) => f.rule.checker === "ds-structure-button-tag").map((f) => f.element.locator);
     expect(tags).toEqual(["#fechar"]);
   });
 });
@@ -130,7 +131,7 @@ describe("B3 — <a class=br-button href> é link; div role=button continua acus
 describe("B5 — cor do texto autoral e borda por lado", () => {
   it("V-09: p com color #e60000 vira ds-token-color; B-15: hr com só border-top #bbb vira border-top-color", async () => {
     const r = await scan("/b5", { checks: ["tokens"] });
-    const colors = r.findings.filter((f) => f.rule.id === "ds-token-color").map((f) => [f.element.locator, f.evidence.data?.property, f.evidence.data?.observedHex]);
+    const colors = r.findings.filter((f) => f.rule.checker === "ds-token-color").map((f) => [f.element.locator, f.evidence.data?.property, f.evidence.data?.observedHex]);
     expect(colors).toContainEqual(["#erro", "color", "#e60000"]);
     expect(colors).toContainEqual(["#sep", "border-top-color", "#bbbbbb"]);
   });
@@ -153,7 +154,8 @@ describe("B6 — a 1ª página do scan traz ≥ 3 famílias", () => {
     expect(r.data.totalFamilies).toBeGreaterThanOrEqual(3);
     expect(r.data.families.length).toBeGreaterThanOrEqual(3);
     expect(r.text.length).toBeLessThanOrEqual(8_000);
-    expect(r.data.families[0].rule.source).toBe("govbr-ds-page");
+    expect(r.data.families[0].rule.checker).toMatch(/^ds-page-/);
+    expect(r.data.families[0].rule.source).toBe("govbr-ds-kb");
     await client.close();
   });
 });
@@ -249,7 +251,7 @@ describe("3.4.1 — revisão independente da 3.4.0", () => {
 
   it("HIGH 2: <a class=br-button href=\"#\" onclick> não é achado e o verify fica sem decisão (nunca rejected)", async () => {
     const r = await scan("/r1", { checks: ["structure"] });
-    expect(r.findings.filter((f) => f.rule.id === "ds-structure-button-tag")).toEqual([]);
+    expect(r.findings.filter((f) => f.rule.checker === "ds-structure-button-tag")).toEqual([]);
     const v = await verifyFinding({
       finding: claim("/r1", "#a1", { id: "ds-structure-button-tag", source: "govbr-ds-structure", description: "tag" }, { component: "button", observedTag: "a", expectedCondition: EXPECTED_CONDITIONS.structureTag }),
       live: true,

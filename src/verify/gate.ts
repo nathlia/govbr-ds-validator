@@ -42,7 +42,7 @@ import {
   wcagMembership,
   type Membership,
 } from "./registries.js";
-import { relatedRuleForCheckId } from "./registries.js";
+import { asCheckerForm, checkerOf, relatedRuleForCheckId, type CheckerRef } from "./registries.js";
 import { selectPredicate, selectPredicateKnowledgeFree } from "./predicates.js";
 import type { ContextEvidence } from "./contextual.js";
 import { collectAccessibility, collectAnatomy, traceObserver, type TraceObservation, type TraceRequest } from "../evidence/context.js";
@@ -179,24 +179,30 @@ export async function verifyFinding({
     context?: unknown;
   } = { findingSha256: findingSha256(finding), stateFingerprint: null, live, elements: null };
 
-  const rule = knowledgeFree ? checkRuleKnowledgeFree(finding) : checkRule(finding);
+  // 3.6.0: o achado de um check cita a norma em rule.id e nomeia o check em rule.checker. A citação é conferida
+  // como veio; o check (quando a norma citada é dele) escolhe o predicado e a norma resolvida pelo servidor.
+  const resolution = knowledgeFree ? { ref: null } : checkerOf(finding);
+  const checker = resolution.ref;
+  const asChecker = checker ? asCheckerForm(finding, checker) : finding;
+  const rule = knowledgeFree ? checkRuleKnowledgeFree(finding) : checkRule(finding, checker);
   checks.ruleExists = rule.ruleExists;
   checks.applicability = rule.applicability;
   let verifiedBy = rule.verifiedBy;
   notes.push(...rule.notes);
+  if ("note" in resolution && resolution.note) notes.push(resolution.note);
   // 2.15.0: verificação do oráculo sem norma nunca confirma — e também não rejeita o fato medido.
   const ungrounded = rule.ungrounded === true;
   // 3.4.4 (C7): sem norma decidível por máquina, mas com norma da base sobre o assunto — o próximo passo a nomeia.
-  const related = ungrounded ? relatedRuleForCheckId(finding.rule.source, finding.rule.id) : undefined;
+  const related = ungrounded && checker ? relatedRuleForCheckId(checker.family, checker.checker) : undefined;
 
-  const claims = knowledgeFree ? null : checkRegistryClaims(finding);
+  const claims = knowledgeFree ? null : checkRegistryClaims(asChecker);
   if (claims) {
     checks.evidenceConsistent = claims.status;
     notes.push(claims.detail);
     if (claims.status === "fail") verifiedBy = "token-registry";
   }
 
-  const selection = knowledgeFree ? selectPredicateKnowledgeFree(finding) : selectPredicate(finding);
+  const selection = knowledgeFree ? selectPredicateKnowledgeFree(finding) : selectPredicate(asChecker);
   const baseResult = (): GateVerification => ({
     verdict: ungrounded && verdictOf(checks) === "confirmed" ? "unverifiable" : verdictOf(checks),
     verifiedBy,
@@ -509,7 +515,7 @@ function fromMembership<T>(membership: Membership<T>, verifiedBy: string): RuleC
   };
 }
 
-function checkRule(finding: Finding): RuleCheck {
+function checkRule(finding: Finding, checker: CheckerRef | null = null): RuleCheck {
   const { id, source } = finding.rule;
   let check: RuleCheck;
 
@@ -604,15 +610,17 @@ function checkRule(finding: Finding): RuleCheck {
   // check (CHECK_GROUNDING / restrições publicadas), nunca do `implements` do payload — que pode faltar
   // (as projeções não o mostravam até a 2.14.3) ou divergir. Sem norma nomeada: `unverifiable` com
   // próximo passo, nunca `rejected` (o fato medido não é desmentido pela falta de norma).
-  if (source === "govbr-ds-token" || source === "govbr-ds-structure" || source === "govbr-ds-page") {
-    const grounded = groundingForCheckId(source, id);
+  // 3.6.0: o check vem de rule.checker (ou do id, na forma antiga); a citação já foi conferida acima.
+  if (checker) {
+    const { family, checker: checkId } = checker;
+    const grounded = groundingForCheckId(family, checkId);
     if (grounded !== null && grounded.length === 0) {
       if (check.applicability !== "fail") check.applicability = "unknown";
       check.ungrounded = true;
       check.verifiedBy = "rule-grounding-index";
       check.notes.push(
-        `'${id}' é verificação do oráculo sem norma nomeada: o desvio é observação de revisão, não achado do oráculo (D-27/D-32). Isto não desmente o fato medido.${
-          relatedRuleForCheckId(source, id) ? ` Há norma na base sobre o assunto, que o oráculo não decide por máquina: ${relatedRuleForCheckId(source, id)!.id}.` : ""
+        `'${checkId}' é verificação do oráculo sem norma nomeada: o desvio é observação de revisão, não achado do oráculo (D-27/D-32). Isto não desmente o fato medido.${
+          relatedRuleForCheckId(family, checkId) ? ` Há norma na base sobre o assunto, que o oráculo não decide por máquina: ${relatedRuleForCheckId(family, checkId)!.id}.` : ""
         }`
       );
     } else if (grounded !== null) {
@@ -620,8 +628,13 @@ function checkRule(finding: Finding): RuleCheck {
       const differs =
         declared !== undefined && (declared.length !== grounded.length || declared.some((ruleId) => !grounded.includes(ruleId)));
       check.notes.push(
-        `Norma resolvida pelo servidor a partir de '${id}': ${grounded.join(", ")}.${
+        `Norma resolvida pelo servidor a partir da verificação '${checkId}': ${grounded.join(", ")}.${
           differs ? ` O implements enviado (${declared!.join(", ") || "vazio"}) foi ignorado.` : ""
+        }${
+          // 3.6.0: a forma antiga (id do check em rule.id) continua aceita, mas não é citação.
+          checker.how === "legacy-id"
+            ? ` O id do check não é citação: cite rule.id '${grounded[0]}' (source ${grounded[0].startsWith("emag-") ? "emag" : "govbr-ds-kb"}) com rule.checker '${checkId}'.`
+            : ""
         }`
       );
       // Ids do próprio oráculo que não existem na base são defeito do oráculo (o teste de fundamentação
@@ -632,7 +645,7 @@ function checkRule(finding: Finding): RuleCheck {
       if (missing.length > 0) {
         check.ruleExists = "fail";
         check.verifiedBy = "rule-grounding-index";
-        check.notes.push(`'${id}' implementa ${missing.join(", ")}, que não existe(m) no oráculo (defeito do oráculo).`);
+        check.notes.push(`'${checkId}' implementa ${missing.join(", ")}, que não existe(m) no oráculo (defeito do oráculo).`);
       }
     }
   }

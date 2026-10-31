@@ -194,7 +194,7 @@ describe("S-04 / N-01 / N-06: verify não rejeita o que não mediu", () => {
     const { client, call } = await connect();
     try {
       const scan = await call("scan_page", { url: `${base}/ok`, checks: ["tokens"], view: "findings", detail: "summary", maxChars: 100_000 });
-      const color = scan.data.findings.find((f: { rule: { id: string }; element: { locator: string } }) => f.rule.id === "ds-token-color" && f.element.locator.includes("cor"));
+      const color = scan.data.findings.find((f: { rule: { id: string; checker?: string }; element: { locator: string } }) => f.rule.checker === "ds-token-color" && f.element.locator.includes("cor"));
       expect(color).toBeDefined();
       const details = await call("get_finding_details", { ids: [color.id, color.id] });
       expect(details.data.requested).toBe(1); // N-10: id repetido conta uma vez

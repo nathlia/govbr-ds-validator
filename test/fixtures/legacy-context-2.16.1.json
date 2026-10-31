@@ -10,8 +10,8 @@
           ]
         }
       },
-      "sha256": "1fbbe8c2c52ab60e3698cf2274aedb29711ad95aac3f70064562a420e1982348",
-      "chars": 10935,
+      "sha256": "6e0140c6e96aedc3a2013c48cc77c77ab0161d504a2dd2dc3ec39ab3234b2c61",
+      "chars": 10925,
       "total": 48
     },
     {
@@ -30,8 +30,8 @@
           ]
         }
       },
-      "sha256": "eaf9f9473ffd11430e8d2fc3be0bd8d6d0356a300cd30f26a12d76a426820f0b",
-      "chars": 11838,
+      "sha256": "9d808c666c4528719ebabd810cf12b7600e0f6335521218821f205166275c0c5",
+      "chars": 11828,
       "total": 264
     },
     {
@@ -43,8 +43,8 @@
         },
         "limit": 5
       },
-      "sha256": "799e2fad7280a2f4704351f9f77d1c68ba184e06737f04dd06f2a4a28455e21a",
-      "chars": 9223,
+      "sha256": "2c0e2d21eeeaf86a9da99c2fa2925d22a4739d6965585ee0a855d0b6198a4f8a",
+      "chars": 9213,
       "total": 24
     },
     {
@@ -57,8 +57,8 @@
         "query": "foco",
         "detail": "brief"
       },
-      "sha256": "34f68725caa9aeba818a972d6aafc231f453afbda0fb592f4fbd7dfa1ca7ac0a",
-      "chars": 9420,
+      "sha256": "494d99308ef0c221c2c508d4aa9713216f074724564b3b694bb794928e8382c2",
+      "chars": 9410,
       "total": 5
     },
     {
@@ -87,8 +87,8 @@
         "detail": "full",
         "limit": 3
       },
-      "sha256": "378542d9f0a6a01d4a790ef2432b75c155f763f0cc53c705bf59eb16bd152157",
-      "chars": 8121,
+      "sha256": "880f6ca71f49c7cf11159136da94262bb3ad097da7e7adc4f49fb59b47a0ef7d",
+      "chars": 8111,
       "total": 67
     },
     {
@@ -105,13 +105,79 @@
         },
         "force": "required"
       },
-      "sha256": "06170ff406e7fa9df2811168303dbb9dc7de91c847da171a252b1cc1622d00ac",
-      "chars": 11748,
+      "sha256": "df7d773949e66748699c1eae134b9cfa9dbd3223c61308f641b082188babeb43",
+      "chars": 11738,
       "total": 79
     }
   ],
   "changed35": {
     "note": "3.5.0: a lista de restrições de página citáveis ganhou ds-page-focus-order (única diferença, conferida por diff contra a 3.4.4).",
+    "shapes": [
+      {
+        "context": {
+          "components": [
+            "pagination"
+          ]
+        }
+      },
+      {
+        "context": {
+          "components": [
+            "input",
+            "datetimepicker",
+            "upload",
+            "button"
+          ],
+          "terms": [
+            "formulario",
+            "erro",
+            "obrigatorio"
+          ]
+        }
+      },
+      {
+        "context": {
+          "terms": [
+            "foco"
+          ]
+        },
+        "limit": 5
+      },
+      {
+        "context": {
+          "components": [
+            "modal"
+          ]
+        },
+        "query": "foco",
+        "detail": "brief"
+      },
+      {
+        "context": {
+          "regions": [
+            "header"
+          ]
+        },
+        "detail": "full",
+        "limit": 3
+      },
+      {
+        "context": {
+          "components": [
+            "table",
+            "checkbox"
+          ],
+          "terms": [
+            "rótulo",
+            "cabeçalho"
+          ]
+        },
+        "force": "required"
+      }
+    ]
+  },
+  "changed36": {
+    "note": "3.6.0: a nota das restrições de página diz que os ids são checks e que o achado cita a norma em citeAs (mesmo tamanho de orçamento; única diferença, conferida por diff contra a 3.5.0 com pageConstraints removido).",
     "shapes": [
       {
         "context": {

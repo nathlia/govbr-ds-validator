@@ -53,7 +53,7 @@ describe("CSS provenance in a live browser (D-51)", () => {
     expect(by["da-pagina"].authored?.borderRadius).toEqual(["7px"]);
 
     const findings = checkTokenCompliance({ url }, evidence.elements, getTokenRegistry(), ["radius", "spacing"]);
-    expect(findings.map((f) => `${f.element.locator} ${f.rule.id}`).sort()).toEqual([
+    expect(findings.map((f) => `${f.element.locator} ${f.rule.checker}`).sort()).toEqual([
       "#apertado ds-token-spacing",
       "#da-pagina ds-token-radius",
     ]);

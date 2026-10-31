@@ -67,13 +67,13 @@ describe("page facts across shadow roots", () => {
     const url = `${origin}/core`;
     const facts = await withPage(url, (page) => inspectPageStructure(page, url));
     expect(facts.regions).toMatchObject({ header: 1, footer: 1 });
-    expect(checkPageStructure({ url }, facts).map((f) => f.rule.id)).toEqual(["ds-page-skip-link"]);
+    expect(checkPageStructure({ url }, facts).map((f) => f.rule.checker)).toEqual(["ds-page-skip-link"]);
   });
 
   it("does not accuse a web-component header of being absent, and does not charge a page without links for the skip link", async () => {
     const url = `${origin}/so-cabecalho`;
     const result = await scanPage({ url, checks: ["page"] }, new PageScanCache(1));
-    expect(result.findings.map((f) => f.rule.id)).toEqual(["ds-page-footer"]);
+    expect(result.findings.map((f) => f.rule.checker)).toEqual(["ds-page-footer"]);
     expect(result.findings[0].evidence.data).toMatchObject({ region: "footer", observedCount: 0 });
   });
 });

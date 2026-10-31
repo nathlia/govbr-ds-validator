@@ -22,10 +22,10 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { CheckStatus, Finding, Verdict, Verification } from "../schema/finding.js";
 import { canonical } from "../verify/store.js";
-import { findingIdentity, projectFinding, type FindingDetail } from "./findings.js";
+import { findingIdentity, implementsBeyondCitation, projectFinding, type FindingDetail } from "./findings.js";
 
 export const FAMILY_KEY =
-  "rule.source + rule.id + rule.implements + rule.wcag + nature + mode + pathway + severity + " +
+  "rule.source + rule.id + rule.checker + rule.implements + rule.wcag + nature + mode + pathway + severity + " +
   "element.page + stateFingerprint do lote + evidence.data.property + evidenceSignature";
 
 export const EVIDENCE_SIGNATURE_KEY = "sha256(canonical({observed, expected, data})) — 16 hex";
@@ -120,6 +120,7 @@ export function familyKey(finding: Finding, stateFingerprint: string | null = nu
     canonical({
       source: finding.rule.source,
       ruleId: finding.rule.id,
+      checker: finding.rule.checker ?? null,
       implements: [...(finding.rule.implements ?? [])].sort(),
       wcag: finding.rule.wcag ?? null,
       nature: finding.nature,
@@ -288,7 +289,8 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
       rule: {
         source: first.rule.source,
         id: first.rule.id,
-        ...(first.rule.implements?.length ? { implements: [...first.rule.implements] } : {}),
+        ...(first.rule.checker ? { checker: first.rule.checker } : {}),
+        ...(implementsBeyondCitation(first.rule) ? { implements: [...first.rule.implements!] } : {}),
       },
       property: propertyOf(first),
       nature: first.nature,

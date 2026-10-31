@@ -82,7 +82,7 @@ export function demoteToObservations(findings: Finding[], elements: ElementEvide
       data: {
         reason,
         ...(el?.originHost ? { host: el.originHost } : {}),
-        rule: { source: f.rule.source, id: f.rule.id },
+        rule: { source: f.rule.source, id: f.rule.id, ...(f.rule.checker ? { checker: f.rule.checker } : {}) },
         observed: f.evidence.observed,
         ...(f.evidence.expected ? { expected: f.evidence.expected } : {}),
         // 3.4.4 (revisão, M2): estilo autoral da página num estado oculto (menu fechado, diálogo fechado) não
