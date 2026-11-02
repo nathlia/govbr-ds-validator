@@ -253,16 +253,45 @@ export function boundStrings<T>(value: T, maxString = 300, maxArray = 50, depth 
  * na 1ª página (todo spec que o braço com ganhou veio deles). investigate → nomes + contagens; pageLevel →
  * códigos + contagem + next (inteiro no ledger).
  */
+/**
+ * 3.7.1 (teste à mão da 3.7.0: no teto padrão a chegada de A e de B só trazia nomes — nem cláusula nem investigateNote): o
+ * aviso dobra-se no `next`, que nunca sai — `next.hint` (≤ 100 caracteres) com até 3 componentes cujas cláusulas não
+ * couberam. Só quando alguma cláusula foi tirada; sai por último (depois dele, só nomes + next).
+ */
+export const NEXT_HINT_MAX = 100;
+export function nextHintFor(components: string[]): string | null {
+  if (!components.length) return null;
+  const tail = " não mostradas: este next por componente, ou maxChars maior";
+  for (let k = Math.min(3, components.length); k >= 1; k--) {
+    const more = components.length - k;
+    const hint = `cláusulas de ${components.slice(0, k).join(", ")}${more > 0 ? ` +${more}` : ""}${tail}`;
+    if (hint.length <= NEXT_HINT_MAX) return hint;
+  }
+  return null;
+}
+
 function investigateNames(r: Record<string, unknown>): Record<string, unknown> | null {
-  const inv = r.investigate as { items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: unknown; components?: string[] } | undefined;
+  const inv = r.investigate as ({ items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: Record<string, unknown>; components?: string[] } & { [COMPACT_CLAUSES]?: CompactClauses }) | undefined;
   if (!inv) return null;
-  // 3.7.0: da forma compacta (nomes + cláusulas) para só os nomes.
-  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, next: inv.next } } : null;
+  // 3.7.1: o next leva a dica das cláusulas que não couberam (só quando havia cláusula a mostrar).
+  const compact = inv[COMPACT_CLAUSES];
+  const hint = compact ? nextHintFor(Object.keys(compact.byComponent)) : null;
+  const next = inv.next && hint ? { ...inv.next, hint } : inv.next;
+  // 3.7.0: da forma compacta (nomes + cláusulas, ou o aviso) para só os nomes.
+  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, next } } : null;
   const names = [
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
-  return { ...r, investigate: { components: names, next: inv.next } };
+  return { ...r, investigate: { components: names, next } };
+}
+
+/** 3.7.1: o último degrau do investigate — o next sem a dica (fica o passo). */
+function investigateHintOut(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { components?: string[]; next?: Record<string, unknown> } | undefined;
+  if (!inv?.next || !("hint" in inv.next)) return null;
+  const { hint: _h, ...next } = inv.next;
+  return { ...r, investigate: { ...inv, next } };
 }
 
 /** 3.7.0: as cláusulas na forma compacta, por componente (ordem do investigate), e quantas há no total. */
@@ -416,6 +445,7 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["investigate → nomes + 1 cláusula", investigateCompact(1)],
     ["investigate → nomes + aviso", investigateNudge],
     ["investigate → nomes + next", investigateNames],
+    ["investigate → next sem dica", investigateHintOut],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
     ["sessionPending.checklist → contagem", sessionPendingChecklistStep],
@@ -1081,8 +1111,16 @@ function assembleFirstScanPage(
   }
   // Último recurso: com tudo fora, o próprio rótulo "extras" (≈ 9 caracteres) pode ser o que separa a página da 3.6.4 de
   // uma família a mais. Só então ele sai (consider só troca a melhor página quando ganha família): a família vence.
+  const bareLabels = state.labels.filter((l) => l !== "extras");
   if (state.labels.some((l) => l === "extras")) {
-    done = consider({ ...state, labels: state.labels.filter((l) => l !== "extras") });
+    done = consider({ ...state, labels: bareLabels });
+    if (done) return done;
+  }
+  // 3.7.1: a dica das cláusulas no next do investigate sai por último — depois de todo o cabeçalho e dos acréscimos das
+  // famílias; depois dela, só nomes + next (consider só troca a melhor página quando ganha família).
+  const hintOut = investigateHintOut(state.head);
+  if (hintOut) {
+    done = consider({ ...state, head: hintOut, labels: [...bareLabels.filter((l) => l !== "investigate"), "investigate"] });
     if (done) return done;
   }
   if (best) return best;

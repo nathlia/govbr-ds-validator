@@ -521,3 +521,45 @@ describe("3.7.0 revisão — lacuna B: o host <br-button> do web component é ju
     }
   });
 });
+
+// ── 3.7.1: no teto padrão, com a 1ª página cheia de famílias, a dica das cláusulas vai no next ────────────────────
+
+describe("3.7.1 — a dica das cláusulas que não couberam dobra-se no next (teste à mão: chegada de A e B a 8.000)", () => {
+  it("8.000, 1ª página cheia de famílias: investigate = nomes + next.hint (≤ 100), sem família a menos que só com nomes", async () => {
+    const { assembleScan, investigateFor, nextHintFor } = await import("../../src/responses/scan.js");
+    const { buildFamilyPage } = await import("../../src/responses/families.js");
+    const findings = Array.from({ length: 22 }, (_, i) => ({
+      id: `F-${String(i + 1).padStart(3, "0")}`,
+      rule: { source: "axe-core", id: "color-contrast", description: "contraste" },
+      element: { locator: `main > ol > li:nth-of-type(${i + 1}) > span.preco-${i}`, page: "http://x/f" },
+      evidence: { observed: `contraste ${(2 + i / 10).toFixed(2)}:1`, expected: "4.5:1" },
+      severity: "serious", nature: "syntactic", mode: "display", pathway: "deterministic",
+    })) as unknown as Finding[];
+    const page = (b: number) => buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x" }) as unknown as Record<string, unknown>;
+    const components = ["radio", "checkbox", "select", "table", "tag", "tab", "input", "button"];
+    const strong = (c: string) => checklist.unmeasuredStrongCount(c);
+    const pushed = investigateFor(components, "S-page-001", () => ({}), strong, (c) => checklist.investigateClauses(c));
+    const plain = investigateFor(components, "S-page-001", () => ({}), strong);
+    const n = (x: Record<string, unknown>) => (Array.isArray(x.families) ? x.families.length : 0);
+    let hinted = 0;
+    for (let pad = 0; pad <= 3_000; pad += 50) {
+      const head = { contract: "c", kind: "scan", scanId: "S-page-001", filler: "a".repeat(pad) };
+      const r = assembleScan({ ...head, investigate: pushed }, null, "S-page-001", 8_000, page, { firstScanPage: true });
+      const base = assembleScan({ ...head, investigate: plain }, null, "S-page-001", 8_000, page, { firstScanPage: true });
+      expect(JSON.stringify(r).length).toBeLessThanOrEqual(8_000);
+      expect(n(r), `pad ${pad}`).toBe(n(base));
+      const inv = r.investigate as Record<string, any>;
+      expect(inv.next).toMatchObject({ tool: "get_component_spec", arguments: { view: "checklist" } });
+      if (inv.next.hint) {
+        hinted += 1;
+        expect(inv.next.hint.length).toBeLessThanOrEqual(100);
+        expect(inv.next.hint).toMatch(/^cláusulas de radio/);
+      }
+      // sem cláusula a mostrar, nunca há dica
+      expect((base.investigate as Record<string, any>).next.hint).toBeUndefined();
+    }
+    expect(hinted).toBeGreaterThan(0);
+    expect(nextHintFor([])).toBeNull();
+    expect(nextHintFor(["radio", "checkbox", "select", "table"])).toBe("cláusulas de radio, checkbox, select +1 não mostradas: este next por componente, ou maxChars maior");
+  });
+});

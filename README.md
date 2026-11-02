@@ -83,6 +83,14 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.1 — a dica das cláusulas no `next` do investigate (D-155/D-159)
+
+Motivo: no teste à mão da 3.7.0, no teto padrão (8.000) a chegada de A e de B trazia só os nomes no `investigate` (nem
+cláusula nem `investigateNote`). Quando alguma cláusula mensurável foi tirada pela escada, o `next` — que nunca sai — leva
+`hint` (≤ 100 car.: até 3 componentes cujas cláusulas não couberam, "+N", e o que fazer: este next por componente ou
+`maxChars` maior). Conta no orçamento e é o último degrau da 1ª página (depois do cabeçalho e dos acréscimos das famílias);
+depois dele, só nomes + `next`, e só quando isso ganha família. O resto da escada e o `tools/list` não mudam.
+
 ## 3.7.0 — o scan empurra as cláusulas mensuráveis; botão só com ícone fora do circular (D-155/D-159)
 
 Motivo (decisão da autora de 2026-11-01, sobre os rastreios `mecanismo-oraculo-dev-364-2026-11-02.md`,
