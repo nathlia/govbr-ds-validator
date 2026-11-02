@@ -715,59 +715,96 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     ["pageLevel → ids", onHead(pageLevelIdsStep)],
     // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
     // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
-    // 3.6.5 (reexecução das chamadas reais): os acréscimos da 3.6.5 nunca tiram família da 1ª página. Por último, depois
-    // de todo o cabeçalho no piso da 3.6.4: encurtam (alsoIn → só os familyIds; notas curtas) e, se ainda faltar
-    // espaço para uma família, saem para o detalhe (get_finding_details(scanId) os traz). A página só troca para a forma
-    // sem acréscimo quando ela ganha família (empate: fica a com acréscimo). Sem rótulo em `compacted` (custaria o espaço).
-    ["", (s) => {
-      const prev = s.pager;
-      return { ...s, pager: (b) => familyExtrasShort(prev(b)) };
-    }],
-    ["", (s) => {
-      const prev = s.pager;
-      return { ...s, head: headExtrasOut(s.head), pager: (b) => familyExtrasOut(prev(b)) };
-    }],
+    // 3.6.5 (reexecução das chamadas reais): os acréscimos da 3.6.5 nunca tiram família da 1ª página — encolhem por último,
+    // depois de todo o cabeçalho no piso da 3.6.4, e a página só troca para uma forma com menos acréscimo quando ela ganha
+    // família (empate: fica a com mais acréscimo).
+    // 3.6.6 (revisão da 3.6.5, MÉDIA 2): em degraus, cada um marcado em `compacted` (a troca era tudo ou nada e sem rótulo:
+    // no 1º scan da tela A saíam todas as forças e todos os passos). Ordem: notas → alsoIn → passos → força; os dois
+    // últimos família a família, da última para a primeira (assembleFirstScanPage: extrasByFamily).
+    ["extras:notas → curtas", extrasStage(familyNotesShort)],
+    ["extras:alsoIn → curto", extrasStage(familyAlsoInShort)],
+    ["extras:notas → fora", extrasStage(familyNotesOut, headExtrasOut)],
+    ["extras:alsoIn → fora", extrasStage(familyAlsoInOut)],
   ];
 }
 
-/** 3.6.5: as notas da página e o alsoIn na forma curta (só os familyIds). */
-export function familyExtrasShort(p: Record<string, unknown>): Record<string, unknown> {
-  const families = Array.isArray(p.families)
-    ? (p.families as Array<Record<string, unknown>>).map((f) => {
-        if (!f.alsoIn) return f;
-        const { alsoIn, alsoInMore: _m, ...rest } = f;
-        return { ...rest, alsoIn: (alsoIn as Array<{ familyId?: string } | string>).map((a) => (typeof a === "string" ? a : a.familyId)) };
-      })
-    : p.families;
-  const out: Record<string, unknown> = { ...p, families };
+/** 3.6.6: um degrau dos acréscimos — só quando tira algo (senão o rótulo em `compacted` mentiria e custaria espaço). */
+function extrasStage(onPage: (p: Record<string, unknown>) => Record<string, unknown>, onHead?: (h: Record<string, unknown>) => Record<string, unknown>) {
+  return (s: FirstPageState): FirstPageState | null => {
+    const head = onHead ? onHead(s.head) : s.head;
+    const all = s.pager(1_000_000);
+    if (head === s.head && JSON.stringify(onPage(all)) === JSON.stringify(all)) return null;
+    const prev = s.pager;
+    return { ...s, head, pager: (b: number) => onPage(prev(b)) };
+  };
+}
+
+/** 3.6.6: as partes dos acréscimos em `compacted`; todas fora → um rótulo só ("extras"), para o rótulo não custar família. */
+const EXTRAS_PARTS = ["extras:notas", "extras:alsoIn", "extras:passos", "extras:força"];
+function extrasLabels(labels: string[], part: string, allOut: boolean): string[] {
+  const next = [...labels.filter((l) => l !== part), part];
+  return allOut ? [...next.filter((l) => !EXTRAS_PARTS.includes(l)), "extras"] : next;
+}
+
+/** 3.6.6: os acréscimos por família que saem família a família (da última para a primeira), nesta ordem. */
+export const EXTRAS_BY_FAMILY: Array<{ part: string; has: (f: Record<string, unknown>) => boolean; drop: (f: Record<string, unknown>) => Record<string, unknown> }> = [
+  {
+    part: "extras:passos",
+    has: (f) => "interaction" in f,
+    drop: (f) => (({ interaction: _i, ...rest }) => rest)(f),
+  },
+  {
+    part: "extras:força",
+    has: (f) => Boolean(f.rule && typeof f.rule === "object" && "force" in (f.rule as Record<string, unknown>)),
+    drop: (f) => ({ ...f, rule: (({ force: _f, ...r }) => r)(f.rule as Record<string, unknown>) }),
+  },
+];
+
+const mapFamilies = (p: Record<string, unknown>, f: (family: Record<string, unknown>, index: number) => Record<string, unknown>) =>
+  Array.isArray(p.families) ? { ...p, families: (p.families as Array<Record<string, unknown>>).map(f) } : p;
+
+/** 3.6.6: um acréscimo por família fora das famílias de índice ≥ keep (as primeiras `keep` o mantêm). */
+export function familyExtraFrom(p: Record<string, unknown>, extra: (typeof EXTRAS_BY_FAMILY)[number], keep: number): Record<string, unknown> {
+  return mapFamilies(p, (f, i) => (i >= keep && extra.has(f) ? extra.drop(f) : f));
+}
+
+/** 3.6.6: as notas da página na forma curta. */
+export function familyNotesShort(p: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...p };
   if (out.alsoInNote) out.alsoInNote = "alsoIn: outro fato, cartão próprio";
   if (out.interactionNote) out.interactionNote = "interaction.steps → state.steps";
   return out;
 }
 
-/** 3.6.5: sem os acréscimos nas famílias (força, passo de interação, alsoIn) e sem as notas — ficam no detalhe. */
-export function familyExtrasOut(p: Record<string, unknown>): Record<string, unknown> {
-  const families = Array.isArray(p.families)
-    ? (p.families as Array<Record<string, unknown>>).map((f) => {
-        const { alsoIn: _a, alsoInMore: _m, interaction: _i, ...rest } = f;
-        const rule = rest.rule as Record<string, unknown> | undefined;
-        if (rule && "force" in rule) {
-          const { force: _f, ...r } = rule;
-          return { ...rest, rule: r };
-        }
-        return rest;
-      })
-    : p.families;
+/**
+ * 3.6.6: o alsoIn na forma curta — o par scanId + familyId (o get_finding_details pede os dois; MÉDIA 5: a forma curta da
+ * 3.6.5 guardava só o familyId), sem a rota.
+ */
+export function familyAlsoInShort(p: Record<string, unknown>): Record<string, unknown> {
+  return mapFamilies(p, (f) => {
+    if (!f.alsoIn) return f;
+    const { alsoIn, alsoInMore: _m, ...rest } = f;
+    return { ...rest, alsoIn: (alsoIn as Array<{ scanId?: string; familyId?: string }>).map((a) => ({ scanId: a.scanId, familyId: a.familyId })) };
+  });
+}
+
+/** 3.6.6: sem as notas da página (alsoInNote, interactionNote). */
+export function familyNotesOut(p: Record<string, unknown>): Record<string, unknown> {
   const { alsoInNote: _a, interactionNote: _i, ...rest } = p;
-  return { ...rest, families };
+  return rest;
+}
+
+/** 3.6.6: sem o alsoIn nas famílias (fica no detalhe). */
+export function familyAlsoInOut(p: Record<string, unknown>): Record<string, unknown> {
+  return mapFamilies(p, (f) => (({ alsoIn: _a, alsoInMore: _m, ...rest }) => rest)(f));
 }
 
 /** 3.6.5: no cabeçalho, o sub-bloco checklist do sessionPending (a contagem total já está em count) e a revisita só com o nome. */
 function headExtrasOut(h: Record<string, unknown>): Record<string, unknown> {
   let out = h;
   const sp = out.sessionPending as Record<string, unknown> | undefined;
-  if (sp && "checklist" in sp) {
-    const { checklist: _c, ...rest } = sp;
+  if (sp && ("checklist" in sp || "checklistUnregistered" in sp)) {
+    const { checklist: _c, checklistUnregistered: _u, ...rest } = sp;
     out = { ...out, sessionPending: rest };
   }
   const cr = out.checksRun as { executed?: Array<Record<string, unknown> | string> } | undefined;
@@ -886,6 +923,34 @@ function assembleFirstScanPage(
     const part = label.split(" → ")[0];
     state = part ? { ...next, labels: [...state.labels.filter((l) => l !== part), part] } : { ...next, labels: state.labels };
     done = consider(state);
+    if (done) return done;
+  }
+  // 3.6.6 (revisão da 3.6.5, MÉDIA 2): passos e força saem família a família, da última para a primeira — primeiro da
+  // família que ainda não coube (a seguinte à última da melhor página), depois das que estão na página. Cada degrau só é
+  // tentado se tira algo; a melhor página continua a 1ª forma (com mais acréscimo) que alcança o maior número de famílias.
+  for (const extra of EXTRAS_BY_FAMILY) {
+    const all = state.pager(1_000_000);
+    const fams = Array.isArray(all.families) ? (all.families as Array<Record<string, unknown>>) : [];
+    const placed = best ? listedItems(best) : 0;
+    for (let keep = Math.min(placed, fams.length); keep >= 0; keep--) {
+      if (!fams.slice(keep).some(extra.has)) continue;
+      // Da família `keep` em diante (as de índice maior já saíram no degrau anterior): fora o 1º degrau, só tenta quando a
+      // família `keep` tem o acréscimo (senão a página seria a mesma).
+      if (keep < Math.min(placed, fams.length) && !extra.has(fams[keep])) continue;
+      const prev = state.pager;
+      const pager = (b: number) => familyExtraFrom(prev(b), extra, keep);
+      // Tudo fora (nada mais de acréscimo na página inteira): um rótulo só.
+      const rest = pager(1_000_000);
+      const allOut = keep === 0 && !(Array.isArray(rest.families) && (rest.families as Array<Record<string, unknown>>).some((f) => EXTRAS_BY_FAMILY.some((e) => e.has(f)) || "alsoIn" in f)) && !rest.alsoInNote && !rest.interactionNote;
+      state = { ...state, pager, labels: extrasLabels(state.labels, extra.part, allOut) };
+      done = consider(state);
+      if (done) return done;
+    }
+  }
+  // Último recurso: com tudo fora, o próprio rótulo "extras" (≈ 9 caracteres) pode ser o que separa a página da 3.6.4 de
+  // uma família a mais. Só então ele sai (consider só troca a melhor página quando ganha família): a família vence.
+  if (state.labels.some((l) => l === "extras")) {
+    done = consider({ ...state, labels: state.labels.filter((l) => l !== "extras") });
     if (done) return done;
   }
   if (best) return best;

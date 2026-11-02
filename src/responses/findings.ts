@@ -26,6 +26,12 @@ export interface FindingPageOptions {
   cursor?: number;
   limit?: number;
   maxChars?: number;
+  /**
+   * 3.6.6 (revisão da 3.6.5, MÉDIA 3): as ações da receita do lote de cada achado — o passo de interação projetado é o
+   * mesmo da família e do verify_finding (o Tab a partir do carregamento só vale numa receita sem ações). undefined =
+   * receita desconhecida (lote sem estado).
+   */
+  recipeActionsOf?: (finding: Finding) => readonly unknown[] | undefined;
 }
 
 export const FINDING_DEDUPLICATION_KEY =
@@ -95,6 +101,8 @@ export function diffFindings(previous: Finding[], current: Finding[]) {
 export class FindingStore {
   private readonly findings = new Map<string, Finding>();
   private readonly batches = new Map<string, { findings: Finding[]; metadata?: Record<string, unknown> }>();
+  /** 3.6.6: o lote mais recente de cada achado (para a receita do estado na projeção por ids). */
+  private readonly batchOfFinding = new Map<string, string>();
   private batchCounter = 0;
 
   put(items: Finding[]): void {
@@ -106,6 +114,7 @@ export class FindingStore {
     this.batchCounter += 1;
     const scanId = `S-${kind}-${String(this.batchCounter).padStart(3, "0")}`;
     this.batches.set(scanId, { findings: [...items], metadata });
+    for (const finding of items) this.batchOfFinding.set(finding.id, scanId);
     return scanId;
   }
 
@@ -123,6 +132,11 @@ export class FindingStore {
   getBatch(scanId: string): Finding[] | undefined {
     const batch = this.batches.get(scanId);
     return batch ? [...batch.findings] : undefined;
+  }
+
+  /** 3.6.6: o lote (scanId) mais recente que contém o achado. */
+  batchIdOf(findingId: string): string | undefined {
+    return this.batchOfFinding.get(findingId);
   }
 
   /** 3.6.3: os ids dos lotes desta sessão, na ordem em que foram gravados. */
@@ -150,9 +164,10 @@ function truncate(value: string, max = 240): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
-export function projectFinding(finding: Finding, detail: FindingDetail): unknown {
+export function projectFinding(finding: Finding, detail: FindingDetail, recipeActions?: readonly unknown[]): unknown {
   if (detail === "full") return finding;
-  const interaction = interactionOf(finding);
+  // 3.6.6 (MÉDIA 3): com as ações da receita do lote — o mesmo passo que a família e o verify_finding dizem.
+  const interaction = interactionOf(finding, recipeActions);
   // Com passo (ou sem saber qual): o achado o diz; sem passo (fato da marcação), não cresce.
   const needed = interaction && interaction.needed !== false ? (({ basis: _b, ...rest }) => rest)(interaction) : undefined;
 
@@ -234,7 +249,7 @@ export function buildFindingPage(findings: Finding[], options: FindingPageOption
   let budgetHit = false;
 
   while (index < findings.length && projected.length < limit) {
-    const item = projectFinding(findings[index], detail);
+    const item = projectFinding(findings[index], detail, options.recipeActionsOf?.(findings[index]));
     const itemChars = JSON.stringify(item).length + (projected.length ? 1 : 0);
     if (projected.length > 0 && usedChars + itemChars > maxChars) {
       budgetHit = true;

@@ -116,6 +116,23 @@ export class ScanStateMisuseError extends Error {
 export type GateVerification = Verification & { next?: string; issue?: GateIssue };
 
 /**
+ * 3.6.6 (revisão da 3.6.5, ALTA 1): a nota que decidiu ou impediu a decisão (o detalhe do predicado, a limitação do estado
+ * não alcançado, a falta de predicado) — fora do objeto da verificação (que é guardado e devolvido inteiro), para o bloco
+ * `interaction` do verify_finding dizer o que faltou observar.
+ * Revisão da 3.6.6 (MÉDIA 1): com o motivo ESTRUTURADO de a decisão faltar — `recipeGap` = a receita não levou ao que o
+ * predicado precisa observar (estado não alcançado; alvo ausente no estado; predicado contextual com
+ * ContextOutcome.recipeGap). Sem ele, a receita alcançou o estado e o predicado não decidiu por outro motivo.
+ */
+export interface DecisiveNote {
+  note: string;
+  recipeGap: boolean;
+}
+const DECISIVE_NOTE = new WeakMap<GateVerification, DecisiveNote>();
+export function decisiveNoteOf(verification: GateVerification): DecisiveNote | undefined {
+  return DECISIVE_NOTE.get(verification);
+}
+
+/**
  * 3.3.0 (S-04, N-06): o que impediu a decisão, quando não é contraevidência medida. Todos dão
  * `unverifiable` (nunca `rejected`): o fato não foi avaliado, a entrada é que precisa ser corrigida.
  */
@@ -170,6 +187,8 @@ export async function verifyFinding({
 }: GateInput): Promise<GateVerification> {
   const checks: Checks = { ruleExists: "unknown", applicability: "unknown", evidenceConsistent: "unknown", violation: "not-checked" };
   const notes: string[] = [];
+  /** 3.6.6: a decisão faltou porque a receita não levou ao que o predicado observa (ver DecisiveNote). */
+  let recipeGap = false;
   const binding: {
     findingSha256: string;
     stateFingerprint: string | null;
@@ -221,10 +240,15 @@ export async function verifyFinding({
   });
 
   let issue: GateIssue | undefined;
-  const result = (): GateVerification => ({
-    ...baseResult(),
-    ...(issue ? { issue } : {}),
-  });
+  const result = (): GateVerification => {
+    const out: GateVerification = {
+      ...baseResult(),
+      ...(issue ? { issue } : {}),
+    };
+    // 3.6.6: a última nota é a que decidiu (ou impediu) — o predicado, a limitação do estado, o motivo de não haver predicado.
+    if (notes.length) DECISIVE_NOTE.set(out, { note: notes[notes.length - 1], recipeGap });
+    return out;
+  };
 
   if (verdictOf(checks) === "rejected") return result();
   if (!selection.predicate && selection.claimStatus === "contradicted") {
@@ -297,6 +321,7 @@ export async function verifyFinding({
         // Erro de receita/chegada é limitação de quem pediu: nada é verificado num estado que não foi
         // reproduzido — nem confirmado, nem rejeitado como se o defeito não existisse.
         state.limitation = unreachedLimitation(attestation);
+        recipeGap = true;
         verifiedBy = "state-replay";
         notes.push(
           `Limitação: o estado alegado não foi reproduzido. ${state.limitation.detail} A alegação fica sem verificação; isto não indica ausência de defeito.`
@@ -316,6 +341,7 @@ export async function verifyFinding({
         // Estado não reproduzido é limitação, não evidência contra o achado: nada é verificado num
         // estado diferente do alegado, e o veredito fica `unverifiable` (nunca `rejected`).
         verifiedBy = "state-fingerprint";
+        recipeGap = true;
         state.limitation = {
           kind: "state-not-reproduced",
           detail: `O estado reproduzido (${fingerprint}) não é o estado alegado (${claimed.fingerprint}); diverge em: ${state.mismatches.join(", ")}.${
@@ -354,6 +380,7 @@ export async function verifyFinding({
         }
         if (outcome.matched === 0) {
           issue = "locator-no-elements";
+          recipeGap = true;
           checks.violation = "undetermined";
           notes.push(`Nenhum elemento para '${finding.element.locator}' no estado verificado; o axe não decidiu sobre o alvo. Se o defeito só existe depois de uma interação, envie actions ou cite o scanId.`);
           return;
@@ -386,6 +413,7 @@ export async function verifyFinding({
       if (evidence.count === 0 && context && !context.trace) {
         // Predicados contextuais: alvo desconhecido no estado é limitação, não contraprova.
         checks.violation = "undetermined";
+        recipeGap = true;
         verifiedBy = `predicate:${selection.predicate!.id}`;
         notes.push(
           `Nenhum elemento para '${finding.element.locator}' no estado verificado: alvo desconhecido ou estado diferente do alegado. A alegação fica sem verificação; isto não indica ausência de defeito.`
@@ -395,6 +423,7 @@ export async function verifyFinding({
       if (evidence.count === 0 && !context) {
         // 3.3.0 (S-04): alvo ausente é limitação do estado (interação, atraso), não contraprova.
         issue = "locator-no-elements";
+        recipeGap = true;
         checks.violation = "undetermined";
         notes.push(
           `Nenhum elemento para '${finding.element.locator}' no estado verificado (${recipe.actions.length} ação(ões) reproduzida(s)). Se o defeito só existe depois de uma interação, envie actions.`
@@ -470,6 +499,7 @@ export async function verifyFinding({
         checks.violation = outcome.status;
         verifiedBy = `predicate:${selection.predicate.id}`;
         notes.push(outcome.detail);
+        if (outcome.status === "undetermined" && outcome.recipeGap) recipeGap = true;
         if (outcome.status === "undetermined" && outcome.code) issue = outcome.code;
         // 3.4.4 (C8): a regra julgada inaplicável neste estado não pode sair com applicability "pass" —
         // quem lê só `checks` entendia "aplicável e indeterminado".

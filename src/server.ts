@@ -85,7 +85,7 @@ import {
   STYLE_PROPERTIES,
   type StyleProperty,
 } from "./evidence/inspect.js";
-import { verifyFinding } from "./verify/gate.js";
+import { decisiveNoteOf, verifyFinding } from "./verify/gate.js";
 import { mixedStateVerdict, routeOfUrl, stateReferences, type ScanStateInfo } from "./verify/mixedStates.js";
 import { VerificationStore } from "./verify/store.js";
 import { ArrivalSchema, PageActionsSchema, type PageAction } from "./scan/actions.js";
@@ -107,7 +107,6 @@ import {
 import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, evidenceSignature, familyIndex, groupFamilies, type FamilyExtras } from "./responses/families.js";
 import { unitForceOf } from "./responses/normForce.js";
 import { INTERACTION_NOTE, interactionOf } from "./checkers/interaction.js";
-import { CONTEXT_CONDITIONS } from "./verify/contextual.js";
 import { PageScanCache, pageLevelFirst, scanPage, type RevisitItem } from "./scan/pageScan.js";
 import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.js";
 import {
@@ -816,6 +815,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
     return extras;
   };
 
+  /**
+   * 3.6.6 (revisão da 3.6.5, MÉDIA 3): as ações da receita do estado de um lote (scan de página). undefined quando o lote
+   * não tem estado (o passo projetado fica o de sempre).
+   */
+  const recipeActionsOfBatch = (batchScanId?: string): readonly unknown[] | undefined => {
+    const ledger = batchScanId ? findingStore.getBatchMetadata(batchScanId) : undefined;
+    const state = ledger?.state as StateAttestation | undefined;
+    return state?.observed?.url ? (state.recipe?.actions ?? []) : undefined;
+  };
+  /** 3.6.6: a receita do lote mais recente de cada achado, para a projeção por ids concordar com a família e o verify. */
+  const recipeActionsOfFinding = (finding: Finding) => recipeActionsOfBatch(findingStore.batchIdOf(finding.id));
+
   /** 3.6.5 (item 4): as famílias de um scan de página entram no registro da sessão (todas, pela chave completa). */
   const recordScanFamilies = (scanId: string, url: string, fingerprint: string, findings: Finding[]) => {
     session.recordFamilies(
@@ -849,7 +860,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     if ((view ?? "families") === "families") {
       return buildFamilyPage(findings, { cursor, limit, maxChars, memberLimit, stateFingerprint, verificationFor, ...familyExtras(batchScanId) });
     }
-    const page = buildFindingPage(findings, { detail, cursor, limit, maxChars });
+    const page = buildFindingPage(findings, { detail, cursor, limit, maxChars, recipeActionsOf: () => recipeActionsOfBatch(batchScanId) });
     if (cursor) return page;
     const index = familyIndex(findings, stateFingerprint);
     return {
@@ -1763,9 +1774,17 @@ export function createServer(options: ServerOptions = {}): McpServer {
     if (!routes.length) return componentChecklist(component, cursor, undefined, { ...base, pendingStatus: "component-not-found" });
     const provisional = session.clauseIdsPreview(component, clauses.map((c) => c.id));
     const draft = componentChecklist(component, cursor, undefined, { ...base, pendingIds: provisional });
-    const served = new Set(((draft.items as Array<{ citeAs: string }> | undefined) ?? []).map((i) => i.citeAs));
+    // 3.6.6 (revisão da 3.6.5, MÉDIA 4, opção a): registra só a cláusula cujo pendingId a página MOSTROU. Sem id à vista o
+    // agente não teria como fechá-la (pendingResolved pede o id, e o sessionPending mostra até 3 por componente); a opção b
+    // (todo id registrado no sessionPending) custaria espaço na 1ª página do scan, que é das famílias. A cláusula servida
+    // sem id fica no checklist com a nota "sem pendingId: dê estado no relatório"; volta a registrar quando for mostrada.
+    const served = new Set(((draft.items as Array<{ citeAs: string; pendingId?: string }> | undefined) ?? []).filter((i) => i.pendingId).map((i) => i.citeAs));
     session.registerClauses(component, routes, clauses.filter((c) => served.has(c.id)));
-    return componentChecklist(component, cursor, undefined, { ...base, pendingIds: session.clauseIds(component) });
+    const page = componentChecklist(component, cursor, undefined, { ...base, pendingIds: session.clauseIds(component) });
+    // 3.6.6 (revisão da 3.6.6, BAIXA 2): a cláusula mensurável servida sem pendingId fica contada (sessionPending.checklist.unregistered).
+    const candidates = new Set(clauses.map((c) => c.id));
+    session.noteUnregistered(component, ((page.items as Array<{ citeAs: string; pendingId?: string }> | undefined) ?? []).filter((i) => candidates.has(i.citeAs) && !i.pendingId).map((i) => i.citeAs));
+    return page;
   };
 
   const withPendingIds = (scanId: string, route: string, items: NotJudgedItem[]): PendingItem[] => {
@@ -1999,7 +2018,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const pageItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
-          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route)
+          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts())
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
         session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks, components: result.coverage.componentsFound ?? [] });
@@ -2446,7 +2465,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           assembleScan(head, null, scanId ?? "", budget, (pageBudget) =>
             scanId
               ? batchView(found, stateFingerprint, { view: familyView, detail: detail ?? "summary", cursor, limit, maxChars: pageBudget, memberLimit }, scanId)
-              : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars: pageBudget }),
+              : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars: pageBudget, recipeActionsOf: recipeActionsOfFinding }),
           ),
         );
       }
@@ -2595,18 +2614,50 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const recipeActions = (scanState?.recipe.actions ?? actions ?? []) as PageAction[];
       const interaction = knowledgeFree ? undefined : interactionOf(candidate, recipeActions);
       // Reexecução 3.6.5: o bloco só vai para achado mode:"interaction" que precisa de passo, ou cujo passo o oráculo não
-      // sabe. Fato da marcação (axe, estrutura, ordem de foco depois de ações) não ganha bloco. "unknown" com o fato
-      // CONFIRMADO pelo predicado no estado desta receita vira needed:false: a receita basta.
-      // A condição contextual (foco restaurado, erro identificado, mensagem de estado…) é decidida SOBRE as ações da receita:
-      // com ações, o passo é a própria receita.
-      const contextual = CONTEXT_CONDITIONS.some((c) => c.condition === (candidate.evidence?.data as { expectedCondition?: unknown } | undefined)?.expectedCondition);
+      // sabe. Fato da marcação (axe, estrutura, ordem de foco depois de ações) não ganha bloco.
+      // 3.6.6 (revisão da 3.6.5, ALTA 1): "unknown" vira needed:false SÓ quando o predicado DECIDIU no estado desta receita
+      // (violação verificada ou contradita): então a receita leva ao fato. A condição contextual com ações não basta — a
+      // receita pode não chegar ao fato (só abrir a modal, sem fechá-la; nenhum Tab dentro dela; passo quebrado). Estado não
+      // alcançado, predicado sem decisão ou sem predicado: needed:"unknown" com `missing` = o que faltou observar (a nota que
+      // impediu a decisão: o detalhe do predicado ou a limitação do estado).
+      // Revisão da 3.6.6 (MÉDIA 1): sem decisão, o pedido de passo (needed:"unknown", stateSteps, nota "sem o passo, o fato
+      // não aparece") só vale quando a falta é da RECEITA — estado não alcançado/não reproduzido (sem live, nem tentado), alvo
+      // ausente no estado, ou o predicado contextual diz que não observou o que precisa (abrir, fechar, Tab, a última ação):
+      // motivo estruturado `recipeGap` do gate/predicado, não o texto. Nos demais (sujeito que não é o da condição, norma sem
+      // predicado, ambiguidade com o fato no DOM), a receita alcançou o estado: needed:false com o motivo neutro em `missing`.
+      const violation = verification.checks?.violation;
+      const decided = violation === "verified" || violation === "contradicted";
+      const decisive = decisiveNoteOf(verification);
+      const reached = (verification.binding?.state as { reached?: unknown } | undefined)?.reached === true;
+      const recipeGap = decisive?.recipeGap === true || !reached;
+      const missing = decisive?.note ? { missing: clip(decisive.note, 300) } : {};
       const interactionBlock = !interaction || interaction.needed === false
         ? undefined
-        : interaction.needed === "unknown" && verification.verdict === "confirmed"
-          ? { needed: false, text: "o predicado confirmou o fato no estado desta receita: ela basta como state.steps" }
-          : interaction.needed === "unknown" && contextual && recipeActions.length > 0
-            ? { needed: false, text: "a condição é decidida sobre as ações da receita: elas são o passo (state.steps)" }
-            : { needed: interaction.needed, steps: interaction.steps, text: interaction.text, stateSteps: [...recipeActions, ...interaction.steps], note: INTERACTION_NOTE };
+        : interaction.needed === "unknown" && decided
+          ? {
+              needed: false,
+              text: violation === "verified"
+                ? "o predicado confirmou o fato no estado desta receita: ela basta como state.steps"
+                : "o predicado decidiu no estado desta receita (o fato não se sustenta nele): a receita leva ao estado; nenhum passo a mais",
+            }
+          : interaction.needed === "unknown" && !recipeGap
+            ? {
+                needed: false,
+                text: "a receita alcança o estado; o predicado não decidiu por outro motivo (missing), não por falta de passo",
+                ...missing,
+              }
+            : interaction.needed === "unknown"
+              ? {
+                  needed: "unknown" as const,
+                  steps: [],
+                  text: verification.binding?.live
+                    ? "a receita não levou ao que o predicado observa: complete-a com o que falta (missing) e verifique de novo"
+                    : interaction.text,
+                  ...missing,
+                  stateSteps: [...recipeActions],
+                  note: INTERACTION_NOTE,
+                }
+              : { needed: interaction.needed, steps: interaction.steps, text: interaction.text, stateSteps: [...recipeActions, ...interaction.steps], note: INTERACTION_NOTE };
       // 3.6.1 (D-155, item 1): verificar uma das normas de uma pendência, na rota dela, a resolve (qualquer veredito).
       const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict);
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não

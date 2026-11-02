@@ -83,7 +83,89 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
-## 3.6.5 — o que o oráculo devolvia pela metade nas perdas do com (D-155, rastreio dev-364)
+## 3.6.6 — revisão independente do delta da 3.6.5 (D-155)
+
+Motivo: uma revisão independente da 3.6.5 (sondas em `.tmp-eval/rev365b/`, sobre a reexecução rc2 das 136 chamadas
+reais) achou um defeito alto, três médios e um baixo; a revisão da 1ª versão da 3.6.6 achou mais dois (um médio, um
+baixo), incorporados abaixo. Todas as correções são genéricas (por regra de decisão, degrau de
+compactação ou registro de pendência; nada por tela, seletor ou componente nomeado). O `tools/list` não muda em nenhum
+dos seis perfis (sha256 conferido antes e depois). O perfil knowledge-free não ganha nada da base. Teste:
+`test/integration/fix366.test.ts` (7 testes: os 5 dos achados da 3.6.5 falham na 3.6.5; os 2 da revisão da 3.6.6
+falham na 1ª versão da 3.6.6; todos passam na final); três testes do `fix365` ficaram
+mais fortes (nenhum afrouxado).
+
+- **ALTA — "sem passo" só quando o predicado decidiu** (`server.ts`, bloco `interaction` do `verify_finding`). A 3.6.5
+  dava `needed:false` ("as ações da receita são o passo") a toda condição contextual com ações, mesmo quando a receita
+  não levava ao fato: foco restaurado com receita que só abre a modal, `tab-stays-within-modal` sem Tab, receita
+  quebrada (caso real `dev-364-b-01__p03#20`, fill not-found). Agora `needed:false` só sai com a violação **verificada
+  ou contradita** no estado da receita (`checks.violation`). Estado não alcançado, predicado sem decisão ou sem
+  predicado → `needed:"unknown"` com `missing` = a nota que impediu a decisão (o detalhe do predicado — "o fechamento
+  da modal não foi observado na receita" — ou a limitação do estado — "Passo 0 (fill) da receita falhou: not-found"),
+  e `stateSteps` = as ações da receita. A nota sai de `decisiveNoteOf(verification)` (`verify/gate.ts`, fora do objeto
+  da verificação, que é guardado e devolvido inteiro como antes).
+  Revisão da 3.6.6 (MÉDIA): esse `unknown` aparecia em 23 das 44 chamadas reais, e em 20 a receita alcançava o estado e
+  o predicado não decidia por outro motivo (sujeito que não é o da condição — o invocador no lugar do diálogo, a raiz
+  que não é `.br-message` —, norma sem predicado — "localizar não confirma" —, ambiguidade com o fato no DOM): o pedido
+  "complete a receita" e a nota "sem o passo, o fato não aparece" eram falsos. Agora o pedido de passo
+  (`needed:"unknown"`, `stateSteps`, nota) só sai quando a falta é da RECEITA, pelo motivo **estruturado** do gate ou do
+  predicado, não pelo texto: estado não alcançado ou não reproduzido (inclusive sem `live`), alvo ausente no estado
+  (`issue: "locator-no-elements"`), ou o predicado contextual marca `recipeGap` (novo campo de `ContextOutcome`, não
+  muda o `issue`) — abrir/fechar/exibir não observado na receita, nenhum Tab, a mensagem já visível ou o campo
+  inexistente antes da última ação, nenhuma ação que aja (janela do gatilho), sujeito não exibido ou ausente no estado.
+  Os motivos de sujeito/norma/ambiguidade não tinham código (só `rule-not-applicable` e `subject-not-a-dialog`): o
+  `recipeGap` foi posto em cada retorno de falta da receita, e o que não o tem é tratado como "a receita alcançou o
+  estado". Nos demais, `needed:false` com `text` neutro ("a receita alcança o estado; o predicado não decidiu por outro
+  motivo") e `missing` = o motivo, sem `stateSteps` nem nota.
+- **MÉDIA — os acréscimos saem em degraus marcados** (`responses/scan.ts`, 1ª página do scan). A 3.6.5 trocava para a
+  forma sem acréscimos de uma vez e sem rótulo: no 1º scan da tela A, no teto padrão, saíam todas as forças e todos os
+  passos. Agora, depois de todo o cabeçalho no piso da 3.6.4, nesta ordem e cada degrau só se tirar algo: notas curtas
+  → alsoIn curto → notas fora (com o sub-bloco checklist do sessionPending e o detalhe da revisita) → alsoIn fora →
+  passos família a família, da última para a primeira (primeiro a família que ainda não coube) → força família a
+  família. Cada parte entra em `compacted` (`extras:notas`, `extras:alsoIn`, `extras:passos`, `extras:força`; tudo fora
+  → um rótulo só, `extras`). A regra continua: a página só troca para uma forma com menos acréscimo quando ela ganha
+  família (empate: fica a com mais acréscimo), então nenhuma família sai antes dos acréscimos. Último recurso: com tudo
+  fora, o próprio rótulo `extras` sai se for ele a diferença de uma família (a família vence).
+- **MÉDIA — `get_finding_details(ids)` concorda com a família e o verify** (`responses/findings.ts`). A projeção por ids
+  chamava `interactionOf` sem as ações da receita e dizia "a partir do carregamento, 1 Tab" num scan com
+  `[click #mais]`. Agora cada achado leva as ações da receita do lote mais recente que o contém
+  (`FindingStore.batchIdOf`); a lista plana do lote (`view:"findings"`) também.
+- **MÉDIA — nenhuma pendência registrada sem id à vista** (`tools/componentChecklist.ts`, `server.ts`). A 3.6.5
+  registrava toda cláusula servida, mas o id só aparecia nos primeiros itens que coubessem, e o `sessionPending` mostra
+  até 3 por componente: pendência que o agente não tinha como fechar. Escolha: **(a) só a cláusula cujo `pendingId` a
+  página mostrou vira pendência** — a opção (b), todo id registrado à vista no `sessionPending`, gastaria espaço na 1ª
+  página do scan, que é das famílias. A página é montada com ids provisórios, registra as mostradas e é montada de novo
+  (a nota depende só do que a página mostra, então o rascunho e a final medem igual). A cláusula servida sem id fica com
+  a nota "sem pendingId: dê estado no relatório"; volta a registrar quando for mostrada. Revisão da 3.6.6 (BAIXA): ela
+  fica contada — `sessionPending.checklist.components[].unregistered` (o componente entra mesmo sem pendência aberta, e
+  a nota do sub-bloco explica o campo); na forma de ids, `unregistered: {componente: n}`; na de contagem,
+  `sessionPending.checklistUnregistered` ao lado do total. Na 1ª página do scan ele desce e sai junto com o sub-bloco
+  checklist, na escada dos extras (`extras:notas`): não custa família. A escada do checklist nunca
+  desce abaixo da nota curta de pendência: o número de ids vem antes da nota geral inteira (para cada k, do maior ao
+  menor, a nota geral inteira e depois a curta), e o último degrau é nota geral curta + nota de pendência curta (a
+  página da 3.6.4 cabia com a nota geral inteira, que é maior que as duas juntas). Os itens da página continuam os da
+  3.6.4.
+- **BAIXA — alsoIn curto com scanId** (`responses/scan.ts`). A forma curta guardava só o `familyId`; o
+  `get_finding_details` pede `scanId` + `familyId`. Agora `{scanId, familyId}` (sem a rota).
+- **Testes.** `fix365`: "só a página servida registra" exige `pendingId` à vista nas duas páginas e a contagem igual
+  aos ids mostrados; "1ª página do scan" exige a força na página em mais da metade dos tetos que cortam família, o passo
+  em algum, e rótulo `extras*` quando a força sai; "checklist" exige a nota de pendência em toda página com pendências,
+  `pendingId` à vista em toda página com candidata e as obrigações dos elementos na 1ª página. `fix366`: os cinco itens
+  acima e os dois da revisão da 3.6.6 (sujeito errado com a receita completa → sem pedido de passo; `unregistered`
+  igual às cláusulas servidas sem id em checkbox e tab, e nenhuma família a menos com ele no cabeçalho).
+- **Reexecução das 136 chamadas reais** (`thesis-workspace/planejamento/atual/reexecucao-3.6.5-2026-11-02`,
+  `out/replay-3.6.6-all.json`): **0 de 53 chamadas perdem família na 1ª página** frente à 3.6.4; **0 itens de
+  checklist perdidos** (5 listas; nota de pendência nas 5; 18 `pendingId` à vista, todos registrados); 0 erros; acima
+  do teto pedido só `b-p03#19` (igual à 3.6.4). Os quatro casos da revisão: `a-p01#0` e `a-p03#0` — 6/6 famílias, força
+  em 4, passo em 1 das 3 de interação (rc2: força 0, passo 0), `compacted` + `extras:notas`, `extras:passos`;
+  `a-p01#18` e `a-p03#26` — 5/6 famílias (as mesmas da 3.6.4), força 0 e passo 0, `compacted` + `extras`: a página da
+  3.6.4 já estava a 26 caracteres do teto e uma força custa 19 (com o rótulo, 16 sobram). 1ªs páginas de scan com
+  famílias (39): força em todas 3, em parte 23, em nenhuma 13 (rc2: tudo ou nada). `verify_finding` com bloco
+  `interaction` (37 de 44): 12 `needed:false` decidido no estado da receita, 2 `needed:true` (foco visível), 3
+  `needed:"unknown"` com pedido de passo — os três de receita: `b-p03#20` (passo 0 not-found), `b-p02#16` (mensagem
+  visível antes da última ação), `b-p01#10` (alvo ausente no estado) — e 20 neutros (`needed:false` + `missing`:
+  sujeito, norma ou ambiguidade); rc2: 35/2/0, 1ª versão da 3.6.6: 12/2/23. Mediana 3.022,5 → 3.092 car. (máx 4.883).
+- 850 testes (843 da 3.6.5 + os 7 do `fix366`).
+
 
 Motivo: o rastreio das perdas do com nas telas de desenvolvimento com a 3.6.4 (`dev-364-b-01`, `dev-364-a-01`,
 `thesis-workspace/planejamento/atual/mecanismo-oraculo-dev-364-2026-11-02.md`) achou seis causas no oráculo; uma

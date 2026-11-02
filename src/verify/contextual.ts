@@ -46,6 +46,12 @@ export interface ContextOutcome {
   status: ContextOutcomeStatus;
   detail: string;
   code?: ContextOutcomeCode;
+  /**
+   * 3.6.6 (revisão da 3.6.6, MÉDIA 1): o `undetermined` é falta da RECEITA — o que o predicado precisa observar (abrir,
+   * fechar, Tab, a última ação, o sujeito exibido) não aconteceu no estado reproduzido. Ausente = o predicado viu o
+   * estado e não decidiu por outro motivo (sujeito, norma, ambiguidade). Não muda o `issue` da verificação.
+   */
+  recipeGap?: true;
 }
 
 export interface ContextEvidence {
@@ -250,7 +256,7 @@ function contains(haystack: string, needle: string): boolean {
 }
 
 function combine(outcomes: ContextOutcome[], label: string): ContextOutcome {
-  if (outcomes.length === 0) return { status: "undetermined", detail: `Nenhum sujeito de ${label} observado no estado reproduzido.` };
+  if (outcomes.length === 0) return { status: "undetermined", recipeGap: true, detail: `Nenhum sujeito de ${label} observado no estado reproduzido.` };
   const contradicted = outcomes.filter((o) => o.status === "contradicted");
   const undetermined = outcomes.filter((o) => o.status === "undetermined");
   const summary = outcomes.map((o, i) => `[${i + 1}] ${o.detail}`).slice(0, 4).join(" ");
@@ -264,6 +270,7 @@ function combine(outcomes: ContextOutcome[], label: string): ContextOutcome {
       status: "undetermined",
       detail: `${undetermined.length} de ${outcomes.length} sujeito(s) sem decisão possível (${label}). ${summary}`,
       ...(code ? { code } : {}),
+      ...(undetermined.every((o) => o.recipeGap) ? { recipeGap: true as const } : {}),
     };
   }
   return { status: "verified", detail: `Violação recalculada em ${outcomes.length} de ${outcomes.length} sujeito(s): ${label}. ${summary}` };
@@ -497,14 +504,14 @@ function messageBinding(pre: TraceObservation, subject: SubjectSnapshot): { boun
 
 function errorItemIdentified(evidence: ContextEvidence, finding: Finding, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
-  if (typeof window === "string") return { status: "undetermined", detail: window };
+  if (typeof window === "string") return { status: "undetermined", recipeGap: true, detail: window };
   const { pre, final } = window;
   const selector = String((finding.evidence.data as Record<string, unknown>).errorMessage);
   if (!final.message || final.message.found === 0) {
-    return { status: "undetermined", detail: `A mensagem de erro '${selector}' não existe no estado reproduzido.` };
+    return { status: "undetermined", recipeGap: true, detail: `A mensagem de erro '${selector}' não existe no estado reproduzido.` };
   }
   if (!final.message.shown || !final.message.text.trim()) {
-    return { status: "undetermined", detail: `A mensagem de erro '${selector}' não está visível com texto no estado reproduzido.` };
+    return { status: "undetermined", recipeGap: true, detail: `A mensagem de erro '${selector}' não está visível com texto no estado reproduzido.` };
   }
   if (final.message.found > 1) {
     return {
@@ -513,7 +520,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
     };
   }
   if (pre.message?.shown && normalizeText(pre.message.text) === normalizeText(final.message.text)) {
-    return { status: "undetermined", detail: `A mensagem '${final.message.text}' já estava visível antes da última ação: a detecção do erro não foi observada.` };
+    return { status: "undetermined", recipeGap: true, detail: `A mensagem '${final.message.text}' já estava visível antes da última ação: a detecção do erro não foi observada.` };
   }
   const messageText = final.message.text;
   const mismatch = accessibilityMismatch(evidence, final);
@@ -570,7 +577,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
       };
     }
     const read = errorSignals(pre, subject, true, options);
-    if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    if (read === undefined) return { status: "undetermined", recipeGap: true, detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
     const { signals, ds } = read;
     if (signals.length === 0) return { status: "undetermined", detail: `a mensagem "${messageText}" apareceu, mas ${noDetection(ds, options)}` };
     const binding = messageBinding(pre, subject);
@@ -593,7 +600,7 @@ function errorItemIdentified(evidence: ContextEvidence, finding: Finding, option
 
 function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContextOptions = {}): ContextOutcome {
   const window = triggerWindow(evidence);
-  if (typeof window === "string") return { status: "undetermined", detail: window };
+  if (typeof window === "string") return { status: "undetermined", recipeGap: true, detail: window };
   const { pre, final } = window;
   const remaining = [...(pre.visibleText ?? [])];
   const appeared: string[] = [];
@@ -614,7 +621,7 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
       };
     }
     const read = errorSignals(pre, subject, false, options);
-    if (read === undefined) return { status: "undetermined", detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
+    if (read === undefined) return { status: "undetermined", recipeGap: true, detail: "O campo não existia antes da última ação: a reação dele não foi observada." };
     const { signals, ds } = read;
     if (signals.length === 0) return { status: "undetermined", detail: noDetection(ds, options) };
     const associated = appeared.filter((chunk) => contains(facts.ax!.description, chunk) || contains(facts.ax!.name, chunk));
@@ -632,13 +639,13 @@ function errorDescribedInText(evidence: ContextEvidence, options: EvaluateContex
 
 function statusMessage(evidence: ContextEvidence): ContextOutcome {
   const window = triggerWindow(evidence);
-  if (typeof window === "string") return { status: "undetermined", detail: window };
+  if (typeof window === "string") return { status: "undetermined", recipeGap: true, detail: window };
   const { pre, final } = window;
   const outcomes = final.subjects.map((subject): ContextOutcome => {
     const before = pre.subjects.find((s) => s.ref === subject.ref);
     const beforeText = before?.shown ? before.text : "";
     if (!subject.shown || !subject.text.trim() || normalizeText(subject.text) === normalizeText(beforeText)) {
-      return { status: "undetermined", detail: "o contêiner não ganhou texto com a última ação: nenhuma mensagem de status observada." };
+      return { status: "undetermined", recipeGap: true, detail: "o contêiner não ganhou texto com a última ação: nenhuma mensagem de status observada." };
     }
     if (final.focusStable === false) {
       return { status: "undetermined", detail: "o foco ainda mudava no teto de espera: a exceção do foco movido não é decidível." };
@@ -669,7 +676,7 @@ export function decideAnatomyPart(part: AnatomyPart, facts: AnatomyFacts): Conte
   if (!facts.classes.includes(`br-${part.component}`)) {
     return { status: "undetermined", detail: `o sujeito não é raiz .br-${part.component}: a anatomia não se aplica a ele.` };
   }
-  if (!facts.shown) return { status: "undetermined", detail: `a raiz .br-${part.component} não está exibida neste estado.` };
+  if (!facts.shown) return { status: "undetermined", recipeGap: true, detail: `a raiz .br-${part.component} não está exibida neste estado.` };
   switch (part.part) {
     case "mensagem":
       if (facts.messageText.length > 0) return { status: "contradicted", detail: `há texto da mensagem: "${facts.messageText.join(" ").slice(0, 80)}".` };
@@ -717,7 +724,7 @@ function anatomyPart(evidence: ContextEvidence, finding: Finding): ContextOutcom
 
 export function decideCurrentCrumbNotLink(facts: AnatomyFacts): ContextOutcome {
   if (!facts.classes.includes("br-breadcrumb")) return { status: "undetermined", detail: "o sujeito não é raiz .br-breadcrumb." };
-  if (!facts.shown) return { status: "undetermined", detail: "o Breadcrumb não está exibido neste estado." };
+  if (!facts.shown) return { status: "undetermined", recipeGap: true, detail: "o Breadcrumb não está exibido neste estado." };
   const last = facts.breadcrumb.items[facts.breadcrumb.items.length - 1];
   if (!last) return { status: "undetermined", detail: "o Breadcrumb não tem itens." };
   return last.link
@@ -774,10 +781,10 @@ function focusRestored(evidence: ContextEvidence): ContextOutcome {
     if (first && shownAt(first)) {
       return first.obs.active === null
         ? { status: "undetermined", code: "rule-not-applicable", detail: "a modal já estava aberta ao carregar e nada tinha foco: não há 'último elemento focado' — a regra não se aplica a este estado (não é contradição)." }
-        : { status: "undetermined", detail: "a modal já estava aberta ao carregar: a abertura não foi observada." };
+        : { status: "undetermined", recipeGap: true, detail: "a modal já estava aberta ao carregar: a abertura não foi observada." };
     }
     const k = openingIndex(t);
-    if (k < 0) return { status: "undetermined", detail: "a abertura da modal não foi observada na receita." };
+    if (k < 0) return { status: "undetermined", recipeGap: true, detail: "a abertura da modal não foi observada na receita." };
     if (!t.points[k].snap?.modal) return { status: "undetermined", code: "subject-not-a-dialog", detail: "o sujeito não é uma janela modal (.br-modal, role=dialog/alertdialog, <dialog>, aria-modal)." };
     const before = t.points[k - 1].obs;
     const invoker = before.nextTarget ?? before.active;
@@ -786,7 +793,7 @@ function focusRestored(evidence: ContextEvidence): ContextOutcome {
     }
     let j = -1;
     for (let m = k + 1; m < t.points.length; m += 1) if (!shownAt(t.points[m])) { j = m; break; }
-    if (j < 0) return { status: "undetermined", detail: "o fechamento da modal não foi observado na receita." };
+    if (j < 0) return { status: "undetermined", recipeGap: true, detail: "o fechamento da modal não foi observado na receita." };
     const after = t.points[j].obs;
     if (after.focusStable === false || before.focusStable === false) {
       return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois de abrir ou fechar: só o valor estável decide." };
@@ -807,7 +814,7 @@ function initialFocus(evidence: ContextEvidence, finding: Finding): ContextOutco
   const informative = finding.rule.id.endsWith("e0ce4b474163");
   return forEachSubject(evidence, informative ? "foco inicial da modal informativa fora do fechar" : "foco inicial da modal de ação fora da primária", (t) => {
     const k = openingIndex(t);
-    if (k < 0) return { status: "undetermined", detail: "a abertura da modal não foi observada na receita." };
+    if (k < 0) return { status: "undetermined", recipeGap: true, detail: "a abertura da modal não foi observada na receita." };
     const { obs, snap } = t.points[k];
     if (obs.focusStable === false) return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois de abrir: só o valor estável decide." };
     if (!snap?.modal) return { status: "undetermined", code: "subject-not-a-dialog", detail: "o sujeito não é uma janela modal: element.locator deve ser o diálogo, não o invocador." };
@@ -869,7 +876,7 @@ function focusContained(evidence: ContextEvidence): ContextOutcome {
     if (wrapped) return { status: "contradicted", detail: "o Tab a partir do último focável da modal ficou dentro dela." };
     if (unstable) return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois do Tab: só o valor estável decide." };
     if (toDocument) return { status: "undetermined", detail: "o Tab levou o foco ao documento (fora da página): o oráculo não decide se saiu do fluxo da modal." };
-    return { status: "undetermined", detail: "nenhum Tab a partir do último focável da modal aberta foi observado." };
+    return { status: "undetermined", recipeGap: true, detail: "nenhum Tab a partir do último focável da modal aberta foi observado." };
   });
 }
 
@@ -877,7 +884,7 @@ function focusOnClose(evidence: ContextEvidence, finding: Finding): ContextOutco
   const component = finding.rule.id.includes("-menu-") ? "menu" : "message";
   return forEachSubject(evidence, `foco não vai ao fechar ao exibir o ${component === "menu" ? "Menu" : "Message"}`, (t) => {
     const k = openingIndex(t);
-    if (k < 0) return { status: "undetermined", detail: "a exibição do componente não foi observada na receita." };
+    if (k < 0) return { status: "undetermined", recipeGap: true, detail: "a exibição do componente não foi observada na receita." };
     const { obs, snap } = t.points[k];
     if (obs.focusStable === false) return { status: "undetermined", detail: "o foco ainda mudava no teto de espera depois de abrir: só o valor estável decide." };
     if (!snap || !snap.classes.includes(`br-${component}`)) return { status: "undetermined", detail: `o sujeito não é raiz .br-${component}.` };

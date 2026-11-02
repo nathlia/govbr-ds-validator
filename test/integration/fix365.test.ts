@@ -427,13 +427,20 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
       // os ids aparecem nos itens enquanto couberem (os itens da página não caem por causa deles); registradas, sempre
       expect(served1.length).toBeGreaterThan(0);
       for (const i of p1.data.items as Array<Record<string, any>>) if (i.pendingId) expect(candidates.has(i.citeAs)).toBe(true);
+      // 3.6.6 (revisão: o teste passava com zero pendingId): a pendência registrada é a que a página mostrou com id
+      const shown1 = served1.filter((i) => i.pendingId);
+      expect(shown1.length, "pendingId à vista na 1ª página").toBeGreaterThan(0);
       const after1 = await call("scan_page", { url: `${base}/oficina/tabela`, checks: ["axe"] });
       expect(after1.data.sessionPending.checklist.count).toBe(served1.length);
+      expect(after1.data.sessionPending.checklist.count).toBe(shown1.length);
       const p2 = await call("get_component_spec", { component: "table", view: "checklist", cursor: p1.data.nextCursor });
       const served2 = (p2.data.items as Array<Record<string, any>>).filter((i) => candidates.has(i.citeAs));
       expect(served2.length).toBeGreaterThan(0);
+      const shown2 = served2.filter((i) => i.pendingId);
+      expect(shown2.length, "pendingId à vista na 2ª página").toBeGreaterThan(0);
       const after2 = await call("scan_page", { url: `${base}/oficina/tabela`, checks: ["axe"] });
       expect(after2.data.sessionPending.checklist.count).toBe(served1.length + served2.length);
+      expect(after2.data.sessionPending.checklist.count).toBe(shown1.length + shown2.length);
     } finally {
       await client.close();
     }
@@ -504,6 +511,8 @@ describe("3.6.5 reexecução — os acréscimos da 3.6.5 nunca tiram família da
     const page = (extras: boolean) => (b: number) =>
       buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x", ...(extras ? { forceOf: unitForceOf, interaction: true, alsoInFor } : {}) }) as unknown as Record<string, unknown>;
     let compared = 0;
+    let withForce = 0;
+    let withSteps = 0;
     for (let pad = 0; pad <= 4_000; pad += 173) {
       const head = { contract: "c", kind: "scan", scanId: "S-page-002", filler: "x".repeat(pad), sessionPending: { count: 3, items: [], checklist: { note: "n", count: 3, components: [{ component: "message", count: 3, ids: ["P-01", "P-02", "P-03"] }] } } };
       const base = assembleScan({ ...head, sessionPending: { count: 0, items: [] } }, null, "S-page-002", 8_000, page(false), { firstScanPage: true });
@@ -512,13 +521,27 @@ describe("3.6.5 reexecução — os acréscimos da 3.6.5 nunca tiram família da
       expect(n(withExtras), `pad ${pad}`).toBeGreaterThanOrEqual(n(base));
       expect(JSON.stringify(withExtras).length).toBeLessThanOrEqual(8_000);
       if (n(base) < 30) compared += 1;
+      // 3.6.6 (revisão: só contagens — passaria se os extras sumissem sempre): os acréscimos estão na página quando cabem,
+      // e o que saiu está marcado em compacted (ou a página não tem acréscimo nenhum e o rótulo era a diferença de uma família)
+      const fams = (Array.isArray(withExtras.families) ? withExtras.families : []) as Array<Record<string, any>>;
+      if (fams.some((f) => f.rule.force)) withForce += 1;
+      if (fams.some((f) => f.interaction)) withSteps += 1;
+      const labels = (Array.isArray(withExtras.compacted) ? withExtras.compacted : []) as string[];
+      const bare = !fams.some((f) => f.rule.force || f.interaction || f.alsoIn) && n(withExtras) === n(base);
+      if (fams.length && fams.some((f) => !f.rule.force)) expect(labels.some((l) => l.startsWith("extras")) || bare, `pad ${pad}: força fora sem rótulo`).toBe(true);
     }
     expect(compared, "casos em que o teto corta famílias").toBeGreaterThan(5);
+    expect(withForce, "tetos com a força na página").toBeGreaterThan(compared / 2);
+    expect(withSteps, "tetos com o passo na página").toBeGreaterThan(0);
   });
 
   it("checklist: os itens da 1ª página (e das seguintes) são os mesmos com e sem pendingId, geometria e obrigações, nos 36 componentes", () => {
     const obligations = { note: "n", items: Array.from({ length: 4 }, (_, i) => ({ subject: "<input> <button>", citeAs: `govbr-3.7.0-accessibility-global-${String(i).padStart(12, "0")}`, force: "required" })) };
-    for (const component of Object.keys(getComponentSpecs().components)) {
+    let withCandidates = 0;
+    let withIds = 0;
+    let withObligations = 0;
+    const components = Object.keys(getComponentSpecs().components);
+    for (const component of components) {
       const ids = Object.fromEntries(checklist.checklistPendingClauses(component).map((c, i) => [c.id, `P-${100 + i}`]));
       let cursor: number | undefined = 0;
       while (cursor !== undefined) {
@@ -526,9 +549,20 @@ describe("3.6.5 reexecução — os acréscimos da 3.6.5 nunca tiram família da
         const full = checklist.componentChecklist(component, cursor, undefined, { pendingIds: ids, elementObligations: obligations });
         expect((full.items as Array<{ citeAs: string }>).map((i) => i.citeAs), `${component}@${cursor}`).toEqual((plain.items as Array<{ citeAs: string }>).map((i) => i.citeAs));
         expect(JSON.stringify(full).length, `${component}@${cursor}`).toBeLessThanOrEqual(RESPONSE_BUDGET);
+        // 3.6.6 (revisão: só comparava os itens — passaria se os acréscimos sumissem sempre): com pendências, a nota de
+        // pendência está em toda página (nunca abaixo da nota curta) e há pendingId à vista quando a página tem candidata
+        if (Object.keys(ids).length) expect(full.pendingNote, `${component}@${cursor}`).toBeTruthy();
+        const its = full.items as Array<{ citeAs: string; pendingId?: string }>;
+        if (its.some((i) => ids[i.citeAs])) {
+          withCandidates += 1;
+          if (its.some((i) => i.pendingId)) withIds += 1;
+        }
+        if (cursor === 0 && full.elementObligations) withObligations += 1;
         cursor = plain.nextCursor as number | undefined;
       }
     }
+    expect(withIds, "páginas com pendingId à vista").toBe(withCandidates);
+    expect(withObligations, "1ªs páginas com as obrigações dos elementos").toBeGreaterThanOrEqual(components.length / 2);
   });
 
   it("verify_finding: achado de display não ganha bloco interaction; 'unknown' só sem confirmação; confirmado no estado da receita → needed:false", async () => {

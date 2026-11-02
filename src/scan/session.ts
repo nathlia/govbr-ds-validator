@@ -178,6 +178,11 @@ export class ScanSession {
   private readonly delivered = new Set<string>();
   /** 3.6.5 (item 4): assinatura de evidência → onde a família foi vista (scan, rota, estado). */
   private readonly sightings = new Map<string, FamilySighting[]>();
+  /**
+   * 3.6.6 (revisão da 3.6.6, BAIXA 2): cláusulas mensuráveis SERVIDAS no checklist sem pendingId à vista (não viraram
+   * pendência, opção a) — por componente; saem quando forem registradas.
+   */
+  private readonly unregistered = new Map<string, Set<string>>();
 
   /** 3.6.5 (item 4): guarda as famílias de um scan (todas, não só as da página devolvida). */
   recordFamilies(scanId: string, route: string, fingerprint: string, families: Array<{ signature: string; familyId: string; locators: string[] }>): void {
@@ -375,6 +380,25 @@ export class ScanSession {
     return out;
   }
 
+  /** 3.6.6: guarda as cláusulas servidas sem pendingId (as já registradas não contam). */
+  noteUnregistered(component: string, clauseIds: string[]): void {
+    const registered = this.clauseIds(component);
+    const set = this.unregistered.get(component) ?? new Set<string>();
+    for (const id of clauseIds) if (!registered[id]) set.add(id);
+    if (set.size) this.unregistered.set(component, set);
+  }
+
+  /** 3.6.6: quantas cláusulas servidas sem pendingId cada componente tem (as registradas depois saem). */
+  unregisteredCounts(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [component, set] of this.unregistered) {
+      const registered = this.clauseIds(component);
+      const n = [...set].filter((id) => !registered[id]).length;
+      if (n) out[component] = n;
+    }
+    return out;
+  }
+
   /** 3.6.5 (revisão): as cláusulas já registradas de um componente (citeAs → id). */
   clauseIds(component: string): Record<string, string> {
     const out: Record<string, string> = {};
@@ -513,11 +537,20 @@ export const UNITS_NOTE =
  * 3.6.1 (revisão M1/H1): uma entrada por código (rotas contadas, até 3 ids); a cláusula com texto só enquanto o
  * código não teve o texto entregue nesta sessão (depois, só o id); as sem sinal medido (idioma, regiões) só contadas.
  */
-export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string>, delivered: (code: string) => boolean, withText: boolean, currentRoute?: string) {
+export function sessionPendingBlock(
+  open: PendingEntry[],
+  currentIds: Set<string>,
+  delivered: (code: string) => boolean,
+  withText: boolean,
+  currentRoute?: string,
+  /** 3.6.6 (BAIXA 2): cláusulas servidas no checklist sem pendingId, por componente (ScanSession.unregisteredCounts). */
+  unregistered: Record<string, number> = {},
+) {
   // 3.6.3 (revisão HIGH 1): por rota — a pendência deste scan conta aqui só pelas OUTRAS rotas em que segue aberta.
   const openSlots = (e: PendingEntry) => e.slots.filter((x) => x.status === "open" && !(currentIds.has(e.id) && (currentRoute === undefined || x.route === currentRoute)));
   const others = open.filter((e) => openSlots(e).length > 0);
-  if (!others.length) return undefined;
+  const unregisteredComponents = Object.keys(unregistered).filter((c) => unregistered[c] > 0);
+  if (!others.length && !unregisteredComponents.length) return undefined;
   // 3.6.3 (revisão HIGH 1, custo): o id sozinho quando a pendência segue aberta em todas as suas rotas e não é desta página;
   // senão `P-NN×n` = aberta em n outras rotas (quais: `openOn`, que sai primeiro no teto). Rótulos de rota inteiros
   // custavam ~80 caracteres cada (caminhos com uuid) e tiravam famílias da 1ª página.
@@ -535,13 +568,23 @@ export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string
     const component = e.code.slice(CHECKLIST_CODE_PREFIX.length);
     byComponent.set(component, [...(byComponent.get(component) ?? []), e]);
   }
-  const checklist = clauses.length
+  // 3.6.6 (BAIXA 2): o componente com cláusulas servidas sem pendingId entra com `unregistered` (mesmo sem pendência aberta).
+  for (const component of unregisteredComponents) if (!byComponent.has(component)) byComponent.set(component, []);
+  const checklist = byComponent.size
     ? {
-        note: "Cláusulas obrigatórias lidas em get_component_spec (checklist), ainda sem estado: verify_finding citando a cláusula, ou scan_page pendingResolved [{id, status, reason}].",
+        note:
+          "Cláusulas obrigatórias lidas em get_component_spec (checklist), ainda sem estado: verify_finding citando a cláusula, ou scan_page pendingResolved [{id, status, reason}]." +
+          (unregisteredComponents.length ? " unregistered = servidas sem pendingId (não são pendência): dê estado a cada uma no relatório." : ""),
         count: clauses.length,
         components: [...byComponent.entries()].map(([component, entries]) => {
           const labels = entries.map(label);
-          return { component, count: entries.length, ids: labels.slice(0, 3), ...(labels.length > 3 ? { more: labels.length - 3 } : {}) };
+          return {
+            component,
+            count: entries.length,
+            ids: labels.slice(0, 3),
+            ...(labels.length > 3 ? { more: labels.length - 3 } : {}),
+            ...(unregistered[component] ? { unregistered: unregistered[component] } : {}),
+          };
         }),
       }
     : undefined;
@@ -584,10 +627,17 @@ export const CHECKLIST_CODE_PREFIX = "checklist:";
  */
 type ChecklistBlock = {
   count?: number;
-  components?: Array<{ component: string; count: number; ids?: string[] }>;
+  components?: Array<{ component: string; count: number; ids?: string[]; unregistered?: number }>;
   byComponent?: Record<string, number>;
   ids?: string[];
+  unregistered?: Record<string, number>;
 };
+
+/** 3.6.6 (BAIXA 2): o contador `unregistered` por componente, em qualquer forma do sub-bloco. */
+function unregisteredOf(block: ChecklistBlock): Record<string, number> {
+  if (isFull(block)) return Object.fromEntries(block.components!.filter((c) => c.unregistered).map((c) => [c.component, c.unregistered!]));
+  return block.unregistered ?? {};
+}
 
 const isFull = (b: ChecklistBlock) => Array.isArray(b.components);
 const isIds = (b: ChecklistBlock) => !isFull(b) && Array.isArray(b.ids);
@@ -596,9 +646,11 @@ const isIds = (b: ChecklistBlock) => !isFull(b) && Array.isArray(b.ids);
 function checklistIds(block: ChecklistBlock | undefined): ChecklistBlock | Record<string, number> | undefined {
   if (!block || !isFull(block)) return block;
   const components = block.components!;
+  const unregistered = unregisteredOf(block);
   return {
     byComponent: Object.fromEntries(components.map((c) => [c.component, c.count])),
     ids: components.flatMap((c) => (c.ids ?? []).map((id) => `${id}:${c.component}`)),
+    ...(Object.keys(unregistered).length ? { unregistered } : {}),
   };
 }
 
@@ -607,7 +659,9 @@ export function sessionPendingChecklistCount<T extends { checklist?: unknown }>(
   const c = block.checklist as ChecklistBlock | undefined;
   if (!c || typeof c !== "object" || (!isFull(c) && !isIds(c))) return null;
   const total = isFull(c) ? c.components!.reduce((n, x) => n + x.count, 0) : Object.values(c.byComponent ?? {}).reduce((n, x) => n + x, 0);
-  return { ...block, checklist: total };
+  // 3.6.6 (BAIXA 2): na forma de contagem, o contador sem id fica ao lado, por componente (sai com o sub-bloco, na escada dos extras).
+  const unregistered = unregisteredOf(c);
+  return { ...block, checklist: total, ...(Object.keys(unregistered).length ? { checklistUnregistered: unregistered } : {}) };
 }
 
 /** Encolhimento do teto: sem textos; depois só ids. */

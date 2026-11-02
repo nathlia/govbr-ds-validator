@@ -47,6 +47,8 @@ export interface PredicateOutcome {
   detail: string;
   /** 3.4.0 (B2): motivo tipado de um `undetermined` com próximo passo próprio (contextual.ts). */
   code?: "rule-not-applicable" | "subject-not-a-dialog";
+  /** 3.6.6: o `undetermined` é falta da receita (contextual.ts, ContextOutcome.recipeGap). */
+  recipeGap?: true;
 }
 
 export interface ClaimOutcome {

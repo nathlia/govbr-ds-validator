@@ -153,7 +153,14 @@ export interface ChecklistExtras {
  * curta; geometria → marca; nota → fora. Só se nem assim couber (não visto nas chamadas reais), a página volta a ser
  * medida com os acréscimos.
  */
-type Level = { obligations: "full" | "pointer" | "none"; note: "full" | "short" | "none"; geometry: "full" | "marker" | "none"; pendingIds: boolean | number };
+type Level = {
+  obligations: "full" | "pointer" | "none";
+  note: "full" | "short" | "none";
+  geometry: "full" | "marker" | "none";
+  pendingIds: boolean | number;
+  /** 3.6.6: a nota geral da lista, inteira ou curta (o último recurso para caber a nota curta de pendência). */
+  general?: "full" | "short";
+};
 const BASE: Level = { obligations: "none", note: "none", geometry: "none", pendingIds: false };
 const LADDER: Level[] = [
   { obligations: "full", note: "full", geometry: "full", pendingIds: true },
@@ -162,13 +169,21 @@ const LADDER: Level[] = [
   { obligations: "none", note: "short", geometry: "full", pendingIds: true },
   { obligations: "none", note: "short", geometry: "marker", pendingIds: true },
   { obligations: "none", note: "short", geometry: "none", pendingIds: true },
-  // Depois: os ids só nos primeiros itens que couberem (componentChecklist tenta do maior número ao menor); último
-  // recurso, nenhum (as pendências seguem registradas; a nota curta diz como fechá-las).
+  // Depois: os ids nos primeiros k itens que couberem, do maior k ao menor — para cada k, a nota geral inteira e, se não
+  // couber, a curta; por último nenhum id. 3.6.6 (revisão da 3.6.5, MÉDIA 4): a nota curta de pendência
+  // nunca sai (a 3.6.5 descia a "sem nota nem id" em modal@0, step@0, carousel@0 e checkbox@19); a nota geral curta abre
+  // o espaço dela — a página da 3.6.4 cabia com a nota geral inteira, e a curta + a nota de pendência curta é menor.
 ];
 const LAST: Level[] = [
   { obligations: "none", note: "short", geometry: "none", pendingIds: false },
-  { obligations: "none", note: "none", geometry: "none", pendingIds: false },
+  { obligations: "none", note: "short", geometry: "none", pendingIds: false, general: "short" },
 ];
+
+const GENERAL_NOTE =
+  "Pendências suas, não veredito: cada obrigação/proibição do componente na base, com como medi-la. " +
+  "automatic:true = o oráculo mede (scan_page acha; verify_finding decide com a expectedCondition). " +
+  "automatic:false = nenhum check mede: zero achados do scan não diz nada sobre ela; meça como indicado e cite o citeAs.";
+const GENERAL_NOTE_SHORT = "Pendências suas, não veredito. automatic:false = nenhum check mede: meça e cite o citeAs.";
 
 /** Sem o texto da geometria: `geometry: true` marca a cláusula (ou nada, `drop`, para o limite da página da 3.6.4). */
 function withoutGeometry<T extends { measure: Record<string, unknown> }>(item: T, drop = false): T {
@@ -201,16 +216,21 @@ export function componentChecklist(component: string, cursor: number, budget = R
         .filter((r): r is KnowledgeRule => Boolean(r) && STRONG.has(r!.force))
         .map((r) => ({ citeAs: r.id, force: r.force, text: cut(plain(r.originalText), CHECKLIST_TEXT_MAX), measure: measureOf(r) }))
     : [];
-  const hasPending = Object.keys(pendingIds).length > 0;
-  const pendingNote = (level: Level) => {
+  // 3.6.6 (revisão da 3.6.5, MÉDIA 4): a sessão registra pendência só da cláusula cujo pendingId foi MOSTRADO (o servidor
+  // registra o que a página mostrou); a cláusula mensurável servida sem pendingId não é pendência registrada — a nota o diz.
+  // A nota depende só do que a página mostra (candidatas da base × ids à vista), para o rascunho e a página final medirem igual.
+  const hasPending = extras.pendingIds !== undefined;
+  const candidates = hasPending ? new Set(checklistPendingClauses(component).map((c) => c.id)) : new Set<string>();
+  const pendingNote = (level: Level, unshown: number) => {
     if (level.note === "none") return {};
     if (hasPending) {
       return {
         pendingNote: level.note === "full"
-          ? "pendingId = pendência da sessão até ter estado: verify_finding citando citeAs, ou scan_page pendingResolved [{id, status, reason}]."
-          : level.pendingIds === true
+          ? "pendingId = pendência da sessão até ter estado: verify_finding citando citeAs, ou scan_page pendingResolved [{id, status, reason}]." +
+            (unshown ? " Item mensurável sem pendingId não virou pendência: dê a ele um estado no relatório." : "")
+          : unshown === 0
             ? "pendingId: verify_finding ou pendingResolved."
-            : "As obrigações sem medida desta página (com ou sem pendingId à vista) são pendência: verify_finding citando citeAs.",
+            : "pendingId: verify_finding ou pendingResolved; sem pendingId: dê estado no relatório.",
       };
     }
     if (extras.pendingStatus === "component-not-found") {
@@ -241,28 +261,27 @@ export function componentChecklist(component: string, cursor: number, budget = R
       shown += 1;
       return pendingIds[citeAs];
     };
+    const items = page.map((item) => {
+      const { citeAs, ...rest } = item;
+      const id = idOf(citeAs);
+      const it = id ? { citeAs, pendingId: id, ...rest } : item;
+      return level.geometry === "full" ? it : withoutGeometry(it, level.geometry === "none");
+    });
+    const unshown = items.filter((i) => candidates.has(i.citeAs) && !("pendingId" in i)).length;
     return {
     contract: CONTRACT,
     kind: "component-checklist",
     component,
-    note:
-      "Pendências suas, não veredito: cada obrigação/proibição do componente na base, com como medi-la. " +
-      "automatic:true = o oráculo mede (scan_page acha; verify_finding decide com a expectedCondition). " +
-      "automatic:false = nenhum check mede: zero achados do scan não diz nada sobre ela; meça como indicado e cite o citeAs.",
+    note: level.general === "short" ? GENERAL_NOTE_SHORT : GENERAL_NOTE,
     total: baseItems.length,
     automatic,
     unmeasured: baseItems.length - automatic,
     cursor: Math.min(cursor, baseItems.length),
     count: page.length,
-    items: page.map((item) => {
-      const { citeAs, ...rest } = item;
-      const id = idOf(citeAs);
-      const it = id ? { citeAs, pendingId: id, ...rest } : item;
-      return level.geometry === "full" ? it : withoutGeometry(it, level.geometry === "none");
-    }),
+    items,
     ...(related.length ? { related: { note: "Obrigações de fora do componente ligadas a ele pela camada de relações (leia também; não é aplicabilidade).", items: level.geometry === "full" ? related : related.map((r) => withoutGeometry(r, level.geometry === "none")) } } : {}),
     ...obligations(level),
-    ...pendingNote(level),
+    ...pendingNote(level, unshown),
     ...(next !== null
       ? { nextCursor: next, next: step("request-detail", "próximos itens da lista", "get_component_spec", { component, view: "checklist", cursor: next }) }
       : { end: MESSAGES["page-end"] }),
@@ -285,14 +304,21 @@ export function componentChecklist(component: string, cursor: number, budget = R
     const response = compose(level)(page, next);
     if (textSize(response) <= budget) return response;
   }
+  // 3.6.6 (MÉDIA 4): só a cláusula com pendingId à vista vira pendência, então o número de ids vem antes da nota geral
+  // inteira: para cada k (do maior ao menor), a nota geral inteira e, se não couber, a curta.
   const onPage = page.filter((item) => pendingIds[item.citeAs]).length;
-  for (let k = onPage - 1; k > 0; k--) {
-    const response = compose({ obligations: "none", note: "short", geometry: "none", pendingIds: k })(page, next);
-    if (textSize(response) <= budget) return response;
+  for (let k = onPage; k > 0; k--) {
+    for (const general of ["full", "short"] as const) {
+      if (k === onPage && general === "full") continue; // já tentado no último degrau da escada
+      const response = compose({ obligations: "none", note: "short", geometry: "none", pendingIds: k === onPage ? true : k, general })(page, next);
+      if (textSize(response) <= budget) return response;
+    }
   }
   for (const level of LAST) {
     const response = compose(level)(page, next);
     if (textSize(response) <= budget) return response;
   }
-  return budgetPage(baseItems, cursor, compose(LADDER[LADDER.length - 1]), budget);
+  // Inalcançável no orçamento padrão (a nota geral curta + a nota de pendência curta são menores que a nota geral da
+  // página da 3.6.4); com orçamento menor, a página volta a ser medida na forma do último degrau.
+  return budgetPage(baseItems, cursor, compose(LAST[LAST.length - 1]), budget);
 }
