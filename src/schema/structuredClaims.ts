@@ -20,6 +20,8 @@ export const EXPECTED_CONDITIONS = {
   placeholderOnlyLabel: "form-field-label-not-placeholder-only",
   /** 3.5.0 (C03): ícone decorativo ao lado do rótulo escondido da tecnologia assistiva (aria-hidden). */
   decorativeIconHidden: "decorative-icon-aria-hidden",
+  /** 3.7.0 (C01): botão do DS só com ícone tem a classe circle (a única forma só com ícone que o DS admite); senão, rótulo visível. */
+  iconOnlyButtonCircle: "icon-only-br-button-is-circle",
   /** 3.5.0 (C03): o title do link não repete o texto do link (e-MAG 3.5). */
   linkTitleNotRepeated: "link-title-not-repeating-text",
   // 2.13.0 (NAT-85) — verificação contextual delimitada. Cada condição nomeia o estado ESPERADO;

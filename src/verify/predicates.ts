@@ -23,6 +23,7 @@ import { checkComponentStructure, scriptDependentAnchor } from "../checkers/stru
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf } from "../checkers/formLabels.js";
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING, exposedDecorativeIcons, isControl, linkTitleRepeatsText } from "../checkers/decorativeIcons.js";
+import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING, iconOnlyNonCircleButton, isButtonHost } from "../checkers/iconOnlyButton.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
@@ -273,7 +274,7 @@ const placeholderLabelPredicate: Predicate = {
 };
 
 /** 3.5.0 (C03): predicado por elemento — verified quando todos violam, contradicted quando algum não. */
-function elementPredicate(id: string, condition: string, label: string, violates: (el: ElementEvidence) => boolean): Predicate {
+function elementPredicate(id: string, condition: string, label: string, violates: (el: ElementEvidence) => boolean, control: (el: ElementEvidence) => boolean = isControl): Predicate {
   return {
     id,
     properties: [],
@@ -285,13 +286,16 @@ function elementPredicate(id: string, condition: string, label: string, violates
       const outside = elements.filter((el) => el.origin === "ds-web-component" || el.origin === "flatpickr");
       if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de componente do DS ou de terceiro embutido: fora da autoria da página — observação, não violação.` };
       // O localizador tem de nomear o CONTROLE (button, a, papel interativo), não o ícone dentro dele.
-      const notControl = elements.filter((el) => !isControl(el));
+      const notControl = elements.filter((el) => !control(el));
       if (notControl.length) return { status: "undetermined", detail: `${notControl.length} de ${elements.length} elemento(s) não é controle (<${notControl[0].tagName}>): aponte element.locator para o botão/link que contém o ícone e repita.` };
       return onEveryElement(elements, label, (el) => (violates(el) ? null : `${el.locator} não viola neste estado`));
     },
   };
 }
 const decorativeIconPredicate = elementPredicate("decorative-icon", DECORATIVE_ICON_CONDITION, "ícone decorativo exposto ao lado do rótulo", (el) => exposedDecorativeIcons(el) > 0);
+/** 3.7.0 (C01): botão do DS só com ícone sem a classe circle (contradicted quando algum tem circle ou rótulo visível). */
+// 3.7.0 (revisão, lacuna B): o host <br-button> do web component do DS também é o sujeito (a escolha do autor).
+const iconOnlyButtonPredicate = elementPredicate("icon-only-button", ICON_ONLY_BUTTON_CONDITION, "br-button só com ícone fora da variante circular", iconOnlyNonCircleButton, (el) => isControl(el) || isButtonHost(el));
 const linkTitlePredicate = elementPredicate("link-title", LINK_TITLE_CONDITION, "title do link repete o texto", linkTitleRepeatsText);
 
 function citesAny(finding: Finding, grounding: { implements: string[] }, emag?: string, wcag: string[] = []): boolean {
@@ -325,6 +329,11 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   if (data.expectedCondition === DECORATIVE_ICON_CONDITION) {
     if (citesAny(finding, DECORATIVE_ICON_GROUNDING, undefined, ["1.1.1"]) || (finding.rule.source === "govbr-ds-kb" && finding.rule.id === "govbr-3.7.0-accessibility-button-23e3cfbf49f3")) return { predicate: decorativeIconPredicate };
     return none(`A condição '${DECORATIVE_ICON_CONDITION}' só é decidida para ${DECORATIVE_ICON_GROUNDING.implements.join(", ")}, govbr-3.7.0-accessibility-button-23e3cfbf49f3 ou WCAG 1.1.1.`);
+  }
+  // 3.7.0 (C01): só com a condição exata e uma das cláusulas do rótulo do Button (a exceção circular é aplicada pelo predicado).
+  if (data.expectedCondition === ICON_ONLY_BUTTON_CONDITION) {
+    if (citesAny(finding, ICON_ONLY_BUTTON_GROUNDING)) return { predicate: iconOnlyButtonPredicate };
+    return none(`A condição '${ICON_ONLY_BUTTON_CONDITION}' só é decidida para ${ICON_ONLY_BUTTON_GROUNDING.implements.join(", ")} (o rótulo do Button é obrigatório; a exceção é a variante circular). Nome acessível é outro defeito: WCAG 4.1.2.`);
   }
   if (data.expectedCondition === LINK_TITLE_CONDITION) {
     // 3.5.0 (revisão, MED): title redundante não reprova a WCAG 2.4.4 — só a cláusula do e-MAG 3.5 que o proíbe.

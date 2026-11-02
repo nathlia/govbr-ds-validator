@@ -158,22 +158,50 @@ export function investigateFor(
   scanId: string,
   unmeasured: (component: string) => Record<string, number>,
   strong: (component: string) => { strong: number; unmeasured: number } = () => ({ strong: 0, unmeasured: 0 }),
+  /**
+   * 3.7.0 (D-155/D-159; rastreio dev-364: o checklist nunca foi puxado): as cláusulas mensuráveis que nenhum check julga,
+   * por mensurabilidade, com o procedimento — empurradas no item (componentChecklist.investigateClauses).
+   */
+  clauses?: (component: string) => { total: number; clauses: Array<{ citeAs: string; text: string; how: string; short?: string }> },
 ) {
   if (!componentsInDomOrder.length) return undefined;
   const ranked = componentsInDomOrder
     .map((component, i) => ({ component, i, s: strong(component) }))
     .sort((a, b) => b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+  const clauseOf = new Map(ranked.map(({ component }) => [component, clauses?.(component)]));
   const items = ranked.slice(0, 5).map(({ component, s }) => ({
     component,
     stateRef: scanId,
     requiredUnmeasured: s.unmeasured,
     unmeasured: unmeasured(component),
+    ...(() => {
+      const c = clauseOf.get(component);
+      return c && c.clauses.length
+        ? { clauses: c.clauses.map(({ citeAs, text, how }) => ({ citeAs, text, how })), ...(c.total > c.clauses.length ? { clausesMore: c.total - c.clauses.length } : {}) }
+        : {};
+    })(),
     // 3.5.0 (D-155): o passo é a lista de verificação (obrigações/proibições + como medir).
     next: { tool: "get_component_spec", arguments: { component, view: "checklist" } },
   }));
   const rest = ranked.slice(5).map((r) => r.component);
+  // 3.7.0 (revisão da reexecução, lacuna A): a forma compacta (todos os componentes, `id · procedimento curto`) fica guardada
+  // fora do JSON (chave símbolo: não conta no tamanho nem sai na resposta) para os degraus da escada do teto.
+  const compact: CompactClauses = { byComponent: {}, total: 0 };
+  // Nos degraus de poucos componentes, primeiro os que têm cláusula de atributo/área/posição (a parte da anatomia — "parte
+  // X presente" — por último): a ordem do investigate desempata.
+  const anatomyOnly = (component: string) => (clauseOf.get(component)?.clauses ?? []).every((x) => (x.short ?? "").startsWith("parte "));
+  for (const { component } of [...ranked].sort((a, b) => Number(anatomyOnly(a.component)) - Number(anatomyOnly(b.component)))) {
+    const c = clauseOf.get(component);
+    if (!c?.clauses.length) continue;
+    compact.byComponent[component] = c.clauses.map((x) => `${x.citeAs} · ${x.short ?? x.how}`);
+    compact.total += c.total;
+  }
   return {
+    ...(Object.keys(compact.byComponent).length ? { [COMPACT_CLAUSES]: compact } : {}),
     note: "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
+    ...(items.some((i) => "clauses" in i)
+      ? { clausesNote: "clauses: obrigações mensuráveis que nenhum check julgou, DOM/CSS primeiro; meça pelo how e dê a cada uma um estado (medida, violada ou não se aplica). As demais: next." }
+      : {}),
     retrieval: "automatic" as const,
     items,
     more: rest.length ? { remaining: rest.length, components: rest } : null,
@@ -227,12 +255,96 @@ export function boundStrings<T>(value: T, maxString = 300, maxArray = 50, depth 
  */
 function investigateNames(r: Record<string, unknown>): Record<string, unknown> | null {
   const inv = r.investigate as { items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: unknown; components?: string[] } | undefined;
-  if (!inv || inv.components) return null;
+  if (!inv) return null;
+  // 3.7.0: da forma compacta (nomes + cláusulas) para só os nomes.
+  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, next: inv.next } } : null;
   const names = [
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
   return { ...r, investigate: { components: names, next: inv.next } };
+}
+
+/** 3.7.0: as cláusulas na forma compacta, por componente (ordem do investigate), e quantas há no total. */
+type CompactClauses = { byComponent: Record<string, string[]>; total: number };
+const COMPACT_CLAUSES = Symbol("investigate.compactClauses");
+
+/**
+ * 3.7.0 (revisão da reexecução, lacuna A: no teto padrão o investigate só chegava como nomes; 22 de 28 scans): a forma
+ * compacta — os nomes + até `perComponent` cláusulas por componente como `id · procedimento curto` (a letra fica na lista de
+ * verificação) + `clausesMore`. Custa ~1/3 da forma de itens.
+ */
+function investigateCompact(perComponent: number, maxComponents = Infinity) {
+  return (r: Record<string, unknown>): Record<string, unknown> | null => {
+    const inv = r.investigate as ({ items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: unknown; components?: string[]; clauses?: Record<string, string[]> } & { [COMPACT_CLAUSES]?: CompactClauses }) | undefined;
+    const compact = inv?.[COMPACT_CLAUSES];
+    if (!inv || !compact) return null;
+    // só encolhe: cada degrau tem no máximo as cláusulas do anterior (por componente e em número de componentes)
+    const shownNow = inv.clauses ? Object.values(inv.clauses) : null;
+    if (inv.components && !shownNow) return null;
+    if (shownNow && Math.max(...shownNow.map((c) => c.length)) <= perComponent && shownNow.length <= maxComponents) return null;
+    const names = inv.components ?? [
+      ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
+      ...(inv.more?.components ?? []),
+    ];
+    const byComponent = Object.fromEntries(Object.entries(compact.byComponent).slice(0, maxComponents).map(([c, list]) => [c, list.slice(0, perComponent)]));
+    const shown = Object.values(byComponent).reduce((n, l) => n + l.length, 0);
+    return {
+      ...r,
+      investigate: {
+        [COMPACT_CLAUSES]: compact,
+        components: names,
+        clauses: byComponent,
+        ...(compact.total > shown ? { clausesMore: compact.total - shown } : {}),
+        clausesNote: "clauses: obrigações que nenhum check julgou, `id · o que medir e o valor`; meça e dê estado. Letra e demais: next.",
+        next: inv.next,
+      },
+    };
+  };
+}
+
+/**
+ * 3.7.0 (decisão do coordenador, 02/11): famílias primeiro — quando nem uma cláusula cabe, o degrau seguinte é só os nomes
+ * + uma linha (`investigateNote`, ≤ 160 caracteres) com os componentes cujas cláusulas mensuráveis não couberam e a chamada
+ * que as traz. Sai por último antes dos nomes sozinhos (o `next` fica sempre).
+ */
+export const INVESTIGATE_NOTE_MAX = 160;
+export function investigateNoteFor(components: string[]): string | null {
+  if (!components.length) return null;
+  const head = "Cláusulas mensuráveis não couberam: ";
+  const tail = " — get_component_spec{component, view:\"checklist\"} ou scan_page com maxChars maior.";
+  const shown: string[] = [];
+  for (const c of components) {
+    const rest = components.length - shown.length - 1;
+    const candidate = `${head}${[...shown, c].join(", ")}${rest > 0 ? ` +${rest}` : ""}${tail}`;
+    if (candidate.length > INVESTIGATE_NOTE_MAX) break;
+    shown.push(c);
+  }
+  if (!shown.length) return null;
+  const more = components.length - shown.length;
+  return `${head}${shown.join(", ")}${more > 0 ? ` +${more}` : ""}${tail}`;
+}
+
+function investigateNudge(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as ({ items?: Array<{ component: string; requiredUnmeasured?: number }>; more?: { components: string[] } | null; next?: unknown; components?: string[]; clauses?: unknown; investigateNote?: string } & { [COMPACT_CLAUSES]?: CompactClauses }) | undefined;
+  const compact = inv?.[COMPACT_CLAUSES];
+  if (!inv || !compact || inv.investigateNote) return null;
+  const note = investigateNoteFor(Object.keys(compact.byComponent));
+  if (!note) return null;
+  const names = inv.components ?? [
+    ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
+    ...(inv.more?.components ?? []),
+  ];
+  return { ...r, investigate: { [COMPACT_CLAUSES]: compact, components: names, investigateNote: note, next: inv.next } };
+}
+
+type InvestigateItem = { component: string; clauses?: Array<{ citeAs: string; text?: string; how: string }>; clausesMore?: number };
+
+/** 3.7.0: as cláusulas empurradas no investigate → só id + procedimento (a letra fica na lista de verificação). */
+function investigateClausesShort(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { items?: InvestigateItem[] } | undefined;
+  if (!inv?.items?.some((i) => i.clauses?.some((c) => c.text !== undefined))) return null;
+  return { ...r, investigate: { ...inv, items: inv.items.map((i) => (i.clauses ? { ...i, clauses: i.clauses.map(({ citeAs, how }) => ({ citeAs, how })) } : i)) } };
 }
 
 /** 3.6.1 (revisão H1): pendências → forma curta (`P-NN:código⇒emag-x.y`); a cláusula inteira em full. */
@@ -298,7 +410,11 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
   let out = { ...response };
   const squeezed: string[] = [];
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
-    // 3.5.0: os blocos novos cedem primeiro.
+    // 3.5.0: os blocos novos cedem primeiro. 3.7.0: as cláusulas empurradas descem em degraus antes dos nomes.
+    ["investigate.clauses → id + how", investigateClausesShort],
+    ["investigate → nomes + 2 cláusulas", investigateCompact(2)],
+    ["investigate → nomes + 1 cláusula", investigateCompact(1)],
+    ["investigate → nomes + aviso", investigateNudge],
     ["investigate → nomes + next", investigateNames],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
@@ -396,7 +512,8 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     out = next;
     // 3.6.1: etapas da mesma parte se sucedem (pageLevel curto → códigos → contagem): fica só a última.
     const part = label.split(" → ")[0];
-    for (let i = squeezed.length - 1; i >= 0; i--) if (squeezed[i].split(" → ")[0] === part) squeezed.splice(i, 1);
+    // 3.7.0: a etapa de uma parte também apaga as das subpartes (investigate → nomes apaga investigate.clauses).
+    for (let i = squeezed.length - 1; i >= 0; i--) { const p = squeezed[i].split(" → ")[0]; if (p === part || p.startsWith(`${part}.`)) squeezed.splice(i, 1); }
     squeezed.push(label);
   }
   out = { ...out, squeezed };
@@ -621,10 +738,11 @@ const listedItems = (r: Record<string, unknown>) =>
  * de `maxChars` (B p02 #13 voltava 3.191 para 3.000).
  *
  * Ordem das etapas (o que tem continuação ou é constante cede antes): pendências de outras rotas → ids; revisitados →
- * contagem + seletores; investigate → nomes; observações → contagem; chaves constantes das famílias; cobertura →
- * contagens; estado → essencial (a janela da receita e a fonte ficam: o runner do govbr-eval as lê, 3.4.3); ids do diff
- * → continuação; deduplicação; 3.6.3: só então pendências desta página → forma curta (com medida e tarefa) → mínima
- * (uma norma, um lugar com o valor, a tarefa em poucas palavras);
+ * contagem + seletores; observações → contagem; chaves constantes das famílias; ids do diff → continuação; deduplicação;
+ * 3.7.0: investigate (as cláusulas empurradas → só id + procedimento → a 1ª por componente → nomes + next); cobertura →
+ * contagens e estado → essencial (a janela da receita e a fonte ficam: o runner do govbr-eval as lê, 3.4.3), sempre depois
+ * do investigate, como até a 3.6.6; 3.6.3: só então pendências desta página → forma curta (com medida e tarefa)
+ * → mínima (uma norma, um lugar com o valor, a tarefa em poucas palavras);
  * separação por rota → código; textos de limits → códigos; pendências → códigos → contagem. Só então famílias.
  */
 type FirstPageState = {
@@ -654,9 +772,25 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
       if (!rv?.items) return null;
       return { ...h, revisited: { count: rv.items.length, selectors: rv.items.map((i) => clip(i.locator, 80)) } };
     })],
-    ["investigate → nomes", onHead(investigateNames)],
     ["observations → contagem", (s) => (s.obs?.length ? { ...s, head: { ...s.head, observations: minimalObservations(s.obs, scanId) }, obs: null } : null)],
     ["familyKey → removido", (s) => (s.pager === page ? { ...s, pager: (b) => constants(page(b)) } : null)],
+    ["stateDiff ids → view:diff", onHead((h) => {
+      const diff = h.stateDiff as { findings?: Record<string, unknown> } | undefined;
+      const f = diff?.findings;
+      if (!f || (!(f.addedIds as unknown[] | undefined)?.length && !(f.removedIds as unknown[] | undefined)?.length && !(f.notRemeasuredIds as unknown[] | undefined)?.length)) return null;
+      const { addedIds: _a, removedIds: _r, notRemeasuredIds: _n, ...counts } = f;
+      return { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
+    })],
+    ["deduplication → ledger", onHead((h) => (h.deduplication ? (({ deduplication: _d, ...rest }) => rest)(h) : null))],
+    // 3.7.0 (D-155/D-159; rastreio dev-364): o investigate traz as cláusulas mensuráveis empurradas — ele cede DEPOIS do
+    // que tem continuação no ledger (observações, cobertura, estado, ids do diff, deduplicação) e ANTES das pendências desta
+    // página; em degraus (letra → só id + procedimento → a 1ª por componente → nomes + next), nunca some e nunca tira família.
+    ["investigate.clauses → id + how", onHead(investigateClausesShort)],
+    ["investigate → nomes + 2 cláusulas", onHead(investigateCompact(2))],
+    ["investigate → nomes + 1 cláusula", onHead(investigateCompact(1))],
+    // 3.7.0 (revisão da reexecução, lacuna A): no teto padrão a 1ª página está cheia de famílias — a cobertura e o estado (com
+    // continuação no ledger) cedem antes da ÚLTIMA cláusula; o investigate desce a 3 componentes, depois a 1, e só então a nomes.
+    ["investigate → nomes + 1 cláusula (3 componentes)", onHead(investigateCompact(1, 3))],
     ["coverage → contagens", onHead((h) => {
       const c = h.coverage as Record<string, unknown> | undefined;
       if (!c || c.compact) return null;
@@ -693,14 +827,8 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
         },
       };
     })],
-    ["stateDiff ids → view:diff", onHead((h) => {
-      const diff = h.stateDiff as { findings?: Record<string, unknown> } | undefined;
-      const f = diff?.findings;
-      if (!f || (!(f.addedIds as unknown[] | undefined)?.length && !(f.removedIds as unknown[] | undefined)?.length && !(f.notRemeasuredIds as unknown[] | undefined)?.length)) return null;
-      const { addedIds: _a, removedIds: _r, notRemeasuredIds: _n, ...counts } = f;
-      return { ...h, stateDiff: { ...diff, findings: { ...counts, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } };
-    })],
-    ["deduplication → ledger", onHead((h) => (h.deduplication ? (({ deduplication: _d, ...rest }) => rest)(h) : null))],
+    ["investigate → nomes + 1 cláusula (1 componente)", onHead(investigateCompact(1, 1))],
+    ["investigate → nomes + aviso", onHead(investigateNudge)],
     // 3.6.3 (rastreio dev-362-b-01 §1): as pendências desta página só encolhem depois de observações, cobertura, estado,
     // ids do diff e deduplicação — e a forma curta guarda o localizador, o valor medido e a tarefa (notJudged.pendingLine).
     ["pageLevel → curto", onHead(pageLevelShortStep)],
@@ -713,6 +841,9 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // 3.6.3 (revisão MEDIUM 2): o piso da 1ª página enquanto uma família puder sair no lugar — só os ids das pendências
     // (P-NN), com a contagem e a continuação; nunca a contagem sozinha.
     ["pageLevel → ids", onHead(pageLevelIdsStep)],
+    // 3.7.0 (decisão de 02/11): o aviso do investigate (componentes cujas cláusulas não couberam + a chamada) fica até as
+    // pendências estarem no piso de ids (nenhuma pendência some) — só então nomes + next, o último degrau antes dos acréscimos.
+    ["investigate → nomes", onHead(investigateNames)],
     // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
     // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
     // 3.6.5 (reexecução das chamadas reais): os acréscimos da 3.6.5 nunca tiram família da 1ª página — encolhem por último,
@@ -921,7 +1052,8 @@ function assembleFirstScanPage(
     // 3.6.2: `compacted` lista só a PARTE encolhida (cada bloco mostra a sua forma e a continuação); etapas da mesma
     // parte não se repetem — a lista custava até ~350 caracteres, o espaço de uma família.
     const part = label.split(" → ")[0];
-    state = part ? { ...next, labels: [...state.labels.filter((l) => l !== part), part] } : { ...next, labels: state.labels };
+    // 3.7.0: a parte também apaga as subpartes (investigate apaga investigate.clauses: a forma final já diz tudo).
+    state = part ? { ...next, labels: [...state.labels.filter((l) => l !== part && !l.startsWith(`${part}.`)), part] } : { ...next, labels: state.labels };
     done = consider(state);
     if (done) return done;
   }

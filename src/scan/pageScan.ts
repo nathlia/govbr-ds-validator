@@ -14,6 +14,7 @@ import { collectAnatomy } from "../evidence/context.js";
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
+import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
 import { contrastPending, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
@@ -534,6 +535,12 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       const icons = checkDecorativeIcons({ url: request.url }, controls);
       rawFindings.push(...icons.findings);
       observations.push(...icons.observations);
+      // 3.7.0 (C01): botão do DS só com ícone fora da variante circular (o rótulo é obrigatório; a exceção é o circular).
+      // 3.7.0 (revisão, lacuna B): e os hosts <br-button> do web component do DS, julgados pela API do host.
+      const buttonHosts = scoped ? region.filter((el) => el.tagName === "br-button") : (await inspectPageComputedStyles(page, request.url, "br-button", [])).elements;
+      const iconOnly = checkIconOnlyButtons({ url: request.url }, [...controls, ...buttonHosts]);
+      rawFindings.push(...iconOnly.findings);
+      observations.push(...iconOnly.observations);
     }
     const tableEvidence = scoped ? region.filter((el) => el.tagName === "table") : (await inspectPageComputedStyles(page, request.url, "table", [])).elements;
     const unnamedTables = unnamedTablesOf(tableEvidence, facts, scoped);

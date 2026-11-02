@@ -274,7 +274,7 @@ export function pageLevelMeasured(checks: string[], componentsRestricted = false
   const out: string[] = [];
   if (checks.includes("page")) out.push("header/footer", "skip-link", "focus-order");
   if (checks.includes("axe")) out.push("title-present", "lang-valid", "h1", "regions (axe)");
-  if (checks.includes("structure")) out.push(...(componentsRestricted ? ["component-structure"] : ["component-structure", "placeholder-label", "decorative-icon", "link-title", "focus-visible"]));
+  if (checks.includes("structure")) out.push(...(componentsRestricted ? ["component-structure"] : ["component-structure", "placeholder-label", "decorative-icon", "icon-only-button", "link-title", "focus-visible"]));
   return out;
 }
 

@@ -83,6 +83,75 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.0 — o scan empurra as cláusulas mensuráveis; botão só com ícone fora do circular (D-155/D-159)
+
+Motivo (decisão da autora de 2026-11-01, sobre os rastreios `mecanismo-oraculo-dev-364-2026-11-02.md`,
+`revisao-fable-melhorias-oraculo-2026-10-30.md` e `auditoria-mensurabilidade-kb-2026-10-30.md` §5/C01/C20): na tela B o
+braço com o oráculo não chamou `get_component_spec` em nenhum dos 3 trios e na A seguiu 1 de 15 `investigate` — a lista
+de verificação existe, mas não é PUXADA; o botão só com ícone sem `circle` e a área de toque 48×48 nunca foram achados.
+Tudo genérico (por regra da base, estratégia declarada, exemplo oficial do DS); nada por tela. O `tools/list` e as
+instruções do `initialize` não mudam (sha256 conferidos nos perfis evaluation e knowledge-free).
+
+- **C01 — `br-button` só com ícone fora da variante circular** (`src/checkers/iconOnlyButton.ts`, check `structure`):
+  `<button>`/`<a>` com `br-button`, exibido e exposto, cujo conteúdo renderizado é só ícone (`i`/`svg`/`img`/`span.fa-*`) e
+  nenhum texto VISÍVEL (o texto precisa ter caixa própria — vale dentro de `display: contents`; `sr-only`/recortado, caixa de
+  1px com overflow escondido, opacidade 0 ou dentro de `svg` não contam: evidência nova `content.iconOnlyVisual`, colhida só
+  em `.br-button` e fora do knowledge-free), sem `circle` (nem `is-circle`, nem o atributo `[circle]`). `<img alt="…">`
+  sozinho conta como ícone (nenhum exemplo oficial do Button usa `img`). Cita `govbr-3.7.0-component-button-7ef75d42ac65`
+  ("O rótulo é um elemento obrigatório.", required; `implements` + a anatomia `…9d77803305c0`); o texto do achado diz,
+  como REGRA DO CHECK e não como letra do DS, a exceção do legado (`govbr-3.7.0-component-button-4d7b5f978df1`: "A
+  exceção ocorre na versão tipo circular…") e a exclusão dos hospedeiros. Hospedeiros: botão dentro de componente cujos
+  exemplos oficiais trazem o mesmo botão (lido de `data/component-specs.json`: `br-input`, `br-tag`), em qualquer ponto
+  da cadeia de ancestrais (`br-list` dentro de `br-input` conta). Deduplicação: botão só com ícone SEM nome fica com o
+  achado de nome (WCAG 4.1.2 / axe `button-name`), sem o C01 no mesmo elemento; o `verify_finding`
+  (`expectedCondition: "icon-only-br-button-is-circle"`, predicado `icon-only-button`) decide o fato também nele. Oculto,
+  `aria-hidden`, `role=none|presentation` ficam de fora; interno de web component do DS vira observação. Falso negativo
+  conhecido: ícone por `background-image` ou caractere (`&times;`).
+  Revisão da reexecução (lacuna B): o host `<br-button>` do `@govbr-ds/webcomponents` (o da tela B) é julgado pela API
+  dele — rótulo pelo atributo `label` ou pelo texto do slot, ícone pelo atributo `icon` ou pelo render, circular pelo
+  atributo `circle` — e o achado sai no localizador do host; o `button.br-button` no shadow root (do DS) não gera achado
+  nem observação. Na chegada da Vistorias: 30 achados C01 (as ações com `title` das 10 linhas); as 10 sem nome ficam com
+  o `button-name` do axe (deduplicação). As páginas de controle não carregam o pacote de web components (só existe
+  embutido no build do pnip): testado com um elemento próprio de mesma API no `fix370`.
+- **`scan_page.investigate` empurra as cláusulas**: cada item traz até 2 `clauses` (`citeAs`, letra curta, `how` = o que
+  selecionar → o que medir → `espera:` o valor) e `clausesMore`; `clausesNote` diz o que fazer. Revisão da 3.7.0 (ALTA):
+  só entra a cláusula cujo TEXTO dá o procedimento — parte obrigatória da tabela de anatomia, área mínima em px, atributo
+  citado entre crases (valor literal curto ou "não vazio"; a força dá presente/ausente) ou lugar nomeado ("à esquerda",
+  "no topo"; não "acima de duas linhas", nem ordem de navegação) — e nunca a condicional ("Quando…", "Caso…", "do tipo…").
+  Nos 36 componentes, 62 cláusulas empurradas (51 de anatomia, 10 de posição, 1 de atributo), nenhuma com o genérico
+  "espera: presente" da 1ª versão (72, 29 genéricas). Na 1ª página o investigate cede depois do que tem continuação no
+  ledger (observações, ids do diff, deduplicação) e antes da cobertura, do estado e das pendências, em degraus marcados em
+  `compacted` (`investigate.clauses` → só id + procedimento → a 1ª por componente → `investigate` nomes + next). Nunca
+  some e nunca tira família (teste em todo teto de 3k a 16k).
+  Revisão da reexecução (lacuna A): degraus compactos — nomes + `clauses` por componente como `id · procedimento curto`
+  (2, depois 1 por componente, depois 1 em 3 componentes); cobertura e estado cedem antes da última cláusula (1 componente);
+  depois nomes + `investigateNote` (≤ 160 car.: os componentes cujas cláusulas não couberam + a chamada que as traz), que
+  fica até as pendências estarem no piso de ids; só então nomes + next (famílias e pendências nunca saem por ele). Nas 136
+  chamadas reais (`.tmp-eval/fix370-budget/`): dos 22 scans só com nomes, 6 passam a ter cláusula, 8 o aviso, 8 só nomes + next.
+- **Lista de verificação por mensurabilidade** (`get_component_spec` view `checklist`): itens em ordem de posto (dom-css,
+  geometry, anatomy, keyboard, viewport, visual, judgement, source; no mesmo posto, o que nenhum check mede primeiro). Com
+  procedimento derivável, `measure.how` é ele (`when` quando só vale em toque/móvel: a de 48×48 `…1c0146e93d2e`); sem ele,
+  a cláusula é julgamento (`measurability: "judgement"`, `how` sem valor esperado; teclado, largura e captura mantêm a
+  instrução da estratégia). O rótulo do Button (agora medido pelo C01) traz `measure.procedure` com a exceção como
+  PROCEDIMENTO DO ORÁCULO e a proveniência dita (id legado inteiro); a letra e a `condition` lost-exception são as da base.
+- **C20 (48×48) não entra como detector.** Ligar o `target-size` do axe (WCAG 2.5.8, 24×24, desligado por padrão no
+  4.12) foi medido nos controles `a/`: 30 achados em 10 páginas, todos nos links de texto da lista do esqueleto
+  (`li > a`, 19 px de altura), também nos gêmeos `-C` e fora das células do catálogo — não é "zero falso positivo"
+  demonstrável, então a regra continua desligada. A cláusula 48×48 (`foundation-global-1c0146e93d2e`) é expressa como
+  procedimento quando servida (`espera: ≥ 48×48px`, `when`: toque/móvel; a de 24×24, `…5f213b4dbcb5`, `≥ 24×24px`); um
+  detector exigiria emulação móvel no scan (janela congelada 1280×900) — não feito.
+- **Controles (sem modelo):** portão NAT-86 `a/` (`npm run portao:oraculo -- --divisao desenvolvimento`, matriz
+  d35b33f5) **GO**, 171 linhas: 165 idênticas à 3.6.6 e 6 só no hash de estado (como 3.6.5 × 3.6.6). Varredura das 80
+  páginas `a/` em cada receita: **0 achados C01**. Extensão de desenvolvimento F5-06 (govbr-eval
+  `controles/extensao-370/`, ala `c/` do corpus; fora do catálogo e da matriz congelados, reserva intocada): medição
+  independente 5/5 gêmeos, 17/17 fatos, axe padrão limpo; C01 + `verify_finding` confirmam só os dois defeituosos (só
+  ícone com aria-label; só ícone com texto recortado) e nada nos três conformes (circular, rótulo visível, botão do Input);
+  fora do C01, os achados de cada par são idênticos.
+- Testes: 860 (850 da 3.6.6 + 10). `test/integration/fix370.test.ts` (10 testes: C01 na página e no verify, hospedeiros, knowledge-free,
+  investigate com cláusulas e a escada do teto, checklist ordenado e procedimentos). Ajustes de fixture em três testes 3.6.x pela ordem nova (a
+  cobertura encolhe depois do investigate; a 2ª página do checklist de `table` não tem mais cláusula mensurável →
+  `tab`; `checkbox`/`tab` agora mostram todos os `pendingId` → `radio` e `table` entram).
+
 ## 3.6.6 — revisão independente do delta da 3.6.5 (D-155)
 
 Motivo: uma revisão independente da 3.6.5 (sondas em `.tmp-eval/rev365b/`, sobre a reexecução rc2 das 136 chamadas

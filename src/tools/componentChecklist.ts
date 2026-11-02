@@ -13,6 +13,8 @@ import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTitleRecord, listingOrder } from "../responses/retrieval.js";
 import { CONTRACT, MESSAGES, RESPONSE_BUDGET, budgetPage, step, textSize } from "../responses/contract.js";
 import { oracleMeasuresFor, type OracleMeasure } from "./oracleCoverage.js";
+import { getComponentSpecs } from "../data/load.js";
+import { BUTTON_LABEL_ANATOMY, BUTTON_LABEL_LEGACY, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
 export const CHECKLIST_TEXT_MAX = 180;
 const STRONG = new Set(["required", "prohibited"]);
@@ -100,15 +102,164 @@ function strategyMeasure(rule: KnowledgeRule): { how: string; properties?: strin
   }
 }
 
-function measureOf(rule: KnowledgeRule): Record<string, unknown> {
+// ════════════════════════════════════════════════════════════════════════════
+// 3.7.0 (D-155/D-159): mensurabilidade e procedimento de medida por cláusula
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Nos trios dev-364 o agente com o oráculo não PUXOU a lista de verificação (tela B: zero get_component_spec em 3
+// execuções; tela A: 1 de 15 investigate seguidos). A 3.7.0 EMPURRA para o scan as cláusulas que se medem e ordena a
+// lista por mensurabilidade.
+//
+// Revisão da 3.7.0 (ALTA): a estratégia de verificação declarada na base (`dom`, `computed-style`) não basta — a 1ª
+// versão empurrava "deve ser ignorado pelos leitores" ou "O HTML Base do componente" com "espera: presente", uma
+// expectativa que a cláusula não diz (lida como norma do oráculo, convida falso positivo). Agora uma cláusula só tem
+// PROCEDIMENTO quando o próprio texto dá o que medir E o valor: a parte obrigatória da anatomia ("| n | Parte | … |
+// Obrigatório |"), uma dimensão em px, um atributo citado entre crases (com a força dando presente/ausente), ou uma
+// posição visual nomeada. Só essas são empurradas no investigate e ficam no topo da lista; o resto fica na lista como
+// julgamento, sem expectativa inventada. Nada por tela, nada por gabarito.
+
+/**
+ * Postos de mensurabilidade, do mais mensurável ao que pede juízo; `source` = não observável na página. dom-css: atributo
+ * citado ou área mínima em px; geometry: lugar nomeado ("à esquerda"); anatomy: parte obrigatória da tabela de anatomia
+ * (o nome da parte não é seletor: o agente a localiza).
+ */
+export const MEASURABILITY = ["dom-css", "geometry", "anatomy", "keyboard", "viewport", "visual", "judgement", "source"] as const;
+export type Measurability = (typeof MEASURABILITY)[number];
+
+/** Linha de tabela de anatomia ("| 2 | Rótulo | … | Obrigatório |"), lida já sem markdown (`plain`). */
+const ANATOMY_ROW = /^\|?\s*\d+\s*·?\s*([^·|]+?)\s*·.*\bObrigat[óo]rio\b/i;
+/** Dimensão mínima em px ("48x48px"). */
+const SIZE = /(\d+)\s*[x×]\s*(\d+)\s*px/i;
+/** Atributo HTML/ARIA citado entre crases: `aria-hidden="true"`, `title`, `role="dialog"`. */
+const ATTRIBUTE = /^(aria-[a-z]+|role|title|alt|tabindex|lang|for|id|href|scope|type)(\s*=\s*("[^"]*"|'[^']*'|[^\s"']+))?$/i;
+/** Cláusula condicional: a expectativa depende de um caso que o texto abre ("Quando…", "Caso…", "… do tipo icônico…"). */
+const CONDITIONAL = /^(?:[a-z0-9]{1,2}\s*[-–.)]\s*|aten[çc][ãa]o:\s*)?(se|ao|em caso|nos? casos?|em layouts|em telas|aqui)\b|(?:^|[^\p{L}])(quando|caso|sempre que|do tipo|se houver)(?=[^\p{L}]|$)/iu;
+/** Área mínima de interação/toque/clique (a dimensão em px de outra coisa — o tamanho de uma variante — não é procedimento). */
+const AREA = /(?:^|[^\p{L}])[áa]rea(?=[^\p{L}]|$)/iu;
+/** Lugar nomeado ("à esquerda", "no topo"); "acima de duas linhas" ou "abaixo do campo" não são posição medível. */
+const PLACE = /(?:^|\s)(?:à|a|na|no|ao)\s+(esquerda|direita|topo)(?=[^\p{L}]|$)/giu;
+/** Ordem de navegação, foco ou gesto não é lugar na tela (a geometria não a mede). */
+const NOT_A_PLACE = /navega|\bfoco\b|teclado|\btab\b|swipe|arrast/i;
+
+const TOUCH = /dispositivos? m[óo]ve(l|is)|\bmobile\b|\btouch\b|\btoque\b/i;
+
+export interface Procedure {
+  /** O que selecionar na página. */
+  select: string;
+  /** O que medir nele. */
+  measure: string;
+  /** O valor esperado — o que a cláusula DIZ (ou o que ela proíbe). */
+  expect: string;
+  /** Quando a cláusula só vale numa condição que o scan não reproduz (ex.: janela de toque/móvel). */
+  when?: string;
+  /** Presente quando o procedimento é do ORÁCULO e não está na letra da cláusula servida (ex.: exceção perdida). */
+  provenance?: string;
+}
+
+/**
+ * Procedimentos do oráculo para cláusulas cuja letra servida não basta para medir sem erro. Só o que um check do oráculo
+ * mede com o mesmo critério: o rótulo obrigatório do Button perdeu a exceção do circular na base literal — sem ela, todo
+ * botão circular "violaria" (iconOnlyButton.ts).
+ */
+const ORACLE_PROCEDURES: Record<string, Procedure> = Object.fromEntries(
+  [BUTTON_LABEL_REQUIRED, BUTTON_LABEL_ANATOMY].map((id) => [
+    id,
+    {
+      select: ".br-button (<button>/<a>) exibido",
+      measure: "texto visível (sr-only não conta) e ícones (i/svg/img); a classe circle",
+      expect: "só ícone ⇒ classe circle (variante circular); senão, rótulo visível",
+      provenance: `procedimento do oráculo, não letra da cláusula: a exceção do circular está no legado ${BUTTON_LABEL_LEGACY} ("A exceção ocorre na versão tipo circular…"), que a base literal perdeu; o check icon-only-button mede isto`,
+    },
+  ]),
+);
+
+/**
+ * O procedimento que o TEXTO da cláusula permite derivar — o que selecionar, o que medir e o valor que ela mesma diz — ou
+ * `null` quando o texto não dá os dois (a cláusula fica como julgamento). Lido do texto, nunca da página.
+ */
+export function procedureOf(rule: KnowledgeRule, component?: string | null): Procedure | null {
+  const oracle = ORACLE_PROCEDURES[rule.id];
+  if (oracle) return oracle;
+  if (rule.validationStrategy === "source-code") return null;
+  const text = plain(rule.originalText ?? "");
+  const comp = component ?? rule.component;
+  const root = comp ? (getComponentSpecs().components[comp]?.rootClass ?? `br-${comp}`) : null;
+  const select = root ? `.${root}` : "o elemento citado";
+  const prohibited = rule.force === "prohibited";
+  const when = TOUCH.test(text) ? "janela de toque/móvel (o scan mede 1280×900 sem toque): meça com emulação móvel ou declare não medida" : undefined;
+  const out = (measure: string, expect: string, sel = select): Procedure => ({ select: sel, measure, expect, ...(when ? { when } : {}) });
+  const anatomy = ANATOMY_ROW.exec(text);
+  if (anatomy) return out(`a parte "${anatomy[1].trim()}" em cada ${select}`, "presente e visível");
+  if (CONDITIONAL.test(text) || (rule.conditions ?? []).length > 0) return null;
+  const size = AREA.test(text) ? SIZE.exec(text) : null;
+  if (size) return out("getBoundingClientRect() da área clicável", `≥ ${size[1]}×${size[2]}px`, root ? `${select} interativo` : "controle (button, a, [role=button]) com ícone");
+  const attribute = [...(rule.originalText ?? "").matchAll(/`([^`]+)`/g)].map((m) => m[1].trim()).find((c) => ATTRIBUTE.test(c));
+  if (attribute && (rule.validationStrategy === "dom" || rule.validationStrategy === "accessibility-tree" || rule.validationStrategy === "computed-style")) {
+    // Valor literal curto (`aria-hidden="true"`) é o esperado; valor em prosa ("nome descritivo…") só diz "não vazio".
+    const value = /=\s*["']?([^"']*)["']?$/.exec(attribute)?.[1];
+    const literal = value !== undefined && /^[\w-]{1,24}$/.test(value);
+    const name = attribute.split("=")[0].trim();
+    const expect = prohibited ? "ausente" : literal ? "presente com esse valor" : value !== undefined ? "presente e não vazio" : "presente";
+    return out(`o atributo ${literal ? attribute : name} nos elementos que a cláusula nomeia`, expect);
+  }
+  const places = geometryHint(rule) && !NOT_A_PLACE.test(text) ? [...new Set([...text.matchAll(PLACE)].map((m) => m[1].toLowerCase()))] : [];
+  if (places.length) return out("getBoundingClientRect() relativo à raiz e a ordem no DOM", `posição: ${places.map((w) => (w === "topo" ? "no topo" : `à ${w}`)).join(" e ")}`);
+  return null;
+}
+
+export function measurabilityOf(rule: KnowledgeRule): Measurability {
+  const proc = procedureOf(rule);
+  if (proc) return proc.measure.startsWith("getBoundingClientRect() relativo") ? "geometry" : proc.measure.startsWith("a parte ") ? "anatomy" : "dom-css";
+  switch (rule.validationStrategy) {
+    case "keyboard-interaction":
+      return "keyboard";
+    case "responsive-viewport":
+      return "viewport";
+    case "source-code":
+      return "source";
+    case "visual":
+    case "manual":
+      return "visual";
+    default:
+      return "judgement";
+  }
+}
+
+const rankOf = (rule: KnowledgeRule) => MEASURABILITY.indexOf(measurabilityOf(rule));
+
+/** Ordem estável por mensurabilidade (empate: a ordem da listagem da base). */
+export function byMeasurability<T extends { rule: KnowledgeRule }>(items: T[]): T[] {
+  return items.map((item, i) => ({ item, i })).sort((a, b) => rankOf(a.item.rule) - rankOf(b.item.rule) || a.i - b.i).map(({ item }) => item);
+}
+
+/** O procedimento numa linha (investigate e o `how` da lista). */
+export function procedureLine(p: Procedure, max = 160): string {
+  return cut(`${p.select} → ${p.measure} → espera: ${p.expect}${p.when ? ` (só em ${p.when.split(" (")[0]})` : ""}${p.provenance ? " [oráculo]" : ""}`, max);
+}
+
+/** Sem procedimento derivável: o que fazer, sem valor esperado (a cláusula pede juízo). */
+const JUDGEMENT_HOW = "julgamento: o texto não dá o que medir nem o valor; registre o que leu";
+
+function measureOf(rule: KnowledgeRule, component?: string): Record<string, unknown> {
   const oracle = oracleMeasuresFor(rule.id);
   if (oracle.length) {
+    const own = ORACLE_PROCEDURES[rule.id];
     return {
       automatic: true,
       oracle: oracle.map((m: OracleMeasure) => (m.tool === "scan_page" ? { tool: m.tool, check: m.check } : { tool: m.tool, expectedCondition: m.expectedCondition })),
+      // 3.7.0: a medida do próprio oráculo dita como procedimento, quando a letra servida não basta (exceção perdida).
+      ...(own ? { procedure: own } : {}),
     };
   }
-  return { automatic: false, strategy: rule.validationStrategy, ...manualMeasure(rule) };
+  // 3.7.0: com procedimento derivável, `how` é ele (o que selecionar → o que medir → o valor que a cláusula diz). Sem ele, a
+  // cláusula é julgamento: teclado, outra largura e captura mantêm a instrução da estratégia (sem valor esperado); as demais
+  // dizem que é juízo — nada de "espera:" que a cláusula não diz.
+  const proc = procedureOf(rule, component);
+  const base = manualMeasure(rule);
+  if (proc) return { automatic: false, strategy: rule.validationStrategy, ...base, how: procedureLine(proc), ...(proc.when ? { when: proc.when } : {}) };
+  const keepsStrategy = ["keyboard-interaction", "responsive-viewport", "source-code", "visual", "manual"].includes(rule.validationStrategy);
+  const { properties: _p, ...rest } = base;
+  return { automatic: false, strategy: rule.validationStrategy, ...(keepsStrategy ? base : { ...rest, how: JUDGEMENT_HOW }) };
 }
 
 /** Obrigações e proibições do componente (sem registros-título), na ordem da listagem da base. */
@@ -124,6 +275,37 @@ export function checklistPendingClauses(component: string): Array<{ id: string; 
   return checklistRules(component)
     .filter((r) => oracleMeasuresFor(r.id).length === 0 && (MEASURABLE.has(r.validationStrategy) || geometryHint(r)))
     .map((r) => ({ id: r.id, force: r.force, text: cut(plain(r.originalText), 100) }));
+}
+
+/**
+ * 3.7.0 (D-155/D-159; rastreio dev-364; revisão ALTA): as cláusulas que o scan EMPURRA no investigate — as
+ * obrigações/proibições que nenhum check julga e cujo TEXTO dá um procedimento (procedureOf ≠ null), por mensurabilidade,
+ * cada uma com o id citável, a letra curta e o procedimento numa linha. `total` = quantas há (as demais pela lista).
+ */
+export function investigateClauses(component: string, max = 2): { total: number; clauses: Array<{ citeAs: string; text: string; how: string; short: string }> } {
+  const ranked = byMeasurability(checklistRules(component).filter((r) => oracleMeasuresFor(r.id).length === 0 && procedureOf(r, component) !== null).map((rule) => ({ rule })));
+  return {
+    total: ranked.length,
+    clauses: ranked.slice(0, max).map(({ rule }) => {
+      const proc = procedureOf(rule, component)!;
+      return { citeAs: rule.id, text: cut(plain(rule.originalText), 90), how: procedureLine(proc, 150), short: procedureShort(proc) };
+    }),
+  };
+}
+
+/**
+ * 3.7.0 (revisão da reexecução, lacuna A): o procedimento na forma mínima, para a forma compacta do investigate no teto
+ * padrão — sem o seletor (o componente já está na chave) e sem "espera:"; o valor que a cláusula diz fica. ≤ 70 caracteres.
+ */
+export function procedureShort(p: Procedure): string {
+  const part = /^a parte "(.+)" em cada /.exec(p.measure);
+  const touch = p.when ? " (toque/móvel)" : "";
+  if (part) return cut(`parte "${part[1]}" ${p.expect}`, 70);
+  if (p.measure.startsWith("getBoundingClientRect() relativo")) return cut(`${p.expect} (geometria)`, 70);
+  if (p.measure.startsWith("getBoundingClientRect() da área")) return cut(`área clicável ${p.expect}${touch}`, 70);
+  const attr = /^o atributo (.+) nos elementos/.exec(p.measure);
+  if (attr) return cut(`${attr[1]}: ${p.expect}`, 70);
+  return cut(`${p.measure} → ${p.expect}`, 70);
 }
 
 /** Quantas obrigações/proibições do componente nenhum check ou predicado do oráculo mede. */
@@ -195,7 +377,10 @@ function withoutGeometry<T extends { measure: Record<string, unknown> }>(item: T
 export function componentChecklist(component: string, cursor: number, budget = RESPONSE_BUDGET, extras: ChecklistExtras = {}): Record<string, unknown> {
   const rules = checklistRules(component);
   const pendingIds = extras.pendingIds ?? {};
-  const baseItems = rules.map((r) => {
+  // 3.7.0: por mensurabilidade (DOM/CSS primeiro, juízo por último); no mesmo posto, o que nenhum check mede vem antes.
+  const ranked = byMeasurability(rules.map((rule) => ({ rule, auto: oracleMeasuresFor(rule.id).length > 0 })));
+  const ordered = [...ranked].sort((a, b) => rankOf(a.rule) - rankOf(b.rule) || Number(a.auto) - Number(b.auto)).map((x) => x.rule);
+  const baseItems = ordered.map((r) => {
     const lost = lostExceptionOf(r);
     return {
       citeAs: r.id,
@@ -203,7 +388,7 @@ export function componentChecklist(component: string, cursor: number, budget = R
       text: cut(plain(r.originalText), CHECKLIST_TEXT_MAX),
       // 3.5.0 (revisão, HIGH 2): a exceção que a base literal perdeu vai junto, como condição do item.
       ...(lost ? { condition: { code: lost.code, legacyId: lost.legacyId, text: lost.text, note: "não se aplica ao caso excetuado" } } : {}),
-      measure: measureOf(r),
+      measure: measureOf(r, component),
     };
   });
   const automatic = baseItems.filter((i) => i.measure.automatic).length;

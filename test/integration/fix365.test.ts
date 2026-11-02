@@ -74,6 +74,12 @@ const PAGES: Record<string, string> = {
     "Peças — Oficina",
     `<h1>Peças</h1><div class="br-table"><table><caption>Peças em estoque</caption><thead><tr><th scope="col">Peça</th></tr></thead><tbody><tr><td>Filtro</td></tr></tbody></table></div>`,
   ),
+  // 3.7.0: abas do DS — com a lista ordenada por mensurabilidade, a de table cabe as mensuráveis na 1ª página; a de tab
+  // ainda tem cláusula mensurável na 2ª (o caso "a página seguinte registra quando o cursor é pedido").
+  "/oficina/abas": page(
+    "Abas — Oficina",
+    `<h1>Serviços</h1><div class="br-tab"><nav class="tab-nav"><ul><li class="tab-item active"><button type="button" data-panel="p1"><span class="name">Revisão</span></button></li></ul></nav><div class="tab-content"><div class="tab-panel active" id="p1">Revisão completa.</div></div></div>`,
+  ),
   // Menu oculto com um separador de cor fora da paleta; o botão o abre.
   "/oficina/menu": page(
     "Menu — Oficina",
@@ -418,11 +424,11 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
   it("revisão (item 5): só a página servida registra; a página seguinte registra quando o cursor é pedido", async () => {
     const { client, call } = await connect();
     try {
-      const scan = await call("scan_page", { url: `${base}/oficina/tabela` });
-      expect(scan.data.coverage.componentsFound).toContain("table");
-      const candidates = new Set(checklist.checklistPendingClauses("table").map((c) => c.id));
-      const p1 = await call("get_component_spec", { component: "table", view: "checklist" });
-      expect(p1.data.nextCursor, "a lista de table tem mais de uma página").toBeDefined();
+      const scan = await call("scan_page", { url: `${base}/oficina/abas` });
+      expect(scan.data.coverage.componentsFound).toContain("tab");
+      const candidates = new Set(checklist.checklistPendingClauses("tab").map((c) => c.id));
+      const p1 = await call("get_component_spec", { component: "tab", view: "checklist" });
+      expect(p1.data.nextCursor, "a lista de tab tem mais de uma página").toBeDefined();
       const served1 = (p1.data.items as Array<Record<string, any>>).filter((i) => candidates.has(i.citeAs));
       // os ids aparecem nos itens enquanto couberem (os itens da página não caem por causa deles); registradas, sempre
       expect(served1.length).toBeGreaterThan(0);
@@ -430,15 +436,15 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
       // 3.6.6 (revisão: o teste passava com zero pendingId): a pendência registrada é a que a página mostrou com id
       const shown1 = served1.filter((i) => i.pendingId);
       expect(shown1.length, "pendingId à vista na 1ª página").toBeGreaterThan(0);
-      const after1 = await call("scan_page", { url: `${base}/oficina/tabela`, checks: ["axe"] });
+      const after1 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"] });
       expect(after1.data.sessionPending.checklist.count).toBe(served1.length);
       expect(after1.data.sessionPending.checklist.count).toBe(shown1.length);
-      const p2 = await call("get_component_spec", { component: "table", view: "checklist", cursor: p1.data.nextCursor });
+      const p2 = await call("get_component_spec", { component: "tab", view: "checklist", cursor: p1.data.nextCursor });
       const served2 = (p2.data.items as Array<Record<string, any>>).filter((i) => candidates.has(i.citeAs));
       expect(served2.length).toBeGreaterThan(0);
       const shown2 = served2.filter((i) => i.pendingId);
       expect(shown2.length, "pendingId à vista na 2ª página").toBeGreaterThan(0);
-      const after2 = await call("scan_page", { url: `${base}/oficina/tabela`, checks: ["axe"] });
+      const after2 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"] });
       expect(after2.data.sessionPending.checklist.count).toBe(served1.length + served2.length);
       expect(after2.data.sessionPending.checklist.count).toBe(shown1.length + shown2.length);
     } finally {

@@ -58,6 +58,7 @@ const PAGES: Record<string, string> = {
      <nav class="br-step" aria-label="Etapas"><div class="step-progress"><button class="step-progress-btn" type="button">1</button></div></nav>
      <div class="br-carousel" aria-label="Destaques"><div class="carousel-page">Livro</div></div>
      <div class="br-checkbox"><input id="aviso" type="checkbox"><label for="aviso">Avisar</label></div>
+     <div class="br-radio"><input id="retirar" type="radio" name="entrega"><label for="retirar">Retirar</label></div>
      <div class="br-tab"><nav class="tab-nav"><ul><li class="tab-item"><button type="button">Livros</button></li></ul></nav></div>
      <div class="br-table"><table><caption>Livros</caption><thead><tr><th scope="col">Título</th></tr></thead><tbody><tr><td>A</td></tr></tbody></table></div>`,
   ),
@@ -319,7 +320,9 @@ describe("3.6.6 item 4 — nenhuma pendência registrada sem id à vista", () =>
     try {
       await call("scan_page", { url: `${base}/biblioteca/painel`, checks: ["structure"] });
       const unshown: Record<string, Set<string>> = {};
-      for (const component of ["checkbox", "tab"]) {
+      // 3.7.0: a lista ordenada por mensurabilidade e o procedimento curto põem todos os ids de checkbox, tab e radio à vista;
+      // a de table (já na página) ainda serve cláusula sem id — é ela que mantém o caso coberto.
+      for (const component of ["checkbox", "tab", "radio", "table"]) {
         const candidates = new Set(checklist.checklistPendingClauses(component).map((c) => c.id));
         let cursor: number | undefined = 0;
         while (cursor !== undefined) {
@@ -331,7 +334,7 @@ describe("3.6.6 item 4 — nenhuma pendência registrada sem id à vista", () =>
         }
       }
       const total = Object.values(unshown).reduce((n, s) => n + s.size, 0);
-      expect(total, "cláusulas servidas sem pendingId (checkbox, tab)").toBeGreaterThan(0);
+      expect(total, "cláusulas servidas sem pendingId (checkbox, tab, radio, table)").toBeGreaterThan(0);
       const after = await call("scan_page", { url: `${base}/biblioteca/painel`, checks: ["axe"], maxChars: 60_000 });
       const block = after.data.sessionPending.checklist as { note: string; components: Array<{ component: string; unregistered?: number }> };
       for (const [component, set] of Object.entries(unshown)) {

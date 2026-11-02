@@ -77,7 +77,21 @@ export interface ElementEvidence {
      * none/presentation até o controle, sem nome próprio). Só aparece quando > 0.
      */
     exposedIcons?: number;
+    /**
+     * 3.7.0 (C01): só em elemento com a classe `br-button` (e fora do perfil knowledge-free) — o conteúdo renderizado
+     * é só ícone (`i`, `svg`, `img` com caixa) e nenhum texto visível: texto em elemento sem caixa, de 1px, recortado
+     * (clip / clip-path, o padrão `sr-only`), com opacidade 0 ou dentro de `svg` não conta como visível.
+     */
+    iconOnlyVisual?: boolean;
+    /** 3.7.0 (C01): o `br-button` tem o atributo `circle` (a folha do DS desenha o circular também por `.br-button[circle]`). */
+    circleAttribute?: true;
   };
+  /**
+   * 3.7.0 (C01): só em elemento com a classe `br-button` — as classes raiz `br-*` dos componentes do DS que o contêm,
+   * do mais próximo ao mais externo (atravessando hosts de shadow root; até 8), ou ausente. Diz se o botão é parte de
+   * outro componente.
+   */
+  hostComponents?: string[];
   /**
    * Nome acessível do elemento (2.8.0), colhido só para elemento interativo apenas com ícone — o
    * único caso em que um verificador decide sobre ele.

@@ -22,6 +22,7 @@ import { checkPageStructure, titleDuplicateFinding } from "../../src/checkers/pa
 import { checkFocusIndicators } from "../../src/checkers/focusIndicator.js";
 import { checkPlaceholderLabels } from "../../src/checkers/formLabels.js";
 import { checkDecorativeIcons } from "../../src/checkers/decorativeIcons.js";
+import { checkIconOnlyButtons } from "../../src/checkers/iconOnlyButton.js";
 import { ANATOMY_PARTS } from "../../src/verify/contextual.js";
 import { getComponentSpecs, getTokenRegistry, findEmagRule } from "../../src/data/load.js";
 import { getKnowledgeBase, getRuleById } from "../../src/data/knowledge.js";
@@ -75,6 +76,8 @@ function producers(): Array<[string, Finding[]]> {
       makeElement({ content: { textContent: "Enviar", hasVisibleText: true, hasIconOnly: false, exposedIcons: 1 } }),
       makeElement({ locator: "#l", tagName: "a", classes: [], attributes: { title: "Ajuda", href: "/ajuda" } as never, content: { textContent: "Ajuda", hasVisibleText: true, hasIconOnly: false } }),
     ]).findings],
+    // 3.7.0 (C01): br-button só com ícone fora da variante circular — cita o id KB do rótulo obrigatório do Button.
+    ["icon-only-button", checkIconOnlyButtons(page, [makeElement({ attributes: { ariaLabel: "Imprimir" } as never, content: { textContent: "", hasVisibleText: false, hasIconOnly: true, iconOnlyVisual: true } })]).findings],
   ];
 }
 

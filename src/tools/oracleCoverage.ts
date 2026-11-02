@@ -7,6 +7,7 @@ import { CHECK_GROUNDING, type CheckKind } from "../checkers/grounding.js";
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING } from "../checkers/formLabels.js";
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING } from "../checkers/decorativeIcons.js";
+import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING } from "../checkers/iconOnlyButton.js";
 import { FOCUS_ORDER_IMPLEMENTS } from "../checkers/pageStructure.js";
 import { ANATOMY_PARTS, CONTEXT_CONDITIONS } from "../verify/contextual.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -50,7 +51,7 @@ function build(): Map<string, OracleMeasure[]> {
       if (condition) add(map, id, { tool: "verify_finding", expectedCondition: condition });
     }
   }
-  for (const [grounding, condition] of [[FOCUS_INDICATOR_GROUNDING, FOCUS_INDICATOR_CONDITION], [PLACEHOLDER_LABEL_GROUNDING, PLACEHOLDER_LABEL_CONDITION], [DECORATIVE_ICON_GROUNDING, DECORATIVE_ICON_CONDITION], [LINK_TITLE_GROUNDING, LINK_TITLE_CONDITION]] as const) {
+  for (const [grounding, condition] of [[FOCUS_INDICATOR_GROUNDING, FOCUS_INDICATOR_CONDITION], [PLACEHOLDER_LABEL_GROUNDING, PLACEHOLDER_LABEL_CONDITION], [DECORATIVE_ICON_GROUNDING, DECORATIVE_ICON_CONDITION], [LINK_TITLE_GROUNDING, LINK_TITLE_CONDITION], [ICON_ONLY_BUTTON_GROUNDING, ICON_ONLY_BUTTON_CONDITION]] as const) {
     for (const id of grounding.implements) {
       if (!id.startsWith("govbr-")) continue;
       add(map, id, { tool: "scan_page", check: "structure" });

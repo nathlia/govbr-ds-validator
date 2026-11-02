@@ -101,7 +101,7 @@ export async function inspectPageComputedStyles(
   try {
   // 3.4.4 (revisão, L5): só host com tag de componente do DS (br-<componente do catálogo>) conta como DS.
   const dsHosts = isKnowledgeLocked() ? [] : Object.keys(getComponentSpecs().components).map((name) => `br-${name}`);
-  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts }) => {
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts, dsFacts }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -368,6 +368,74 @@ export async function inspectPageComputedStyles(
           }
         }
 
+        // 3.7.0 (C01): botão do DS só com ícone na tela — sem texto VISÍVEL (o texto sr-only/recortado não conta) e com
+        // ao menos um ícone renderizado. E os componentes do DS que o contêm, do mais próximo ao mais externo.
+        let iconOnlyVisual: boolean | undefined;
+        let hostComponents: string[] | undefined;
+        // 3.7.0 (revisão, lacuna B): o host do web component do DS (`<br-button>`, @govbr-ds/webcomponents) é da página — o
+        // autor escolhe `icon`, `label`/texto no slot e `circle`; o `button.br-button` no shadow root é do DS.
+        const wcHost = dsFacts && el.tagName.toLowerCase() === "br-button";
+        let wcCircle = false;
+        if (dsFacts && (el.classList.contains("br-button") || wcHost)) {
+          // O texto tem caixa própria (Range): vale também dentro de `display: contents`, que não tem caixa (revisão 3.7.0).
+          const textBox = (t: Node) => {
+            const range = document.createRange();
+            range.selectNodeContents(t);
+            return Array.from(range.getClientRects()).some((r) => r.width > 1 && r.height > 1);
+          };
+          const shownText = (t: Node): boolean => {
+            if (!(t.textContent ?? "").trim() || !textBox(t)) return false;
+            for (let n: Element | null = t.parentElement; n; n = n === el ? null : n.parentElement) {
+              if (n.namespaceURI === "http://www.w3.org/2000/svg") return false;
+              const cs = getComputedStyle(n);
+              if (cs.display === "none" || cs.visibility === "hidden" || cs.visibility === "collapse" || parseFloat(cs.opacity) === 0) return false;
+              if (/^rect\(\s*(0|1)px[ ,]+(0|1)px[ ,]+(0|1)px[ ,]+(0|1)px\s*\)$/.test(cs.clip)) return false;
+              if (/inset\(\s*(50|100)%/.test(cs.clipPath)) return false;
+              if (cs.display === "contents") continue;
+              // recorte por caixa de 1px com overflow escondido (variante do sr-only sem clip)
+              const r = n.getBoundingClientRect();
+              if ((r.width <= 1 || r.height <= 1) && cs.overflow !== "visible") return false;
+            }
+            return true;
+          };
+          const ICON = "i, svg, img, span[class*='fa-']";
+          const textIn = (root: Node) => {
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+              if (t.parentElement && ["style", "script"].includes(t.parentElement.tagName.toLowerCase())) continue;
+              if (shownText(t)) return true;
+            }
+            return false;
+          };
+          // ícone: i, svg, img e o span de fonte de ícone (`<span class="fas fa-…">`), com caixa
+          const iconsIn = (root: Element | ShadowRoot) => Array.from(root.querySelectorAll(ICON)).filter((n) => (n.tagName.toLowerCase() === "svg" || !n.closest("svg")) && n.getClientRects().length > 0);
+          if (wcHost) {
+            // API do host: rótulo pelo atributo `label` ou pelo texto no slot (luz); ícone pelo atributo `icon` ou por ícone
+            // no slot ou no render; circular pelo atributo `circle` (ou a classe circle no botão que o componente desenha).
+            const shadow = el.shadowRoot;
+            const inner = shadow?.querySelector("button.br-button, a.br-button") ?? null;
+            const label = (el.getAttribute("label") ?? "").trim() !== "";
+            const visible = label || textIn(el) || (shadow ? textIn(shadow) : false);
+            const icon = (el.getAttribute("icon") ?? "").trim() !== "" || iconsIn(el).length > 0 || (shadow ? iconsIn(shadow).length > 0 : false);
+            wcCircle = (el.hasAttribute("circle") && el.getAttribute("circle") !== "false") || Boolean(inner?.classList.contains("circle"));
+            iconOnlyVisual = !visible && icon;
+          } else {
+            iconOnlyVisual = !textIn(el) && iconsIn(el).length > 0;
+          }
+          const hosts: string[] = [];
+          for (let n: Element | null = el.parentElement ?? ((el.getRootNode() as ShadowRoot).host ?? null), depth = 0; n && depth < 60; depth += 1) {
+            for (const c of Array.from(n.classList)) if (/^br-[a-z]+$/.test(c) && c !== "br-button" && !hosts.includes(c)) hosts.push(c);
+            // o host de web component do DS (`<br-input>`) conta como o componente pela tag
+            const tag = n.tagName.toLowerCase();
+            if (tag !== "br-button" && dsHosts.includes(tag) && !hosts.includes(tag)) hosts.push(tag);
+            const parent: Element | null = n.parentElement;
+            if (parent) { n = parent; continue; }
+            const r = n.getRootNode();
+            n = r instanceof ShadowRoot ? r.host : null;
+          }
+          if (hosts.length) hostComponents = hosts.slice(0, 8);
+        }
+
         return {
           nameProbeIndex,
           locator: locatorFor(el),
@@ -400,7 +468,11 @@ export async function inspectPageComputedStyles(
             descendantAlt: descendantAlt || null,
             labelText,
             ...(exposedIcons > 0 ? { exposedIcons } : {}),
+            ...(iconOnlyVisual !== undefined ? { iconOnlyVisual } : {}),
+            // 3.7.0: a folha do DS também desenha o circular pelo atributo (.br-button[circle]).
+            ...(iconOnlyVisual !== undefined && (el.hasAttribute("circle") && el.getAttribute("circle") !== "false" || wcCircle) ? { circleAttribute: true as const } : {}),
           },
+          ...(hostComponents ? { hostComponents } : {}),
           inlineStyle: el.getAttribute("style"),
           authoredRaw,
           computed: snapshot,
@@ -455,6 +527,7 @@ export async function inspectPageComputedStyles(
       interactiveTags: [...INTERACTIVE_TAGS] as string[],
       probeKey: NAME_PROBE_KEY,
       dsHosts,
+      dsFacts: !isKnowledgeLocked(),
       descendants: options.descendants === true,
       descendantLimit: DESCENDANT_SCOPE_LIMIT,
     });

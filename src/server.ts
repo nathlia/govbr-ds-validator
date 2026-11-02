@@ -148,7 +148,7 @@ export function startupChecks(): Promise<void> {
 import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock, slotOf } from "./scan/session.js";
-import { checklistPendingClauses, componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
+import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
@@ -2011,7 +2011,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const first = !cursor;
         // §10 + §15.8: investigate na ordem do DOM (coverage.componentsFound não é ordenado), 1ª página.
         // 3.5.0 (revisão Fable P1): todos os componentes encontrados, por obrigações/proibições sem medida.
-        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount) : undefined;
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c)) : undefined;
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
