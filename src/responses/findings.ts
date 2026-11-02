@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Finding } from "../schema/finding.js";
 import { canonical } from "../verify/store.js";
+import { interactionOf } from "../checkers/interaction.js";
 
 export const FindingDetailSchema = z.enum(["summary", "evidence", "full"]);
 export type FindingDetail = z.infer<typeof FindingDetailSchema>;
@@ -151,6 +152,9 @@ function truncate(value: string, max = 240): string {
 
 export function projectFinding(finding: Finding, detail: FindingDetail): unknown {
   if (detail === "full") return finding;
+  const interaction = interactionOf(finding);
+  // Com passo (ou sem saber qual): o achado o diz; sem passo (fato da marcação), não cresce.
+  const needed = interaction && interaction.needed !== false ? (({ basis: _b, ...rest }) => rest)(interaction) : undefined;
 
   const common = {
     id: finding.id,
@@ -176,6 +180,8 @@ export function projectFinding(finding: Finding, detail: FindingDetail): unknown
     nature: finding.nature,
     mode: finding.mode,
     pathway: finding.pathway,
+    // 3.6.5 (D-155, item 1): o passo que leva ao estado em que o fato existe (só quando o check interagiu para medir).
+    ...(needed ? { interaction: needed } : {}),
   };
 
   if (detail === "summary") {

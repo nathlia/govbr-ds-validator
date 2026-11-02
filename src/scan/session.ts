@@ -50,6 +50,13 @@ export function routeLabel(route: string): string {
   }
 }
 
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** A rota curta para respostas: segmentos longos (uuid, hash) viram `…abcd`; até 48 caracteres. */
+export function shortRoute(route: string): string {
+  return clip(routeLabel(route).replace(/[^/]{13,}/g, (seg) => `…${seg.slice(-4)}`), 48);
+}
+
 export interface PendingRule {
   id: string;
   force: string;
@@ -120,6 +127,17 @@ export interface SessionScan {
   /** 3.6.1 (revisão M4): o assunto principal exibido (h1; sem h1, o 1º título em main). */
   heading?: string | null;
   checks: string[];
+  /** 3.6.5 (item 5): componentes do DS encontrados neste scan (coverage.componentsFound). */
+  components?: string[];
+}
+
+/** 3.6.5 (item 4): onde uma família (pela assinatura de evidência) foi vista nesta sessão. */
+export interface FamilySighting {
+  scanId: string;
+  route: string;
+  fingerprint: string;
+  familyId: string;
+  locators: string[];
 }
 
 export interface HiddenEntry {
@@ -158,6 +176,42 @@ export class ScanSession {
   private counter = 0;
   /** 3.6.1 (revisão H1): códigos cuja cláusula (texto) já saiu numa resposta desta sessão; repetições só com o id. */
   private readonly delivered = new Set<string>();
+  /** 3.6.5 (item 4): assinatura de evidência → onde a família foi vista (scan, rota, estado). */
+  private readonly sightings = new Map<string, FamilySighting[]>();
+
+  /** 3.6.5 (item 4): guarda as famílias de um scan (todas, não só as da página devolvida). */
+  recordFamilies(scanId: string, route: string, fingerprint: string, families: Array<{ signature: string; familyId: string; locators: string[] }>): void {
+    for (const f of families) {
+      const list = this.sightings.get(f.signature) ?? [];
+      if (!list.some((x) => x.scanId === scanId && x.familyId === f.familyId)) list.push({ scanId, route, fingerprint, familyId: f.familyId, locators: [...new Set(f.locators)] });
+      this.sightings.set(f.signature, list);
+    }
+  }
+
+  /**
+   * 3.6.5 (D-155, item 4; rastreio dev-364 §1, B-23 p02): a mesma assinatura de evidência vista em OUTRA rota com outros
+   * elementos (o conjunto de localizadores difere), ou na mesma rota noutro estado com outros elementos (nenhum em comum).
+   * O mesmo conjunto de elementos noutra rota (layout compartilhado) e o mesmo elemento noutro estado da rota são o mesmo
+   * fato (não entram). Um item por rota/estado, na ordem em que foram vistos.
+   */
+  alsoIn(signature: string, scanId: string, route: string, fingerprint: string, locators: string[], max = 2): { items: Array<{ route: string; scanId: string; familyId: string }>; more: number } {
+    const mine = new Set(locators);
+    const seen = new Set<string>();
+    const out: Array<{ route: string; scanId: string; familyId: string }> = [];
+    for (const x of this.sightings.get(signature) ?? []) {
+      if (x.scanId === scanId) continue;
+      // Revisão (MÉDIA 2): noutra rota, o MESMO conjunto de elementos (layout compartilhado: cabeçalho, regiões) é o
+      // mesmo elemento — como a pendência da 3.6.3 — e não entra; só entra quando os elementos diferem.
+      const sameSet = x.locators.length === mine.size && x.locators.every((l) => mine.has(l));
+      const other = (x.route !== route && !sameSet) || (x.route === route && x.fingerprint !== fingerprint && !x.locators.some((l) => mine.has(l)));
+      if (!other) continue;
+      const key = `${x.route}|${x.fingerprint}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ route: shortRoute(x.route), scanId: x.scanId, familyId: x.familyId });
+    }
+    return { items: out.slice(0, max), more: Math.max(0, out.length - max) };
+  }
 
   textDelivered(code: string): boolean {
     return this.delivered.has(code);
@@ -274,6 +328,71 @@ export class ScanSession {
     });
   }
 
+  /**
+   * 3.6.5 (D-155, item 5; rastreio dev-364 §2, A-11 p01): cláusulas obrigatórias e mensuráveis de um componente,
+   * lidas na lista de verificação, que nenhum check mede — viram pendências da sessão, uma por cláusula, nas rotas em
+   * que o componente foi encontrado, com a mesma mecânica das outras (verify_finding citando a cláusula, ou
+   * pendingResolved). Código `checklist:<componente>`: o sessionPending as põe no sub-bloco `checklist`, por componente
+   * (contagem e ids; o texto está na página do checklist que as serviu). Revisão: só entram as cláusulas SERVIDAS numa
+   * página do checklist (quem chama decide), e nada marca o código como "texto entregue". Uma cláusula já aberta só ganha
+   * as rotas novas. Devolve cláusula → id.
+   */
+  registerClauses(component: string, routes: string[], clauses: Array<{ id: string; force: string; text: string }>): Record<string, string> {
+    const code = `${CHECKLIST_CODE_PREFIX}${component}`;
+    const out: Record<string, string> = {};
+    for (const clause of clauses) {
+      const key = `clause|${component}|${clause.id}`;
+      let entry = this.pending.get(key);
+      if (!entry) {
+        this.counter += 1;
+        entry = {
+          id: `P-${String(this.counter).padStart(2, "0")}`,
+          key,
+          code,
+          subject: clause.id,
+          route: routes[0],
+          routes: [],
+          slots: [],
+          scans: [],
+          norms: [clause.id],
+          rule: { id: clause.id, force: clause.force, text: clause.text },
+          locators: [],
+          low: false,
+          status: "open",
+        };
+        this.pending.set(key, entry);
+        this.byId.set(entry.id, entry);
+      }
+      for (const route of routes) {
+        if (!entry.routes.includes(route)) entry.routes.push(route);
+        if (!slotOf(entry, route)) {
+          entry.slots.push({ route, status: "open", locators: [], scans: [] });
+          entry.status = "open";
+        }
+      }
+      out[clause.id] = entry.id;
+    }
+    return out;
+  }
+
+  /** 3.6.5 (revisão): as cláusulas já registradas de um componente (citeAs → id). */
+  clauseIds(component: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const e of this.byId.values()) if (e.code === `${CHECKLIST_CODE_PREFIX}${component}`) out[e.subject] = e.id;
+    return out;
+  }
+
+  /**
+   * 3.6.5 (revisão): ids para montar a página antes de registrar — os já registrados, e um provisório da largura do maior
+   * id que o registro poderia dar (o pendingId conta no orçamento da página).
+   */
+  clauseIdsPreview(component: string, clauseIds: string[]): Record<string, string> {
+    const known = this.clauseIds(component);
+    const fresh = clauseIds.filter((id) => !known[id]);
+    const widest = `P-${String(this.counter + fresh.length).padStart(2, "0")}`;
+    return { ...Object.fromEntries(fresh.map((id) => [id, widest])), ...known };
+  }
+
   open(): PendingEntry[] {
     // 3.6.3: `pending` indexa a mesma entrada por rota e por elemento; a lista sai de byId (uma vez cada, na ordem dos ids).
     return [...this.byId.values()].filter((e) => e.status === "open");
@@ -388,7 +507,6 @@ export class ScanSession {
 export const UNITS_NOTE =
   "Rotas/estados diferentes = achados separados: um cartão por rota/estado, com o scanId do seu; não junte membros de rotas/estados diferentes.";
 
-const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 /**
  * Bloco `sessionPending`: as pendências abertas da sessão que NÃO estão no `checksRun.pageLevel` deste scan.
@@ -407,10 +525,28 @@ export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string
     const slots = openSlots(e);
     return slots.length === e.slots.length && !currentIds.has(e.id) ? e.id : `${e.id}×${slots.length}`;
   };
-  const shortRoute = (route: string) => clip(routeLabel(route).replace(/[^/]{13,}/g, (seg) => `…${seg.slice(-4)}`), 48);
   const low = others.filter((e) => e.low).length;
+  // 3.6.5 (revisão, item 5/BAIXA 7): as cláusulas lidas no checklist ficam num sub-bloco próprio, por componente (contagem
+  // e ids), sem a cláusula da 1ª fingindo ser de todas; encolhe à contagem pela escada (sessionPendingChecklistCount).
+  const isClause = (e: PendingEntry) => e.code.startsWith(CHECKLIST_CODE_PREFIX);
+  const clauses = others.filter((e) => !e.low && isClause(e));
+  const byComponent = new Map<string, PendingEntry[]>();
+  for (const e of clauses) {
+    const component = e.code.slice(CHECKLIST_CODE_PREFIX.length);
+    byComponent.set(component, [...(byComponent.get(component) ?? []), e]);
+  }
+  const checklist = clauses.length
+    ? {
+        note: "Cláusulas obrigatórias lidas em get_component_spec (checklist), ainda sem estado: verify_finding citando a cláusula, ou scan_page pendingResolved [{id, status, reason}].",
+        count: clauses.length,
+        components: [...byComponent.entries()].map(([component, entries]) => {
+          const labels = entries.map(label);
+          return { component, count: entries.length, ids: labels.slice(0, 3), ...(labels.length > 3 ? { more: labels.length - 3 } : {}) };
+        }),
+      }
+    : undefined;
   const byCode = new Map<string, PendingEntry[]>();
-  for (const e of others.filter((x) => !x.low)) byCode.set(e.code, [...(byCode.get(e.code) ?? []), e]);
+  for (const e of others.filter((x) => !x.low && !isClause(x))) byCode.set(e.code, [...(byCode.get(e.code) ?? []), e]);
   const items = [...byCode.entries()].map(([code, entries]) => {
     const rule = entries[0].rule;
     const labels = entries.map(label);
@@ -425,20 +561,63 @@ export function sessionPendingBlock(open: PendingEntry[], currentIds: Set<string
     };
   });
   return {
-    note: withText
-      ? "Pendências abertas de outras rotas/estados (cada id é um item próprio): resolva medindo (verify_finding com uma das normas) ou em scan_page pendingResolved [{id, status, reason}]."
-      : "Pendências abertas de outras rotas/estados (cada id é um item próprio): resolva medindo (verify_finding com o critério em norms).",
+    ...(items.length || low
+      ? {
+          note: withText
+            ? "Pendências abertas de outras rotas/estados (cada id é um item próprio): resolva medindo (verify_finding com uma das normas) ou em scan_page pendingResolved [{id, status, reason}]."
+            : "Pendências abertas de outras rotas/estados (cada id é um item próprio): resolva medindo (verify_finding com o critério em norms).",
+        }
+      : {}),
     count: others.length,
     items,
     ...(low ? { lowSignal: low } : {}),
+    ...(checklist ? { checklist } : {}),
   };
 }
 
+/** 3.6.5: código das pendências de cláusula lida no checklist (`checklist:<componente>`). */
+export const CHECKLIST_CODE_PREFIX = "checklist:";
+
+/**
+ * O sub-bloco `checklist` de sessionPending nas três formas da escada: inteiro (`components` com contagem e ids), ids
+ * (`byComponent` + `ids`) e contagem (o total, um número).
+ */
+type ChecklistBlock = {
+  count?: number;
+  components?: Array<{ component: string; count: number; ids?: string[] }>;
+  byComponent?: Record<string, number>;
+  ids?: string[];
+};
+
+const isFull = (b: ChecklistBlock) => Array.isArray(b.components);
+const isIds = (b: ChecklistBlock) => !isFull(b) && Array.isArray(b.ids);
+
+/** 3.6.5 (revisão): o sub-bloco de checklist → contagem por componente + os ids (sem textos nem notas). */
+function checklistIds(block: ChecklistBlock | undefined): ChecklistBlock | Record<string, number> | undefined {
+  if (!block || !isFull(block)) return block;
+  const components = block.components!;
+  return {
+    byComponent: Object.fromEntries(components.map((c) => [c.component, c.count])),
+    ids: components.flatMap((c) => (c.ids ?? []).map((id) => `${id}:${c.component}`)),
+  };
+}
+
+/** 3.6.5 (revisão; reexecução): o sub-bloco de checklist → a contagem total (o que ele tem, pelo checklist de cada componente). */
+export function sessionPendingChecklistCount<T extends { checklist?: unknown }>(block: T): T | null {
+  const c = block.checklist as ChecklistBlock | undefined;
+  if (!c || typeof c !== "object" || (!isFull(c) && !isIds(c))) return null;
+  const total = isFull(c) ? c.components!.reduce((n, x) => n + x.count, 0) : Object.values(c.byComponent ?? {}).reduce((n, x) => n + x, 0);
+  return { ...block, checklist: total };
+}
+
 /** Encolhimento do teto: sem textos; depois só ids. */
-export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[] }>; count?: number; lowSignal?: number }) {
+export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[] }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
+  const checklist = checklistIds(block.checklist);
+  const ids = (block.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
   return {
     count: block.count ?? 0,
-    ids: (block.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`)),
+    ...(ids.length || !checklist ? { ids } : {}),
     ...(block.lowSignal ? { lowSignal: block.lowSignal } : {}),
+    ...(checklist ? { checklist } : {}),
   };
 }

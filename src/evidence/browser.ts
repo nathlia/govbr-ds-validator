@@ -299,6 +299,35 @@ export async function withPage<T>(
   }
 }
 
+/**
+ * 3.6.5 (D-155, item 3a): uma página isolada para conferir marcação dada (o exemplo canônico de um componente) com os
+ * mesmos checks do scan. Nada navega: o HTML entra por `load` (setContent) e TODA requisição de rede é recusada
+ * (imagens, folhas, scripts externos) — a política de saída não precisa de exceção. Prazo: o da chamada.
+ */
+export async function withHtmlPage<T>(fn: (page: Page, load: (html: string) => Promise<void>) => Promise<T>): Promise<T> {
+  const ctx = callContext.getStore();
+  const deadline = ctx?.deadline ?? Date.now() + toolDeadlineMs();
+  const b = await getBrowser();
+  const context = await b.newContext();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await context.route("**/*", (route) => route.abort().catch(() => {}));
+    const page = await context.newPage();
+    page.on("dialog", (dialog) => dialog.dismiss().catch(() => {}));
+    const load = async (html: string) => {
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: Math.max(1_000, Math.min(10_000, deadline - Date.now())) });
+    };
+    const guard = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new BrowserToolError("tool-timeout", "A conferência do exemplo passou do prazo da chamada.")), Math.max(0, deadline - Date.now()));
+    });
+    guard.catch(() => {});
+    return await Promise.race([fn(page, load), guard]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    await disposeContext(context, false);
+  }
+}
+
 export async function closeBrowser(): Promise<void> {
   if (browser) {
     const closing = browser;

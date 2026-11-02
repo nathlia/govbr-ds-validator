@@ -35,6 +35,7 @@ import type { PageFacts, PageRegion } from "../evidence/pageFacts.js";
 import { PAGE_REGION_SELECTORS } from "../evidence/pageFacts.js";
 import { checkerRule, groundingFor, type CheckKind } from "./grounding.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
+import { TAB_FROM_START } from "./interaction.js";
 
 export type PageConstraintKind = "page-region" | "page-skip-link" | "page-focus-order" | "page-title";
 
@@ -295,6 +296,8 @@ export function checkPageStructure(page: { url: string }, facts: PageFacts): Fin
             targetExists: first.targetExists,
             expectedCondition: EXPECTED_CONDITIONS.skipLinkFirstFocus,
             focusedBefore: { tag: before.tag, tabindex: before.tabindex, id: before.id },
+            // 3.6.5 (D-155, item 1): o fato é quem recebe o 1º Tab a partir do carregamento.
+            interaction: { ...TAB_FROM_START },
           },
         },
         severity: "serious",

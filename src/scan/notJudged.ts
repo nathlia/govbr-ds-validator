@@ -93,6 +93,20 @@ function emagRule(id: string): NotJudgedItem["rule"] {
   }
 }
 
+/**
+ * 3.6.5 (D-155, item 3b): a norma das pendências de ELEMENTO, num lugar só — o notJudgedFor as usa, e a spec do
+ * componente lê daqui o que o oráculo cobra desses elementos em qualquer página (sujeito = o seletor que o scan lê).
+ */
+export const ELEMENT_PENDING = {
+  "table-name": { subject: "table", emag: "3.9", extra: ["wcag-1.3.1"] },
+  "field-name-source": { subject: "input:not([type='hidden']), textarea, select", emag: "6.2", extra: ["wcag-3.3.2"] },
+} as const;
+
+/** 3.6.5: a cláusula obrigatória que a pendência cita (a mesma de `rule` nos itens), para quem não tem o item. */
+export function elementPendingRule(code: keyof typeof ELEMENT_PENDING): NotJudgedItem["rule"] {
+  return emagRule(ELEMENT_PENDING[code].emag);
+}
+
 /** Norma + cláusula de uma pendência (a cláusula só quando a base a serve). */
 function grounded(emagId: string, extra: string[] = []): Pick<NotJudgedItem, "norms" | "rule"> {
   const rule = emagRule(emagId);
@@ -161,7 +175,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       examples: titleOnly.slice(0, EXAMPLES).map((f) => clip(f.locator, 120)),
       elementSet: setHash(titleOnly.map((f) => f.locator)),
       todo: "rótulo associado (o axe aceita o title como nome)",
-      ...grounded("6.2", ["wcag-3.3.2"]),
+      ...grounded(ELEMENT_PENDING["field-name-source"].emag, [...ELEMENT_PENDING["field-name-source"].extra]),
       measure: "label/aria-labelledby/aria-label",
     });
   }
@@ -200,7 +214,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       examples: input.unnamedTables.slice(0, EXAMPLES).map((l) => clip(l, 120)),
       elementSet: setHash(input.unnamedTables),
       todo: "título da tabela (o axe não exige caption)",
-      ...grounded("3.9", ["wcag-1.3.1"]),
+      ...grounded(ELEMENT_PENDING["table-name"].emag, [...ELEMENT_PENDING["table-name"].extra]),
       measure: "<caption> 1º filho",
     });
   }

@@ -101,6 +101,16 @@ export function fitComponentSpec(
     rules.clauses = { ...rules.clauses, items: rules.clauses.items.slice(0, 3) };
     if (fits()) return response;
   }
+  // 3.6.5 (item 3b): as obrigações dos elementos ficam com sujeito, id e força (o texto pelo id, em get_ds_rules).
+  const obligations = response.elementObligations as { note?: string; items?: Array<{ subject: string; citeAs: string; force: string; text?: string }> } | undefined;
+  if (obligations?.items?.some((i) => i.text !== undefined)) {
+    response.elementObligations = {
+      ...obligations,
+      items: obligations.items.map(({ subject, citeAs, force }) => ({ subject, citeAs, force })),
+      textsNext: { tool: "get_ds_rules", arguments: { ids: obligations.items.map((i) => i.citeAs).slice(0, 10) } },
+    };
+    if (fits()) return response;
+  }
   if (!opts.chosen) return response;
   // 3. exemplo implícito: o primeiro outro exemplo que cabe, dito.
   if (opts.implicit) {

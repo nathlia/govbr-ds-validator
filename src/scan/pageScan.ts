@@ -286,6 +286,19 @@ async function sameElementDuplicates(page: Page, findings: Finding[]): Promise<S
   return new Set(structural.filter((_, i) => same[i]));
 }
 
+/**
+ * Tabelas exibidas sem nome (caption, aria-label, aria-labelledby, title) — a pendência `table-name`. 3.6.5: função
+ * própria, para que o exemplo canônico do componente seja conferido pela MESMA leitura que a página.
+ */
+export function unnamedTablesOf(tableEvidence: Awaited<ReturnType<typeof inspectPageComputedStyles>>["elements"], facts: PageFacts, scoped: boolean): string[] {
+  const tableFacts = facts.tables ?? [];
+  return scoped || tableFacts.length !== tableEvidence.length
+    // escopo ou contagens diferentes: a leitura por localizador decide (caption não é colhido; nome por atributos).
+    ? tableEvidence.filter((el) => el.rendered !== false && !["presentation", "none"].includes((el.attributes.role ?? "").toLowerCase()) &&
+        !/<caption[\s>]/i.test(el.outerHTML) && !el.attributes.ariaLabel?.trim() && !el.content.labelledbyText?.trim() && !el.attributes.title?.trim()).map((el) => el.locator)
+    : tableEvidence.filter((_, i) => tableFacts[i].rendered && !tableFacts[i].presentational && !tableFacts[i].named).map((el) => el.locator);
+}
+
 /** 3.4.0 (B9): teto de elementos focáveis medidos por scan. */
 export const FOCUS_INDICATOR_LIMIT = 300;
 
@@ -499,6 +512,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     // 3.5.0: os fatos do documento são lidos sempre — também alimentam as pendências (notJudged).
     const facts: PageFacts = await inspectPageStructure(page, request.url);
     if (checks.includes("page")) {
+      // 3.6.5: a evidência da ordem de foco é a mesma em todo estado (um diff entre estados não a dá como mudada); o
+      // Tab a partir do carregamento só é dado como passo numa receita sem ações — decidido na projeção (interactionOf).
       rawFindings.push(...checkPageStructure({ url: request.url }, facts));
     }
 
@@ -521,12 +536,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       observations.push(...icons.observations);
     }
     const tableEvidence = scoped ? region.filter((el) => el.tagName === "table") : (await inspectPageComputedStyles(page, request.url, "table", [])).elements;
-    const tableFacts = facts.tables ?? [];
-    const unnamedTables = scoped || tableFacts.length !== tableEvidence.length
-      // escopo ou contagens diferentes: a leitura por localizador decide (caption não é colhido; nome por atributos).
-      ? tableEvidence.filter((el) => el.rendered !== false && !["presentation", "none"].includes((el.attributes.role ?? "").toLowerCase()) &&
-          !/<caption[\s>]/i.test(el.outerHTML) && !el.attributes.ariaLabel?.trim() && !el.content.labelledbyText?.trim() && !el.attributes.title?.trim()).map((el) => el.locator)
-      : tableEvidence.filter((_, i) => tableFacts[i].rendered && !tableFacts[i].presentational && !tableFacts[i].named).map((el) => el.locator);
+    const unnamedTables = unnamedTablesOf(tableEvidence, facts, scoped);
 
     let axe: PageScanResult["coverage"]["axe"];
     let contrastIncomplete: Awaited<ReturnType<typeof runAxeScanOnPage>>["contrastIncomplete"] | undefined;

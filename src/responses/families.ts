@@ -23,6 +23,7 @@ import { z } from "zod";
 import type { CheckStatus, Finding, Verdict, Verification } from "../schema/finding.js";
 import { canonical } from "../verify/store.js";
 import { findingIdentity, implementsBeyondCitation, projectFinding, type FindingDetail } from "./findings.js";
+import { interactionOf } from "../checkers/interaction.js";
 
 export const FAMILY_KEY =
   "rule.source + rule.id + rule.checker + rule.implements + rule.wcag + nature + mode + pathway + severity + " +
@@ -66,7 +67,29 @@ export interface FamilyOptions {
   now?: () => number;
 }
 
-export interface FamilyPageOptions extends FamilyOptions {
+/** 3.6.5 (item 4): uma família com a mesma assinatura de evidência vista em outra rota/estado desta sessão. */
+export interface AlsoIn {
+  route: string;
+  scanId: string;
+  familyId: string;
+}
+
+/**
+ * 3.6.5 (D-155): o que a família mostra além da chave. Todos opcionais e decididos por quem chama (o servidor os
+ * liga nos perfis com normas): sem eles, a família é a de sempre.
+ */
+export interface FamilyExtras {
+  /** Item 2: a força da(s) unidade(s) citada(s), como vem da base (undefined = a base não tem). */
+  forceOf?: (rule: Finding["rule"]) => string | undefined;
+  /** Item 1: o passo mínimo de interação das famílias `mode:"interaction"`. */
+  interaction?: boolean;
+  /** Item 1 (revisão): as ações da receita do estado do lote (o Tab a partir do carregamento só vale sem ações). */
+  recipeActions?: readonly unknown[];
+  /** Item 4: a mesma assinatura em outra rota/estado da sessão. */
+  alsoInFor?: (signature: string, familyId: string, memberLocators: string[]) => { items: AlsoIn[]; more: number };
+}
+
+export interface FamilyPageOptions extends FamilyOptions, FamilyExtras {
   cursor?: number;
   limit?: number;
   maxChars?: number;
@@ -250,6 +273,15 @@ function expired(options: FamilyOptions): boolean {
   return options.deadline !== undefined && (options.now ?? Date.now)() >= options.deadline;
 }
 
+/** 3.6.5 (item 4): a nota única da página quando alguma família tem alsoIn. */
+export const ALSO_IN_NOTE =
+  "alsoIn = a mesma evidência numa outra rota/estado desta sessão: é outro fato, com cartão próprio por rota/estado e o scanId do seu " +
+  "(verify_finding recusa juntar rotas: mixed-states). Não o descarte como já relatado.";
+
+/** 3.6.5 (item 1): a nota única da página quando alguma família precisa de passo de interação. */
+export const INTERACTION_FAMILY_NOTE =
+  "interaction.steps: o fato só existe depois destes passos (com o localizador de cada membro); no cartão, em state.steps depois da receita do estado. needed:\"unknown\" = o oráculo não sabe o passo: descreva o seu.";
+
 const FAMILY_HINT =
   "Família = mesma norma, tipo, propriedade, estado e assinatura de evidência. Contagens e vereditos são por membro: " +
   "nenhum membro herda o veredito de outro. Os demais ids de uma família: get_finding_details(scanId, familyId, cursor=nextMemberCursor) " +
@@ -275,12 +307,19 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
   let stopReason: PartialReason | undefined;
   let memberLimitHit = false;
   let trimmedForBudget = false;
+  let familiesAlsoIn = 0;
 
   while (index < families.length) {
     if (projected.length >= limit) { stopReason = "limit"; break; }
     if (projected.length > 0 && expired(options)) { stopReason = "time-limit"; break; }
     const { familyId, members } = families[index];
     const first = members[0];
+    // 3.6.5 (D-155, itens 1, 2 e 4): força da norma, passo de interação e a mesma evidência em outra rota/estado.
+    const force = options.forceOf?.(first.rule);
+    const interaction = options.interaction ? interactionOf(first, options.recipeActions) : undefined;
+    const signature = evidenceSignature(first);
+    const also = options.alsoInFor?.(signature, familyId, members.map((m) => m.element.locator));
+    if (also?.items.length) familiesAlsoIn += 1;
     const makeItem = (listedCount: number) => {
     const listed = members.slice(0, listedCount).map((member) => member.id);
     return {
@@ -291,13 +330,18 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
         id: first.rule.id,
         ...(first.rule.checker ? { checker: first.rule.checker } : {}),
         ...(implementsBeyondCitation(first.rule) ? { implements: [...first.rule.implements!] } : {}),
+        ...(force !== undefined ? { force } : {}),
       },
       property: propertyOf(first),
       nature: first.nature,
       mode: first.mode,
       severity: first.severity,
       // 3.4.4 (C1): o estado é um só por página — sai uma vez no topo (stateFingerprint), não por família.
-      evidenceSignature: evidenceSignature(first),
+      evidenceSignature: signature,
+      // O texto do passo fica na nota única da página (interactionNote) e no achado/verify; aqui, só o estruturado. Sem
+      // passo (o fato está no DOM do estado), nada: a família não cresce — o verify_finding o diz (interaction.needed:false).
+      ...(interaction && interaction.needed !== false ? { interaction: { needed: interaction.needed, steps: interaction.steps } } : {}),
+      ...(also?.items.length ? { alsoIn: also.items, ...(also.more ? { alsoInMore: also.more } : {}) } : {}),
       value: valueOf(first),
       // 3.3.0 (N-05): o exemplo não repete o que a família já diz (página, severidade, natureza, modo, via).
       example: slimExample(projectFinding(first, "summary") as Record<string, unknown>, valueOf(first)),
@@ -366,6 +410,8 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
       : {}),
     ...(index < families.length ? { nextCursor: index } : {}),
     ...(versions.length ? { identityVersions: versions } : {}),
+    ...(familiesAlsoIn ? { alsoInNote: ALSO_IN_NOTE } : {}),
+    ...(projected.some((f) => (f as { interaction?: unknown }).interaction) ? { interactionNote: INTERACTION_FAMILY_NOTE } : {}),
     responseCharsEstimate: usedChars,
     familyHint: FAMILY_HINT,
   };
@@ -436,7 +482,7 @@ export function familyIndex(findings: Finding[], stateFingerprint: string | null
 function slimExample(example: Record<string, unknown>, value?: string) {
   const { page: _page, ...element } = (example.element ?? {}) as Record<string, unknown>;
   // 3.4.4 (C1): a norma do exemplo é a da família (está na chave) — não se repete.
-  const { severity: _s, nature: _n, mode: _m, pathway: _p, rule: _r, ...rest } = example;
+  const { severity: _s, nature: _n, mode: _m, pathway: _p, rule: _r, interaction: _i, ...rest } = example;
   // 3.4.0 (B6): `observed` igual ao `value` da família não se repete no exemplo.
   if (value !== undefined && rest.observed === value) delete rest.observed;
   return { ...rest, element };

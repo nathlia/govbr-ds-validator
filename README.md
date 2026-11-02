@@ -83,6 +83,94 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.6.5 — o que o oráculo devolvia pela metade nas perdas do com (D-155, rastreio dev-364)
+
+Motivo: o rastreio das perdas do com nas telas de desenvolvimento com a 3.6.4 (`dev-364-b-01`, `dev-364-a-01`,
+`thesis-workspace/planejamento/atual/mecanismo-oraculo-dev-364-2026-11-02.md`) achou seis causas no oráculo; uma
+revisão independente da 1ª versão destas correções achou mais oito pontos, já incorporados abaixo. Todas as correções
+são genéricas (por check, pendência ou regra da base; nada por tela, seletor ou componente nomeado). O `tools/list` não
+muda em nenhum perfil (esquemas de entrada e descrições iguais; sha256 conferidos nos seis perfis). O perfil
+knowledge-free não ganha nada novo. Teste: `test/integration/fix365.test.ts` (15 testes: os das correções falham na 3.6.4; dois são guardas — o knowledge-free sem extras e a 1ª página com
+os mesmos números de famílias com e sem acréscimos — que passam nela e falham se a 3.6.5 vazar extras ou cortar família).
+
+- **Achado de interação traz o passo que leva ao estado** (`checkers/interaction.ts`). O foco visível (A-04 p03) dizia
+  "ao receber foco…" ligado ao estado inicial; o agente copiou o estado do scan como receita e o juiz não reproduziu o
+  fato. Agora o check grava o que fez em `evidence.data.interaction` (foco visível `{action:"focus", via:"keyboard"}`;
+  ordem de foco `{action:"tab-from-start", presses:1}` numa receita sem ações, `{action:"markup"}` depois de ações) e
+  todo achado `mode:"interaction"` projeta o passo mínimo na forma das `actions`, nesta ordem: o que o check gravou; sem
+  gravação (o agente reescreveu a evidência), a `expectedCondition` do predicado (foco visível → focar o elemento; salto
+  como 1º foco → Tab a partir do carregamento, só sem ações na receita); check que decide pela marcação (axe, estrutura
+  do componente) → nenhum passo (`needed:false`); nada disso → `needed:"unknown"`, nunca "nenhum passo" por omissão.
+  Foco → `{action:"press", selector:<localizador>, key:"Shift"}` (o Playwright foca o elemento sem editar); ordem de
+  foco → `{action:"press", key:"Tab"}`. Onde aparece: na família (`interaction: {needed, steps}` + `interactionNote` uma
+  vez por página; famílias sem passo não crescem), no achado de `get_finding_details` (com o texto) e no
+  `verify_finding` (`interaction.stateSteps` = ações da receita do estado + o passo). A gravação muda o `evidence.data`
+  dos achados de foco visível e de ordem de foco (logo a assinatura de evidência e o JSON do CLI de linha de base
+  desses dois checks).
+- **Família traz a força da norma** (`responses/normForce.ts`). B-15 p03: a família mostrava `severity:"moderate"` e
+  não que a norma é obrigatória; o agente largou o fato "por impacto". `rule.force` vem de `getRuleById(id).force` (a
+  fonte do get_ds_rules e do verify): uma palavra, a da unidade que a família manda citar (`rule.id`); sem ela na base,
+  a mais forte das que o check implementa; id que a base não tem (e-MAG por número, WCAG, regra do axe) fica sem força.
+- **Spec do componente não contradiz as pendências do oráculo** (`tools/exampleAudit.ts`). A-05 p03: o scan pedia o
+  CAPTION como obrigatório e `get_component_spec table` serviu o exemplo canônico sem caption com `warnings: []`. (a)
+  Cada exemplo passa pelos MESMOS detectores do scan (pendências de elemento do notJudged, rótulo por placeholder, ícone
+  decorativo exposto) numa página isolada, sem rede e sem a folha do DS (`withHtmlPage`, toda requisição recusada); o
+  que o exemplo servido não cumpre volta em `warnings` (`type: "oracle-pending" | "oracle-finding"`, código, elemento,
+  cláusula) com `warningsNote`. Nos 172 exemplos dos 36 componentes: 2 com alerta (`table-irregular-1` e `-2`,
+  `table-name`, sem `<caption>`). (b) A spec traz `elementObligations`: cada pendência ou check de ELEMENTO do oráculo
+  (sujeito = o seletor que o scan lê; cláusula = a da fundamentação do check) cujo sujeito aparece na marcação do
+  componente — `<table>` → CAPTION (e-MAG 3.9), campos → rótulo associado (e-MAG 6.2), campos de texto → placeholder,
+  focáveis → foco visível. Os sujeitos e as normas saem de `ELEMENT_PENDING` (notJudged, que o próprio scan usa) e das
+  tabelas de fundamentação dos checks; nenhuma lista nova. A lista de verificação traz a forma curta (sujeito, id,
+  força; o texto por get_ds_rules), para não tirar itens do componente da 1ª página. No teto da spec, as obrigações
+  encolhem para sujeito + id + força antes de o exemplo ser adiado. Conferência em cache por processo; falha do
+  navegador vira `exampleAudit: {status:"unavailable"}`, nunca erro.
+- **Mesma assinatura em outra rota** (`session.recordFamilies`/`alsoIn`). B-23 p02: o contraste do detalhe tinha a
+  mesma `evidenceSignature` da família de outra rota e não virou cartão. A família ganha `alsoIn: [{route, scanId,
+  familyId}]` (até 2, `alsoInMore`) quando a mesma assinatura foi vista em outra rota com OUTROS elementos (o conjunto
+  de localizadores difere), ou na mesma rota noutro estado sem elemento em comum. O mesmo conjunto de elementos noutra
+  rota (layout compartilhado: cabeçalho, regiões) é o mesmo elemento — como a pendência da 3.6.3 — e não entra; o
+  mesmo elemento noutro estado da rota também não. Nota única `alsoInNote`: outro fato, cartão próprio por rota/estado
+  (coerente com a recusa `mixed-states`).
+- **Cláusula servida no checklist vira pendência da sessão** (`session.registerClauses`). A-11 p01: as cláusulas de
+  posição da Message vieram no checklist e nunca mais voltaram. Cada obrigação/proibição que nenhum check mede e que se
+  mede na página (estratégia dom, computed-style, accessibility-tree, keyboard-interaction ou responsive-viewport; ou
+  posição/ordem visual) vira pendência `P-NN` quando é SERVIDA numa página da lista (a página seguinte registra quando o
+  cursor é pedido; a página é montada com ids provisórios da largura final e montada de novo com os reais), nas rotas
+  em que um scan encontrou o componente. Componente que nenhum scan encontrou não registra nada, e o perfil sem
+  scan_page também não — `pendingNote` diz qual dos dois. O item traz `pendingId`; em `sessionPending` elas ficam no
+  sub-bloco `checklist` (por componente: contagem e até 3 ids, com nota própria), que desce pela escada do teto:
+  inteiro → ids (`byComponent` + ids) → contagem (`{componente: n}`); na 1ª página do scan, direto à contagem junto com
+  as outras pendências → ids. Fecham como as outras: `verify_finding` citando a cláusula na rota, ou `pendingResolved`.
+  Nos 36 componentes, 301 das 838 obrigações/proibições podem virar pendência. Posição/ordem visual (esquerda, direita,
+  topo, acima, abaixo, embaixo, centralizado; "ordem" que não é de tabulação, foco ou leitura), fora das estratégias de
+  teclado e código-fonte, ganha `measure.geometry` (getBoundingClientRect relativo à raiz e ordem no DOM) ALÉM da medida
+  da estratégia (61 cláusulas). Medido pela revisão (página com header, input, button e table; checklist dos quatro;
+  scan noutra rota): pendências 42 → 35 (todas lidas; antes 9 nunca lidas), `sessionPending` 347 → 122 caracteres,
+  famílias na 1ª página 4 → 6 (as mesmas 6 de sem checklist), itens na 1ª página do checklist header 20, table 14 →
+  17, button 17 → 19, input 13 → 15 (3.6.4: button 20, input 17).
+- **`checksRun` declara a revisita** (menor). B-15 p03: o achado de token veio da revisita de um elemento antes oculto
+  e `checksRun.omitted` dizia "tokens não foram medidos". Agora `executed` traz `{check:"tokens (revisita)",
+  tokenChecks, findings}` e o omitido de tokens diz que só os elementos antes ocultos foram medidos.
+- **Reexecução das 136 chamadas reais do com (`dev-364-b-01`, `dev-364-a-01`; 3.6.4 × 3.6.5,
+  `thesis-workspace/planejamento/atual/reexecucao-3.6.5-2026-11-02`), correções:** (1) os acréscimos nunca tiram
+  família da 1ª página do scan: duas etapas novas no FIM da escada da 1ª página, depois de todo o cabeçalho no piso da
+  3.6.4 — encurtar (alsoIn → só os familyIds; notas curtas) e, se ainda faltar espaço, tirar para o detalhe (força,
+  passo de interação, alsoIn e notas das famílias; o sub-bloco checklist do sessionPending, cuja contagem já está em
+  `count`; a revisita no `checksRun` só com o nome); a página só troca para a forma sem acréscimo quando ela ganha
+  família (empate: fica a com acréscimo); sem rótulo em `compacted`. A forma de contagem do sub-bloco checklist é o
+  total (um número). A evidência da ordem de foco é a mesma em todo estado (o Tab só sem ações é decidido na
+  projeção): gravá-la por estado fazia o `stateDiff` acusar evidência mudada. (2) `verify_finding` só traz o bloco
+  `interaction` para achado `mode:"interaction"` que precisa de passo ou cujo passo o oráculo não sabe; fato da marcação
+  não ganha bloco; "unknown" com o fato confirmado pelo predicado no estado da receita, ou com condição contextual
+  (decidida sobre as ações da receita) e ações enviadas, vira `needed:false` (só o texto; a receita basta). Na
+  reexecução: 37 de 44 verify com bloco, todos `mode:"interaction"` — 35 `needed:false`, 2 `needed:true`, 0 `unknown`.
+  Resultado da reexecução rc2: 0 de 53 chamadas perdem família na 1ª página; 0 itens de checklist perdidos. (3) Lista de verificação: o limite da página é o da 3.6.4 (itens sem acréscimo); os acréscimos entram e
+  encolhem até caber — obrigações dos elementos inteiras → ponteiro → fora da 1ª página (vão para a última, depois dos
+  itens); nota curta; geometria → marca → fora; `pendingId` só nos primeiros itens que couberem → nenhum (as
+  pendências seguem registradas). A spec também traz as obrigações na forma curta (sujeito, id, força).
+- Nenhum teste antigo alterado. 843 testes (828 da 3.6.4 + os 15 do `fix365`).
+
 ## 3.6.4 — mistura de rotas citada só por ids de achado (teste à mão, D-155)
 
 No teste ao vivo da 3.6.3 na tela B, um achado de rodapé ausente com `evidence.data.members` = [F-017 (lista), F-066 (agendamento)] foi **confirmado**: achados de página têm localizador `html` em toda rota, e o `verify_finding` localizava cada id citado também pelo casamento regra + localizador, pondo F-066 nas duas rotas. Agora o id exato manda; regra + localizador só vale quando o id não está em scan nenhum. Teste: `fix363.test.ts` (falha na 3.6.3, passa na 3.6.4).

@@ -46,6 +46,9 @@ export const FORM_FIELD_SELECTOR = "input, textarea, select";
 /** Tipos de `input` que não recebem texto digitado: o placeholder não se aplica a eles. */
 const NON_TEXT_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "checkbox", "radio", "file", "color", "range"]);
 
+/** 3.6.5 (item 3b): os campos a que a verificação do placeholder se aplica (os que recebem texto digitado), como seletor. */
+export const PLACEHOLDER_SUBJECT_SELECTOR = [`input${[...NON_TEXT_TYPES].map((t) => `:not([type='${t}'])`).join("")}`, "textarea"].join(", ");
+
 export type LabelSource =
   | { kind: "labelled"; via: "label" | "aria-labelledby" | "aria-label" }
   | { kind: "placeholder-only"; placeholder: string; title: string | null }

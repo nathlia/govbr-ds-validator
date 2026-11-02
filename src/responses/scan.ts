@@ -6,7 +6,7 @@
 import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
 import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
-import { sessionPendingCodes } from "../scan/session.js";
+import { sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -69,6 +69,8 @@ export function checksRunFor(
   coverage: { axe?: { engine: { name: string; version: string } }; actionsApplied?: unknown[]; selectors?: string[] },
   viewport: { width: number; height: number } | undefined,
   knowledgeFree: boolean,
+  /** 3.6.5 (item 6): o que a revisita de elementos antes ocultos mediu neste scan (pageScan.RevisitItem). */
+  revisited?: Array<{ locator: string; checker: string; now: string; findings?: string[] }>,
 ) {
   const scope = recipe.selectors?.length ? recipe.selectors.join(", ") : "document";
   const engine = coverage.axe ? `${coverage.axe.engine.name} ${coverage.axe.engine.version}` : undefined;
@@ -83,15 +85,29 @@ export function checksRunFor(
     };
   }
   const active = recipe.checks ?? ALL_CHECKS;
-  const executed = active.map((check) => ({
+  const executed: Array<Record<string, unknown> & { check: string }> = active.map((check) => ({
     check,
     scope,
     ...(check === "structure" ? { components: recipe.components?.length ? [...recipe.components].sort() : "todos os br-* encontrados" } : {}),
     ...(check === "tokens" ? { tokenChecks: recipe.tokenChecks ?? ALL_TOKEN_CHECKS } : {}),
     ...(check === "axe" && engine ? { engine } : {}),
   }));
+  // 3.6.5 (D-155, item 6; rastreio dev-364 §2, B-15 p03): a revisita mediu tokens e gerou achado — o check aparece
+  // como executado (só nesses elementos), em vez de só "tokens omitido", que contradizia o achado de token.
+  const revisitHits = (revisited ?? []).filter((r) => r.now === "measured" && r.findings?.length);
+  const revisitChecks = [...new Set(revisitHits.map((r) => r.checker.replace(/^ds-token-/, "").replace(/^font-family$/, "font")))];
+  const revisitFindings = revisitHits.flatMap((r) => r.findings ?? []);
+  if (revisitHits.length) {
+    executed.push({ check: "tokens (revisita)", tokenChecks: revisitChecks, findings: revisitFindings.slice(0, 10) });
+  }
   const omitted: Array<{ check: string; why: string }> = [];
-  for (const check of ALL_CHECKS) if (!active.includes(check)) omitted.push({ check, why: CHECK_OMISSION_WHY[check] });
+  for (const check of ALL_CHECKS) {
+    if (active.includes(check)) continue;
+    const why = check === "tokens" && revisitHits.length
+      ? "medidos só nos elementos antes ocultos (executed: tokens (revisita)); no resto deste estado, não."
+      : CHECK_OMISSION_WHY[check];
+    omitted.push({ check, why });
+  }
   const omittedTokens = active.includes("tokens") && recipe.tokenChecks ? ALL_TOKEN_CHECKS.filter((t) => !recipe.tokenChecks!.includes(t)) : [];
   for (const sub of omittedTokens) omitted.push({ check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
   if (active.includes("structure") && recipe.components?.length) {
@@ -229,8 +245,16 @@ function pageLevelShortStep(r: Record<string, unknown>): Record<string, unknown>
 /** 3.6.1: sessionPending → ids:código (as normas e os textos estão nos scans que as abriram). */
 function sessionPendingStep(r: Record<string, unknown>): Record<string, unknown> | null {
   const sp = r.sessionPending as { items?: Array<{ code: string; ids: string[] }>; count?: number; ids?: unknown; lowSignal?: number } | undefined;
-  if (!sp || sp.ids) return null;
+  if (!sp || sp.ids || !sp.items) return null;
   return { ...r, sessionPending: sessionPendingCodes(sp) };
+}
+
+/** 3.6.5 (revisão): as cláusulas lidas no checklist (sub-bloco de sessionPending) → contagem + componentes. */
+function sessionPendingChecklistStep(r: Record<string, unknown>): Record<string, unknown> | null {
+  const sp = r.sessionPending as { checklist?: unknown } | undefined;
+  if (!sp?.checklist) return null;
+  const next = sessionPendingChecklistCount(sp);
+  return next ? { ...r, sessionPending: next } : null;
 }
 
 /** 3.6.3: pendências curtas → mínimas (uma norma, um lugar com o valor medido, a tarefa em poucas palavras). */
@@ -278,6 +302,7 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["investigate → nomes + next", investigateNames],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
+    ["sessionPending.checklist → contagem", sessionPendingChecklistStep],
     [
       "state → essencial (inteiro no ledger)",
       (r) => {
@@ -619,7 +644,11 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     return { ...rest, familyHint: "Mais famílias: get_finding_details(scanId, cursor=nextCursor); membros: get_finding_details(scanId, familyId, cursor=nextMemberCursor)." };
   };
   return [
-    ["sessionPending → ids", onHead(sessionPendingStep)],
+    // 3.6.5 (revisão): na 1ª página, as cláusulas lidas no checklist descem junto, direto à contagem por componente.
+    ["sessionPending → ids", onHead((h) => {
+      const next = sessionPendingStep(h);
+      return next ? (sessionPendingChecklistStep(next) ?? next) : null;
+    })],
     ["revisited → contagem + seletores", onHead((h) => {
       const rv = h.revisited as { items?: Array<{ locator: string }>; count?: number } | undefined;
       if (!rv?.items) return null;
@@ -686,7 +715,66 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     ["pageLevel → ids", onHead(pageLevelIdsStep)],
     // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
     // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
+    // 3.6.5 (reexecução das chamadas reais): os acréscimos da 3.6.5 nunca tiram família da 1ª página. Por último, depois
+    // de todo o cabeçalho no piso da 3.6.4: encurtam (alsoIn → só os familyIds; notas curtas) e, se ainda faltar
+    // espaço para uma família, saem para o detalhe (get_finding_details(scanId) os traz). A página só troca para a forma
+    // sem acréscimo quando ela ganha família (empate: fica a com acréscimo). Sem rótulo em `compacted` (custaria o espaço).
+    ["", (s) => {
+      const prev = s.pager;
+      return { ...s, pager: (b) => familyExtrasShort(prev(b)) };
+    }],
+    ["", (s) => {
+      const prev = s.pager;
+      return { ...s, head: headExtrasOut(s.head), pager: (b) => familyExtrasOut(prev(b)) };
+    }],
   ];
+}
+
+/** 3.6.5: as notas da página e o alsoIn na forma curta (só os familyIds). */
+export function familyExtrasShort(p: Record<string, unknown>): Record<string, unknown> {
+  const families = Array.isArray(p.families)
+    ? (p.families as Array<Record<string, unknown>>).map((f) => {
+        if (!f.alsoIn) return f;
+        const { alsoIn, alsoInMore: _m, ...rest } = f;
+        return { ...rest, alsoIn: (alsoIn as Array<{ familyId?: string } | string>).map((a) => (typeof a === "string" ? a : a.familyId)) };
+      })
+    : p.families;
+  const out: Record<string, unknown> = { ...p, families };
+  if (out.alsoInNote) out.alsoInNote = "alsoIn: outro fato, cartão próprio";
+  if (out.interactionNote) out.interactionNote = "interaction.steps → state.steps";
+  return out;
+}
+
+/** 3.6.5: sem os acréscimos nas famílias (força, passo de interação, alsoIn) e sem as notas — ficam no detalhe. */
+export function familyExtrasOut(p: Record<string, unknown>): Record<string, unknown> {
+  const families = Array.isArray(p.families)
+    ? (p.families as Array<Record<string, unknown>>).map((f) => {
+        const { alsoIn: _a, alsoInMore: _m, interaction: _i, ...rest } = f;
+        const rule = rest.rule as Record<string, unknown> | undefined;
+        if (rule && "force" in rule) {
+          const { force: _f, ...r } = rule;
+          return { ...rest, rule: r };
+        }
+        return rest;
+      })
+    : p.families;
+  const { alsoInNote: _a, interactionNote: _i, ...rest } = p;
+  return { ...rest, families };
+}
+
+/** 3.6.5: no cabeçalho, o sub-bloco checklist do sessionPending (a contagem total já está em count) e a revisita só com o nome. */
+function headExtrasOut(h: Record<string, unknown>): Record<string, unknown> {
+  let out = h;
+  const sp = out.sessionPending as Record<string, unknown> | undefined;
+  if (sp && "checklist" in sp) {
+    const { checklist: _c, ...rest } = sp;
+    out = { ...out, sessionPending: rest };
+  }
+  const cr = out.checksRun as { executed?: Array<Record<string, unknown> | string> } | undefined;
+  if (cr?.executed?.some((e) => typeof e === "object" && e.check === "tokens (revisita)" && Object.keys(e).length > 1)) {
+    out = { ...out, checksRun: { ...cr, executed: cr.executed.map((e) => (typeof e === "object" && e.check === "tokens (revisita)" ? { check: e.check } : e)) } };
+  }
+  return out;
 }
 
 /**
@@ -705,7 +793,12 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
     (x) => (x.familyHint ? (({ familyHint: _h, ...rest }) => rest)(x) : x),
     (x) => (x.cacheMissReason ? (({ cacheMissReason: _c, ...rest }) => rest)(x) : x),
     (x) => (x.observations ? { ...x, observations: { total: (x.observations as { total?: unknown }).total, next: { tool: "get_finding_details", arguments: { scanId, view: "observations" } } } } : x),
-    (x) => (x.sessionPending ? { ...x, sessionPending: { count: (x.sessionPending as { count?: unknown }).count, ids: spIds(x.sessionPending as never) } } : x),
+    (x) => {
+      if (!x.sessionPending) return x;
+      const sp = x.sessionPending as { count?: unknown; checklist?: unknown };
+      const counted = sp.checklist ? (sessionPendingChecklistCount(sp)?.checklist ?? sp.checklist) : undefined;
+      return { ...x, sessionPending: { count: sp.count, ids: spIds(sp as never), ...(counted ? { checklist: counted } : {}) } };
+    },
     (x) => (x.revisited ? { ...x, revisited: { count: (x.revisited as { count?: unknown; items?: unknown[] }).count ?? (x.revisited as { items?: unknown[] }).items?.length, next: full } } : x),
     (x) => (x.units ? { ...x, units: { routes: (x.units as { routes?: unknown }).routes, states: (x.units as { states?: unknown }).states, rule: "um achado por rota/estado" } } : x),
     // 3.6.3: sem família nenhuma na 1ª página, as pendências descem à contagem ANTES dos textos de limits (D-154: eles por último).
@@ -791,7 +884,7 @@ function assembleFirstScanPage(
     // 3.6.2: `compacted` lista só a PARTE encolhida (cada bloco mostra a sua forma e a continuação); etapas da mesma
     // parte não se repetem — a lista custava até ~350 caracteres, o espaço de uma família.
     const part = label.split(" → ")[0];
-    state = { ...next, labels: [...state.labels.filter((l) => l !== part), part] };
+    state = part ? { ...next, labels: [...state.labels.filter((l) => l !== part), part] } : { ...next, labels: state.labels };
     done = consider(state);
     if (done) return done;
   }

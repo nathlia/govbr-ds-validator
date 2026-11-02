@@ -12,6 +12,7 @@ import { findEmagRule } from "../data/load.js";
 import type { FocusIndicatorFact } from "../evidence/focusIndicator.js";
 import { FOCUS_COMPARED_PROPERTIES } from "../evidence/focusIndicator.js";
 import type { CheckGrounding } from "./grounding.js";
+import { FOCUS_INTERACTION } from "./interaction.js";
 
 export const FOCUS_INDICATOR_CONDITION = "focus-indicator-visible";
 
@@ -52,6 +53,8 @@ export function checkFocusIndicators(
           comparedProperties: [...FOCUS_COMPARED_PROPERTIES],
           changedOnFocus: [],
           ...(fact.discounted?.length ? { discountedOnFocus: fact.discounted } : {}),
+          // 3.6.5 (D-155, item 1): o fato só existe com o elemento focado — o passo que o check fez.
+          interaction: { ...FOCUS_INTERACTION },
         },
       },
       severity: "serious" as const,

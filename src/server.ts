@@ -88,7 +88,7 @@ import {
 import { verifyFinding } from "./verify/gate.js";
 import { mixedStateVerdict, routeOfUrl, stateReferences, type ScanStateInfo } from "./verify/mixedStates.js";
 import { VerificationStore } from "./verify/store.js";
-import { ArrivalSchema, PageActionsSchema } from "./scan/actions.js";
+import { ArrivalSchema, PageActionsSchema, type PageAction } from "./scan/actions.js";
 import type { StateAttestation } from "./scan/pageScan.js";
 import { sameScanPage, scanPageKey } from "./scan/state.js";
 import { validateFindings, buildReport, persistReport, summarize, REPORT_NOTES_MAX_CHARS } from "./report/report.js";
@@ -104,7 +104,10 @@ import {
   type FindingDetail,
   PAGE_CONTENT_NOTE,
 } from "./responses/findings.js";
-import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, familyIndex } from "./responses/families.js";
+import { FamilyViewInputShape, buildFamilyMemberPage, buildFamilyPage, evidenceSignature, familyIndex, groupFamilies, type FamilyExtras } from "./responses/families.js";
+import { unitForceOf } from "./responses/normForce.js";
+import { INTERACTION_NOTE, interactionOf } from "./checkers/interaction.js";
+import { CONTEXT_CONDITIONS } from "./verify/contextual.js";
 import { PageScanCache, pageLevelFirst, scanPage, type RevisitItem } from "./scan/pageScan.js";
 import { ABSENCE_NOTE, ABSENCE_NOTE_KNOWLEDGE_FREE } from "./responses/absence.js";
 import {
@@ -146,7 +149,8 @@ export function startupChecks(): Promise<void> {
 import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock, slotOf } from "./scan/session.js";
-import { componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
+import { checklistPendingClauses, componentChecklist, unmeasuredStrongCount } from "./tools/componentChecklist.js";
+import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
@@ -794,6 +798,35 @@ export function createServer(options: ServerOptions = {}): McpServer {
     });
 
   /**
+   * 3.6.5 (D-155, itens 1, 2 e 4): o que as famílias mostram fora do perfil knowledge-free — força da unidade citada (da
+   * base), passo de interação e a mesma evidência em outra rota/estado da sessão. As famílias seguem iguais entre os perfis
+   * que varrem com a base (NAT-84); o knowledge-free fica como estava (nada da base).
+   */
+  const familyExtras = (batchScanId?: string): FamilyExtras => {
+    if (knowledgeFree) return {};
+    const extras: FamilyExtras = { forceOf: unitForceOf, interaction: true };
+    const ledger = batchScanId ? findingStore.getBatchMetadata(batchScanId) : undefined;
+    const state = ledger?.state as StateAttestation | undefined;
+    if (batchScanId && state?.observed?.url && typeof ledger?.stateFingerprint === "string") {
+      const route = routeKeyOf(state.observed.url);
+      const fingerprint = ledger.stateFingerprint;
+      extras.recipeActions = state.recipe?.actions ?? [];
+      extras.alsoInFor = (signature, _familyId, locators) => session.alsoIn(signature, batchScanId, route, fingerprint, locators);
+    }
+    return extras;
+  };
+
+  /** 3.6.5 (item 4): as famílias de um scan de página entram no registro da sessão (todas, pela chave completa). */
+  const recordScanFamilies = (scanId: string, url: string, fingerprint: string, findings: Finding[]) => {
+    session.recordFamilies(
+      scanId,
+      routeKeyOf(url),
+      fingerprint,
+      groupFamilies(findings, fingerprint).map((f) => ({ signature: evidenceSignature(f.members[0]), familyId: f.familyId, locators: f.members.map((m) => m.element.locator) })),
+    );
+  };
+
+  /**
    * 2.11.0 (NAT-84): visão de um lote — a página de findings de sempre ou a página de famílias.
    * Só apresentação: `summary`, `deduplication` e o lote guardado não mudam. Nada depende do perfil.
    */
@@ -808,11 +841,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
       maxChars?: number;
       memberLimit?: number;
     },
+    /** 3.6.5 (D-155): o scan do lote (para alsoIn); ausente fora de um scan de página. */
+    batchScanId?: string,
   ) {
     const { view, detail, cursor, limit, maxChars, memberLimit } = args;
     // Padrão: famílias (decisão do coordenador na revisão do NAT-84). A lista plana segue em view="findings".
     if ((view ?? "families") === "families") {
-      return buildFamilyPage(findings, { cursor, limit, maxChars, memberLimit, stateFingerprint, verificationFor });
+      return buildFamilyPage(findings, { cursor, limit, maxChars, memberLimit, stateFingerprint, verificationFor, ...familyExtras(batchScanId) });
     }
     const page = buildFindingPage(findings, { detail, cursor, limit, maxChars });
     if (cursor) return page;
@@ -1460,7 +1495,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
             next: [step("request-detail", "a lista de verificação, sem exemplo", "get_component_spec", { component: spec.name, view: "checklist" })],
           });
         }
-        return ok(componentChecklist(spec.name, cursor ?? 0));
+        // 3.6.5 (item 3b): as obrigações globais dos elementos da marcação; (item 5) as cláusulas obrigatórias e
+        // mensuráveis sem medida do oráculo viram pendências da sessão (pendingId em cada item).
+        const audit = await auditComponentExamples(spec.name, spec.examples as Array<{ name: string; html?: unknown }>);
+        return ok(checklistWithPending(spec.name, cursor ?? 0, elementObligationsCompact(audit)));
       }
       if (cursor !== undefined) {
         return fail({
@@ -1473,6 +1511,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // Defect awareness (D-10/Phase 2.4): the canonical examples of some
       // components are themselves non-conformant — warn at spec-serving time.
       const defects = getComponentDefects(spec.name);
+      // 3.6.5 (D-155, item 3): os exemplos conferidos pelas pendências/checks do próprio oráculo (a) e as obrigações
+      // globais que ele cobra dos elementos da marcação do componente (b).
+      const audit = await auditComponentExamples(spec.name, spec.examples as Array<{ name: string; html?: unknown }>);
+      const oracleWarnings = (name: string | undefined) => (name ? audit.warnings[name] ?? [] : []);
+      const auditUnavailable = audit.error ? { exampleAudit: { status: "unavailable", reason: audit.error } } : {};
+      const obligations = elementObligationsCompact(audit);
       // 3.0.0 (§9): as regras do componente por estratégia de verificação, com até 3 passos exatos
       // nas estratégias que exigem estado ou interação (ordem fixa, sem mapa por componente).
       const own = filterRules({ component: spec.name });
@@ -1511,10 +1555,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
           kind: "component-example",
           component: spec.name,
           example: chosen,
-          warnings: defects.map((d) => ({
-            type: d.type, severity: d.severity, file: d.file, element: d.element,
-            note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
-          })),
+          warnings: [
+            ...defects.map((d) => ({
+              type: d.type, severity: d.severity, file: d.file, element: d.element,
+              note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
+            })),
+            ...oracleWarnings(chosen.name),
+          ],
+          ...(oracleWarnings(chosen.name).length ? { warningsNote: EXAMPLE_WARNING_NOTE } : {}),
+          ...auditUnavailable,
           note: "Exemplo canônico do @govbr-ds/core: evidência de implementação, não norma.",
           availableExamples: examples.map((e) => e.name),
           absenceNote: ABSENCE_NOTE,
@@ -1558,6 +1607,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           evidence: d.evidence,
           note: "Defeito de acessibilidade no exemplo canônico oficial — não trate este fragmento como norma (veja govbr://knowledge/conflicts).",
         })),
+        ...(obligations ? { elementObligations: obligations } : {}),
+        ...auditUnavailable,
         ...(chosen ? { example: chosen } : {}),
         availableExamples: examples.map((e) => e.name),
         ...(chosen
@@ -1569,7 +1620,19 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // não lista (ex.: ARIA escrito em tempo de execução) não é prova de conformidade.
         absenceNote: ABSENCE_NOTE,
       };
-      return ok(fitComponentSpec(response, { component: spec.name, chosen, implicit: example === undefined, examples }));
+      // 3.6.5 (item 3a): os alertas do oráculo são os do exemplo SERVIDO (o ajuste ao teto pode trocar o implícito).
+      const withOracleWarnings = (name: string | undefined) => {
+        const base = (response.warnings as Array<{ type: string }>).filter((w) => w.type !== "oracle-pending" && w.type !== "oracle-finding");
+        const own = oracleWarnings(name);
+        response.warnings = [...base, ...own];
+        if (own.length) response.warningsNote = EXAMPLE_WARNING_NOTE;
+        else delete response.warningsNote;
+      };
+      withOracleWarnings(chosen?.name);
+      const fitted = fitComponentSpec(response, { component: spec.name, chosen, implicit: example === undefined, examples });
+      const served = (fitted.example as { name?: string; status?: string } | undefined);
+      if (served?.name !== chosen?.name || served?.status === "deferred") withOracleWarnings(served?.status === "deferred" ? undefined : served?.name);
+      return ok(fitted);
     })
   );
 
@@ -1684,6 +1747,27 @@ export function createServer(options: ServerOptions = {}): McpServer {
   };
 
   /** 3.6.1 (item 1): itens do notJudged com o id da pendência da sessão (e a resolução, se já houver). */
+  /**
+   * 3.6.5 (D-155, item 5; revisão): as cláusulas obrigatórias e mensuráveis sem medida do oráculo viram pendências da
+   * sessão quando SERVIDAS na página do checklist que o agente recebeu (as páginas seguintes registram quando o cursor é
+   * pedido), nas rotas em que um scan encontrou o componente. Sem scan que o encontrou, nada é registrado (e a nota diz);
+   * no perfil sem scan_page, também não. A página é montada com ids provisórios da largura final (o pendingId conta no
+   * orçamento), os citeAs servidos são registrados e a página é montada de novo com os ids reais.
+   */
+  const checklistWithPending = (component: string, cursor: number, obligations: ReturnType<typeof elementObligationsCompact>) => {
+    const base = { elementObligations: obligations };
+    const clauses = checklistPendingClauses(component);
+    if (!clauses.length) return componentChecklist(component, cursor, undefined, base);
+    if (!hasDeterministic) return componentChecklist(component, cursor, undefined, { ...base, pendingStatus: "no-scan-tool" });
+    const routes = [...new Set(session.previousScans().filter((s) => s.components?.includes(component)).map((s) => s.route))];
+    if (!routes.length) return componentChecklist(component, cursor, undefined, { ...base, pendingStatus: "component-not-found" });
+    const provisional = session.clauseIdsPreview(component, clauses.map((c) => c.id));
+    const draft = componentChecklist(component, cursor, undefined, { ...base, pendingIds: provisional });
+    const served = new Set(((draft.items as Array<{ citeAs: string }> | undefined) ?? []).map((i) => i.citeAs));
+    session.registerClauses(component, routes, clauses.filter((c) => served.has(c.id)));
+    return componentChecklist(component, cursor, undefined, { ...base, pendingIds: session.clauseIds(component) });
+  };
+
   const withPendingIds = (scanId: string, route: string, items: NotJudgedItem[]): PendingItem[] => {
     const entries = session.registerPending(scanId, route, items, (item) => (item.examples ?? []).slice());
     return items.map((item, i) => {
@@ -1887,6 +1971,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           }
         }
         session.recordHidden(scanId, url, result.observations);
+        // 3.6.5 (item 4): as famílias deste estado, para marcar a mesma evidência noutra rota/estado.
+        recordScanFamilies(scanId, result.state.observed.url, result.stateFingerprint, findings);
         const stateDiff = compareToScanId && previousFindings
           ? {
               previousScanId: compareToScanId,
@@ -1916,7 +2002,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route)
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
-        session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks });
+        session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks, components: result.coverage.componentsFound ?? [] });
         const revisited = first ? revisitedBlock(result.revisited) : undefined;
         const head = {
           contract: CONTRACT,
@@ -1936,6 +2022,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               result.coverage,
               result.state.observed.viewport,
               false,
+              result.revisited,
             ),
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
             // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).
@@ -1953,7 +2040,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           absenceNote: ABSENCE_NOTE,
         };
         const response = assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
-          batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
+          batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }, scanId),
           { firstScanPage: first },
         );
         markDeliveredTexts(response);
@@ -2358,7 +2445,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         return ok(
           assembleScan(head, null, scanId ?? "", budget, (pageBudget) =>
             scanId
-              ? batchView(found, stateFingerprint, { view: familyView, detail: detail ?? "summary", cursor, limit, maxChars: pageBudget, memberLimit })
+              ? batchView(found, stateFingerprint, { view: familyView, detail: detail ?? "summary", cursor, limit, maxChars: pageBudget, memberLimit }, scanId)
               : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars: pageBudget }),
           ),
         );
@@ -2503,6 +2590,23 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(knowledgeFree ? { knowledgeFree: true } : {}),
       });
       const stored = verificationStore.record(candidate, verification);
+      // 3.6.5 (D-155, item 1): o passo de interação que leva ao estado do fato, depois das ações da receita — a forma
+      // de state.steps do cartão. Nos perfis com normas; o knowledge-free fica como estava.
+      const recipeActions = (scanState?.recipe.actions ?? actions ?? []) as PageAction[];
+      const interaction = knowledgeFree ? undefined : interactionOf(candidate, recipeActions);
+      // Reexecução 3.6.5: o bloco só vai para achado mode:"interaction" que precisa de passo, ou cujo passo o oráculo não
+      // sabe. Fato da marcação (axe, estrutura, ordem de foco depois de ações) não ganha bloco. "unknown" com o fato
+      // CONFIRMADO pelo predicado no estado desta receita vira needed:false: a receita basta.
+      // A condição contextual (foco restaurado, erro identificado, mensagem de estado…) é decidida SOBRE as ações da receita:
+      // com ações, o passo é a própria receita.
+      const contextual = CONTEXT_CONDITIONS.some((c) => c.condition === (candidate.evidence?.data as { expectedCondition?: unknown } | undefined)?.expectedCondition);
+      const interactionBlock = !interaction || interaction.needed === false
+        ? undefined
+        : interaction.needed === "unknown" && verification.verdict === "confirmed"
+          ? { needed: false, text: "o predicado confirmou o fato no estado desta receita: ela basta como state.steps" }
+          : interaction.needed === "unknown" && contextual && recipeActions.length > 0
+            ? { needed: false, text: "a condição é decidida sobre as ações da receita: elas são o passo (state.steps)" }
+            : { needed: interaction.needed, steps: interaction.steps, text: interaction.text, stateSteps: [...recipeActions, ...interaction.steps], note: INTERACTION_NOTE };
       // 3.6.1 (D-155, item 1): verificar uma das normas de uma pendência, na rota dela, a resolve (qualquer veredito).
       const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict);
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
@@ -2517,6 +2621,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
         }),
         ...(stateWarning ? { stateWarning } : {}),
+        ...(interactionBlock ? { interaction: interactionBlock } : {}),
         ...(pendingResolved.length ? { pendingResolved } : {}),
         // 3.6.3 (revisão HIGH 1): a mesma pendência em outras rotas segue aberta até ser medida lá.
         ...(pendingResolved.length && session.stillOpen(pendingResolved).length ? { pendingStillOpen: session.stillOpen(pendingResolved) } : {}),
