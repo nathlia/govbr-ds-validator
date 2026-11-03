@@ -23,6 +23,41 @@
  * Não há subtração global: cada perdão sai no relatório com o caminho, a ferramenta e a justificativa
  * (e o caminho do argumento, no eco). Ferramenta sem campos declarados não perdoa nada além do eco do
  * próprio nome e das exceções nomeadas.
+ *
+ * Seletor de elemento da página (detector 1.3.1 do eval, dev-366-b-01; regra ESTRUTURAL, não lista de caminhos).
+ * A 3.6.5/3.6.6 passou a citar localizadores e seletores em formas novas (`checksRun.pageLevel.notMeasured[*].
+ * measured[*].locator`, o seletor da falha do replay em `verification.binding.state.failure.selector`, o seletor
+ * citado entre aspas no texto do verify: "Nenhum elemento para 'br-button[label="Editar"]'"). Numa tela feita com
+ * os web components do DS a TAG do elemento (`br-input`, `br-button`) é o nome da classe raiz do componente e está
+ * no dicionário; ali ela é fato da página, não conhecimento servido. Por isso, em qualquer ferramenta, uma
+ * ocorrência é `pagina` quando, e só quando, TODAS valem (revisão adversarial de 02/11 aplicada):
+ *   1. o termo é exato e vem de `specs:rootClass` ou `specs:variantClass` (nome de elemento/classe de componente;
+ *      ids, títulos e trechos da base, tokens, ids de check e termos fixos nunca entram por esta regra);
+ *   2. a folha cita um seletor CSS bem-formado (SELECTOR_SHAPE: compostos tipo/#id/.classe/[atributo]/:pseudo,
+ *      combinadores espaço > + ~ , e o `>>>` de travessia de shadow root): a folha INTEIRA, quando o nome final do
+ *      caminho é `locator` ou `selector`, a folha inteira no formato de descritor de elemento `<tag#id.classe>` (o
+ *      `active` do traço), a folha inteira que é um seletor com sintaxe de seletor (o alvo do axe), ou um trecho entre
+ *      aspas ('…', "…", `…`) de qualquer folha; nos dois últimos casos, sem a chave como prova, todo nome em posição de
+ *      tipo tem de ser tag renderizada da tela (prosa ASCII também lê como seletor de descendentes), e o seletor TEM de
+ *      ter sintaxe de seletor (`[`, `#`, `.`, `>`, `+`, `~`, `,`): um nome nu entre aspas ('br-skiplink') não é seletor;
+ *   3. o termo aparece no seletor só em posição de tipo ou de classe, e não aparece na folha fora dos seletores
+ *      citados (o mesmo nome solto na prosa do servidor continua `sem-explicacao`); classe de variante só vale em
+ *      posição de classe, nunca como tag;
+ *   4. a tela RENDERIZA esse nome naquela posição: o termo em posição de tipo está nas tags, em posição de classe
+ *      está nas classes do inventário do DOM renderizado da tela (`Provenance.elements`, gerado sobre o site
+ *      congelado nas paradas declaradas, shadow roots atravessados). Os bytes servidos NÃO contam (os bundles do DS
+ *      trazem quase todos os nomes). Sem inventário, a regra não perdoa nada (falha fechada);
+ *   5. o caminho não é de receita, replay, passo ou ação (`recipe`, `replay`, `actions`, `steps` em qualquer ponto
+ *      do caminho, qualquer ferramenta): ali a única explicação é o eco do argumento da mesma chamada.
+ * `exactTokens` também separa compostos com ponto (`.is-primary`, `div.br-skiplink` → `is-primary`, `br-skiplink`),
+ * para que o nome em posição de classe seja ocorrência e passe por esta regra (ou fique sem explicação). As classes do
+ * inventário incluem as DINÂMICAS (vistas em tempo de execução: foco por teclado, hover, transições do setup, ex.
+ * `focus-visible`), registradas à parte no inventário com a fase em que apareceram.
+ * Limites aceitos na revisão adversarial (LOW): (a) o inventário é um par de conjuntos planos — tag e classe não são
+ * casadas (`br-input.is-primary` passa se a tela renderiza `br-input` e, noutro elemento, `.is-primary`); (b) uma folha
+ * de prosa feita só de nomes renderizados com sintaxe de seletor ("br-header > br-button") é lida como seletor. Nos dois
+ * casos o termo continua sendo nome que a tela de fato renderiza; o conhecimento ao redor (títulos, trechos, ids) é
+ * pego pelas outras entradas do dicionário.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -57,7 +92,15 @@ export function words(text: string): string[] {
 
 /** Tokens exatos (ids, nomes de token CSS, classes): sensível a caixa. */
 export function exactTokens(text: string): string[] {
-  return (text.match(/[A-Za-z0-9_.\-]+/g) ?? []).map((t) => t.replace(/\.+$/, ""));
+  const out: string[] = [];
+  for (const raw of text.match(/[A-Za-z0-9_.\-]+/g) ?? []) {
+    const t = raw.replace(/^\.+|\.+$/g, "");
+    if (!t) continue;
+    out.push(t);
+    // composto com ponto (classe, tag.classe, .a.b): cada parte também é token; o composto inteiro fica (ids com ponto)
+    if (t.includes(".")) for (const part of t.split(".")) if (part && part !== t) out.push(part);
+  }
+  return out;
 }
 
 function stringsOf(value: unknown, out: string[] = []): string[] {
@@ -388,6 +431,16 @@ export interface Provenance {
   page: string | null;
   /** Bundle do axe-core. */
   axe: string;
+  /**
+   * Inventário do DOM RENDERIZADO da tela (nomes de tag e de classe nas paradas declaradas, shadow roots atravessados).
+   * É a única prova aceita pela regra do seletor de elemento da página; ausente/null = a regra não perdoa nada.
+   */
+  elements?: PageElements | null;
+}
+
+export interface PageElements {
+  tags: ReadonlySet<string>;
+  classes: ReadonlySet<string>;
 }
 
 function contains(haystack: string, hit: Hit): boolean {
@@ -401,7 +454,140 @@ function sameValue(hit: Hit, value: string): boolean {
   return words(value).join(" ") === hit.term;
 }
 
-export function classify(hit: Hit, provenance: Provenance, normalizedWordCache?: Map<string, string>): { class: Classification; why: string } {
+/** Fontes do dicionário que nomeiam um elemento/classe de componente (as únicas que a regra do seletor perdoa). */
+export const PAGE_ELEMENT_SOURCES = new Set(["specs:rootClass", "specs:variantClass"]);
+/** Nome final do caminho que diz "esta folha inteira é um localizador/seletor". */
+const SELECTOR_LEAF = /\.(?:locator|selector)$/;
+const QUOTED = /'([^'\n]+)'|"([^"\n]+)"|`([^`\n]+)`/g;
+const IDENT = /-?[A-Za-z_][A-Za-z0-9_-]*/y;
+
+/**
+ * SELECTOR_SHAPE: lê `text` como seletor CSS (lista de compostos tipo|*, #id, .classe, [atributo], :pseudo(…), unidos
+ * por espaço, >, +, ~, vírgula ou `>>>`). Devolve os nomes em posição de tipo e de classe, ou null se não for seletor.
+ */
+export function selectorNames(text: string): Array<{ name: string; at: "type" | "class" }> | null {
+  const s = text.trim();
+  const out: Array<{ name: string; at: "type" | "class" }> = [];
+  let i = 0;
+  const ident = (): string | null => {
+    IDENT.lastIndex = i;
+    const m = IDENT.exec(s);
+    if (!m) return null;
+    i = IDENT.lastIndex;
+    return m[0];
+  };
+  const balanced = (open: string, close: string): boolean => {
+    let depth = 0;
+    let quote: string | null = null;
+    for (; i < s.length; i += 1) {
+      const c = s[i];
+      if (quote) {
+        if (c === "\\") i += 1;
+        else if (c === quote) quote = null;
+        continue;
+      }
+      if (c === '"' || c === "'") quote = c;
+      else if (c === open) depth += 1;
+      else if (c === close && --depth === 0) {
+        i += 1;
+        return true;
+      }
+    }
+    return false;
+  };
+  const spaces = () => {
+    while (i < s.length && /\s/.test(s[i])) i += 1;
+  };
+  if (!s) return null;
+  for (;;) {
+    let any = false;
+    if (s[i] === "*") {
+      i += 1;
+      any = true;
+    } else {
+      const t = ident();
+      if (t) {
+        out.push({ name: t, at: "type" });
+        any = true;
+      }
+    }
+    for (;;) {
+      const c = s[i];
+      if (c === "#" || c === ".") {
+        i += 1;
+        const t = ident();
+        if (!t) return null;
+        if (c === ".") out.push({ name: t, at: "class" });
+      } else if (c === "[") {
+        if (!balanced("[", "]")) return null;
+      } else if (c === ":") {
+        i += s[i + 1] === ":" ? 2 : 1;
+        if (!ident()) return null;
+        if (s[i] === "(" && !balanced("(", ")")) return null;
+      } else break;
+      any = true;
+    }
+    if (!any) return null;
+    const before = i;
+    spaces();
+    if (i >= s.length) return out;
+    if (s.startsWith(">>>", i)) i += 3;
+    else if (">+~,".includes(s[i])) i += 1;
+    else if (i === before) return null;
+    spaces();
+    if (i >= s.length) return null;
+  }
+}
+
+/** Sintaxe que distingue um seletor citado de um nome nu entre aspas ('br-skiplink', 'is-primary'). */
+const SELECTOR_SYNTAX = /[[#.>+~,]/;
+/** Descritor de elemento que o traço do verify escreve (`<input#br-input-147.focus-visible>`): um composto entre <>. */
+const ELEMENT_DESCRIPTOR = /^<([^<>\s]+)>$/;
+/** Caminhos de receita/replay/passo/ação: só o eco do argumento da mesma chamada os explica (condição 5). */
+const RECIPE_PATH = /recipe|replay|actions|steps/i;
+
+/** Seletor de elemento da página (regra do cabeçalho, condições 1–5). */
+function inPageSelector(hit: Hit, leafText: string, elements: PageElements | null | undefined): boolean {
+  if (!elements || hit.kind !== "exact" || !PAGE_ELEMENT_SOURCES.has(hit.source) || RECIPE_PATH.test(hit.path)) return false;
+  const selectors: string[] = [];
+  let outside = leafText;
+  const leaf = leafText.trim();
+  // sem a chave como prova (…locator/…selector), todo nome em posição de tipo tem de ser tag renderizada: prosa ASCII
+  // ("Use .is-primary on the button") também lê como seletor de descendentes, mas "Use", "on", "the" não são tags da tela
+  const typesRendered = (sel: string) => selectorNames(sel)!.every((n) => n.at !== "type" || elements.tags.has(n.name.toLowerCase()));
+  if (SELECTOR_LEAF.test(hit.path) && selectorNames(leafText)) {
+    selectors.push(leafText);
+    outside = "";
+  } else if (ELEMENT_DESCRIPTOR.test(leaf) && selectorNames(ELEMENT_DESCRIPTOR.exec(leaf)![1])) {
+    selectors.push(ELEMENT_DESCRIPTOR.exec(leaf)![1]);
+    outside = "";
+  } else if (SELECTOR_SYNTAX.test(leaf) && selectorNames(leaf) && typesRendered(leaf)) {
+    // a folha inteira é um seletor (ex.: o alvo do axe em coverage.axe.incompleteRules[*].example)
+    selectors.push(leaf);
+    outside = "";
+  } else {
+    outside = leafText.replace(QUOTED, (whole, a?: string, b?: string, c?: string) => {
+      const inner = a ?? b ?? c ?? "";
+      if (!SELECTOR_SYNTAX.test(inner) || !selectorNames(inner) || !typesRendered(inner)) return whole;
+      selectors.push(inner);
+      return " ";
+    });
+  }
+  if (!selectors.length || exactTokens(outside).includes(hit.term)) return false;
+  let named = 0;
+  for (const sel of selectors) {
+    const at = selectorNames(sel)!.filter((n) => n.name === hit.term);
+    if (exactTokens(sel).filter((t) => t === hit.term).length > at.length) return false;
+    for (const n of at) {
+      if (n.at === "type" && (hit.source !== "specs:rootClass" || !elements.tags.has(hit.term))) return false;
+      if (n.at === "class" && !elements.classes.has(hit.term)) return false;
+    }
+    named += at.length;
+  }
+  return named > 0;
+}
+
+export function classify(hit: Hit, provenance: Provenance, normalizedWordCache?: Map<string, string>, leafText?: string): { class: Classification; why: string } {
   const containsCached = (key: "page" | "axe", haystack: string) => {
     if (hit.kind === "exact") return haystack.includes(hit.term);
     let normalized = normalizedWordCache?.get(key);
@@ -433,6 +619,9 @@ export function classify(hit: Hit, provenance: Provenance, normalizedWordCache?:
   if (fields.axe.includes(hit.path) && containsCached("axe", provenance.axe)) {
     return { class: "axe", why: `campo da saída do axe-core (${provenance.tool} ${hit.path}) e o termo existe no bundle do axe` };
   }
+  if (leafText !== undefined && inPageSelector(hit, leafText, provenance.elements)) {
+    return { class: "pagina", why: `nome de elemento/classe (${hit.source}) só em posição de tipo/classe de seletor citado em ${provenance.tool} ${hit.path}, e a tela renderiza esse nome nessa posição (inventário do DOM)` };
+  }
   return { class: "sem-explicacao", why: "" };
 }
 
@@ -451,7 +640,7 @@ export function scanResponse(dict: Dictionary, text: string, provenance: Provena
   const cache = new Map<string, string>();
   const hits: ScanResult["hits"] = [];
   for (const leaf of leaves(parsed)) {
-    for (const hit of hitsInText(dict, leaf.text, leaf.path)) hits.push({ ...hit, ...classify(hit, provenance, cache) });
+    for (const hit of hitsInText(dict, leaf.text, leaf.path)) hits.push({ ...hit, ...classify(hit, provenance, cache, leaf.text) });
   }
   return { hits };
 }

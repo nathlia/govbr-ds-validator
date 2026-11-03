@@ -106,6 +106,50 @@ describe("falhas deliberadas", () => {
     expect(scanResponse(dict, "error: try get_ds_rules", { tool: "scan_page", args: {}, page: null, axe: AXE }).hits[0].class).toBe("sem-explicacao");
   });
 
+  it("seletor de elemento da página (detector 1.3.1 do eval): só a tag/classe RENDERIZADA, em posição de seletor, é página", () => {
+    const tags = [...dict.exact.values()].filter((t) => t.source === "specs:rootClass").map((t) => t.term);
+    const [tag, naoRenderizada] = tags;
+    const variant = pick("specs:variantClass", "exact");
+    const id = pick("kb:id", "exact");
+    const title = pick("kb:title", "phrase");
+    // os bytes da página trazem os dois componentes (como os bundles do DS); a tela só renderiza `tag` e `variant`
+    const page = `<${tag} class="${variant}"></${tag}><script>define("${naoRenderizada}")</script>`;
+    const elements = { tags: new Set([tag]), classes: new Set([variant]) };
+    const run = (payload: unknown, opts: { tool?: string; el?: typeof elements | null; args?: unknown } = {}) =>
+      scanResponse(dict, JSON.stringify(payload), { tool: opts.tool ?? "verify_finding", args: opts.args ?? {}, page, axe: AXE, elements: opts.el === undefined ? elements : opts.el }).hits;
+    const cls = (payload: unknown, opts: Parameters<typeof run>[1] = {}) => run(payload, opts).map((h) => `${h.source}:${h.class}`);
+    // folha inteira num campo …locator/…selector, em caminhos que nenhuma ferramenta declara
+    expect(cls({ checksRun: { pageLevel: { notMeasured: [{ measured: [{ locator: `${tag}[label="Longitude"] >>> #${tag}-146` }] }] } } }, { tool: "scan_page" })).toEqual(["specs:rootClass:pagina"]);
+    expect(cls({ verification: { binding: { state: { failure: { selector: `${tag}[label="Editar"]` } } } } })).toEqual(["specs:rootClass:pagina"]);
+    // seletor citado entre aspas, com sintaxe de seletor; variante em posição de classe; descritor <tag.classe> do traço
+    expect(cls({ verification: { detail: `Nenhum elemento para '${tag}[label="Editar"]' no passo 2.` } })).toEqual(["specs:rootClass:pagina"]);
+    expect(cls({ reasons: [{ detail: `A mensagem '${tag}.${variant} .feedback' não existe.` }] }).sort()).toEqual(["specs:rootClass:pagina", "specs:variantClass:pagina"]);
+    expect(cls({ verification: { binding: { context: { trace: [{ active: `<input#x.${variant}>` }] } } } })).toEqual(["specs:variantClass:pagina"]);
+    // a folha inteira é um seletor (alvo do axe): vale com todo tipo renderizado; prosa ASCII lida como seletor, não
+    expect(cls({ coverage: { axe: { incompleteRules: [{ example: `.item[_ngcontent-x=\"\"]:nth-child(3) > .px-3.${variant} > ${tag}` }] } } }, { tool: "scan_page" }).sort()).toEqual(["specs:rootClass:pagina", "specs:variantClass:pagina"]);
+    expect(cls({ coverage: { note: `Use .${variant} on the main button` } }, { tool: "scan_page" })).toEqual(["specs:variantClass:sem-explicacao"]);
+    expect(cls({ verification: { detail: `Veja 'use .${variant} here'.` } })).toEqual(["specs:variantClass:sem-explicacao"]);
+    // falha fechada: sem inventário da tela
+    expect(cls({ verification: { detail: `Nenhum elemento para '${tag}[label="Editar"]'.` } }, { el: null })).toEqual(["specs:rootClass:sem-explicacao"]);
+    // componente nos bytes da página mas não renderizado; nome nu entre aspas; variante como tag
+    expect(cls({ verification: { detail: `Nenhum elemento para '${naoRenderizada}[label="Editar"]'.` } })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ verification: { detail: `Esperado '${tag}' antes do cabeçalho.` } })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ verification: { detail: `Use '${variant}[x]'.` } }, { el: { tags: new Set([tag, variant]), classes: new Set([variant]) } })).toEqual(["specs:variantClass:sem-explicacao"]);
+    // solta na prosa, em valor de atributo, em receita/replay/passo de qualquer ferramenta
+    expect(cls({ verification: { detail: `O ${tag} exige rótulo: '${tag}[label="x"]'.` } })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ verification: { binding: { state: { failure: { selector: `[data-x="${tag}"]` } } } } })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ verification: { binding: { state: { recipe: { actions: [{ selector: `${tag}[label="x"]` }] } } } } })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ ledger: { state: { recipe: { actions: [{ selector: `${tag}[label="x"]` }] } } } }, { tool: "get_finding_details" })).toEqual(["specs:rootClass:sem-explicacao"]);
+    expect(cls({ state: { replay: { steps: [{ detail: `faltou '${tag}[x]'` }] } } }, { tool: "scan_page" })).toEqual(["specs:rootClass:sem-explicacao"]);
+    // tokenização: classe com ponto vira ocorrência (antes passava sem ser vista)
+    expect(cls({ note: `Use .${variant} no botão` })).toEqual(["specs:variantClass:sem-explicacao"]);
+    // id e título da base nunca entram pela regra, mesmo entre aspas e presentes na página
+    expect(cls({ verification: { detail: `Nenhum elemento para '${id}'.` } })).toEqual(["kb:id:sem-explicacao"]);
+    const mixed = run({ verification: { detail: `${title}. Nenhum elemento para '${tag}[label="Editar"]'.` } });
+    expect(mixed.filter((h) => h.kind === "phrase").every((h) => h.class === "sem-explicacao")).toBe(true);
+    expect(mixed.find((h) => h.term === tag)!.class).toBe("pagina");
+  });
+
   it("exceções nomeadas valem só no caminho declarado", () => {
     const b = new DictionaryBuilder();
     b.addExact("ds-core-random-list-id", "teste");
