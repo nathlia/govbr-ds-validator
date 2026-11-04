@@ -6,7 +6,7 @@
 import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
 import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
-import { sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
+import { CROSS_ROUTE, sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -163,14 +163,23 @@ export function investigateFor(
    * por mensurabilidade, com o procedimento — empurradas no item (componentChecklist.investigateClauses).
    */
   clauses?: (component: string) => { total: number; clauses: Array<{ citeAs: string; text: string; how: string; short?: string }> },
+  /**
+   * 3.7.2 (rastreio dev-371-a §4/§7, A-11: o message, único componente novo no estado de erro, saía em 11º de 16): os
+   * componentes deste estado que não estavam no estado anterior escaneado na sessão — vêm primeiro (no investigate, nas
+   * formas compactas, no aviso, na dica e no `next`), antes da ordem por obrigações sem medida.
+   */
+  newComponents: ReadonlySet<string> = new Set(),
 ) {
   if (!componentsInDomOrder.length) return undefined;
+  const isNew = (c: string) => (newComponents.has(c) ? 1 : 0);
   const ranked = componentsInDomOrder
     .map((component, i) => ({ component, i, s: strong(component) }))
-    .sort((a, b) => b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+    .sort((a, b) => isNew(b.component) - isNew(a.component) || b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+  const fresh = ranked.filter((r) => isNew(r.component)).map((r) => r.component);
   const clauseOf = new Map(ranked.map(({ component }) => [component, clauses?.(component)]));
   const items = ranked.slice(0, 5).map(({ component, s }) => ({
     component,
+    ...(isNew(component) ? { newInState: true as const } : {}),
     stateRef: scanId,
     requiredUnmeasured: s.unmeasured,
     unmeasured: unmeasured(component),
@@ -188,27 +197,34 @@ export function investigateFor(
   // fora do JSON (chave símbolo: não conta no tamanho nem sai na resposta) para os degraus da escada do teto.
   const compact: CompactClauses = { byComponent: {}, total: 0 };
   // Nos degraus de poucos componentes, primeiro os que têm cláusula de atributo/área/posição (a parte da anatomia — "parte
-  // X presente" — por último): a ordem do investigate desempata.
+  // X presente" — por último): a ordem do investigate desempata. 3.7.2: o componente novo no estado vem antes de tudo.
   const anatomyOnly = (component: string) => (clauseOf.get(component)?.clauses ?? []).every((x) => (x.short ?? "").startsWith("parte "));
-  for (const { component } of [...ranked].sort((a, b) => Number(anatomyOnly(a.component)) - Number(anatomyOnly(b.component)))) {
+  for (const { component } of [...ranked].sort((a, b) => isNew(b.component) - isNew(a.component) || Number(anatomyOnly(a.component)) - Number(anatomyOnly(b.component)))) {
     const c = clauseOf.get(component);
     if (!c?.clauses.length) continue;
     compact.byComponent[component] = c.clauses.map((x) => `${x.citeAs} · ${x.short ?? x.how}`);
     compact.total += c.total;
   }
+  // 3.7.2 (rastreio dev-371-a §4): a forma de itens só punha cláusulas nos 5 primeiros, e a compacta (orçamento menor)
+  // chegava a todos — um orçamento maior mostrava MENOS componentes. Os de `more` levam a forma compacta deles.
+  const moreClauses = Object.fromEntries(rest.filter((c) => compact.byComponent[c]).map((c) => [c, compact.byComponent[c]]));
   return {
     ...(Object.keys(compact.byComponent).length ? { [COMPACT_CLAUSES]: compact } : {}),
     note: "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
+    ...(fresh.length ? { newInState: fresh, newNote: "newInState: componentes que não estavam no estado anterior da sessão — vêm primeiro." } : {}),
     ...(items.some((i) => "clauses" in i)
       ? { clausesNote: "clauses: obrigações mensuráveis que nenhum check julgou, DOM/CSS primeiro; meça pelo how e dê a cada uma um estado (medida, violada ou não se aplica). As demais: next." }
       : {}),
     retrieval: "automatic" as const,
     items,
-    more: rest.length ? { remaining: rest.length, components: rest } : null,
+    more: rest.length ? { remaining: rest.length, components: rest, ...(Object.keys(moreClauses).length ? { clauses: moreClauses } : {}) } : null,
     next: { tool: "get_component_spec", arguments: { component: ranked[0].component, view: "checklist" } },
     doNotRepeat: MESSAGES["scan-no-repeat"],
   };
 }
+
+/** 3.7.2: os componentes novos no estado, levados às formas compactas do investigate (só quando há). */
+const newOf = (inv: { newInState?: unknown }) => (Array.isArray(inv.newInState) && inv.newInState.length ? { newInState: inv.newInState as string[] } : {});
 
 // ── Observações (S-03) ──────────────────────────────────────────────────────────────────────
 
@@ -278,12 +294,12 @@ function investigateNames(r: Record<string, unknown>): Record<string, unknown> |
   const hint = compact ? nextHintFor(Object.keys(compact.byComponent)) : null;
   const next = inv.next && hint ? { ...inv.next, hint } : inv.next;
   // 3.7.0: da forma compacta (nomes + cláusulas, ou o aviso) para só os nomes.
-  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, next } } : null;
+  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, ...newOf(inv as never), next } } : null;
   const names = [
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
-  return { ...r, investigate: { components: names, next } };
+  return { ...r, investigate: { components: names, ...newOf(inv as never), next } };
 }
 
 /** 3.7.1: o último degrau do investigate — o next sem a dica (fica o passo). */
@@ -323,6 +339,7 @@ function investigateCompact(perComponent: number, maxComponents = Infinity) {
       investigate: {
         [COMPACT_CLAUSES]: compact,
         components: names,
+        ...newOf(inv as never),
         clauses: byComponent,
         ...(compact.total > shown ? { clausesMore: compact.total - shown } : {}),
         clausesNote: "clauses: obrigações que nenhum check julgou, `id · o que medir e o valor`; meça e dê estado. Letra e demais: next.",
@@ -364,7 +381,7 @@ function investigateNudge(r: Record<string, unknown>): Record<string, unknown> |
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
-  return { ...r, investigate: { [COMPACT_CLAUSES]: compact, components: names, investigateNote: note, next: inv.next } };
+  return { ...r, investigate: { [COMPACT_CLAUSES]: compact, components: names, ...newOf(inv as never), investigateNote: note, next: inv.next } };
 }
 
 type InvestigateItem = { component: string; clauses?: Array<{ citeAs: string; text?: string; how: string }>; clausesMore?: number };
@@ -882,12 +899,27 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // 3.6.6 (revisão da 3.6.5, MÉDIA 2): em degraus, cada um marcado em `compacted` (a troca era tudo ou nada e sem rótulo:
     // no 1º scan da tela A saíam todas as forças e todos os passos). Ordem: notas → alsoIn → passos → força; os dois
     // últimos família a família, da última para a primeira (assembleFirstScanPage: extrasByFamily).
+    // 3.7.2 (rastreio dev-371-b §3, B-23 p01): o alsoIn que liga a família a OUTRA rota nunca sai pelo orçamento — fica na
+    // forma curta (rota + scanId + familyId), e a nota curta fica com ele; só o de outro estado da mesma rota sai.
     ["extras:notas → curtas", extrasStage(familyNotesShort)],
     ["extras:alsoIn → curto", extrasStage(familyAlsoInShort)],
     ["extras:notas → fora", extrasStage(familyNotesOut, headExtrasOut)],
     ["extras:alsoIn → fora", extrasStage(familyAlsoInOut)],
   ];
 }
+
+/**
+ * 3.7.2 (revisão MÉDIA 4): o item do alsoIn é de outra rota — decidido pela rota INTEIRA na sessão (session.alsoIn marca
+ * CROSS_ROUTE, chave símbolo: não sai no JSON), nunca pelo rótulo encurtado (duas rotas longas colidem em shortRoute). Sem a
+ * marca (item que não veio da sessão): conta como outra rota (nunca sai sem saber).
+ */
+type AlsoInItem = { route?: string; scanId?: string; familyId?: string; [CROSS_ROUTE]?: boolean };
+const otherRoute = (a: AlsoInItem) => a[CROSS_ROUTE] !== false;
+/** A forma curta de um item: o de outra rota guarda a rota; a marca acompanha (símbolo). */
+const shortItem = (a: AlsoInItem): AlsoInItem =>
+  otherRoute(a) && a.route !== undefined
+    ? { route: a.route, scanId: a.scanId, familyId: a.familyId, ...(a[CROSS_ROUTE] !== undefined ? { [CROSS_ROUTE]: a[CROSS_ROUTE] } : {}) }
+    : { scanId: a.scanId, familyId: a.familyId, ...(a[CROSS_ROUTE] !== undefined ? { [CROSS_ROUTE]: a[CROSS_ROUTE] } : {}) };
 
 /** 3.6.6: um degrau dos acréscimos — só quando tira algo (senão o rótulo em `compacted` mentiria e custaria espaço). */
 function extrasStage(onPage: (p: Record<string, unknown>) => Record<string, unknown>, onHead?: (h: Record<string, unknown>) => Record<string, unknown>) {
@@ -901,10 +933,15 @@ function extrasStage(onPage: (p: Record<string, unknown>) => Record<string, unkn
 }
 
 /** 3.6.6: as partes dos acréscimos em `compacted`; todas fora → um rótulo só ("extras"), para o rótulo não custar família. */
-const EXTRAS_PARTS = ["extras:notas", "extras:alsoIn", "extras:passos", "extras:força"];
-function extrasLabels(labels: string[], part: string, allOut: boolean): string[] {
+const EXTRAS_PARTS = ["extras:notas", "extras:alsoIn", "extras:passos", "extras:força", "extras:normas"];
+/**
+ * 3.7.2 (revisão BAIXA 7): com o alsoIn de outra rota ainda na página (ele não sai pelo orçamento), o rótulo único não diz
+ * "extras" (todos fora): diz `extras:alsoIn-kept` — todos os acréscimos que saem saíram; o alsoIn de outra rota ficou.
+ */
+export const EXTRAS_ALSO_IN_KEPT = "extras:alsoIn-kept";
+function extrasLabels(labels: string[], part: string, allOut: boolean, alsoInKept = false): string[] {
   const next = [...labels.filter((l) => l !== part), part];
-  return allOut ? [...next.filter((l) => !EXTRAS_PARTS.includes(l)), "extras"] : next;
+  return allOut ? [...next.filter((l) => !EXTRAS_PARTS.includes(l) && l !== EXTRAS_ALSO_IN_KEPT), alsoInKept ? EXTRAS_ALSO_IN_KEPT : "extras"] : next;
 }
 
 /** 3.6.6: os acréscimos por família que saem família a família (da última para a primeira), nesta ordem. */
@@ -913,6 +950,13 @@ export const EXTRAS_BY_FAMILY: Array<{ part: string; has: (f: Record<string, unk
     part: "extras:passos",
     has: (f) => "interaction" in f,
     drop: (f) => (({ interaction: _i, ...rest }) => rest)(f),
+  },
+  // 3.7.2: as referências secundárias (norma obrigatória de uma regra só best-practice do axe) saem antes da força (são
+  // secundárias), família a família, e só quando isso ganha família na 1ª página (inteiras em get_finding_details).
+  {
+    part: "extras:normas",
+    has: (f) => Boolean(f.rule && typeof f.rule === "object" && "references" in (f.rule as Record<string, unknown>)),
+    drop: (f) => ({ ...f, rule: (({ references: _r, ...r }) => r)(f.rule as Record<string, unknown>) }),
   },
   {
     part: "extras:força",
@@ -939,25 +983,35 @@ export function familyNotesShort(p: Record<string, unknown>): Record<string, unk
 
 /**
  * 3.6.6: o alsoIn na forma curta — o par scanId + familyId (o get_finding_details pede os dois; MÉDIA 5: a forma curta da
- * 3.6.5 guardava só o familyId), sem a rota.
+ * 3.6.5 guardava só o familyId), sem a rota. 3.7.2: o item de OUTRA rota guarda a rota (rota + registro: é ela que diz
+ * "outro cartão"); o de outro estado da mesma rota fica só com scanId + familyId.
  */
 export function familyAlsoInShort(p: Record<string, unknown>): Record<string, unknown> {
   return mapFamilies(p, (f) => {
     if (!f.alsoIn) return f;
     const { alsoIn, alsoInMore: _m, ...rest } = f;
-    return { ...rest, alsoIn: (alsoIn as Array<{ scanId?: string; familyId?: string }>).map((a) => ({ scanId: a.scanId, familyId: a.familyId })) };
+    return { ...rest, alsoIn: (alsoIn as AlsoInItem[]).map(shortItem) };
   });
 }
 
-/** 3.6.6: sem as notas da página (alsoInNote, interactionNote). */
+/** 3.7.2: alguma família ainda liga a outra rota (o alsoIn que não sai). */
+export const hasCrossRouteAlsoIn = (p: Record<string, unknown>) =>
+  Array.isArray(p.families) && (p.families as Array<Record<string, unknown>>).some((f) => Array.isArray(f.alsoIn) && (f.alsoIn as AlsoInItem[]).some(otherRoute));
+
+/** 3.6.6: sem as notas da página (alsoInNote, interactionNote). 3.7.2: com alsoIn de outra rota, a nota fica curta. */
 export function familyNotesOut(p: Record<string, unknown>): Record<string, unknown> {
   const { alsoInNote: _a, interactionNote: _i, ...rest } = p;
-  return rest;
+  return p.alsoInNote && hasCrossRouteAlsoIn(p) ? { ...rest, alsoInNote: "alsoIn: outro fato, cartão próprio" } : rest;
 }
 
-/** 3.6.6: sem o alsoIn nas famílias (fica no detalhe). */
+/** 3.6.6: sem o alsoIn nas famílias (fica no detalhe). 3.7.2: só o de outro estado da mesma rota sai; o de outra rota fica curto. */
 export function familyAlsoInOut(p: Record<string, unknown>): Record<string, unknown> {
-  return mapFamilies(p, (f) => (({ alsoIn: _a, alsoInMore: _m, ...rest }) => rest)(f));
+  return mapFamilies(p, (f) => {
+    if (!f.alsoIn) return f;
+    const { alsoIn, alsoInMore: _m, ...rest } = f;
+    const kept = (alsoIn as AlsoInItem[]).filter(otherRoute).map(shortItem);
+    return kept.length ? { ...rest, alsoIn: kept } : rest;
+  });
 }
 
 /** 3.6.5: no cabeçalho, o sub-bloco checklist do sessionPending (a contagem total já está em count) e a revisita só com o nome. */
@@ -1103,16 +1157,17 @@ function assembleFirstScanPage(
       const pager = (b: number) => familyExtraFrom(prev(b), extra, keep);
       // Tudo fora (nada mais de acréscimo na página inteira): um rótulo só.
       const rest = pager(1_000_000);
-      const allOut = keep === 0 && !(Array.isArray(rest.families) && (rest.families as Array<Record<string, unknown>>).some((f) => EXTRAS_BY_FAMILY.some((e) => e.has(f)) || "alsoIn" in f)) && !rest.alsoInNote && !rest.interactionNote;
-      state = { ...state, pager, labels: extrasLabels(state.labels, extra.part, allOut) };
+      // 3.7.2 (A2): o alsoIn de outra rota (e a nota curta dele) não sai pelo orçamento — não impede o rótulo único.
+      const allOut = keep === 0 && !(Array.isArray(rest.families) && (rest.families as Array<Record<string, unknown>>).some((f) => EXTRAS_BY_FAMILY.some((e) => e.has(f)))) && !rest.interactionNote;
+      state = { ...state, pager, labels: extrasLabels(state.labels, extra.part, allOut, allOut && hasCrossRouteAlsoIn(rest)) };
       done = consider(state);
       if (done) return done;
     }
   }
   // Último recurso: com tudo fora, o próprio rótulo "extras" (≈ 9 caracteres) pode ser o que separa a página da 3.6.4 de
   // uma família a mais. Só então ele sai (consider só troca a melhor página quando ganha família): a família vence.
-  const bareLabels = state.labels.filter((l) => l !== "extras");
-  if (state.labels.some((l) => l === "extras")) {
+  const bareLabels = state.labels.filter((l) => l !== "extras" && l !== EXTRAS_ALSO_IN_KEPT);
+  if (state.labels.some((l) => l === "extras" || l === EXTRAS_ALSO_IN_KEPT)) {
     done = consider({ ...state, labels: bareLabels });
     if (done) return done;
   }

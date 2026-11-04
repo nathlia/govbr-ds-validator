@@ -10,6 +10,9 @@ import { readFileSync } from "node:fs";
 import type { Finding, Observation, Severity } from "../schema/finding.js";
 import { nextFindingId } from "../schema/finding.js";
 import { findEmagRule } from "../data/load.js";
+import { emagUnits } from "../data/normativeUnits.js";
+import { getKnowledgeBase, getRuleById } from "../data/knowledge.js";
+import { rankRules } from "../data/retrieval.js";
 import { withPage } from "../evidence/browser.js";
 import { SHADOW_STEP } from "../evidence/inspect.js";
 import type { Page } from "playwright";
@@ -66,6 +69,46 @@ const AXE_TO_EMAG: Record<string, string> = {
   "link-in-text-block": "4.2",
   "focus-order-semantics": "1.4",
 };
+
+/**
+ * 3.7.2 (rastreio dev-371-b §2/§7, B-26): regras só best-practice do axe sem par em AXE_TO_EMAG cuja recomendação e-MAG
+ * trata do mesmo assunto. `empty-table-header` (cabeçalho de tabela sem texto) ↔ e-MAG 3.10 (associar células de dados às
+ * células de cabeçalho). Só a ligação regra → recomendação; as cláusulas citadas saem da base em tempo de execução.
+ */
+const BEST_PRACTICE_TO_EMAG: Record<string, string> = {
+  "empty-table-header": "3.10",
+};
+
+/**
+ * 3.7.2 (rastreio dev-371-b §2/§7): a família de uma regra só best-practice do axe (nenhum critério WCAG) vinha sem a força
+ * do DS/e-MAG — o agente caía num critério WCAG que o juiz contestou. Agora ela traz, como referências SECUNDÁRIAS, o id da
+ * recomendação e-MAG do mesmo assunto e as cláusulas obrigatórias (required/prohibited) dela que casam com o texto da regra
+ * do axe (help): revisão MÉDIA 5 — as cláusulas fortes da recomendação são ranqueadas contra o help pelo motor de busca
+ * (rankRules, o mesmo do get_ds_rules, com o piso dele); ficam até 2 acima do piso. Nenhuma acima do piso: só `emag-N.N`.
+ * Só ids que a base tem (emagUnits). O achado continua sendo da regra do axe: a referência é a norma a ler antes de citar.
+ */
+const referencesMemo = new Map<string, Array<{ id: string; force?: string }> | undefined>();
+export function bestPracticeReferences(finding: Pick<Finding, "rule" | "evidence">): Array<{ id: string; force?: string }> | undefined {
+  if (finding.rule.source !== "axe-core" || finding.evidence.data?.bestPractice !== true) return undefined;
+  const rec = AXE_TO_EMAG[finding.rule.id] ?? BEST_PRACTICE_TO_EMAG[finding.rule.id];
+  if (!rec) return undefined;
+  const help = String(finding.evidence.expected ?? "");
+  const key = `${getKnowledgeBase().meta.knowledgeVersion}\u0001${finding.rule.id}\u0001${rec}\u0001${help}`;
+  if (referencesMemo.has(key)) return referencesMemo.get(key);
+  let out: Array<{ id: string; force?: string }> | undefined;
+  try {
+    const strong = emagUnits(rec).clauses
+      .filter((c) => c.force === "required" || c.force === "prohibited")
+      .map((c) => getRuleById(c.id))
+      .filter((r): r is NonNullable<typeof r> => Boolean(r));
+    const ranked = strong.length && help.trim() ? rankRules({ text: help, component: null, pool: strong }).results.slice(0, 2) : [];
+    out = [...ranked.map((s) => ({ id: s.rule.id, force: s.rule.force })), { id: `emag-${rec}` }];
+  } catch {
+    out = undefined;
+  }
+  referencesMemo.set(key, out);
+  return out;
+}
 
 const IMPACT_TO_SEVERITY: Record<string, Severity> = {
   critical: "critical",

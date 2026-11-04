@@ -113,7 +113,7 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
       const r = JSON.parse(text);
       // 3.1.0: `messages` só aparece quando um cartão usa um código; a busca 1.1.0 devolve aqui um único
       // cartão (a cláusula de cores de estado da paginação), que não usa nenhum.
-      expect(Object.keys(r).filter((k) => k !== "messages")).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "related", "investigation", "gaps", "page", "next", "absenceNote"]);
+      expect(Object.keys(r).filter((k) => k !== "messages")).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "related", "investigation", "gaps", "page", "next", "componentClauses", "absenceNote"]);
       expect(r).toMatchObject({ contract: CONTRACT, kind: "retrieval", status: "partial-match", reading: MESSAGES.reading, absenceNote: ABSENCE_NOTE });
       expect(Object.keys(r.kb)).toEqual(["dsVersion", "knowledgeVersion", "ranking", "vocabulary", "guidance"]);
       expect(Object.keys(r.query)).toEqual(expect.arrayContaining(["terms", "expansions", "componentHint", "globalsAllowed"]));
@@ -148,7 +148,7 @@ describe("contrato — exemplos 01–07 (estrutura e mensagens fixas)", () => {
 
   it("02 ausência: no-match, lacuna mecânica, 3 próximos passos, absenceNote", async () => {
     const r = await call("get_ds_rules", { query: "xyzzy quux", component: "button" });
-    expect(Object.keys(r)).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "gaps", "page", "next", "absenceNote"]);
+    expect(Object.keys(r)).toEqual(["contract", "kind", "status", "reading", "kb", "query", "results", "gaps", "page", "next", "componentClauses", "absenceNote"]);
     expect(r).toMatchObject({ status: "no-match", results: [], absenceNote: ABSENCE_NOTE });
     expect(r.gaps).toEqual([{ kind: "unmatched-terms", about: "quux xyzzy", message: MESSAGES["gap-unmatched"] }]);
     expect(r.page).toEqual({ returned: 0, matched: 0, cursor: null, stop: "no-match", note: MESSAGES["no-match-floor"] });

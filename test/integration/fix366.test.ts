@@ -26,6 +26,7 @@ import { getComponentSpecs } from "../../src/data/load.js";
 import { RESPONSE_BUDGET } from "../../src/responses/contract.js";
 import * as checklist from "../../src/tools/componentChecklist.js";
 import type { Finding } from "../../src/schema/finding.js";
+import { CROSS_ROUTE } from "../../src/scan/session.js";
 
 function page(title: string, body: string, script = ""): string {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${title}</title></head>
@@ -205,27 +206,43 @@ describe("3.6.6 itens 2 e 5 — os acréscimos saem em degraus marcados; o alsoI
       pathway: "deterministic",
     })) as unknown as Finding[];
     // a mesma evidência noutra rota em uma família de cada três (pelo familyId: estável entre as montagens da página)
-    const alsoInFor = (_s: string, familyId: string) =>
-      familyId.charCodeAt(familyId.length - 1) % 3 === 0 ? { items: [{ route: "/outra/rota/com/um/caminho/longo", scanId: "S-page-001", familyId: "FAM-00aa11bb22cc" }], more: 0 } : { items: [], more: 0 };
-    const page = (extras: boolean) => (b: number) =>
-      buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x", ...(extras ? { forceOf: unitForceOf, interaction: true, alsoInFor } : {}) }) as unknown as Record<string, unknown>;
+    // 3.7.2 (revisão BAIXA 8): e, numa família de cada três (outro resto), a mesma evidência noutro ESTADO da mesma rota —
+    // marca CROSS_ROUTE da sessão (false); esse item sai no aperto, o de outra rota (true) não.
+    const alsoInFor = (_s: string, familyId: string) => {
+      const k = familyId.charCodeAt(familyId.length - 1) % 3;
+      return k === 0
+        ? { items: [{ route: "/outra/rota/com/um/caminho/longo", scanId: "S-page-001", familyId: "FAM-00aa11bb22cc", [CROSS_ROUTE]: true }], more: 0 }
+        : k === 1
+          ? { items: [{ route: "/b", scanId: "S-page-003", familyId: "FAM-33dd44ee55ff", [CROSS_ROUTE]: false }], more: 0 }
+          : { items: [], more: 0 };
+    };
+    // 3.7.2 (A2): o alsoIn de OUTRA rota nunca sai pelo orçamento (fica com a família, na forma curta com a rota) — a base
+    // da comparação passa a ter o alsoIn; força e passo de interação continuam sem custar família.
+    const page = (extras: boolean | "alsoIn") => (b: number) =>
+      buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x", ...(extras === "alsoIn" ? { alsoInFor } : extras ? { forceOf: unitForceOf, interaction: true, alsoInFor } : {}) }) as unknown as Record<string, unknown>;
     const full = (page(true)(1_000_000).families as Array<Record<string, any>>);
     let graduated = 0;
     let shortAlsoIn = 0;
     let cut = 0;
     let unlabeled = 0;
+    let sameRouteDropped = 0;
+    let keptLabel = 0;
     for (let pad = 0; pad <= 5_000; pad += 61) {
-      const head = { contract: "c", kind: "scan", scanId: "S-page-002", filler: "y".repeat(pad), sessionPending: { count: 0, items: [] } };
-      const plain = assembleScan(head, null, "S-page-002", 8_000, page(false), { firstScanPage: true });
+      const head = { contract: "c", kind: "scan", scanId: "S-page-002", url: "http://x/b", state: { observed: { url: "http://x/b" } }, filler: "y".repeat(pad), sessionPending: { count: 0, items: [] } };
+      const plain = assembleScan(head, null, "S-page-002", 8_000, page("alsoIn"), { firstScanPage: true });
+      const none = assembleScan(head, null, "S-page-002", 8_000, page(false), { firstScanPage: true });
       const r = assembleScan(head, null, "S-page-002", 8_000, page(true), { firstScanPage: true });
       const fams = (Array.isArray(r.families) ? r.families : []) as Array<Record<string, any>>;
       const n = (x: Record<string, unknown>) => (Array.isArray(x.families) ? x.families.length : 0);
       expect(n(r), `pad ${pad}`).toBeGreaterThanOrEqual(n(plain));
+      // revisão BAIXA 8: o alsoIn de outra rota custa no máximo uma família frente à página sem acréscimo nenhum
+      expect(n(r), `pad ${pad}: custo do alsoIn de outra rota`).toBeGreaterThanOrEqual(n(none) - 1);
       expect(JSON.stringify(r).length).toBeLessThanOrEqual(8_000);
       const labels = (Array.isArray(r.compacted) ? r.compacted : []) as string[];
       // Sem rótulo só no último recurso: nada de acréscimo na página e o rótulo "extras" era a diferença de uma família
       // (então a página tem as mesmas famílias da sem acréscimos).
-      const bare = !fams.some((f) => f.rule.force || f.interaction || f.alsoIn) && n(r) === n(plain);
+      // 3.7.2 (A2): o alsoIn de outra rota fica (não é acréscimo que sai); "nada de acréscimo" = sem força e sem passo.
+      const bare = !fams.some((f) => f.rule.force || f.interaction) && n(r) >= n(plain);
       if (bare && !labels.some((l) => l.startsWith("extras"))) unlabeled += 1;
       const marked = (part: string) => labels.includes(part) || labels.includes("extras") || bare;
       // o que saiu da família está marcado em compacted
@@ -233,20 +250,39 @@ describe("3.6.6 itens 2 e 5 — os acréscimos saem em degraus marcados; o alsoI
         const was = full[i];
         if (was.rule.force && !f.rule.force) expect(marked("extras:força"), `pad ${pad}: força fora sem rótulo`).toBe(true);
         if (was.interaction && !f.interaction) expect(marked("extras:passos"), `pad ${pad}: passo fora sem rótulo`).toBe(true);
-        if (was.alsoIn && !f.alsoIn) expect(marked("extras:alsoIn"), `pad ${pad}: alsoIn fora sem rótulo`).toBe(true);
-        // item 5: em qualquer forma, o alsoIn guarda scanId e familyId
-        for (const a of (f.alsoIn ?? []) as Array<Record<string, unknown>>) {
-          expect(a).toMatchObject({ scanId: "S-page-001", familyId: "FAM-00aa11bb22cc" });
-          if (!("route" in a)) shortAlsoIn += 1;
+        if (was.alsoIn && !f.alsoIn) {
+          expect(marked("extras:alsoIn"), `pad ${pad}: alsoIn fora sem rótulo`).toBe(true);
+          // só o da mesma rota sai
+          expect(was.alsoIn[0].familyId, `pad ${pad}`).toBe("FAM-33dd44ee55ff");
+          sameRouteDropped += 1;
         }
+        // item 5: em qualquer forma, o alsoIn guarda scanId e familyId; 3.7.2: o de outra rota sempre fica, e com a rota
+        if (was.alsoIn?.[0]?.familyId === "FAM-00aa11bb22cc") expect(f.alsoIn, `pad ${pad}`).toBeDefined();
+        for (const a of (f.alsoIn ?? []) as Array<Record<string, unknown>>) {
+          if (a.familyId === "FAM-00aa11bb22cc") {
+            expect(a).toMatchObject({ scanId: "S-page-001", familyId: "FAM-00aa11bb22cc", route: "/outra/rota/com/um/caminho/longo" });
+            // a forma curta (quando o degrau rodou): só rota, scanId e familyId — sem alsoInMore
+            if (labels.includes("extras:alsoIn") || labels.includes("extras:alsoIn-kept")) expect(Object.keys(a).sort()).toEqual(["familyId", "route", "scanId"]);
+            shortAlsoIn += 1;
+          } else {
+            expect(a).toMatchObject({ scanId: "S-page-003", familyId: "FAM-33dd44ee55ff" });
+            if (labels.includes("extras:alsoIn")) expect(Object.keys(a).sort()).toEqual(["familyId", "scanId"]);
+          }
+        }
+        if (labels.includes("extras:alsoIn") || labels.includes("extras:alsoIn-kept")) expect(f).not.toHaveProperty("alsoInMore");
       });
+      // revisão BAIXA 7: "extras" (todos fora) nunca com alsoIn na página
+      if (fams.some((f) => f.alsoIn)) expect(labels.includes("extras"), `pad ${pad}`).toBe(false);
+      if (labels.includes("extras:alsoIn-kept")) keptLabel += 1;
       if (fams.length && n(r) < full.length) cut += 1;
       // degrau: algum passo já saiu e a força ainda está em alguma família (a 3.6.5 tirava os dois juntos)
       if (fams.some((f, i) => full[i].interaction && !f.interaction) && fams.some((f) => f.rule.force)) graduated += 1;
     }
     expect(cut, "tetos que cortam famílias").toBeGreaterThan(5);
     expect(graduated, "páginas em que passos saíram e a força ficou").toBeGreaterThan(0);
-    expect(shortAlsoIn, "páginas com o alsoIn na forma curta").toBeGreaterThan(0);
+    expect(shortAlsoIn, "páginas com o alsoIn (de outra rota, com a rota)").toBeGreaterThan(0);
+    expect(sameRouteDropped, "o alsoIn da mesma rota saiu em algum teto").toBeGreaterThan(0);
+    expect(keptLabel, "rótulo extras:alsoIn-kept em algum teto").toBeGreaterThan(0);
     // o último recurso sem rótulo é exceção (o rótulo marca a saída nos demais tetos)
     expect(unlabeled, "tetos em que o rótulo saiu").toBeLessThan(cut / 4);
   });

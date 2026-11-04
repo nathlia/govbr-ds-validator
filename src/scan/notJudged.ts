@@ -16,6 +16,8 @@ import type { LabelSource } from "../checkers/formLabels.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import type { ContrastIncompleteNode } from "../checkers/axe.js";
 import { createHash } from "node:crypto";
+import { getRuleById } from "../data/knowledge.js";
+import { BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
 /** 3.6.3: o hash de um conjunto de elementos (ordem não importa). */
 function setHash(parts: string[]): string {
@@ -23,7 +25,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded";
   subject: string;
   count?: number;
   observed?: string;
@@ -35,6 +37,13 @@ export interface NotJudgedItem {
    * "por falta de norma" exija contrariar um texto visível. Ausente no perfil knowledge-free.
    */
   rule?: { id: string; force: string; text: string };
+  /**
+   * 3.7.2 (revisão HIGH 1): pendência de ELEMENTOS que só fecha pelo verify_finding num dos próprios elementos — a norma
+   * citada é compartilhada com achados de outros elementos (o C01 de um botão fora de hospedeiro não decide o candidato
+   * embutido). `boundLocators` = todos os localizadores, inteiros; nunca saem numa resposta.
+   */
+  elementBound?: true;
+  boundLocators?: string[];
   /** 3.6.1 (item 5): o que o axe mediu nos nós de contraste que não decidiu (cores, razão, motivo). */
   measured?: Array<{ locator: string; fg: string | null; bg: string | null; ratio: number | null; reason: string | null }>;
   /**
@@ -64,6 +73,11 @@ export interface NotJudgedInput {
   pageWide: boolean;
   /** 3.6.1 (item 5): nós de color-contrast que o axe deixou incomplete. */
   contrastIncomplete?: { nodes: number; items: ContrastIncompleteNode[] };
+  /**
+   * 3.7.2 (D-166): botões do DS só com ícone fora do circular que o C01 não acusa por serem parte de outro componente
+   * cujo exemplo oficial traz o mesmo botão (checkers/iconOnlyButton.ts) — candidatos a investigar.
+   */
+  embeddedIconButtons?: Array<{ locator: string; host: string; examples: string[] }>;
 }
 
 const EXAMPLES = 3;
@@ -129,6 +143,47 @@ export function contrastPending(contrast: { nodes: number; items: ContrastIncomp
     todo: "decida o contraste: o axe não concluiu (fundo não sólido, sobreposição, pseudo-elemento ou cor incerta)",
     ...(knowledgeFree ? { norms: ["wcag-1.4.3"] } : grounded("4.1", ["wcag-1.4.3"])),
     measure: "cor do texto × fundo efetivo no navegador; 4,5:1 (3:1 texto grande)",
+  };
+}
+
+/** 3.7.2: a cláusula da base por id, com força e texto curto (para a pendência). */
+function kbRule(id: string): NotJudgedItem["rule"] {
+  try {
+    const r = getRuleById(id);
+    if (!r) return undefined;
+    return { id: r.id, force: r.force, text: clip(String(r.originalText ?? r.title ?? "").replace(/\s+/g, " ").trim(), RULE_TEXT_MAX) };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * 3.7.2 (D-166; rastreio dev-371-b §4): o botão só com ícone, sem circle, que é parte de outro componente do DS (o de ação
+ * do Input, o gatilho do Select) não é acusado pelo C01 porque o exemplo oficial do componente traz a mesma marcação — e a
+ * regra do Button ("O rótulo é um elemento obrigatório.") é obrigatória. Candidato a investigar, nunca veredito: a nota diz
+ * qual exemplo oficial coincide; quem decide é o agente.
+ */
+export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput["embeddedIconButtons"]>): NotJudgedItem | null {
+  if (!candidates.length) return null;
+  const hosts = [...new Set(candidates.map((c) => c.host))].slice(0, 3);
+  // um exemplo de cada candidato primeiro (o 1º de cada), depois os segundos: nenhum candidato fica sem o seu na nota
+  const width = Math.max(0, ...candidates.map((c) => c.examples.length));
+  const examples = [...new Set(Array.from({ length: width }, (_, k) => candidates.map((c) => c.examples[k]).filter((e): e is string => Boolean(e))).flat())].slice(0, 4);
+  const rule = kbRule(BUTTON_LABEL_REQUIRED);
+  return {
+    code: "icon-only-embedded",
+    subject: "botões do DS só com ícone, sem circle, dentro de outro componente do DS",
+    count: candidates.length,
+    examples: candidates.slice(0, EXAMPLES).map((c) => clip(c.locator, 120)),
+    elementSet: setHash(candidates.map((c) => c.locator)),
+    elementBound: true,
+    boundLocators: candidates.map((c) => c.locator),
+    observed: `dentro de ${hosts.join(", ")}: a marcação coincide com o exemplo oficial do DS${examples.length ? ` (${examples.join(", ")})` : ""}`,
+    todo: "a investigar: o C01 não acusa (o exemplo oficial traz o mesmo botão sem circle); decida se viola o rótulo obrigatório",
+    // só a cláusula do rótulo: a forma curta da pendência cita a 1ª norma que não está em `rule` (a anatomia tomaria o lugar)
+    norms: [BUTTON_LABEL_REQUIRED],
+    ...(rule ? { rule } : {}),
+    measure: "texto visível no botão × classe/atributo circle",
   };
 }
 
@@ -242,6 +297,8 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   });
   const contrast = contrastPending(input.contrastIncomplete);
   if (contrast) items.push(contrast);
+  const embedded = embeddedIconButtonPending(input.embeddedIconButtons ?? []);
+  if (embedded) items.push(embedded);
   return items;
 }
 
@@ -249,7 +306,7 @@ export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unkno
 
 /** Na resposta: até 2 exemplos (o item inteiro fica no ledger); 3.6.1: com o id da pendência da sessão. */
 function compactItem(item: PendingItem, withText: (code: string) => boolean = () => true) {
-  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -285,7 +342,7 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string): Obse
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
     whyNotAFinding: `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: (({ elementSet: _set, ...rest }) => rest)(item),
+    data: (({ elementSet: _set, boundLocators: _locs, ...rest }) => rest)(item),
   }));
 }
 

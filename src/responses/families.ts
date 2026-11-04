@@ -24,6 +24,7 @@ import type { CheckStatus, Finding, Verdict, Verification } from "../schema/find
 import { canonical } from "../verify/store.js";
 import { findingIdentity, implementsBeyondCitation, projectFinding, type FindingDetail } from "./findings.js";
 import { interactionOf } from "../checkers/interaction.js";
+import { CROSS_ROUTE } from "../scan/session.js";
 
 export const FAMILY_KEY =
   "rule.source + rule.id + rule.checker + rule.implements + rule.wcag + nature + mode + pathway + severity + " +
@@ -72,6 +73,8 @@ export interface AlsoIn {
   route: string;
   scanId: string;
   familyId: string;
+  /** 3.7.2 (revisão MÉDIA 4): outra rota pela rota inteira (session.alsoIn); chave símbolo, fora do JSON. */
+  [CROSS_ROUTE]?: boolean;
 }
 
 /**
@@ -87,6 +90,11 @@ export interface FamilyExtras {
   recipeActions?: readonly unknown[];
   /** Item 4: a mesma assinatura em outra rota/estado da sessão. */
   alsoInFor?: (signature: string, familyId: string, memberLocators: string[]) => { items: AlsoIn[]; more: number };
+  /**
+   * 3.7.2: referências secundárias da norma — as cláusulas obrigatórias do DS/e-MAG do mesmo assunto de uma regra só
+   * best-practice do axe (checkers/axe.ts, bestPracticeReferences). undefined = nenhuma.
+   */
+  referencesOf?: (finding: Finding) => Array<{ id: string; force?: string }> | undefined;
 }
 
 export interface FamilyPageOptions extends FamilyOptions, FamilyExtras {
@@ -319,6 +327,7 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
     const interaction = options.interaction ? interactionOf(first, options.recipeActions) : undefined;
     const signature = evidenceSignature(first);
     const also = options.alsoInFor?.(signature, familyId, members.map((m) => m.element.locator));
+    const references = options.referencesOf?.(first);
     if (also?.items.length) familiesAlsoIn += 1;
     const makeItem = (listedCount: number) => {
     const listed = members.slice(0, listedCount).map((member) => member.id);
@@ -331,6 +340,8 @@ export function buildFamilyPage(findings: Finding[], options: FamilyPageOptions 
         ...(first.rule.checker ? { checker: first.rule.checker } : {}),
         ...(implementsBeyondCitation(first.rule) ? { implements: [...first.rule.implements!] } : {}),
         ...(force !== undefined ? { force } : {}),
+        // 3.7.2: a norma obrigatória do mesmo assunto (regra só best-practice do axe), como referência secundária.
+        ...(references?.length ? { references } : {}),
       },
       property: propertyOf(first),
       nature: first.nature,

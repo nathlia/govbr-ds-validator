@@ -83,6 +83,108 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.2 — candidato embutido, alsoIn de outra rota, componente novo primeiro, cláusulas do componente, força nas best-practice (D-155/D-166)
+
+Motivo: lista única de correções de 04/11, seção A (`planejamento/atual/lista-unica-correcoes-3.7.2-2026-11-04.md`), sobre
+os rastreios da rodada 3.7.1 (`mecanismo-oraculo-dev-371-b-2026-11-04.md` §2–§4/§7, `mecanismo-oraculo-dev-371-a-2026-11-04.md`
+§4/§7). Tudo genérico (por exemplo oficial, regra axe, rota, sessão); nada por tela, seletor ou spec. O `tools/list` e as
+instruções do `initialize` não mudam em nenhum dos seis perfis (sha256 conferidos antes e depois; evaluation `3807ad95…`,
+knowledge-free `f358152a…`, full `575634a0…`, normative `4ad616d8…`, deterministic `af7f8264…`, evidence `4b4f8249…`;
+instructions evaluation `ace27ba8…`, knowledge-free `1a10c763…`). Só respostas mudam.
+
+- **A1 — o botão embutido vira candidato, nunca achado** (`checkers/iconOnlyButton.ts`, D-166). O botão do DS só com ícone e
+  sem `circle` que o C01 pula por ser parte de outro componente cujo exemplo oficial traz o mesmo botão (hospedeiros lidos
+  de `data/component-specs.json`: `br-input`, `br-tag`) não some mais em silêncio: volta como pendência do scan
+  `icon-only-embedded` (`checksRun.pageLevel.notMeasured`, com `pendingId`, `rule` = Button `…7ef75d42ac65` required),
+  `observed` = "dentro de br-input: a marcação coincide com o exemplo oficial do DS (<exemplos>)" e `todo` "a investigar: …
+  decida". Os exemplos citados saem mecanicamente: os do componente cuja raiz `br-*` está na cadeia do elemento (o mais
+  externo primeiro: o Select contém o Input; a Pagination contém o Select), preferindo o mesmo ícone (`fa-*`, sem as classes
+  de estilo/tamanho do Font Awesome: `fa-solid`, `fa-lg`, `fa-fw`, `fa-2x`…), um de cada candidato primeiro, até 4. Fora: sem
+  nome (fica o `button-name`), oculto/decorativo, interno de web component do DS ou terceiro. A pendência é **de elementos**
+  (`elementBound`): o `verify_finding` só a fecha num dos próprios botões (um C01 confirmado noutro botão, com a mesma norma,
+  não a fecha). O `verify_finding` (predicado `icon-only-button`) num botão embutido não rejeita: `undetermined` com a nota (o
+  fato existe; o oráculo não decide). Knowledge-free: nada (o scan do perfil é só o axe).
+- **A2 — o alsoIn de outra rota não sai pelo orçamento** (`responses/scan.ts`, `scan/session.ts`). "Outra rota" é decidido
+  pela rota INTEIRA na sessão (`session.alsoIn` marca cada item com a chave símbolo `CROSS_ROUTE`, que não sai no JSON) —
+  nunca pelo rótulo curto, que colide entre rotas longas (`…/detal…`) e entre UUIDs com os mesmos 4 últimos dígitos. Na 1ª
+  página, `extras:alsoIn → curto` guarda a rota no item de outra rota (`{route, scanId, familyId}`; o de outro estado da mesma
+  rota fica `{scanId, familyId}`), e `extras:alsoIn → fora` só tira o da mesma rota; com alsoIn de outra rota, a nota fica na
+  forma curta ("alsoIn: outro fato, cartão próprio"). Quando todos os acréscimos que saem já saíram e um alsoIn de outra rota
+  ficou, `compacted` diz `extras:alsoIn-kept` (não `extras`, que quer dizer "todos fora"). Consequência declarada: o alsoIn
+  de outra rota pode custar família num teto apertado (a família e ele ficam juntos) — medido: até 1 família com 1 em 3
+  famílias com alsoIn (fix366), até 2 quando TODAS as 30 têm (fix365, caso extremo); passos, normas e força continuam
+  saindo antes de qualquer família. O `get_finding_details` por `ids` de scans de rotas diferentes (outra página, ou o mesmo
+  modelo com outro registro) traz `routesWarning` só na 1ª página (sem cursor): até 5 `routes[]` (rota, scanIds, ids) + `more`,
+  e `note` "ids de N rotas: N cartões, um por rota … mixed-states".
+- **A3 — o componente novo no estado vem primeiro** (`responses/scan.ts` `investigateFor`, `server.ts`). Os componentes deste
+  estado que não estavam no estado anterior vão à frente da ordem por obrigações sem medida: nos itens (`newInState: true`),
+  em `newInState` do bloco, nas formas compactas (`clauses` e `components`), no `investigateNote`, no `next.hint` e no `next`.
+  O estado anterior é o `compareToScanId`, quando dado; sem ele, o scan mais recente **do mesmo modelo de rota**
+  (`routeTemplateOf`: `/x/3025` e `/x/3038` são o mesmo modelo). Nos dois casos só vale um scan com inventário de componentes:
+  página inteira (sem seletores) e com `tokens` ou `structure` — o scan só do axe, só de página ou por seletores não conta, e
+  `compareToScanId` apontando para um deles não dá "novo" nenhum. (A 1ª versão desta 3.7.2 usava o scan de página inteira
+  mais recente de qualquer rota: a chegada de uma página depois de outra punha à frente os componentes que a outra não tinha;
+  revisto.) O 1º scan de cada modelo de rota não muda. A forma de itens leva em `more.clauses` a forma compacta dos
+  componentes de `more`: um orçamento maior nunca mostra cláusula de menos componentes que a forma compacta.
+- **A4 — `get_ds_rules` com `component` aponta o resto do componente** (`tools/componentChecklist.ts`
+  `otherMeasurableClausesLine`, `responses/retrieval.ts`). Na 1ª página da busca, `componentClauses` (≤ 320 car., dentro do
+  orçamento de 8.000): quantas cláusulas mensuráveis do componente nenhum check mede e a resposta não mostrou (em nenhuma parte
+  dela: cartões, `related`, `investigation`, lacunas, evidência), até 2 com id e procedimento curto, e
+  `get_component_spec{component, view:"checklist"}`. Só com `component` explícito e com `get_component_spec` no perfil.
+  Ranking, cartões e cursores não mudam: a fixture léxica 3.4.0 mudou só nas 8 consultas com `component`, e cada uma, sem a
+  linha, é a resposta de antes byte a byte (conferido; sha256 e chars regenerados, nota na fixture).
+- **A5 — norma do e-MAG nas famílias best-practice do axe** (`checkers/axe.ts` `bestPracticeReferences`,
+  `responses/families.ts`). A família de regra só best-practice (sem critério WCAG) com recomendação e-MAG do mesmo assunto
+  (`AXE_TO_EMAG`, mais `empty-table-header` ↔ 3.10) traz `rule.references`: as cláusulas obrigatórias/proibidas da
+  recomendação (`emagUnits`) ranqueadas contra o texto da regra do axe (`help`) pelo mesmo motor do `get_ds_rules`
+  (`rankRules`, com o piso dele) — até 2 acima do piso, com a força — e sempre o id `emag-N.N`; sem cláusula acima do piso, só
+  `emag-N.N`. Só na projeção da família (assinatura de evidência e `familyId` não mudam; inteiras em
+  `get_finding_details(scanId)`); no aperto saem antes da força (`extras:normas`, família a família, só quando ganha família).
+  Knowledge-free: nada. O resultado nas regras best-practice com par:
+
+  | regra axe | `help` | `references` (ids sem o prefixo `govbr-3.7.0-`; a letra cortada em 70) |
+  |---|---|---|
+  | empty-table-header | Table header text should not be empty | accessibility-global-00290bc67eb5 (required: "Para incrementar a acessibilidade, deve-se utilizar os elementos THEAD"); emag-3.10 |
+  | page-has-heading-one | Page should contain a level-one heading | emag-1.3 |
+  | region | All page content should be contained by landmarks | accessibility-global-b524f2350f1a (required: "O primeiro é para o rodapé geral da página que deve receber o valor co"); emag-1.8 |
+  | landmark-one-main | Document should have one main landmark | emag-1.8 |
+  | heading-order | Heading levels should only increase by one | emag-1.3 |
+  | empty-heading | Headings should not be empty | emag-1.3 |
+  | skip-link | The skip-link target should exist and be focusable | accessibility-global-538e57855252 (required: "É importante ressaltar que o primeiro link da página deve ser o de "); emag-1.5 |
+  | tabindex | Elements should not have tabindex greater than zero | accessibility-global-742fd4c4f54b (required: "No entanto, se houver a necessidade de utilizar o tabindex, o mesmo de"); accessibility-global-bd6ce6757c97 (required: "ser verificado manualmente se o fluxo fornecido é realmente o desejado"); emag-1.4 |
+- **Medido sem modelo** (`scanPage`, estado inicial, todos os checks, 1280×720; fluxo, A, B e as 80 páginas de `controles/a`):
+  fluxo 17→17, A 7→7, B 76→76 (46 da 3.6.x + os 30 do C01 da 3.7.0), controles 18→18 —
+  os mesmos fatos (checker, norma, localizador, observado, esperado, severidade) e as mesmas observações em cada uma das 83
+  páginas, contra a 3.7.1 (`.tmp-eval/validator-371`, = HEAD `a0038a9`). Candidatos `icon-only-embedded`: A 2 (os gatilhos
+  dos dois Select: select-multiplo, select-simples), B 3 (a lupa do Buscar: input-buttons, input-highlight; os gatilhos
+  "Exibir" e "Página" do `br-select` dentro de `br-pagination`: pagination-contextual, pagination-dark), controles `a/` 0.
+- **Portão NAT-86** (`npm run portao:oraculo -- --divisao desenvolvimento`): **GO**, matriz d35b33f5, 171 linhas: 165 idênticas à 3.7.1 e 6
+  só no hash de estado do texto da limitação (F1-09-A/B, F2-09-V, F3-12-B; como nas versões anteriores); D2 TN 116 · TP 7 · FP 0.
+- **Guarda da busca** (`benchmark:oraculo`, benchmark-1.0.0, qrels 1.0.4): idêntica à 3.7.1 em todas as métricas e por consulta (fora latência e
+  tamanho): respondíveis 78,6% / P@5 45,7% / 9 enganosas; tamanho médio da resposta 6.573 → 6.792 caracteres (a linha
+  `componentClauses` das consultas com `component`).
+- **Reexecução das chamadas reais da rodada 3.7.1** (136 chamadas do com: `dev-371-b-01` e `dev-371-a-01` p01–p03, site
+  congelado `81fb2847…`, `replay.mjs` da reexecução 3.7.0 com os caminhos absolutos): 3.7.1 × 3.7.2:
+  1 `isError` nas duas (o mesmo `invalid-combination` do original), os mesmos vereditos nos 44 `verify_finding`. Nos 5 scans do
+  estado de erro da tela A, `message` passa de 11º a 1º (`newInState`, `next` e aviso com ele); nos 3 do diálogo, `modal` de 3º a
+  1º. Na B p01 #10 (aba Agendar, `maxChars` 9.000, o caso B-23 do rastreio) a família de contraste agora traz
+  `alsoIn` → `/…/3025` (S-page-003) e a nota curta, que a 3.7.1 cortava (`extras:alsoIn`); o custo é a família `listitem`
+  (2 membros) ir para a página do cursor — a única família a menos nos 41 scans. Depois da revisão: as chegadas da lista da B depois de um detalhe (p01 #17, p03 #14) não
+  marcam mais `newInState` (o anterior é o scan do mesmo modelo de rota; a ordem é a mesma: list, item…); o detalhe
+  (`agendar-vistoria/<uuid>`, p01 #4, p03 #4) segue breadcrumb, header, list, button, input, sem `newInState` (1º scan do modelo).
+  `icon-only-embedded` nas chegadas de A (2) e B (3); `references` nas famílias `page-has-heading-one` (só `emag-1.3`) e
+  `empty-table-header` (`…00290bc67eb5` + `emag-3.10`) da B — mais curtas, a B p01 #10 deixa de cortar acréscimos (`extras:alsoIn`,
+  `extras:normas`); `componentClauses` nas 7 consultas com
+  `component` (message, modal, pagination, tab). Nenhuma chamada real pede ids de rotas diferentes no `get_finding_details`
+  (o `routesWarning` não aparece; está nos testes). Nada novo acima do `maxChars` (os 2 `get_finding_details` com 4.000 que
+  passam, passam igual na 3.7.1).
+- Testes: 882 (os 865 de antes + 17). `test/integration/fix372.test.ts` (17: A1 exemplo mecânico, pendência e
+  verify, knowledge-free; A2 formas curta/fora, colisão de rotas em shortRoute, todo teto, routesWarning; A3 ordem, itens ≥
+  compacta, sessão com ação; A4 linha; A5 ranqueadas, aperto, scan e knowledge-free; revisão: verify noutro botão não fecha o
+  candidato, scan só do axe não inventaria, outra rota não faz "novo"). Ajustes: fix365/fix366 (a base da comparação passa a ter o alsoIn de outra
+  rota, que não sai mais; custo medido contra a página sem acréscimo: ≤ 1 família no fix366, ≤ 2 no fix365, em que as 30
+  famílias têm alsoIn; no fix366 também a forma curta exata, o item da mesma rota que sai e o rótulo `extras:alsoIn-kept`), response-contract (chave `componentClauses` nos exemplos 01/02), fixture léxica 3.4.0 (8 sha e chars, nota).
+
 ## 3.7.1 — a dica das cláusulas no `next` do investigate (D-155/D-159)
 
 Motivo: no teste à mão da 3.7.0, no teto padrão (8.000) a chegada de A e de B trazia só os nomes no `investigate` (nem

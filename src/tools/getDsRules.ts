@@ -23,6 +23,7 @@ import {
 } from "../data/applicability.js";
 import { analyzeQuery, isMarkupQuestion, rankRules, tokenize, vocabularyEnabledByDefault, vocabularyLabel, RANKING_VERSION, type ScoredRule } from "../data/retrieval.js";
 import { componentsNamedIn } from "../data/applicability.js";
+import { otherMeasurableClausesLine } from "./componentChecklist.js";
 import { registryRefsFor, relatedFor, relationsLabel } from "../data/relations.js";
 import { routeSteps } from "../responses/routing.js";
 import { conceptFor, guidanceLabel } from "../data/guidance.js";
@@ -537,6 +538,11 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         unmatchedRegistry: registryRefsFor(ranked.analysis.unmatchedTerms).map((r) => r.num),
         approximations: ranked.analysis.approximations,
         routing: routeSteps(query, scope, available),
+        // 3.7.2 (rastreio dev-371-a §7): com `component`, as outras cláusulas mensuráveis dele e o checklist, numa linha.
+        ...((c: string | null) =>
+          c !== null && available("get_component_spec")
+            ? { componentClauses: (shown: string) => otherMeasurableClausesLine(c, (id) => shown.includes(id)) }
+            : {})(component),
         scopeComponent: scope,
         ...relatedBlock({
           components: scope ? [scope] : [],

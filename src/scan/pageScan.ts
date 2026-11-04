@@ -526,6 +526,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ? region.filter((el) => ["input", "textarea", "select"].includes(el.tagName))
       : (await inspectPageComputedStyles(page, request.url, FORM_FIELD_SELECTOR, [])).elements;
     const placeholderChecked = checks.includes("structure") && normalized.components.length === 0;
+    // 3.7.2 (D-166): os botões só com ícone que o C01 não acusa por serem parte de outro componente do DS (candidatos).
+    let embeddedIconButtons: NonNullable<Parameters<typeof notJudgedFor>[0]["embeddedIconButtons"]> = [];
     if (placeholderChecked) {
       const labels = checkPlaceholderLabels({ url: request.url }, fieldEvidence);
       rawFindings.push(...labels.findings);
@@ -541,6 +543,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       const iconOnly = checkIconOnlyButtons({ url: request.url }, [...controls, ...buttonHosts]);
       rawFindings.push(...iconOnly.findings);
       observations.push(...iconOnly.observations);
+      embeddedIconButtons = iconOnly.candidates;
     }
     const tableEvidence = scoped ? region.filter((el) => el.tagName === "table") : (await inspectPageComputedStyles(page, request.url, "table", [])).elements;
     const unnamedTables = unnamedTablesOf(tableEvidence, facts, scoped);
@@ -592,6 +595,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       placeholderChecked,
       axeRan: checks.includes("axe"),
       ...(contrastIncomplete ? { contrastIncomplete } : {}),
+      ...(embeddedIconButtons.length ? { embeddedIconButtons } : {}),
     });
     const value: CachedScan = {
       status: "scanned",

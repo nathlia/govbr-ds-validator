@@ -514,17 +514,23 @@ describe("3.6.5 reexecução — os acréscimos da 3.6.5 nunca tiram família da
       pathway: "deterministic",
     })) as unknown as Finding[];
     const alsoInFor = () => ({ items: [{ route: "/uma/rota/bem/longa/de/outro/registro", scanId: "S-page-001", familyId: "FAM-0123456789ab" }], more: 1 });
-    const page = (extras: boolean) => (b: number) =>
-      buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x", ...(extras ? { forceOf: unitForceOf, interaction: true, alsoInFor } : {}) }) as unknown as Record<string, unknown>;
+    // 3.7.2 (A2): o alsoIn de OUTRA rota nunca sai pelo orçamento (fica com a família, na forma curta com a rota) — a base
+    // da comparação passa a ter o alsoIn; força e passo de interação continuam sem custar família.
+    const page = (extras: boolean | "alsoIn") => (b: number) =>
+      buildFamilyPage(findings, { maxChars: b, stateFingerprint: "x", ...(extras === "alsoIn" ? { alsoInFor } : extras ? { forceOf: unitForceOf, interaction: true, alsoInFor } : {}) }) as unknown as Record<string, unknown>;
     let compared = 0;
+    let worst = 0;
     let withForce = 0;
     let withSteps = 0;
     for (let pad = 0; pad <= 4_000; pad += 173) {
       const head = { contract: "c", kind: "scan", scanId: "S-page-002", filler: "x".repeat(pad), sessionPending: { count: 3, items: [], checklist: { note: "n", count: 3, components: [{ component: "message", count: 3, ids: ["P-01", "P-02", "P-03"] }] } } };
-      const base = assembleScan({ ...head, sessionPending: { count: 0, items: [] } }, null, "S-page-002", 8_000, page(false), { firstScanPage: true });
+      const base = assembleScan({ ...head, sessionPending: { count: 0, items: [] } }, null, "S-page-002", 8_000, page("alsoIn"), { firstScanPage: true });
       const withExtras = assembleScan(head, null, "S-page-002", 8_000, page(true), { firstScanPage: true });
       const n = (r: Record<string, unknown>) => (Array.isArray(r.families) ? r.families.length : 0);
       expect(n(withExtras), `pad ${pad}`).toBeGreaterThanOrEqual(n(base));
+      // 3.7.2 (revisão BAIXA 8): o alsoIn de outra rota custa no máximo uma família frente à página sem acréscimo nenhum
+      const none = assembleScan({ ...head, sessionPending: { count: 0, items: [] } }, null, "S-page-002", 8_000, page(false), { firstScanPage: true });
+      worst = Math.min(worst, n(withExtras) - n(none));
       expect(JSON.stringify(withExtras).length).toBeLessThanOrEqual(8_000);
       if (n(base) < 30) compared += 1;
       // 3.6.6 (revisão: só contagens — passaria se os extras sumissem sempre): os acréscimos estão na página quando cabem,
@@ -533,9 +539,14 @@ describe("3.6.5 reexecução — os acréscimos da 3.6.5 nunca tiram família da
       if (fams.some((f) => f.rule.force)) withForce += 1;
       if (fams.some((f) => f.interaction)) withSteps += 1;
       const labels = (Array.isArray(withExtras.compacted) ? withExtras.compacted : []) as string[];
-      const bare = !fams.some((f) => f.rule.force || f.interaction || f.alsoIn) && n(withExtras) === n(base);
+      // 3.7.2 (A2): o alsoIn de outra rota fica (não é acréscimo que sai); "nada de acréscimo" = sem força e sem passo.
+      const bare = !fams.some((f) => f.rule.force || f.interaction) && n(withExtras) >= n(base);
       if (fams.length && fams.some((f) => !f.rule.force)) expect(labels.some((l) => l.startsWith("extras")) || bare, `pad ${pad}: força fora sem rótulo`).toBe(true);
     }
+    // 3.7.2 (revisão BAIXA 8): aqui TODAS as 30 famílias têm alsoIn de outra rota (caso extremo) — o custo medido chega a 2
+    // famílias frente à página sem acréscimo; no fix366 (1 em 3 famílias) o limite de 1 família vale. O alsoIn de outra rota
+    // não sai pelo orçamento (A2), então o custo cresce com o número de famílias que o têm.
+    expect(worst, "custo do alsoIn de outra rota em famílias").toBeGreaterThanOrEqual(-2);
     expect(compared, "casos em que o teto corta famílias").toBeGreaterThan(5);
     expect(withForce, "tetos com a força na página").toBeGreaterThan(compared / 2);
     expect(withSteps, "tetos com o passo na página").toBeGreaterThan(0);

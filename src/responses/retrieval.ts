@@ -276,6 +276,11 @@ export interface RetrievalInput {
   unmatchedRegistry?: string[];
   /** 3.4.0 (A4): passos de roteamento pela intenção (vão primeiro em next, 1ª página). */
   routing?: NextStep[];
+  /**
+   * 3.7.2: com `component`, a linha das OUTRAS cláusulas mensuráveis do componente (as que esta página não mostrou) e o
+   * checklist — recebe o texto dos cartões mostrados e devolve a linha, ou null.
+   */
+  componentClauses?: (shownText: string) => string | null;
   /** 3.4.0 (A5): componente em escopo (component, ou o único nomeado no texto); null = nenhum. */
   scopeComponent?: string | null;
   /** 3.4.0 (A7): termos casados só por aproximação. */
@@ -485,6 +490,13 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       ...(first ? { gaps } : {}),
       page: { returned: list.length, matched, cursor, stop, note: MESSAGES[noteCode] },
       next: nextSteps.slice(0, 3),
+      ...((() => {
+        // 3.7.2: a linha conta no orçamento (está dentro de compose): uma por resposta, só na 1ª página.
+        // revisão BAIXA 10: "já mostrada" = em qualquer parte da resposta composta (cartões, related, investigação, lacunas, evidência).
+        const shown = JSON.stringify([list, first && related?.items.length ? related : null, investigation ?? null, first ? gaps : null, input.evidence && first ? input.evidence : null]);
+        const line = first && input.componentClauses ? input.componentClauses(shown) : null;
+        return line ? { componentClauses: line } : {};
+      })()),
       ...(input.evidence && first ? { evidence: input.evidence } : {}),
       ...(input.warnings && first ? { warnings: input.warnings } : {}),
       ...(status === "no-match" || status === "partial-match" || hasNoClause || (ambiguity && gaps.length) ? { absenceNote: ABSENCE_NOTE } : {}),

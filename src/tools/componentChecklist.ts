@@ -308,6 +308,26 @@ export function procedureShort(p: Procedure): string {
   return cut(`${p.measure} → ${p.expect}`, 70);
 }
 
+/**
+ * 3.7.2 (rastreio dev-371-a §7, A-11 p01: a consulta sobre o foco da mensagem devolveu 1 cláusula e parou no piso de
+ * relevância; as 2 de posição do mesmo componente nunca chegaram): uma linha para o get_ds_rules com `component` — as
+ * OUTRAS cláusulas mensuráveis do componente que nenhum check mede (as que a resposta não mostrou) e a chamada do checklist.
+ * null quando não há outra.
+ */
+export const COMPONENT_CLAUSES_LINE_MAX = 320;
+export function otherMeasurableClausesLine(component: string, shown: (id: string) => boolean): string | null {
+  const others = investigateClauses(component, Number.POSITIVE_INFINITY).clauses.filter((c) => !shown(c.citeAs));
+  if (!others.length) return null;
+  const call = ` → get_component_spec{component:"${component}", view:"checklist"}`;
+  for (let k = Math.min(2, others.length); k >= 0; k--) {
+    const listed = others.slice(0, k).map((c) => `${c.citeAs} (${c.short})`).join("; ");
+    const more = others.length - k;
+    const line = `${component}: ${others.length} outra(s) cláusula(s) mensurável(is) que nenhum check mede${listed ? ` — ${listed}` : ""}${more > 0 && k > 0 ? ` +${more}` : ""}${call}`;
+    if (line.length <= COMPONENT_CLAUSES_LINE_MAX || k === 0) return line;
+  }
+  return null;
+}
+
 /** Quantas obrigações/proibições do componente nenhum check ou predicado do oráculo mede. */
 export function unmeasuredStrongCount(component: string): { strong: number; unmeasured: number } {
   const rules = checklistRules(component);

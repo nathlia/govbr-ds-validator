@@ -23,7 +23,7 @@ import { checkComponentStructure, scriptDependentAnchor } from "../checkers/stru
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf } from "../checkers/formLabels.js";
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING, exposedDecorativeIcons, isControl, linkTitleRepeatsText } from "../checkers/decorativeIcons.js";
-import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING, iconOnlyNonCircleButton, isButtonHost } from "../checkers/iconOnlyButton.js";
+import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING, embeddedHostOf, iconOnlyNonCircleButton, iconOnlyNonCircleFact, isButtonHost } from "../checkers/iconOnlyButton.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
@@ -295,7 +295,29 @@ function elementPredicate(id: string, condition: string, label: string, violates
 const decorativeIconPredicate = elementPredicate("decorative-icon", DECORATIVE_ICON_CONDITION, "ícone decorativo exposto ao lado do rótulo", (el) => exposedDecorativeIcons(el) > 0);
 /** 3.7.0 (C01): botão do DS só com ícone sem a classe circle (contradicted quando algum tem circle ou rótulo visível). */
 // 3.7.0 (revisão, lacuna B): o host <br-button> do web component do DS também é o sujeito (a escolha do autor).
-const iconOnlyButtonPredicate = elementPredicate("icon-only-button", ICON_ONLY_BUTTON_CONDITION, "br-button só com ícone fora da variante circular", iconOnlyNonCircleButton, (el) => isControl(el) || isButtonHost(el));
+const iconOnlyButtonBase = elementPredicate("icon-only-button", ICON_ONLY_BUTTON_CONDITION, "br-button só com ícone fora da variante circular", iconOnlyNonCircleButton, (el) => isControl(el) || isButtonHost(el));
+/**
+ * 3.7.2 (D-166): o botão só com ícone sem circle que é parte de outro componente do DS (o scan o aponta como candidato
+ * `icon-only-embedded`) não é contradito — o fato existe; o exemplo oficial do hospedeiro traz a mesma marcação, e o
+ * predicado não decide se isso viola o rótulo obrigatório (undetermined, com a nota). Os demais casos, como na 3.7.0.
+ */
+const iconOnlyButtonPredicate: Predicate = {
+  ...iconOnlyButtonBase,
+  evaluate: (elements, url, facts, context) => {
+    const embedded = elements
+      .filter((el) => el.rendered !== false && !el.axHidden && el.origin !== "ds-web-component" && el.origin !== "flatpickr" && iconOnlyNonCircleFact(el))
+      .map((el) => ({ el, host: embeddedHostOf(el) }))
+      .filter((x): x is { el: ElementEvidence; host: NonNullable<ReturnType<typeof embeddedHostOf>> } => x.host !== null);
+    if (!embedded.length) return iconOnlyButtonBase.evaluate(elements, url, facts, context);
+    const first = embedded[0].host;
+    return {
+      status: "undetermined",
+      detail:
+        `${embedded.length} de ${elements.length} elemento(s) só com ícone e sem circle dentro de ${first.host}: a marcação coincide com o exemplo oficial do DS` +
+        `${first.examples.length ? ` (${first.examples.join(", ")})` : ""}. O fato existe; o predicado não decide se viola o rótulo obrigatório do Button — decida com a regra e o exemplo na frente.`,
+    };
+  },
+};
 const linkTitlePredicate = elementPredicate("link-title", LINK_TITLE_CONDITION, "title do link repete o texto", linkTitleRepeatsText);
 
 function citesAny(finding: Finding, grounding: { implements: string[] }, emag?: string, wcag: string[] = []): boolean {

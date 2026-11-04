@@ -39,6 +39,12 @@ export function routeTemplateOf(route: string): string {
   return route.replace(/\/(?:\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{12,})(?=\/|$|#)/gi, "/:id");
 }
 
+/**
+ * 3.7.2 (revisão MÉDIA 4): marca do item de alsoIn — true quando a outra ocorrência é de OUTRA rota (rota inteira), false
+ * quando é outro estado da mesma rota. Chave símbolo: acompanha o objeto na montagem da resposta e não sai no JSON.
+ */
+export const CROSS_ROUTE: unique symbol = Symbol("alsoIn.crossRoute");
+
 /** A rota para leitura: só o caminho (+ fragmento de rota); a origem é a mesma em quase toda sessão. */
 export function routeLabel(route: string): string {
   try {
@@ -96,6 +102,8 @@ export interface PendingEntry {
   locators: string[];
   /** 3.6.1 (revisão M1): pendência sem sinal medido (idioma, regiões) — em sessionPending só como contagem. */
   low: boolean;
+  /** 3.7.2 (revisão HIGH 1): só o verify_finding num dos elementos da pendência a fecha (NotJudgedItem.elementBound). */
+  elementBound?: boolean;
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -199,10 +207,10 @@ export class ScanSession {
    * O mesmo conjunto de elementos noutra rota (layout compartilhado) e o mesmo elemento noutro estado da rota são o mesmo
    * fato (não entram). Um item por rota/estado, na ordem em que foram vistos.
    */
-  alsoIn(signature: string, scanId: string, route: string, fingerprint: string, locators: string[], max = 2): { items: Array<{ route: string; scanId: string; familyId: string }>; more: number } {
+  alsoIn(signature: string, scanId: string, route: string, fingerprint: string, locators: string[], max = 2): { items: Array<{ route: string; scanId: string; familyId: string; [CROSS_ROUTE]: boolean }>; more: number } {
     const mine = new Set(locators);
     const seen = new Set<string>();
-    const out: Array<{ route: string; scanId: string; familyId: string }> = [];
+    const out: Array<{ route: string; scanId: string; familyId: string; [CROSS_ROUTE]: boolean }> = [];
     for (const x of this.sightings.get(signature) ?? []) {
       if (x.scanId === scanId) continue;
       // Revisão (MÉDIA 2): noutra rota, o MESMO conjunto de elementos (layout compartilhado: cabeçalho, regiões) é o
@@ -213,7 +221,8 @@ export class ScanSession {
       const key = `${x.route}|${x.fingerprint}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ route: shortRoute(x.route), scanId: x.scanId, familyId: x.familyId });
+      // 3.7.2 (revisão MÉDIA 4): outra rota pela rota INTEIRA (o rótulo curto pode colidir); marca fora do JSON (símbolo).
+      out.push({ route: shortRoute(x.route), scanId: x.scanId, familyId: x.familyId, [CROSS_ROUTE]: x.route !== route });
     }
     return { items: out.slice(0, max), more: Math.max(0, out.length - max) };
   }
@@ -309,6 +318,7 @@ export class ScanSession {
           ...(item.rule ? { rule: item.rule } : {}),
           locators: [],
           low: item.signal === "low",
+          ...(item.elementBound ? { elementBound: true } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -438,9 +448,13 @@ export class ScanSession {
     for (const entry of this.open()) {
       if (!entry.norms.some((n) => cited.has(n))) continue;
       const here = slotOf(entry, route);
-      const targets = here
-        ? here.status === "open" ? [here] : []
-        : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
+      // 3.7.2 (revisão HIGH 1): pendência de elementos que compartilha a norma com achados de outros elementos — só o verify
+      // num dos elementos dela a fecha (nesta rota; noutra, o slot que tem esse mesmo elemento).
+      const targets = entry.elementBound
+        ? (here ? [here] : entry.slots).filter((x) => x.status === "open" && x.locators.includes(finding.element.locator))
+        : here
+          ? here.status === "open" ? [here] : []
+          : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
       for (const slot of targets) {
         resolveSlot(entry, slot, resolution);
         resolved.push(slotLabel(entry, slot.route));

@@ -78,7 +78,7 @@ const VERSAO: string = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ).version;
 import { checkComponentStructure, collectStructureObservations } from "./checkers/structure.js";
-import { runAxeScan } from "./checkers/axe.js";
+import { bestPracticeReferences, runAxeScan } from "./checkers/axe.js";
 import { pageConstraints, titleDuplicateFinding } from "./checkers/pageStructure.js";
 import {
   inspectComputedStyles,
@@ -147,7 +147,7 @@ export function startupChecks(): Promise<void> {
 }
 import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
-import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, sessionPendingBlock, slotOf } from "./scan/session.js";
+import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
@@ -803,7 +803,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
    */
   const familyExtras = (batchScanId?: string): FamilyExtras => {
     if (knowledgeFree) return {};
-    const extras: FamilyExtras = { forceOf: unitForceOf, interaction: true };
+    // 3.7.2: a norma obrigatória do DS/e-MAG do mesmo assunto nas famílias de regras só best-practice do axe.
+    const extras: FamilyExtras = { forceOf: unitForceOf, interaction: true, referencesOf: bestPracticeReferences };
     const ledger = batchScanId ? findingStore.getBatchMetadata(batchScanId) : undefined;
     const state = ledger?.state as StateAttestation | undefined;
     if (batchScanId && state?.observed?.url && typeof ledger?.stateFingerprint === "string") {
@@ -826,6 +827,36 @@ export function createServer(options: ServerOptions = {}): McpServer {
   };
   /** 3.6.6: a receita do lote mais recente de cada achado, para a projeção por ids concordar com a família e o verify. */
   const recipeActionsOfFinding = (finding: Finding) => recipeActionsOfBatch(findingStore.batchIdOf(finding.id));
+
+  /**
+   * 3.7.2 (rastreio dev-371-b §3, B-23 p01): os ids pedidos no get_finding_details são de scans de rotas diferentes (outra
+   * página, ou o mesmo modelo de rota com outro registro) — o aviso diz quantos cartões são, antes do verify_finding recusar
+   * (mixed-states). Só scans de página (com estado); ids sem lote de página não entram na conta.
+   */
+  const idsRoutesWarning = (found: Finding[]) => {
+    const byRoute = new Map<string, { scanIds: string[]; ids: string[] }>();
+    for (const f of found) {
+      const batchId = findingStore.batchIdOf(f.id);
+      const state = batchId ? (findingStore.getBatchMetadata(batchId)?.state as StateAttestation | undefined) : undefined;
+      if (!batchId || !state?.observed?.url) continue;
+      const route = routeKeyOf(state.observed.url);
+      const entry = byRoute.get(route) ?? { scanIds: [], ids: [] };
+      if (!entry.scanIds.includes(batchId)) entry.scanIds.push(batchId);
+      entry.ids.push(f.id);
+      byRoute.set(route, entry);
+    }
+    if (byRoute.size < 2) return undefined;
+    const templates = new Set([...byRoute.keys()].map(routeTemplateOf)).size;
+    // 3.7.2 (revisão BAIXA 6): até 5 rotas; as demais só contadas.
+    const all = [...byRoute];
+    return {
+      routes: all.slice(0, 5).map(([route, e]) => ({ route: shortRoute(route), scanIds: e.scanIds.slice(0, 5), ids: e.ids.slice(0, 10), ...(e.ids.length > 10 ? { more: e.ids.length - 10 } : {}) })),
+      ...(all.length > 5 ? { more: all.length - 5 } : {}),
+      note:
+        `ids de ${byRoute.size} rotas${templates < byRoute.size ? " (o mesmo modelo de rota com outro registro conta como outra rota)" : ""}: ` +
+        `${byRoute.size} cartões, um por rota, cada um com o scanId do seu — a evidência de um não vale pelo outro (verify_finding recusa juntar: mixed-states).`,
+    };
+  };
 
   /** 3.6.5 (item 4): as famílias de um scan de página entram no registro da sessão (todas, pela chave completa). */
   const recordScanFamilies = (scanId: string, url: string, fingerprint: string, findings: Finding[]) => {
@@ -1788,7 +1819,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   };
 
   const withPendingIds = (scanId: string, route: string, items: NotJudgedItem[]): PendingItem[] => {
-    const entries = session.registerPending(scanId, route, items, (item) => (item.examples ?? []).slice());
+    // 3.7.2 (revisão HIGH 1): a pendência de elementos guarda todos os localizadores (inteiros), não só os exemplos.
+    const entries = session.registerPending(scanId, route, items, (item) => (item.boundLocators ?? item.examples ?? []).slice());
     return items.map((item, i) => {
       const e = entries[i];
       // 3.6.3 (revisão HIGH 1): resolvida NESTA rota (a mesma pendência pode seguir aberta noutra).
@@ -2011,7 +2043,24 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const first = !cursor;
         // §10 + §15.8: investigate na ordem do DOM (coverage.componentsFound não é ordenado), 1ª página.
         // 3.5.0 (revisão Fable P1): todos os componentes encontrados, por obrigações/proibições sem medida.
-        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c)) : undefined;
+        // 3.7.2 (rastreio dev-371-a §7): os componentes que não estavam no estado anterior escaneado na sessão vêm primeiro.
+        // O anterior é o compareToScanId, quando dado (sem inventário de componentes, não há "novo"); senão o scan mais recente
+        // do MESMO modelo de rota (revisão MÉDIA 3) que tem inventário: página inteira, com tokens ou structure (revisão MÉDIA
+        // 2; o scan só do axe, só de página ou por seletores não inventaria componentes).
+        const hasInventory = (s: { title: string | null; checks: string[]; components?: string[] }) =>
+          s.title !== null && Array.isArray(s.components) && s.checks.some((c) => c === "tokens" || c === "structure");
+        const previousScan = (() => {
+          const scans = session.previousScans();
+          if (compareToScanId) {
+            const s = scans.find((x) => x.scanId === compareToScanId);
+            return s && hasInventory(s) ? s : undefined;
+          }
+          const template = routeTemplateOf(route);
+          for (let i = scans.length - 1; i >= 0; i--) if (routeTemplateOf(scans[i].route) === template && hasInventory(scans[i])) return scans[i];
+          return undefined;
+        })();
+        const newComponents = new Set(previousScan ? (result.coverage.componentsFound ?? []).filter((c) => !(previousScan.components ?? []).includes(c)) : []);
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c), newComponents) : undefined;
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
@@ -2454,6 +2503,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(ledger && !cursor ? { ledger } : {}),
           missing,
           ...(missingAll.length > missing.length ? { missingOmitted: missingAll.length - missing.length } : {}),
+          // 3.7.2: ids de rotas diferentes no mesmo pedido — um cartão por rota.
+          ...((() => {
+            // revisão BAIXA 6: só na 1ª página (a continuação não repete o aviso)
+            const warning = ids && !cursor ? idsRoutesWarning(found) : undefined;
+            return warning ? { routesWarning: warning } : {};
+          })()),
           ...(missing.length
             ? {
                 missingNote:
