@@ -130,6 +130,7 @@ import {
 import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
 import { fitComponentSpec, specClauses, specRelated } from "./tools/componentSpec.js";
 import { emagTemplateCitation } from "./responses/retrieval.js";
+import { emagClausesReply } from "./responses/emagClauses.js";
 
 /** 3.3.0 (B-09): o resumo do e-MAG do projeto não é texto da norma (nada da base é reescrito). */
 const EMAG_PARAPHRASE_NOTE =
@@ -1255,11 +1256,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
       inputSchema: strictInput("get_emag_rules", {
         section: z.number().int().min(1).max(6).optional().describe("Seção 1–6"),
         id: z.string().max(20).optional().describe("Id de regra específica, ex.: '4.1'"),
+        clauseCursor: z.string().max(40).optional().describe("Com id: continuação das cláusulas literais, devolvida em clausesDeferred.next"),
       }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_emag_rules", async ({ section, id }) => {
+    instrumentTool(telemetry, "get_emag_rules", async ({ section, id, clauseCursor }) => {
       const emag = getEmag();
+      if (clauseCursor !== undefined && !id) return fail({
+        error: "clauseCursor exige o id da recomendação.", errorCode: "invalid-combination", field: "clauseCursor",
+        next: [step("request-detail", "reinicie pelo índice ou informe o id da recomendação", "get_emag_rules", {})],
+      });
       if (section !== undefined && id) {
         return fail({
           error: "Informe section ou id, não ambos.",
@@ -1302,25 +1308,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             ? { validationTemplate: { ...template, ruleId: templateCitation.id, ...(templateCitation.id !== template.ruleId ? { historicalRuleId: template.ruleId } : {}), citation: templateCitation } }
             : {}),
         };
-        // Teto do contrato (§7.7): cláusulas que não cabem vão por id, inteiras, no get_ds_rules.
-        if (textSize(response) > RESPONSE_BUDGET) {
-          const clauses = [...units.clauses];
-          const kept: typeof clauses = [];
-          for (const clause of clauses) {
-            const trial = { ...response, normativeContext: { ...units, clauses: [...kept, clause] } };
-            if (kept.length && textSize(trial) > RESPONSE_BUDGET - 400) break;
-            kept.push(clause);
-          }
-          const deferred = clauses.slice(kept.length).map((c) => c.id);
-          response.normativeContext = {
-            ...units,
-            clauses: kept,
-            ...(deferred.length
-              ? { clausesDeferred: { count: deferred.length, note: MESSAGES["text-deferred"], next: { tool: "get_ds_rules", arguments: { ids: deferred.slice(0, 10) } } } }
-              : {}),
-          };
-        }
-        return ok(response);
+        return emagClausesReply(response, units, id, clauseCursor);
       }
       if (section) {
         const found = Object.hasOwn(emag.sections, String(section)) ? emag.sections[String(section)] : undefined;

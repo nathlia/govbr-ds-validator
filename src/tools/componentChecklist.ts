@@ -12,7 +12,7 @@ import { relatedFor } from "../data/relations.js";
 import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTitleRecord, listingOrder } from "../responses/retrieval.js";
 import { CONTRACT, MESSAGES, RESPONSE_BUDGET, budgetPage, step, textSize } from "../responses/contract.js";
-import { oracleMeasuresFor, type OracleMeasure } from "./oracleCoverage.js";
+import { oracleFullyMeasures, oracleMeasuresFor, type OracleMeasure } from "./oracleCoverage.js";
 import { getComponentSpecs } from "../data/load.js";
 import { BUTTON_LABEL_ANATOMY, BUTTON_LABEL_LEGACY, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
@@ -245,8 +245,11 @@ function measureOf(rule: KnowledgeRule, component?: string): Record<string, unkn
   if (oracle.length) {
     const own = ORACLE_PROCEDURES[rule.id];
     return {
-      automatic: true,
-      oracle: oracle.map((m: OracleMeasure) => (m.tool === "scan_page" ? { tool: m.tool, check: m.check } : { tool: m.tool, expectedCondition: m.expectedCondition })),
+      automatic: oracleFullyMeasures(rule.id),
+      oracle: oracle.map((m: OracleMeasure) => ({
+        ...(m.tool === "scan_page" ? { tool: m.tool, check: m.check } : { tool: m.tool, expectedCondition: m.expectedCondition }),
+        ...(m.coverage ? { coverage: m.coverage, limitation: m.limitation } : {}),
+      })),
       // 3.7.0: a medida do próprio oráculo dita como procedimento, quando a letra servida não basta (exceção perdida).
       ...(own ? { procedure: own } : {}),
     };
@@ -273,7 +276,7 @@ export function checklistRules(component: string): KnowledgeRule[] {
  */
 export function checklistPendingClauses(component: string): Array<{ id: string; force: string; text: string }> {
   return checklistRules(component)
-    .filter((r) => oracleMeasuresFor(r.id).length === 0 && (MEASURABLE.has(r.validationStrategy) || geometryHint(r)))
+    .filter((r) => !oracleFullyMeasures(r.id) && (MEASURABLE.has(r.validationStrategy) || geometryHint(r)))
     .map((r) => ({ id: r.id, force: r.force, text: cut(plain(r.originalText), 100) }));
 }
 
@@ -283,7 +286,7 @@ export function checklistPendingClauses(component: string): Array<{ id: string; 
  * cada uma com o id citável, a letra curta e o procedimento numa linha. `total` = quantas há (as demais pela lista).
  */
 export function investigateClauses(component: string, max = 2): { total: number; clauses: Array<{ citeAs: string; text: string; how: string; short: string }> } {
-  const ranked = byMeasurability(checklistRules(component).filter((r) => oracleMeasuresFor(r.id).length === 0 && procedureOf(r, component) !== null).map((rule) => ({ rule })));
+  const ranked = byMeasurability(checklistRules(component).filter((r) => !oracleFullyMeasures(r.id) && procedureOf(r, component) !== null).map((rule) => ({ rule })));
   return {
     total: ranked.length,
     clauses: ranked.slice(0, max).map(({ rule }) => {
@@ -331,7 +334,7 @@ export function otherMeasurableClausesLine(component: string, shown: (id: string
 /** Quantas obrigações/proibições do componente nenhum check ou predicado do oráculo mede. */
 export function unmeasuredStrongCount(component: string): { strong: number; unmeasured: number } {
   const rules = checklistRules(component);
-  return { strong: rules.length, unmeasured: rules.filter((r) => oracleMeasuresFor(r.id).length === 0).length };
+  return { strong: rules.length, unmeasured: rules.filter((r) => !oracleFullyMeasures(r.id)).length };
 }
 
 export interface ChecklistExtras {
@@ -384,8 +387,8 @@ const LAST: Level[] = [
 const GENERAL_NOTE =
   "Pendências suas, não veredito: cada obrigação/proibição do componente na base, com como medi-la. " +
   "automatic:true = o oráculo mede (scan_page acha; verify_finding decide com a expectedCondition). " +
-  "automatic:false = nenhum check mede: zero achados do scan não diz nada sobre ela; meça como indicado e cite o citeAs.";
-const GENERAL_NOTE_SHORT = "Pendências suas, não veredito. automatic:false = nenhum check mede: meça e cite o citeAs.";
+  "automatic:false = nenhum check decide integralmente; coverage:partial/limitation delimitam a parte medida. Meça o restante e cite o citeAs.";
+const GENERAL_NOTE_SHORT = "Pendências suas, não veredito. automatic:false = sem decisão integral: meça o restante e cite o citeAs.";
 
 /** Sem o texto da geometria: `geometry: true` marca a cláusula (ou nada, `drop`, para o limite da página da 3.6.4). */
 function withoutGeometry<T extends { measure: Record<string, unknown> }>(item: T, drop = false): T {
@@ -398,7 +401,7 @@ export function componentChecklist(component: string, cursor: number, budget = R
   const rules = checklistRules(component);
   const pendingIds = extras.pendingIds ?? {};
   // 3.7.0: por mensurabilidade (DOM/CSS primeiro, juízo por último); no mesmo posto, o que nenhum check mede vem antes.
-  const ranked = byMeasurability(rules.map((rule) => ({ rule, auto: oracleMeasuresFor(rule.id).length > 0 })));
+  const ranked = byMeasurability(rules.map((rule) => ({ rule, auto: oracleFullyMeasures(rule.id) })));
   const ordered = [...ranked].sort((a, b) => rankOf(a.rule) - rankOf(b.rule) || Number(a.auto) - Number(b.auto)).map((x) => x.rule);
   const baseItems = ordered.map((r) => {
     const lost = lostExceptionOf(r);

@@ -52,7 +52,9 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b48
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "3807ad9534e64155cc8d38bdcdfb16413ec195d482d119cedb16776420aa8063";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "8c7b9cca98da99218fa9fd03e29cfafeeffbf5260483596bf9ffd0465cf4bbf1";
+// 3.7.3 A3: get_emag_rules aceita clauseCursor. Hash desta fatia, antes da emenda-2.
+// Árvore integrada com emenda-2: 590c6f701d6717b8270e7378393895e86ae1a024cb506a1b08339f9a21077471.
 // 3.6.0: cbfffb0deee45e1df35d2c1d44738f2a2065abd3385d467adbb252f79dc022f0. 3.6.1 (D-155) muda de propósito: scan_page
 // ganha a entrada opcional pendingResolved (o agente fecha pendências da sessão) e a descrição de get_page_rules lista
 // ds-page-title. O perfil knowledge-free não muda (f358152a…).

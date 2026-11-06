@@ -8,7 +8,7 @@ import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checker
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING } from "../checkers/formLabels.js";
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING } from "../checkers/decorativeIcons.js";
 import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING } from "../checkers/iconOnlyButton.js";
-import { FOCUS_ORDER_IMPLEMENTS } from "../checkers/pageStructure.js";
+import { FOCUS_ORDER_IMPLEMENTS, TITLE_IMPLEMENTS } from "../checkers/pageStructure.js";
 import { ANATOMY_PARTS, CONTEXT_CONDITIONS } from "../verify/contextual.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
 
@@ -17,6 +17,9 @@ export interface OracleMeasure {
   tool: "scan_page" | "verify_finding";
   check?: "tokens" | "structure" | "page";
   expectedCondition?: string;
+  /** O check cobre só parte da regra geral: não dispensa o restante da inspeção. */
+  coverage?: "partial";
+  limitation?: string;
 }
 
 /** A regra geral de consumo de tokens sustenta vários checks, mas não é medida inteira por nenhum. */
@@ -45,10 +48,14 @@ function build(): Map<string, OracleMeasure[]> {
   for (const [kind, grounding] of Object.entries(CHECK_GROUNDING) as Array<[CheckKind, (typeof CHECK_GROUNDING)[CheckKind]]>) {
     const check = kind.startsWith("token-") ? "tokens" : kind.startsWith("page-") ? "page" : "structure";
     for (const id of grounding.implements) {
-      if (id === GENERAL_TOKEN_RULE || !id.startsWith("govbr-")) continue;
-      add(map, id, { tool: "scan_page", check });
+      if (!id.startsWith("govbr-")) continue;
+      const partial = id === GENERAL_TOKEN_RULE ? {
+        coverage: "partial" as const,
+        limitation: "Só as propriedades de tokens que o check executou; não decide todo o consumo de tokens da página.",
+      } : {};
+      add(map, id, { tool: "scan_page", check, ...partial });
       const condition = conditionOf[kind];
-      if (condition) add(map, id, { tool: "verify_finding", expectedCondition: condition });
+      if (condition) add(map, id, { tool: "verify_finding", expectedCondition: condition, ...partial });
     }
   }
   for (const [grounding, condition] of [[FOCUS_INDICATOR_GROUNDING, FOCUS_INDICATOR_CONDITION], [PLACEHOLDER_LABEL_GROUNDING, PLACEHOLDER_LABEL_CONDITION], [DECORATIVE_ICON_GROUNDING, DECORATIVE_ICON_CONDITION], [LINK_TITLE_GROUNDING, LINK_TITLE_CONDITION], [ICON_ONLY_BUTTON_GROUNDING, ICON_ONLY_BUTTON_CONDITION]] as const) {
@@ -62,6 +69,12 @@ function build(): Map<string, OracleMeasure[]> {
     if (!id.startsWith("govbr-")) continue;
     add(map, id, { tool: "scan_page", check: "page" });
     add(map, id, { tool: "verify_finding", expectedCondition: EXPECTED_CONDITIONS.skipLinkFirstFocus });
+  }
+  for (const id of TITLE_IMPLEMENTS) {
+    if (!id.startsWith("govbr-")) continue;
+    const partial = { coverage: "partial" as const, limitation: "Título vazio ou sinal de duplicação entre rotas; adequação ao conteúdo ainda exige julgamento." };
+    add(map, id, { tool: "scan_page", check: "page", ...partial });
+    add(map, id, { tool: "verify_finding", expectedCondition: EXPECTED_CONDITIONS.documentTitle, ...partial });
   }
   for (const part of ANATOMY_PARTS) {
     for (const id of part.rules) {
@@ -80,4 +93,9 @@ function build(): Map<string, OracleMeasure[]> {
 export function oracleMeasuresFor(ruleId: string): OracleMeasure[] {
   index ??= build();
   return index.get(ruleId) ?? [];
+}
+
+/** Uma medida parcial não retira a regra das pendências de inspeção. */
+export function oracleFullyMeasures(ruleId: string): boolean {
+  return oracleMeasuresFor(ruleId).some((m) => m.coverage !== "partial");
 }
