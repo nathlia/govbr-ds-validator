@@ -2176,6 +2176,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const route = routeKeyOf(result.state.observed.url);
       const first = !cursor;
       const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
+      // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
+      // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
+      observationStore.set(scanId, notJudgedObservations(pageItems, url));
       const sessionPending = first
         ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), () => true, false, route)
         : undefined;
@@ -2414,12 +2417,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .max(100_000)
           .optional()
           .describe("Orçamento da resposta inteira em caracteres (padrão 8000), cabeçalho e ledger incluídos; o resto vem por nextCursor"),
-        view: (knowledgeFree ? z.enum(["findings", "families", "diff"]) : z.enum(["findings", "families", "observations", "diff"]))
+        view: z.enum(["findings", "families", "observations", "diff"])
           .optional()
           .describe(
             "families (padrão): agrupa instâncias idênticas (mesma norma, tipo, propriedade, estado e evidência) com contagem, " +
               "um exemplo, vereditos por membro e ids com cursor. findings: a página plana de findings. " +
-              (knowledgeFree ? "" : "observations: as observações do scan (fora da pontuação), completas, por cursor. ") +
+              (knowledgeFree ? "observations: as pendências do axe deste scan (fora da pontuação), completas, por cursor. " : "observations: as observações do scan (fora da pontuação), completas, por cursor. ") +
               "diff: as mudanças de findings de um scan com compareToScanId, por cursor. Só apresentação: contagens e lote não mudam"
           ),
         memberLimit: FamilyViewInputShape.memberLimit,
@@ -2455,7 +2458,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const stateFingerprint = typeof ledger?.stateFingerprint === "string" ? ledger.stateFingerprint : null;
         const budget = maxChars ?? RESPONSE_BUDGET;
         if (scanId && (view as string | undefined) === "observations") {
-          return ok(observationPage(observationStore.get(scanId) ?? [], scanId, cursor ?? 0, budget));
+          const page = observationPage(observationStore.get(scanId) ?? [], scanId, cursor ?? 0, budget);
+          // A6: budgetPage preserva o primeiro item inteiro. Se não cabe, o novo caminho sem conhecimento
+          // recusa com continuação explícita, sem truncar medidas nem exceder o teto pedido.
+          if (knowledgeFree && textSize(page) > budget) return fail({
+            error: "A observação completa não cabe no orçamento pedido. Repita com o orçamento indicado.",
+            errorCode: "invalid-argument",
+            field: "maxChars",
+            next: [step("request-detail", "recupere a mesma observação sem cortar evidência", "get_finding_details", {
+              scanId, view: "observations", cursor: cursor ?? 0, maxChars: Math.min(100_000, textSize(page)),
+            })],
+          });
+          return ok(page);
         }
         if (scanId && (view as string | undefined) === "diff") {
           const stored = diffStore.get(scanId);

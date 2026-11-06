@@ -37,7 +37,9 @@ import type { ToolTelemetryEvent } from "../../src/telemetry.js";
  * sha256 do `tools/list` do perfil, fixado (plano §5.3). O runner confere o mesmo valor na ponte.
  * Mudou de propósito? Atualize aqui E declare a mudança: é diferença de tratamento do braço.
  */
-const KNOWLEDGE_FREE_TOOLS_SHA256 = "f358152ab77b8b6930687c1b12206f3821170600d52c0fda0a3dde8d0774bf44";
+const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b4865868d569893997bb48bd";
+// 3.7.3 A6: get_finding_details aceita observations (pendências do axe do próprio lote).
+// 3.4.0–3.7.2: f358152ab77b8b6930687c1b12206f3821170600d52c0fda0a3dde8d0774bf44.
 // 3.3.0: 8bdb5e35ed3346a91b227b45034d64c849f1d21baeb6d5affc995a4ea02c7dee. 3.4.0 (B7) muda de propósito: a ação
 // `navigate` (pushState + popstate, caminho da mesma origem) no esquema de actions do scan_page e do verify_finding.
 // Nada do pacote DS/e-MAG.
