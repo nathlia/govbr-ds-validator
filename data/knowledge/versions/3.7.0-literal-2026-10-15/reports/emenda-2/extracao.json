@@ -1,0 +1,243 @@
+{
+  "version": "3.7.0-literal-2026-10-15+emenda-2",
+  "extractor": "kb-spec-extract/1.1.0",
+  "rules": [
+    {
+      "id": "T1",
+      "what": "linha de tabela de especificação",
+      "text": "Em componentes/<componente>__designer.md ou __desenvolvedor.md, cada linha de corpo (nem a de cabeçalho nem a delimitadora) de uma tabela Markdown (linhas contíguas iniciadas por '|', a 2ª sendo a delimitadora '|---|') que está na região de Especificações: sob o título de nível 2 'Especificações', ou sob um título de nível 2 posterior a ele, no mesmo arquivo, cujo texto (sem acento, caixa e o que vem entre parênteses/colchetes) é uma faceta de especificação (tipografia, iconografia, cor, cores, espacamento, espacamentos, dimensao, dimensoes, sombra, borda, arredondamento, alinhamento, alinhamentos, elevacao, opacidade, movimento, superficie, densidade, escala, estado) — a região acaba no primeiro título de nível 2 que não é faceta. originalText = a linha, do primeiro ao último '|'. A 1ª coluna é a parte do componente; cada outra coluna não vazia é uma entrada {coluna, propriedade, valor, tokens}: propriedade = o valor da coluna 'Property'/'Propriedade' da linha, quando a tabela tem essa coluna, senão o nome da coluna; tokens = os nomes '--…' do valor. Linha sem nenhum valor fora da 1ª coluna e da coluna Property não vira unidade."
+    },
+    {
+      "id": "S1",
+      "what": "frase descritiva sem palavra de força",
+      "text": "Em componentes/<componente>__designer.md ou __desenvolvedor.md, cada sentença (segmentação da normalização: blocos de parágrafo e de item de lista, cortados em sentenças) sob um título de nível 2 (sentença sem título de nível 2 — a introdução da página — fica fora), sem nenhum título no caminho (nível 2 ou mais fundo) igual a, ou começando por, um de: uso, uso alternativo, melhores praticas, tom e voz, tom de voz, dependencias, proximos passos, referencias, instanciacao do componente, codigo basico (sem acento/caixa), que NÃO tem gatilho de força da tabela da normalização (D-119: classificar() e os gatilhos de cobertura deve/devem/evite/recomenda-se/é importante/utilize/prefira/obrigatório e variantes, imperativos inclusos) nem palavra de obrigação solta (necessário/a, obrig…), e tem a forma de declaração: ao menos 5 palavras; não termina em '?' nem em ':' (pergunta, introdução de lista); não é legenda (sentença inteira entre * ou _ com menos de 8 palavras); a 1ª palavra — depois de um rótulo inicial '<Palavra>:' (ex.: 'OBS:', 'Importante:') e de um 'Não', se houver — não é 'Exemplo…', nem um remetimento (veja, consulte, consultar, confira, conferir, acesse, acessar, saiba, clique, clicar, leia, ler, conheca, visite, seguem, segue), nem uma instrução no infinitivo (usar, utilizar, incluir, informar, exceder, atentar, atentarse, adicionar, inserir, definir, aplicar, colocar, manter, seguir, evitar, preencher, verificar, observar, garantir, instanciar, importar, chamar, declarar, configurar, passar, criar, ver); e não contém um remetimento (para saber mais, para mais informacoes, para mais detalhes, a seguir, abaixo seguem, abaixo segue)."
+    },
+    {
+      "id": "S2",
+      "what": "frase com gatilho que a normalização julgou descritiva",
+      "text": "Mesmos arquivos, seções e forma de S1, para a sentença que TEM gatilho de força mas que a normalização excluiu com motivo 'info' ou 'definicao' ou 'usuario' (reports/normalizacao/cobertura.json, excluidas[].motivo): texto descritivo (info, definicao) ou o que o usuário faz com o componente (usuario), sem obrigação/recomendação de projeto, pelo julgamento já registrado e auditado da normalização. A palavra de obrigação solta não exclui aqui (o gatilho já foi julgado)."
+    },
+    {
+      "id": "X1",
+      "what": "sem duplicar a base",
+      "text": "Fica fora o trecho que se sobrepõe (charRange no mesmo arquivo) a uma unidade que já está no rules.jsonl servido: aquele texto já é citável com a força que a normalização lhe deu."
+    },
+    {
+      "id": "ID",
+      "what": "id e campos",
+      "text": "id = govbr-3.7.0-<categoria>-<componente>-<12 hex de sha256(Caminho-fonte + originalText)>, sufixo -n em colisão (o esquema da normalização); categoria = component (designer) ou development (desenvolvedor); force = especificacao; normalizedRule = o trecho sem marcação Markdown (limpar() da normalização, não é paráfrase); title = o começo dele; validationStrategy/automatable pela mesma heurística de palavras-chave (automationConfidence: low); relatedTokens = os nomes '--…' do trecho."
+    }
+  ],
+  "counts": {
+    "units": 2449,
+    "tables": 227,
+    "tableRows": 1152,
+    "sentences": 1297,
+    "byRule": {
+      "S1": 1151,
+      "S2": 146,
+      "T1": 1152
+    },
+    "byTab": {
+      "desenvolvedor": 149,
+      "designer": 2300
+    },
+    "components": 36,
+    "byComponent": {
+      "accordion": {
+        "tableRows": 0,
+        "sentences": 27,
+        "tables": 0
+      },
+      "avatar": {
+        "tableRows": 13,
+        "sentences": 15,
+        "tables": 3
+      },
+      "breadcrumb": {
+        "tableRows": 13,
+        "sentences": 11,
+        "tables": 6
+      },
+      "button": {
+        "tableRows": 25,
+        "sentences": 51,
+        "tables": 6
+      },
+      "card": {
+        "tableRows": 7,
+        "sentences": 29,
+        "tables": 4
+      },
+      "carousel": {
+        "tableRows": 13,
+        "sentences": 48,
+        "tables": 4
+      },
+      "checkbox": {
+        "tableRows": 35,
+        "sentences": 35,
+        "tables": 6
+      },
+      "cookiebar": {
+        "tableRows": 34,
+        "sentences": 102,
+        "tables": 5
+      },
+      "datetimepicker": {
+        "tableRows": 44,
+        "sentences": 35,
+        "tables": 7
+      },
+      "divider": {
+        "tableRows": 4,
+        "sentences": 7,
+        "tables": 2
+      },
+      "footer": {
+        "tableRows": 35,
+        "sentences": 32,
+        "tables": 5
+      },
+      "header": {
+        "tableRows": 78,
+        "sentences": 73,
+        "tables": 11
+      },
+      "input": {
+        "tableRows": 39,
+        "sentences": 42,
+        "tables": 4
+      },
+      "item": {
+        "tableRows": 1,
+        "sentences": 15,
+        "tables": 1
+      },
+      "list": {
+        "tableRows": 21,
+        "sentences": 47,
+        "tables": 5
+      },
+      "loading": {
+        "tableRows": 25,
+        "sentences": 33,
+        "tables": 5
+      },
+      "magicbutton": {
+        "tableRows": 33,
+        "sentences": 19,
+        "tables": 10
+      },
+      "menu": {
+        "tableRows": 56,
+        "sentences": 51,
+        "tables": 15
+      },
+      "message": {
+        "tableRows": 64,
+        "sentences": 32,
+        "tables": 8
+      },
+      "modal": {
+        "tableRows": 11,
+        "sentences": 33,
+        "tables": 5
+      },
+      "notification": {
+        "tableRows": 6,
+        "sentences": 27,
+        "tables": 3
+      },
+      "pagination": {
+        "tableRows": 84,
+        "sentences": 50,
+        "tables": 8
+      },
+      "radio": {
+        "tableRows": 30,
+        "sentences": 21,
+        "tables": 5
+      },
+      "scrim": {
+        "tableRows": 0,
+        "sentences": 14,
+        "tables": 0
+      },
+      "select": {
+        "tableRows": 14,
+        "sentences": 68,
+        "tables": 6
+      },
+      "signin": {
+        "tableRows": 31,
+        "sentences": 17,
+        "tables": 10
+      },
+      "skiplink": {
+        "tableRows": 17,
+        "sentences": 15,
+        "tables": 7
+      },
+      "step": {
+        "tableRows": 55,
+        "sentences": 71,
+        "tables": 9
+      },
+      "switch": {
+        "tableRows": 42,
+        "sentences": 14,
+        "tables": 6
+      },
+      "tab": {
+        "tableRows": 32,
+        "sentences": 23,
+        "tables": 4
+      },
+      "table": {
+        "tableRows": 76,
+        "sentences": 63,
+        "tables": 7
+      },
+      "tag": {
+        "tableRows": 69,
+        "sentences": 36,
+        "tables": 26
+      },
+      "textarea": {
+        "tableRows": 31,
+        "sentences": 39,
+        "tables": 4
+      },
+      "tooltip": {
+        "tableRows": 44,
+        "sentences": 35,
+        "tables": 10
+      },
+      "upload": {
+        "tableRows": 21,
+        "sentences": 19,
+        "tables": 6
+      },
+      "wizard": {
+        "tableRows": 49,
+        "sentences": 48,
+        "tables": 4
+      }
+    }
+  },
+  "skipped": {
+    "T1": {
+      "overlap": 0,
+      "empty": 26
+    },
+    "S": {
+      "overlap": 40,
+      "section": 704,
+      "noH2": 100,
+      "force": 1020,
+      "shape": 1175
+    }
+  },
+  "unitsSha256": "322ad1e676fd3c5a7c31f4ad7409d2bd11b78e9c5a849ec13b13c0766a3b95c6"
+}

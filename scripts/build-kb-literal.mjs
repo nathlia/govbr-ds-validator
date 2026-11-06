@@ -98,6 +98,9 @@ const reassigned = new Map(); // id antigo → id novo
 }
 // 3.6.1 (D-155, NAT-104): a emenda declarada (scripts/kb-amendments/<versão>.json) entra depois das regras da
 // normalização — conferida contra o texto arquivado em data/ — e conta como regra literal.
+// 3.7.3 (D-167): as emendas GERADAS seguintes (scripts/kb-amendments/<versão>+emenda-<n>.json, unidades de
+// especificação) não entram aqui: depois deste build, `node scripts/kb-spec-units.mjs` as aplica sobre este
+// rules.jsonl (e escreve spec-tables.json, reports/emenda-2/ e a emenda-2 no manifest), reproduzindo a versão servida.
 const amendment = readAmendment(VERSION);
 const literalOut = applyAmendment(literal.map((r) => JSON.stringify(r)).join("\n") + "\n", amendment);
 if (amendment) literal.push(...amendment.units);

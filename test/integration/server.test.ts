@@ -600,7 +600,7 @@ describe("get_ds_rules on the literal knowledge version (2.12.0, D-119)", () => 
 
   it("kb names the served knowledge version", async () => {
     const data = JSON.parse(textOf(await client.callTool({ name: "get_ds_rules", arguments: {} })));
-    expect(data.kb).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15+emenda-1" });
+    expect(data.kb).toMatchObject({ dsVersion: "3.7.0", knowledgeVersion: "3.7.0-literal-2026-10-15+emenda-2" });
   });
 
   it("context page 1 interleaves the observed components; the continuation does not repeat the header", async () => {

@@ -73,6 +73,9 @@ export const MESSAGES = {
     "Termo sem correspondência na base, casado pela palavra indexada mais próxima (distância de edição); confira se é o que você quis dizer.",
   "table-row":
     "Linha de tabela da documentação (API ou anatomia): descreve a implementação do componente; leia a unidade por id antes de tratá-la como obrigação de comportamento.",
+  /** 3.7.3 (D-167): unidade de especificação (emenda-2 da base). */
+  specification:
+    "Unidade de especificação (tabela de Especificações ou frase descritiva da página do componente, texto literal): diz o valor ou o comportamento que o DS especifica para a parte do componente; candidata a investigar, não obrigação nem proibição. Meça a parte e compare; para afirmar violação, cite a norma que obriga.",
 } as const;
 
 export type MessageCode = keyof typeof MESSAGES;

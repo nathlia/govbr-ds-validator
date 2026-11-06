@@ -27,7 +27,7 @@
  * ties; it never promotes a rule above a better-matching one. Same input + KB version + ranking
  * version + vocabulary state → same list.
  */
-import { getKnowledgeBase, type KnowledgeBase, type KnowledgeRule, type RuleForce } from "./knowledge.js";
+import { getKnowledgeBase, isSpecification, type KnowledgeBase, type KnowledgeRule, type RuleForce } from "./knowledge.js";
 import { componentsNamedIn } from "./applicability.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -36,7 +36,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Engine version: any change to tokenization, fields, weights or floor is a new version. */
-export const RANKING_VERSION = "govbr-lexical/1.3.1";
+export const RANKING_VERSION = "govbr-lexical/1.3.2";
 
 /**
  * 1.3.1 (3.6.1, revisão): o rótulo de força no fim de um título de seção — "(Obrigatório)", "(Opcional)",
@@ -362,6 +362,12 @@ interface Doc {
   len: number;
   /** The clause is one row of a markdown table (API/anatomy listing), not prose. */
   tableRow: boolean;
+  /**
+   * 3.7.3 (D-167): specification unit (emenda-2). Outside the default pool and its statistics; ranked only in a pool of
+   * its own (get_ds_rules' specification block, or force:"especificacao"), where a specification table row is not
+   * down-weighted as a table row (it is the content the amendment made citable) and also reads its table's header.
+   */
+  spec: boolean;
 }
 /** Collection statistics of the documents being ranked (N, document frequencies, mean length). */
 interface Stats {
@@ -435,7 +441,8 @@ function buildIndex(kb: KnowledgeBase): Index {
       exceptions: rule.exceptions.join(" "),
       expectedEvidence: rule.expectedEvidence.join(" "),
       component: rule.component ? names.get(rule.component) ?? rule.component : "",
-      section: unlabel(typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : String(rule.source.section ?? "")),
+      // 3.7.3 (D-167): a linha de tabela de especificação lê também o cabeçalho literal da sua tabela (sem ele a linha é só valores).
+      section: [unlabel(typeof rule.source.sectionPath === "string" ? rule.source.sectionPath : String(rule.source.section ?? "")), ...(rule.specification?.columns ?? [])].join(" "),
       legacy: (predecessors.get(rule.id) ?? [])
         .flatMap((old) => [old.title, ...old.wcagReferences, ...old.emagReferences])
         .join(" "),
@@ -463,9 +470,10 @@ function buildIndex(kb: KnowledgeBase): Index {
     // Length over the three text values (as in 1.1.0), so BM25 normalization does not move.
     const len = [...textCounts(rule, (t) => t.key, [unlabel(rule.title), rule.normalizedRule, rule.originalText]).values()].reduce((a, b) => a + b, 0);
     const tableRow = isTableRow(rule.originalText ?? "");
-    docs.push({ rule, order, exact, stem, paraExact, paraStem, keysExact, keysStem, pairs, folded: foldText(rule.originalText || rule.normalizedRule || ""), len, tableRow });
+    docs.push({ rule, order, exact, stem, paraExact, paraStem, keysExact, keysStem, pairs, folded: foldText(rule.originalText || rule.normalizedRule || ""), len, tableRow, spec: isSpecification(rule) });
   });
-  return { docs, normative: statsOf(docs.filter((d) => d.rule.force !== "example")), pools: new Map() };
+  // 3.7.3 (D-167): the default pool stays the normative rules (specification units only enter an explicit pool).
+  return { docs, normative: statsOf(docs.filter((d) => d.rule.force !== "example" && !d.spec)), pools: new Map() };
 }
 
 function statsOf(docs: Doc[]): Stats {
@@ -769,7 +777,7 @@ function scoreDoc(doc: Doc, q: QueryAnalysis, ix: Stats, hint: string | null, co
   const coverage = known > 0 ? covered / known : 0;
   const own = hint !== null && doc.rule.component === hint;
   const score = (lexical + bonus) * (RANKING_WEIGHTS.coverageBase + coverage) * (own ? 1 + RANKING_WEIGHTS.componentHint : 1) *
-    (doc.tableRow ? RANKING_WEIGHTS.tableRow : 1) *
+    (doc.tableRow && !doc.spec ? RANKING_WEIGHTS.tableRow : 1) *
     (codingDown && doc.rule.component === null && doc.rule.category === "development" ? RANKING_WEIGHTS.offTopicCoding : 1);
   return { rule: doc.rule, score, coverage, matched, ownComponent: own, order: doc.order };
 }
@@ -837,7 +845,7 @@ export function rankRules(input: RankInput, kb: KnowledgeBase = getKnowledgeBase
   const ix = indexFor(kb);
   const useVocab = input.vocabulary ?? vocabularyEnabledByDefault();
   const allowed = input.pool ? new Set(input.pool.map((r) => r.id)) : null;
-  const poolDocs = allowed ? ix.docs.filter((d) => allowed.has(d.rule.id)) : ix.docs.filter((d) => d.rule.force !== "example");
+  const poolDocs = allowed ? ix.docs.filter((d) => allowed.has(d.rule.id)) : ix.docs.filter((d) => d.rule.force !== "example" && !d.spec);
   const stats = statsFor(ix, allowed ? poolDocs : null);
   const analysis = analyzeQuery(input.text, { vocabulary: useVocab }, kb, stats);
   const hint = input.component ?? null;

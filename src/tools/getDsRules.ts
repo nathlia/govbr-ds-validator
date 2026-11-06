@@ -9,6 +9,7 @@ import {
   getEvidence,
   getKnowledgeBase,
   getRuleById,
+  SPECIFICATION_FORCE,
   type KnowledgeRule,
   type RuleFilter,
 } from "../data/knowledge.js";
@@ -68,6 +69,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const QUERY_MAX_CHARS = 500;
+
+/**
+ * 3.7.3 (D-167): piso declarado do bloco `specification` — a unidade de especificação só vai ao bloco se casa ao menos
+ * metade do peso dos termos conhecidos da pergunta (coverage do motor, no pool das especificações) E casa no próprio texto
+ * (não só pelo nome do componente) ao menos 2 termos dela (1 numa pergunta de um termo só). O bloco é extra: um termo só em
+ * comum — o nome do componente — não basta para pôr uma descrição ao lado das normas. Com force:"especificacao" vale o piso comum.
+ */
+export const SPECIFICATION_BLOCK_MIN_COVERAGE = 0.5;
 
 export interface DsRulesArgs {
   context?: { components?: string[]; regions?: PageRegion[]; terms?: string[] };
@@ -500,6 +509,13 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
   if (query) {
     const pool = globalOnly ? filterRules(strict).filter((r) => r.component === null) : filterRules(strict);
     const ranked = rankRules({ text: query, component, pool, vocabulary }, kb);
+    // 3.7.3 (D-167): sem filtro de força, as unidades de especificação são ranqueadas À PARTE (pool e estatística
+    // próprios, mesmos filtros e pista de componente): vão no bloco `specification` da 1ª página, que nunca tira uma
+    // norma da página nem muda a ordem dela. Com force:"especificacao", o pool já é só delas e elas são os resultados.
+    const specRanked =
+      strict.force === undefined && !globalOnly
+        ? rankRules({ text: query, component, pool: filterRules({ ...strict, force: SPECIFICATION_FORCE }), vocabulary }, kb)
+        : null;
     const meta = kbMeta(vocabulary);
     const key = cursorKey({ tool: "get_ds_rules", mode: "query", args: initialArgs(args), kb: meta });
     const start = startPosition(args, key);
@@ -509,13 +525,14 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     const named = component === null && !globalOnly ? componentsNamedIn(query) : [];
     const scope = component ?? (named.length === 1 ? named[0] : null);
     const available = (tool: string) => projections.tools?.has(tool) ?? true;
-    const hits: Hit[] = ranked.results.map((s) => ({
+    const toHit = (s: ScoredRule): Hit => ({
       rule: s.rule,
       matched: matchedOf(s),
       relation: s.ownComponent ? "component" : s.rule.component === null ? "global" : "related",
       field: mainField(s),
       ...(paraphraseOf(s).length ? { paraphraseOnly: paraphraseOf(s) } : {}),
-    }));
+    });
+    const hits: Hit[] = ranked.results.map(toHit);
     const response = retrievalResponse(
       {
         mode: "query",
@@ -557,6 +574,15 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         ...(args.include_evidence
           ? { evidence: evidenceBlock(getEvidence(component ?? undefined), query, component, vocabulary, Math.min(applied, 3)) }
           : {}),
+        ...((onTopic) =>
+          onTopic.length ? { specification: { hits: onTopic.map(toHit), next: { ...initialArgs(args), force: SPECIFICATION_FORCE } } } : {})(
+          (specRanked?.results ?? []).filter((s) => {
+            // e casa no próprio texto (não só pelo nome do componente) ao menos 2 termos da pergunta (1, se ela só tem 1)
+            const known = specRanked!.analysis.concepts.filter((c) => c.idf > 0 && c.weight === 1).length;
+            const own = s.matched.filter((m) => m.fields.some((f) => f !== "component")).length;
+            return s.coverage >= SPECIFICATION_BLOCK_MIN_COVERAGE && own >= Math.min(2, Math.max(1, known));
+          }),
+        ),
         budget: budgetFor(clamped),
       },
       wcagRegistry(),
@@ -579,7 +605,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     return ok({
       contract: CONTRACT,
       kind: "index",
-      kb: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules },
+      kb: { dsVersion: kb.meta.dsVersion, knowledgeVersion: kb.meta.knowledgeVersion, totalNormative: kb.meta.normativeRules, totalSpecification: kb.meta.specificationRules },
       note:
         "Índice, não listagem: chamar sem filtro devolveria a base normativa inteira. Estreite por component, category, force, validationStrategy ou query — ou peça uma regra por id. Para paginar a base inteira mesmo assim, passe limit.",
       total: base.length,

@@ -10,7 +10,7 @@
           ]
         }
       },
-      "sha256": "3c4f9366e971701d69de46a536c999c7bf601b724290df503bb0610678241731",
+      "sha256": "c8f8ab9de862d875a0d456b4fd6341986ab2737c644727fce9fba725588f3b36",
       "chars": 10934,
       "total": 48
     },
@@ -30,7 +30,7 @@
           ]
         }
       },
-      "sha256": "697e121dd78566e6fd4aded68acdd466f658bdbaace8de7c7dcb3b0a30ae9bd2",
+      "sha256": "836df5844c30bcbc422d6504291fbfbebb035a756c649990dff5db79d2a2bd60",
       "chars": 11837,
       "total": 264
     },
@@ -43,7 +43,7 @@
         },
         "limit": 5
       },
-      "sha256": "221ffec858ed32025a403e1fc78c0cffe99e37dba0e9b3258d480c88eecd338a",
+      "sha256": "ff3c85cb4e6188c4bd6374a878b58957aaff5f362aa745431d185df87e01f281",
       "chars": 9222,
       "total": 24
     },
@@ -57,7 +57,7 @@
         "query": "foco",
         "detail": "brief"
       },
-      "sha256": "dc6821ea059d48d152ce94ec80d79526e2ff562c5d0b5d058f9301b742fe3b17",
+      "sha256": "d414b2ec46681a2491808461001d4cd0e92212878d41171d226cf88f7030d59a",
       "chars": 9419,
       "total": 5
     },
@@ -73,7 +73,7 @@
         },
         "offset": 20
       },
-      "sha256": "af546cd952c4497a0994e8cf0f9194a5f3048512c1056b5276347f8458e37be2",
+      "sha256": "0d21f7092b083a34d55255ec5533b1c028d41c88221aef379909e6abc6c032e0",
       "chars": 11735,
       "total": 88
     },
@@ -87,7 +87,7 @@
         "detail": "full",
         "limit": 3
       },
-      "sha256": "546ecc8698a867717c2802b9cfb4c52362a87776e48a1e2094666ffab702194b",
+      "sha256": "d3547932502df8201820768d5f3bfb0a3336017175c836523fb2f73085c21933",
       "chars": 8053,
       "total": 67
     },
@@ -105,7 +105,7 @@
         },
         "force": "required"
       },
-      "sha256": "6c92189a1eb2333711c840c8cf54039a7b067b27389221272f8b4f3d77676e9a",
+      "sha256": "c98f7a34ccdde60798defabc1ebc25f8263dd03d4f7d4550279db94e4d28f9b3",
       "chars": 11747,
       "total": 79
     }
@@ -318,5 +318,8 @@
         "force": "required"
       }
     ]
+  },
+  "changed373": {
+    "note": "3.7.3-pre (D-167, emenda-2): só o rótulo da versão (…+emenda-2) muda no caminho literal; unidades de especificação não entram (filterRules as exclui por padrão). Conferido resposta a resposta contra a 3.7.2."
   }
 }

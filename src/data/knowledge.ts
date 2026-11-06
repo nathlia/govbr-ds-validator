@@ -29,7 +29,29 @@ export type RuleForce =
   | "permitted"
   | "informative"
   | "example"
-  | "unclear";
+  | "unclear"
+  /**
+   * 3.7.3 (D-167, emenda-2): unidade de ESPECIFICAÇÃO — linha de tabela de Especificações ou frase descritiva de
+   * comportamento/anatomia, literal, que descreve o componente sem obrigar nem proibir. Nunca é norma (fora de
+   * NORMATIVE_FORCES), nunca entra em listagem/contagem/contexto por padrão; a busca a serve como candidata a investigar.
+   */
+  | "especificacao";
+
+/** 3.7.3 (D-167): a força das unidades de especificação. */
+export const SPECIFICATION_FORCE = "especificacao" as const;
+
+/** 3.7.3 (D-167): unidade de especificação (emenda-2) — descreve, não obriga. */
+export function isSpecification(rule: { force: string }): boolean {
+  return rule.force === SPECIFICATION_FORCE;
+}
+
+/** 3.7.3 (D-167): uma entrada da linha de tabela de especificação (coluna → propriedade → valor/tokens). */
+export interface SpecificationEntry {
+  column: string;
+  property: string;
+  value: string;
+  tokens: string[];
+}
 
 /** Forces that constitute normative guidance (D-10 bucket 1). */
 export const NORMATIVE_FORCES: readonly RuleForce[] = [
@@ -69,6 +91,16 @@ export interface KnowledgeRule {
   standard?: string;
   standardVersion?: string;
   notes?: string;
+  /** 3.7.3 (D-167): só nas unidades de especificação — a regra de extração e, na linha de tabela, parte e entradas. */
+  specification?: {
+    rule: string;
+    kind: "table-row" | "sentence";
+    table?: string;
+    facet?: string;
+    columns?: string[];
+    part?: string;
+    entries?: SpecificationEntry[];
+  };
   /** Previous-version ids this rule replaces (same text, different force — 2.12.0). */
   supersedes?: string[];
   /** Only on previous-version ids resolved through getRuleById (2.12.0). */
@@ -102,6 +134,8 @@ export interface KnowledgeBase {
     totalRules: number;
     normativeRules: number;
     evidenceRules: number;
+    /** 3.7.3 (D-167): unidades de especificação (fora de normativeRules). */
+    specificationRules: number;
     legacyIds: number;
     schemaErrors: string[];
   };
@@ -260,8 +294,9 @@ export function getKnowledgeBase(): KnowledgeBase {
       amendments: (manifest.amendments ?? []).map((a, i) => ({ label: a.label ?? `emenda-${i + 1}`, validator: a.validator, decision: a.decision, added: [...a.added] })),
       extractionTimestamp: manifest.extractionTimestamp,
       totalRules: rules.length,
-      normativeRules: rules.filter((r) => r.force !== "example").length,
+      normativeRules: rules.filter((r) => r.force !== "example" && !isSpecification(r)).length,
       evidenceRules: rules.filter((r) => r.force === "example").length,
+      specificationRules: rules.filter(isSpecification).length,
       legacyIds: legacyById.size,
       schemaErrors,
     },
@@ -298,6 +333,9 @@ export function normalizeText(value: string): string {
  * título/regra/texto original/rationale/notes; `component` é o id exato. A busca ampliada (sem
  * acento, em condições/exceções/evidência esperada, com variantes nominais) existe só no caminho
  * `context` (`applicability.ts`), para não mudar o resultado de chamadas antigas.
+ *
+ * 3.7.3 (D-167): unidades de especificação (`force:"especificacao"`) ficam fora como os exemplos, salvo pedidas
+ * por `force:"especificacao"` — nenhuma listagem, faceta, contexto ou checklist de obrigações as conta.
  */
 export function filterRules(filter: RuleFilter = {}): KnowledgeRule[] {
   guardKnowledge("filterRules");
@@ -305,7 +343,7 @@ export function filterRules(filter: RuleFilter = {}): KnowledgeRule[] {
   const q = filter.query?.toLowerCase();
 
   return rules.filter((r) => {
-    if (filter.force !== undefined ? r.force !== filter.force : r.force === "example") return false;
+    if (filter.force !== undefined ? r.force !== filter.force : r.force === "example" || isSpecification(r)) return false;
     if (filter.component !== undefined && r.component !== filter.component) return false;
     if (filter.category !== undefined && r.category !== filter.category) return false;
     if (filter.validationStrategy !== undefined && r.validationStrategy !== filter.validationStrategy) return false;

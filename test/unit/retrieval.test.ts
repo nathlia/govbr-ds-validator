@@ -247,7 +247,8 @@ describe("context adapter", () => {
 
 describe("self-retrieval sweep (NAT-103 B-03), deterministic sample", () => {
   it("a rule is found in the top 5 by its title, its title without accents, and 4 title words", () => {
-    const rules = getKnowledgeBase().rules.filter((r) => r.force !== "example");
+    // 3.7.3 (D-167): a amostra é a das normas (as unidades de especificação ficam fora do pool padrão; ver fix373).
+    const rules = getKnowledgeBase().rules.filter((r) => r.force !== "example" && r.force !== "especificacao");
     const strip = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
     const STOP = new Set("a o as os de da do das dos e é em um uma para por com que se no na nos nas ao à ser deve devem não the of and to".split(" "));
     const words4 = (t: string) => t.replace(/…$/, "").split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}-]/gu, "")).filter((w) => w && !STOP.has(w.toLowerCase())).slice(0, 4).join(" ");

@@ -1,0 +1,6380 @@
+{
+  "scope": "324 existing normative table rows only, direct ranking + response grouping; not the complete historical stdio sweep or scientific benchmark",
+  "query": "first 12 content words, heading+text/free, heading+text/component hint, text only/free",
+  "count": 324,
+  "top5Before": 250,
+  "top5After": 250,
+  "changed": [],
+  "outsideTop5AllThree": [
+    {
+      "id": "govbr-3.7.0-component-button-c039abbbd4e0",
+      "component": "button",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        25,
+        7,
+        22
+      ],
+      "after": [
+        25,
+        7,
+        22
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-card-c6aeb922f827",
+      "component": "card",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        7,
+        9
+      ],
+      "after": [
+        7,
+        7,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-79d6f84ba298",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        16,
+        19
+      ],
+      "after": [
+        13,
+        16,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-7eb71499bdb7",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        15,
+        15
+      ],
+      "after": [
+        8,
+        15,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-287a8c845de5",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        11,
+        9
+      ],
+      "after": [
+        11,
+        11,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-f938e5864027",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        6,
+        9
+      ],
+      "after": [
+        9,
+        6,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-250744748eea",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        23,
+        6,
+        17
+      ],
+      "after": [
+        23,
+        6,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-30a91fbbb0d0",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        35,
+        15,
+        35
+      ],
+      "after": [
+        35,
+        15,
+        35
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-1ea4c463a50c",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        6,
+        6
+      ],
+      "after": [
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-0154d264ed4c",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        7,
+        12
+      ],
+      "after": [
+        11,
+        7,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-5cf4703224d2",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        6,
+        6
+      ],
+      "after": [
+        8,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-601b037eada2",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        13,
+        7,
+        6
+      ],
+      "after": [
+        13,
+        7,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-679951e73bcd",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        6,
+        7
+      ],
+      "after": [
+        7,
+        6,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-f94f70e62f7f",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        7,
+        7
+      ],
+      "after": [
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-c7f92a16072b",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        16,
+        6,
+        19
+      ],
+      "after": [
+        16,
+        6,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-302f96fd990a",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        6,
+        6
+      ],
+      "after": [
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-1c43122b744f",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        24,
+        9,
+        21
+      ],
+      "after": [
+        24,
+        9,
+        21
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-639768857097",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        10,
+        15
+      ],
+      "after": [
+        15,
+        10,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-e162ee802817",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        9,
+        17
+      ],
+      "after": [
+        14,
+        9,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-2fd055d84d5a",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        7,
+        13
+      ],
+      "after": [
+        14,
+        7,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-e32b3de863ee",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        19,
+        14,
+        17
+      ],
+      "after": [
+        19,
+        14,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-58d948a400ea",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        10,
+        19,
+        6
+      ],
+      "after": [
+        10,
+        19,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-6dce32688f49",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        8,
+        18
+      ],
+      "after": [
+        12,
+        8,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-header-1bd49622d7d5",
+      "component": "header",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        26,
+        14,
+        23
+      ],
+      "after": [
+        26,
+        14,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-dffcb08f617c",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        7,
+        10
+      ],
+      "after": [
+        8,
+        7,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-fa32f53ccfad",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        6,
+        7
+      ],
+      "after": [
+        8,
+        6,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-f6c8d7d71ef5",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        15,
+        9,
+        13
+      ],
+      "after": [
+        15,
+        9,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-f20d6d45078d",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        12,
+        10
+      ],
+      "after": [
+        14,
+        12,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-dab245775aff",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        6,
+        12
+      ],
+      "after": [
+        7,
+        6,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-ca8054947d88",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        10,
+        11
+      ],
+      "after": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-2e6586d86e8b",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        17,
+        10,
+        17
+      ],
+      "after": [
+        17,
+        10,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-a44150da4687",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        18,
+        12,
+        18
+      ],
+      "after": [
+        18,
+        12,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-magicbutton-4e40f002b50e",
+      "component": "magicbutton",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        25,
+        23,
+        20
+      ],
+      "after": [
+        25,
+        23,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-4133b3641fdc",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        10,
+        7,
+        7
+      ],
+      "after": [
+        10,
+        7,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-3b2af3e5b18a",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        7,
+        10
+      ],
+      "after": [
+        13,
+        7,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-805fb2f7410e",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        19,
+        32
+      ],
+      "after": [
+        20,
+        19,
+        32
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-ffec793b765d",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        27,
+        7,
+        24
+      ],
+      "after": [
+        27,
+        7,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-001a7ba0b67f",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        6,
+        23
+      ],
+      "after": [
+        20,
+        6,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-0310704133a3",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        31,
+        6,
+        25
+      ],
+      "after": [
+        31,
+        6,
+        25
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-c18c7e1cde93",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        21,
+        6,
+        24
+      ],
+      "after": [
+        21,
+        6,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-ac835fa195a6",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        12,
+        10
+      ],
+      "after": [
+        8,
+        12,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-08dbff1ab29f",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        8,
+        10
+      ],
+      "after": [
+        11,
+        8,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-bc28afb7c88e",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        29,
+        7,
+        25
+      ],
+      "after": [
+        29,
+        7,
+        25
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-a2c189c59ef4",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        22,
+        8,
+        16
+      ],
+      "after": [
+        22,
+        8,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-2c0c0383ea7a",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        34,
+        16,
+        34
+      ],
+      "after": [
+        34,
+        16,
+        34
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-89c58184619d",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        6,
+        16
+      ],
+      "after": [
+        9,
+        6,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-e47457f67ba5",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        12,
+        7,
+        14
+      ],
+      "after": [
+        12,
+        7,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-4234e1a3a6bf",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        25,
+        15,
+        21
+      ],
+      "after": [
+        25,
+        15,
+        21
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-a0222f08c249",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        11,
+        11
+      ],
+      "after": [
+        11,
+        11,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-signin-f451c873091f",
+      "component": "signin",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        15,
+        15,
+        11
+      ],
+      "after": [
+        15,
+        15,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-f7df7129b6c0",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        9,
+        11
+      ],
+      "after": [
+        14,
+        9,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-7581ac895621",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        10,
+        7
+      ],
+      "after": [
+        6,
+        10,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-b9ee8d237a38",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        32,
+        9,
+        26
+      ],
+      "after": [
+        32,
+        9,
+        26
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-cf02184ecd2a",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        10,
+        13,
+        12
+      ],
+      "after": [
+        10,
+        13,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-6881fde1982a",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        11,
+        23
+      ],
+      "after": [
+        11,
+        11,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-4efe84e7d11e",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        10,
+        8
+      ],
+      "after": [
+        7,
+        10,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-step-c0eead3701dd",
+      "component": "step",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        17,
+        7,
+        6
+      ],
+      "after": [
+        17,
+        7,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-step-f06935762cde",
+      "component": "step",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        23,
+        20
+      ],
+      "after": [
+        20,
+        23,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-5a341340135e",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        13,
+        9,
+        14
+      ],
+      "after": [
+        13,
+        9,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-9929ea9674da",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        22,
+        23,
+        38
+      ],
+      "after": [
+        22,
+        23,
+        38
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-ce502412e361",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        23,
+        8,
+        39
+      ],
+      "after": [
+        23,
+        8,
+        39
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-e1fb11053f17",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        10,
+        11
+      ],
+      "after": [
+        12,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-2f33d9ad9a79",
+      "component": "tag",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        26,
+        21,
+        23
+      ],
+      "after": [
+        26,
+        21,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-e5310ca065e3",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        8,
+        11
+      ],
+      "after": [
+        15,
+        8,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-9b90da66a5da",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        10,
+        7
+      ],
+      "after": [
+        7,
+        10,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-upload-c379e1665c57",
+      "component": "upload",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        21,
+        10,
+        11
+      ],
+      "after": [
+        21,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-e04f73ce472c",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        27,
+        17,
+        26
+      ],
+      "after": [
+        27,
+        17,
+        26
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-15d6da1b3df7",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        9,
+        18
+      ],
+      "after": [
+        20,
+        9,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-1c62102406f6",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        19,
+        12,
+        24
+      ],
+      "after": [
+        19,
+        12,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-1eb98fa2d459",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        7,
+        11
+      ],
+      "after": [
+        20,
+        7,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-dcc34f4a211a",
+      "component": "wizard",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        16,
+        10,
+        20
+      ],
+      "after": [
+        16,
+        10,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-13a4f7278f58",
+      "component": null,
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        33,
+        33,
+        27
+      ],
+      "after": [
+        33,
+        33,
+        27
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-04347aba1c13",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        16,
+        16,
+        9
+      ],
+      "after": [
+        16,
+        16,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-be0c7f846e51",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        11,
+        11,
+        18
+      ],
+      "after": [
+        11,
+        11,
+        18
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "id": "govbr-3.7.0-development-avatar-16a1a460c19c",
+      "component": "avatar",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-avatar-23d40d3d6ea4",
+      "component": "avatar",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        16,
+        5,
+        11
+      ],
+      "after": [
+        16,
+        5,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-avatar-f025c9e3cc43",
+      "component": "avatar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-avatar-6302095ecab6",
+      "component": "avatar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-breadcrumb-4ae0c4a60862",
+      "component": "breadcrumb",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-breadcrumb-4f1c2a2a3712",
+      "component": "breadcrumb",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        7,
+        9
+      ],
+      "after": [
+        2,
+        7,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-breadcrumb-09dcc61e7e47",
+      "component": "breadcrumb",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        26,
+        5,
+        7
+      ],
+      "after": [
+        26,
+        5,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-breadcrumb-c2d45d767aaf",
+      "component": "breadcrumb",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        8,
+        8
+      ],
+      "after": [
+        2,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-breadcrumb-b326df7e278b",
+      "component": "breadcrumb",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        2,
+        2
+      ],
+      "after": [
+        13,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-breadcrumb-dad867cfc7f2",
+      "component": "breadcrumb",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        18,
+        6
+      ],
+      "after": [
+        5,
+        18,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-breadcrumb-c744e5494795",
+      "component": "breadcrumb",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        6
+      ],
+      "after": [
+        3,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-breadcrumb-a907794f4b16",
+      "component": "breadcrumb",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        2,
+        7
+      ],
+      "after": [
+        8,
+        2,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-breadcrumb-478cffdbb111",
+      "component": "breadcrumb",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        3
+      ],
+      "after": [
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-button-b77ff20ad216",
+      "component": "button",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-button-c039abbbd4e0",
+      "component": "button",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        25,
+        7,
+        22
+      ],
+      "after": [
+        25,
+        7,
+        22
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-button-9d77803305c0",
+      "component": "button",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        2,
+        6
+      ],
+      "after": [
+        5,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-button-3acf0a99f2d8",
+      "component": "button",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        2,
+        11
+      ],
+      "after": [
+        7,
+        2,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-card-d31bdeb4823b",
+      "component": "card",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        3
+      ],
+      "after": [
+        6,
+        5,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-card-f913a1ba1944",
+      "component": "card",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        23,
+        5,
+        17
+      ],
+      "after": [
+        23,
+        5,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-card-c6aeb922f827",
+      "component": "card",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        7,
+        9
+      ],
+      "after": [
+        7,
+        7,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-card-e57096a3169c",
+      "component": "card",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        12,
+        5
+      ],
+      "after": [
+        9,
+        12,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-96dc0a6ee3c3",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        5,
+        3,
+        7
+      ],
+      "after": [
+        5,
+        3,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-79d6f84ba298",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        16,
+        19
+      ],
+      "after": [
+        13,
+        16,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-d521818843a1",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        3,
+        19
+      ],
+      "after": [
+        13,
+        3,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-9f317f68cbbb",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        3,
+        18
+      ],
+      "after": [
+        13,
+        3,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-7eb71499bdb7",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        15,
+        15
+      ],
+      "after": [
+        8,
+        15,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-a9f29b1a332d",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        12,
+        5
+      ],
+      "after": [
+        9,
+        12,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-7a3d71bf8553",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        22
+      ],
+      "after": [
+        6,
+        3,
+        22
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-3c1be198818d",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        5,
+        3,
+        13
+      ],
+      "after": [
+        5,
+        3,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-carousel-0aca507639ed",
+      "component": "carousel",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        15,
+        5,
+        11
+      ],
+      "after": [
+        15,
+        5,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-d18976c57f79",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        5
+      ],
+      "after": [
+        6,
+        5,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-287a8c845de5",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        11,
+        9
+      ],
+      "after": [
+        11,
+        11,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-e2ab386e0747",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-carousel-f938e5864027",
+      "component": "carousel",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        6,
+        9
+      ],
+      "after": [
+        9,
+        6,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-checkbox-20cf87708f54",
+      "component": "checkbox",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-941b80a2d2a1",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        2,
+        5
+      ],
+      "after": [
+        5,
+        2,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-250744748eea",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        23,
+        6,
+        17
+      ],
+      "after": [
+        23,
+        6,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-b290eac337a1",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        16,
+        4,
+        16
+      ],
+      "after": [
+        16,
+        4,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-30a91fbbb0d0",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        35,
+        15,
+        35
+      ],
+      "after": [
+        35,
+        15,
+        35
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-checkbox-32529a14d65c",
+      "component": "checkbox",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        9,
+        2,
+        7
+      ],
+      "after": [
+        9,
+        2,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-1ea4c463a50c",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        6,
+        6
+      ],
+      "after": [
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-5adfe36afa2a",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-b43717d8840c",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        13,
+        2
+      ],
+      "after": [
+        2,
+        13,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-171508406412",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        2,
+        4
+      ],
+      "after": [
+        5,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-0154d264ed4c",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        7,
+        12
+      ],
+      "after": [
+        11,
+        7,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-09e6c822851d",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        3,
+        12
+      ],
+      "after": [
+        8,
+        3,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-123ead52d124",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        5,
+        3
+      ],
+      "after": [
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-5cf4703224d2",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        6,
+        6
+      ],
+      "after": [
+        8,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-d2e1eb779a86",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        2,
+        9
+      ],
+      "after": [
+        7,
+        2,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-d61fc40891cb",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-601b037eada2",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        13,
+        7,
+        6
+      ],
+      "after": [
+        13,
+        7,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-5f33fc6b4d22",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-967fb12ed330",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        5,
+        17
+      ],
+      "after": [
+        12,
+        5,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-679951e73bcd",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        6,
+        7
+      ],
+      "after": [
+        7,
+        6,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-544ab6a0caf3",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-f94f70e62f7f",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        7,
+        7
+      ],
+      "after": [
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-4df0d5d2e9e5",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        4,
+        5
+      ],
+      "after": [
+        5,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-c7f92a16072b",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        16,
+        6,
+        19
+      ],
+      "after": [
+        16,
+        6,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-574f5ff853c0",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        1,
+        1
+      ],
+      "after": [
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-302f96fd990a",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        6,
+        6
+      ],
+      "after": [
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-7d5051670439",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        5,
+        14
+      ],
+      "after": [
+        15,
+        5,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-e6f56813a861",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-11bf73ab6860",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        3
+      ],
+      "after": [
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-cookiebar-1c43122b744f",
+      "component": "cookiebar",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        24,
+        9,
+        21
+      ],
+      "after": [
+        24,
+        9,
+        21
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-datetimepicker-d6fe2483ef36",
+      "component": "datetimepicker",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-e1c1dfd0b7c7",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        10,
+        3
+      ],
+      "after": [
+        6,
+        10,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-972a659aa015",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-12bb82cf77ab",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-e2a14da13c73",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        2,
+        2
+      ],
+      "after": [
+        3,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-639768857097",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        10,
+        15
+      ],
+      "after": [
+        15,
+        10,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-e162ee802817",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        9,
+        17
+      ],
+      "after": [
+        14,
+        9,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-2fd055d84d5a",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        7,
+        13
+      ],
+      "after": [
+        14,
+        7,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-f14eb20b7e07",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-4a81d640b5ce",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-0e9c2cb3c354",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-b406688301ad",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        2
+      ],
+      "after": [
+        3,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-datetimepicker-e29f2140492c",
+      "component": "datetimepicker",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-divider-b718d9699939",
+      "component": "divider",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        4
+      ],
+      "after": [
+        6,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-divider-c7e96a24a522",
+      "component": "divider",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        1,
+        12
+      ],
+      "after": [
+        8,
+        1,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-footer-f4bc700322d9",
+      "component": "footer",
+      "section": "Elementos obrigatórios",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-footer-98828ad43cff",
+      "component": "footer",
+      "section": "Elementos obrigatórios",
+      "force": "required",
+      "before": [
+        22,
+        3,
+        29
+      ],
+      "after": [
+        22,
+        3,
+        29
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-footer-eae0dd6a1888",
+      "component": "footer",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-footer-38dcb550ba72",
+      "component": "footer",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        5,
+        2
+      ],
+      "after": [
+        2,
+        5,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-cc9e8af60949",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        4,
+        6
+      ],
+      "after": [
+        5,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-96e038a5e8ce",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-e32b3de863ee",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        19,
+        14,
+        17
+      ],
+      "after": [
+        19,
+        14,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-bd5ae5ce9114",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        18,
+        4
+      ],
+      "after": [
+        5,
+        18,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-58d948a400ea",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        10,
+        19,
+        6
+      ],
+      "after": [
+        10,
+        19,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-d1f2b34a8280",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        9,
+        4,
+        6
+      ],
+      "after": [
+        9,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-e3659a9bd77c",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        2
+      ],
+      "after": [
+        4,
+        4,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-03981851ff7e",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        3,
+        2
+      ],
+      "after": [
+        2,
+        3,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-d7c9ff670746",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-db0949174397",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-3e7ec6e60187",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        4,
+        7
+      ],
+      "after": [
+        8,
+        4,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-footer-6dce32688f49",
+      "component": "footer",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        8,
+        18
+      ],
+      "after": [
+        12,
+        8,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-header-be1225dcac60",
+      "component": "header",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-header-1bd49622d7d5",
+      "component": "header",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        26,
+        14,
+        23
+      ],
+      "after": [
+        26,
+        14,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-header-1b37e73f42fb",
+      "component": "header",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        13,
+        5
+      ],
+      "after": [
+        4,
+        13,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-header-b732799fe313",
+      "component": "header",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        7,
+        4,
+        10
+      ],
+      "after": [
+        7,
+        4,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-9c3e562b9623",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        2,
+        3
+      ],
+      "after": [
+        4,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-f08a4e6e570d",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        3,
+        4
+      ],
+      "after": [
+        4,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-296a09e0ff45",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        3,
+        4
+      ],
+      "after": [
+        5,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-06c1e4cb312b",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        7,
+        4
+      ],
+      "after": [
+        8,
+        7,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-e05f3e1a5d30",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        12,
+        2,
+        8
+      ],
+      "after": [
+        12,
+        2,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-709b3d742fa4",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        12,
+        5,
+        21
+      ],
+      "after": [
+        12,
+        5,
+        21
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-dffcb08f617c",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        7,
+        10
+      ],
+      "after": [
+        8,
+        7,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-891236c5c2d6",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        9,
+        2,
+        6
+      ],
+      "after": [
+        9,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-5e8aff612eeb",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        2,
+        6
+      ],
+      "after": [
+        7,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-cc024133c9b8",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        3,
+        10
+      ],
+      "after": [
+        11,
+        3,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-fa32f53ccfad",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        6,
+        7
+      ],
+      "after": [
+        8,
+        6,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-85b52544095a",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        1,
+        11
+      ],
+      "after": [
+        7,
+        1,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-header-6e2c3f6cb9b5",
+      "component": "header",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        8,
+        9
+      ],
+      "after": [
+        5,
+        8,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-input-cfa9708df3b8",
+      "component": "input",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-f6c8d7d71ef5",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        15,
+        9,
+        13
+      ],
+      "after": [
+        15,
+        9,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-f20d6d45078d",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        12,
+        10
+      ],
+      "after": [
+        14,
+        12,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-5aad64163c2e",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        3,
+        6
+      ],
+      "after": [
+        7,
+        3,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-a8f9237a08fb",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        15,
+        5,
+        9
+      ],
+      "after": [
+        15,
+        5,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-dab245775aff",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        6,
+        12
+      ],
+      "after": [
+        7,
+        6,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-1d64cc2512ff",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        10,
+        2,
+        9
+      ],
+      "after": [
+        10,
+        2,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-input-3143861cd040",
+      "component": "input",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        7,
+        3
+      ],
+      "after": [
+        2,
+        7,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-item-dc1b64ecec36",
+      "component": "item",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        4,
+        4
+      ],
+      "after": [
+        9,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-item-f5ef182cb289",
+      "component": "item",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        4,
+        13
+      ],
+      "after": [
+        9,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-item-e3c7c972fb5f",
+      "component": "item",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        3
+      ],
+      "after": [
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-item-3a24b7ab9042",
+      "component": "item",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        3,
+        5
+      ],
+      "after": [
+        7,
+        3,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-list-962aaf818c10",
+      "component": "list",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        4,
+        2
+      ],
+      "after": [
+        2,
+        4,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-list-1fe48e54a02e",
+      "component": "list",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        3,
+        3
+      ],
+      "after": [
+        4,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-list-cf23f8823d88",
+      "component": "list",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        3,
+        4
+      ],
+      "after": [
+        4,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-3be729335d78",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        16,
+        2,
+        15
+      ],
+      "after": [
+        16,
+        2,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-ca8054947d88",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        10,
+        11
+      ],
+      "after": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-2e6586d86e8b",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        17,
+        10,
+        17
+      ],
+      "after": [
+        17,
+        10,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-1573e1293959",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        3,
+        6
+      ],
+      "after": [
+        8,
+        3,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-list-4358446c3587",
+      "component": "list",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        10,
+        3,
+        14
+      ],
+      "after": [
+        10,
+        3,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-loading-2c9dcef5adeb",
+      "component": "loading",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-519d2126d711",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        2,
+        3
+      ],
+      "after": [
+        4,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-a44150da4687",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        18,
+        12,
+        18
+      ],
+      "after": [
+        18,
+        12,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-b58ce5c0fdf7",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        1,
+        5
+      ],
+      "after": [
+        5,
+        1,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-7b550246f104",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        2,
+        6
+      ],
+      "after": [
+        4,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-8f8cf198ee65",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        9,
+        6
+      ],
+      "after": [
+        5,
+        9,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-65a093e9a0dc",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        1,
+        5
+      ],
+      "after": [
+        5,
+        1,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-0d007ecc102e",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        2,
+        3
+      ],
+      "after": [
+        4,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-3b6ea4adceee",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        4,
+        5
+      ],
+      "after": [
+        5,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-loading-77804ac38365",
+      "component": "loading",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        3,
+        10
+      ],
+      "after": [
+        8,
+        3,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-magicbutton-5d09108ea539",
+      "component": "magicbutton",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        3,
+        12,
+        7
+      ],
+      "after": [
+        3,
+        12,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-magicbutton-874896a1066a",
+      "component": "magicbutton",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        1,
+        12
+      ],
+      "after": [
+        9,
+        1,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-magicbutton-378960e6e753",
+      "component": "magicbutton",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        3,
+        15
+      ],
+      "after": [
+        11,
+        3,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-magicbutton-f6ba71e38971",
+      "component": "magicbutton",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        4,
+        6
+      ],
+      "after": [
+        5,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-magicbutton-4e40f002b50e",
+      "component": "magicbutton",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        25,
+        23,
+        20
+      ],
+      "after": [
+        25,
+        23,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-73bf4ea43cba",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-4133b3641fdc",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        10,
+        7,
+        7
+      ],
+      "after": [
+        10,
+        7,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-93be8e674467",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        2,
+        3,
+        2
+      ],
+      "after": [
+        2,
+        3,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-f2db9047010c",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-ea0aae1fd8be",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        22,
+        3,
+        14
+      ],
+      "after": [
+        22,
+        3,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-3c055c3975b5",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        5,
+        6
+      ],
+      "after": [
+        9,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-ebd31253704d",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        7
+      ],
+      "after": [
+        6,
+        4,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-3b2af3e5b18a",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        13,
+        7,
+        10
+      ],
+      "after": [
+        13,
+        7,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-45be6d9fd9c2",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-menu-805fb2f7410e",
+      "component": "menu",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        19,
+        32
+      ],
+      "after": [
+        20,
+        19,
+        32
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-4c465e6c5cee",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        5,
+        8
+      ],
+      "after": [
+        7,
+        5,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-8f11ecbc1bbe",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        12,
+        3,
+        12
+      ],
+      "after": [
+        12,
+        3,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-09699c2e5e76",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        16,
+        4,
+        19
+      ],
+      "after": [
+        16,
+        4,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-a08789e13dd5",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-fcf5b41f87dd",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        2,
+        4
+      ],
+      "after": [
+        4,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-6e0cbed7130e",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-menu-f4dfb52b3f74",
+      "component": "menu",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-message-6bd70842446f",
+      "component": "message",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        18,
+        3,
+        22
+      ],
+      "after": [
+        18,
+        3,
+        22
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-message-0cf7ad61e509",
+      "component": "message",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        18,
+        5,
+        26
+      ],
+      "after": [
+        18,
+        5,
+        26
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-91274eb7d1b6",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        5,
+        9
+      ],
+      "after": [
+        7,
+        5,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-ffec793b765d",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        27,
+        7,
+        24
+      ],
+      "after": [
+        27,
+        7,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-0e441e3af975",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-d0c7ed3f91af",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        4
+      ],
+      "after": [
+        3,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-message-001a7ba0b67f",
+      "component": "message",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        6,
+        23
+      ],
+      "after": [
+        20,
+        6,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-modal-4f4a27b9be07",
+      "component": "modal",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        4
+      ],
+      "after": [
+        6,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-modal-dc9ae67eaf8a",
+      "component": "modal",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        6,
+        2
+      ],
+      "after": [
+        20,
+        6,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-3b3e34c80602",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        3,
+        16
+      ],
+      "after": [
+        12,
+        3,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-f687cfe21f32",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        6,
+        2,
+        6
+      ],
+      "after": [
+        6,
+        2,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-39edd5c2d5cc",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        13,
+        9,
+        4
+      ],
+      "after": [
+        13,
+        9,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-672bf38f39fb",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        3,
+        15
+      ],
+      "after": [
+        9,
+        3,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-3b7114bd412a",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        2,
+        3
+      ],
+      "after": [
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-modal-563ccd3721fc",
+      "component": "modal",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        6,
+        3,
+        6
+      ],
+      "after": [
+        6,
+        3,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-notification-d0f8a5f7d362",
+      "component": "notification",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-0310704133a3",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        31,
+        6,
+        25
+      ],
+      "after": [
+        31,
+        6,
+        25
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-c18c7e1cde93",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        21,
+        6,
+        24
+      ],
+      "after": [
+        21,
+        6,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-8bcba2e4c174",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        13,
+        4,
+        19
+      ],
+      "after": [
+        13,
+        4,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-ac835fa195a6",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        8,
+        12,
+        10
+      ],
+      "after": [
+        8,
+        12,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-08dbff1ab29f",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        8,
+        10
+      ],
+      "after": [
+        11,
+        8,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-notification-1552a227c85e",
+      "component": "notification",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        13,
+        3,
+        17
+      ],
+      "after": [
+        13,
+        3,
+        17
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-a5f55e0133ed",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-73332e3ddb15",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-ea455e768955",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        19,
+        3,
+        3
+      ],
+      "after": [
+        19,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-bc28afb7c88e",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        29,
+        7,
+        25
+      ],
+      "after": [
+        29,
+        7,
+        25
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-pagination-dfa00adf44f6",
+      "component": "pagination",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        25,
+        4,
+        15
+      ],
+      "after": [
+        25,
+        4,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-01f1635e6054",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        2,
+        4
+      ],
+      "after": [
+        5,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-4898b445aa74",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        9,
+        4,
+        7
+      ],
+      "after": [
+        9,
+        4,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-257e3f4d9468",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        3,
+        10
+      ],
+      "after": [
+        11,
+        3,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-523b47e8e5f4",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-629bd554bee2",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-pagination-43221fe5a570",
+      "component": "pagination",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-radio-b6fc1fab228c",
+      "component": "radio",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        7,
+        5,
+        6
+      ],
+      "after": [
+        7,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-5b842129ebf2",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        3,
+        4
+      ],
+      "after": [
+        4,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-a2c189c59ef4",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        22,
+        8,
+        16
+      ],
+      "after": [
+        22,
+        8,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-6207dbe7e8ca",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        15,
+        4,
+        15
+      ],
+      "after": [
+        15,
+        4,
+        15
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-2c0c0383ea7a",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        34,
+        16,
+        34
+      ],
+      "after": [
+        34,
+        16,
+        34
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-radio-1f82ecdefe21",
+      "component": "radio",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        10,
+        5,
+        8
+      ],
+      "after": [
+        10,
+        5,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-89c58184619d",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        6,
+        16
+      ],
+      "after": [
+        9,
+        6,
+        16
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-30d5a5a78675",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        5,
+        7
+      ],
+      "after": [
+        8,
+        5,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-0dfad0565a80",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        4,
+        6
+      ],
+      "after": [
+        8,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-a91eb310313b",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        2
+      ],
+      "after": [
+        6,
+        5,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-c30dbdfa715c",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        9,
+        2,
+        5
+      ],
+      "after": [
+        9,
+        2,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-e47457f67ba5",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        12,
+        7,
+        14
+      ],
+      "after": [
+        12,
+        7,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-4234e1a3a6bf",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        25,
+        15,
+        21
+      ],
+      "after": [
+        25,
+        15,
+        21
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-45cc74e31a78",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        20,
+        5,
+        24
+      ],
+      "after": [
+        20,
+        5,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-ac7fa8ef8e80",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        17,
+        1,
+        14
+      ],
+      "after": [
+        17,
+        1,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-33023f40d1fd",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        10,
+        3,
+        30
+      ],
+      "after": [
+        10,
+        3,
+        30
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-198a9bd0c110",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "permitted",
+      "before": [
+        10,
+        3,
+        29
+      ],
+      "after": [
+        10,
+        3,
+        29
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-6936d523e5a3",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        7,
+        3,
+        10
+      ],
+      "after": [
+        7,
+        3,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-select-2ebc5246d07d",
+      "component": "select",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        8
+      ],
+      "after": [
+        6,
+        3,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-9484a812fe9f",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        8,
+        2
+      ],
+      "after": [
+        4,
+        8,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-a0222f08c249",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        11,
+        11
+      ],
+      "after": [
+        11,
+        11,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-4ccd859c7e6a",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        4,
+        11
+      ],
+      "after": [
+        11,
+        4,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-0681c950ba25",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        5
+      ],
+      "after": [
+        6,
+        5,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-select-ce03bf30c2dd",
+      "component": "select",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-signin-3f83a5cb0039",
+      "component": "signin",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        3,
+        4
+      ],
+      "after": [
+        4,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-signin-f451c873091f",
+      "component": "signin",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        15,
+        15,
+        11
+      ],
+      "after": [
+        15,
+        15,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-signin-2f78e239e71d",
+      "component": "signin",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-f7df7129b6c0",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        9,
+        11
+      ],
+      "after": [
+        14,
+        9,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-7581ac895621",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        10,
+        7
+      ],
+      "after": [
+        6,
+        10,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-b9ee8d237a38",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        32,
+        9,
+        26
+      ],
+      "after": [
+        32,
+        9,
+        26
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-signin-9a3ddc31e532",
+      "component": "signin",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        3,
+        18
+      ],
+      "after": [
+        14,
+        3,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-skiplink-b7fd536dad96",
+      "component": "skiplink",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        3,
+        3,
+        3
+      ],
+      "after": [
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-skiplink-4bfa33bc6e65",
+      "component": "skiplink",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        1,
+        11
+      ],
+      "after": [
+        2,
+        1,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-skiplink-df8758eefe30",
+      "component": "skiplink",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        10,
+        4,
+        4
+      ],
+      "after": [
+        10,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-7e0a659e413b",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        3,
+        19
+      ],
+      "after": [
+        15,
+        3,
+        19
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-cf02184ecd2a",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        10,
+        13,
+        12
+      ],
+      "after": [
+        10,
+        13,
+        12
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-6881fde1982a",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        11,
+        11,
+        23
+      ],
+      "after": [
+        11,
+        11,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-skiplink-4efe84e7d11e",
+      "component": "skiplink",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        10,
+        8
+      ],
+      "after": [
+        7,
+        10,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-step-27f34abaf745",
+      "component": "step",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-step-c0eead3701dd",
+      "component": "step",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        17,
+        7,
+        6
+      ],
+      "after": [
+        17,
+        7,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-step-518405a28697",
+      "component": "step",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        2,
+        5
+      ],
+      "after": [
+        4,
+        2,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-step-f06935762cde",
+      "component": "step",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        23,
+        20
+      ],
+      "after": [
+        20,
+        23,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-step-51d21c25c517",
+      "component": "step",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-switch-1c141c58c929",
+      "component": "switch",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        7,
+        6,
+        5
+      ],
+      "after": [
+        7,
+        6,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-fb51321a7233",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        2,
+        4
+      ],
+      "after": [
+        3,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-58bafaddd0a7",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        7,
+        3,
+        8
+      ],
+      "after": [
+        7,
+        3,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-423879360423",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-5a341340135e",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        13,
+        9,
+        14
+      ],
+      "after": [
+        13,
+        9,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-switch-9929ea9674da",
+      "component": "switch",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        22,
+        23,
+        38
+      ],
+      "after": [
+        22,
+        23,
+        38
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tab-883480e0295b",
+      "component": "tab",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        5,
+        4
+      ],
+      "after": [
+        8,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tab-3f9ad5ebe1c2",
+      "component": "tab",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        10,
+        4,
+        33
+      ],
+      "after": [
+        10,
+        4,
+        33
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tab-3dd6810ecaf4",
+      "component": "tab",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tab-bd97709a288d",
+      "component": "tab",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        21,
+        3,
+        4
+      ],
+      "after": [
+        21,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tab-80096e965bc6",
+      "component": "tab",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        8,
+        4,
+        2
+      ],
+      "after": [
+        8,
+        4,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-7ce162b3416f",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        4,
+        4
+      ],
+      "after": [
+        5,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-2d0909e67215",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        5,
+        5
+      ],
+      "after": [
+        5,
+        5,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-7083f9fe58fa",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-481000b199a8",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-ce502412e361",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        23,
+        8,
+        39
+      ],
+      "after": [
+        23,
+        8,
+        39
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tab-e1fb11053f17",
+      "component": "tab",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        12,
+        10,
+        11
+      ],
+      "after": [
+        12,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-table-ac6aff401d8d",
+      "component": "table",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-2f4041be8c6f",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        4,
+        6
+      ],
+      "after": [
+        4,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-c600fdb49fa9",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        3,
+        4
+      ],
+      "after": [
+        3,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-54d5095fb447",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        3
+      ],
+      "after": [
+        2,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-21f11e056a5a",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        10
+      ],
+      "after": [
+        2,
+        2,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-3f39ca79688a",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        10,
+        3,
+        9
+      ],
+      "after": [
+        10,
+        3,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-table-da77938a63e4",
+      "component": "table",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        4,
+        3
+      ],
+      "after": [
+        4,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tag-cb1c2b36c92f",
+      "component": "tag",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        3
+      ],
+      "after": [
+        6,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-60344762a4ac",
+      "component": "tag",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        16,
+        4,
+        20
+      ],
+      "after": [
+        16,
+        4,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-2f33d9ad9a79",
+      "component": "tag",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        26,
+        21,
+        23
+      ],
+      "after": [
+        26,
+        21,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-f2523506d9dc",
+      "component": "tag",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        2,
+        4
+      ],
+      "after": [
+        3,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tag-00f70e093f8e",
+      "component": "tag",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        3,
+        8
+      ],
+      "after": [
+        8,
+        3,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-textarea-6568c7122efa",
+      "component": "textarea",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        7,
+        4,
+        3
+      ],
+      "after": [
+        7,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-09bf054639ba",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        4,
+        6,
+        5
+      ],
+      "after": [
+        4,
+        6,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-e5310ca065e3",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        15,
+        8,
+        11
+      ],
+      "after": [
+        15,
+        8,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-db63f40deb67",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        3,
+        4
+      ],
+      "after": [
+        6,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-18b117e24ca0",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        8,
+        7,
+        2
+      ],
+      "after": [
+        8,
+        7,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-cb53d01a979b",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        6,
+        4,
+        6
+      ],
+      "after": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-textarea-16a75170ed3e",
+      "component": "textarea",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        2,
+        2,
+        3
+      ],
+      "after": [
+        2,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tooltip-28d5ef864d9b",
+      "component": "tooltip",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        6,
+        8
+      ],
+      "after": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tooltip-3bce7ef644ea",
+      "component": "tooltip",
+      "section": "Configurações obrigatórias",
+      "force": "required",
+      "before": [
+        2,
+        1,
+        3
+      ],
+      "after": [
+        2,
+        1,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tooltip-e937cb91ec57",
+      "component": "tooltip",
+      "section": "Configurações obrigatórias (Popover)",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        6
+      ],
+      "after": [
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-tooltip-6e381ea6a99e",
+      "component": "tooltip",
+      "section": "Configurações obrigatórias (Popover)",
+      "force": "required",
+      "before": [
+        7,
+        4,
+        10
+      ],
+      "after": [
+        7,
+        4,
+        10
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-f9dc5d35b7ed",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        5,
+        5,
+        5
+      ],
+      "after": [
+        5,
+        5,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-53ea06a3f0cf",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-9b90da66a5da",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        7,
+        10,
+        7
+      ],
+      "after": [
+        7,
+        10,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-fd1b375690ae",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        14,
+        10,
+        5
+      ],
+      "after": [
+        14,
+        10,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-tooltip-7ffe579b5ce6",
+      "component": "tooltip",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        14,
+        3,
+        14
+      ],
+      "after": [
+        14,
+        3,
+        14
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-upload-fce124a3079e",
+      "component": "upload",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        5,
+        4
+      ],
+      "after": [
+        6,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-upload-b8546e243b2e",
+      "component": "upload",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        4,
+        3,
+        4
+      ],
+      "after": [
+        4,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-upload-c379e1665c57",
+      "component": "upload",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        21,
+        10,
+        11
+      ],
+      "after": [
+        21,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-b496b4689197",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        6,
+        7,
+        5
+      ],
+      "after": [
+        6,
+        7,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-4d6c1f1860ec",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        2,
+        2
+      ],
+      "after": [
+        4,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-e04f73ce472c",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        27,
+        17,
+        26
+      ],
+      "after": [
+        27,
+        17,
+        26
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-3f9d2af7cab8",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        9,
+        7,
+        3
+      ],
+      "after": [
+        9,
+        7,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-f09f0a8b2d73",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        5,
+        10,
+        4
+      ],
+      "after": [
+        5,
+        10,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-15d6da1b3df7",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        20,
+        9,
+        18
+      ],
+      "after": [
+        20,
+        9,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-8639a440ceec",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        3,
+        4,
+        4
+      ],
+      "after": [
+        3,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-upload-c881ea199688",
+      "component": "upload",
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        13,
+        5,
+        11
+      ],
+      "after": [
+        13,
+        5,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-075edab9dd2b",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        6,
+        4,
+        3
+      ],
+      "after": [
+        6,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-1c62102406f6",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        19,
+        12,
+        24
+      ],
+      "after": [
+        19,
+        12,
+        24
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-1eb98fa2d459",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        7,
+        11
+      ],
+      "after": [
+        20,
+        7,
+        11
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-4546af9de608",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        21,
+        2,
+        2
+      ],
+      "after": [
+        21,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-27e944e01097",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        19,
+        2,
+        3
+      ],
+      "after": [
+        19,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-038ed896fd63",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        20,
+        3,
+        3
+      ],
+      "after": [
+        20,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-development-wizard-f42b6195d957",
+      "component": "wizard",
+      "section": "Propriedades obrigatórias",
+      "force": "required",
+      "before": [
+        23,
+        4,
+        3
+      ],
+      "after": [
+        23,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-887b02fcffea",
+      "component": "wizard",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        3,
+        2,
+        3
+      ],
+      "after": [
+        3,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-dcc34f4a211a",
+      "component": "wizard",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        16,
+        10,
+        20
+      ],
+      "after": [
+        16,
+        10,
+        20
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-3e155146345a",
+      "component": "wizard",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        11,
+        4
+      ],
+      "after": [
+        4,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-component-wizard-7d11097901db",
+      "component": "wizard",
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        11,
+        2,
+        7
+      ],
+      "after": [
+        11,
+        2,
+        7
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-foundation-global-893c0354f7d0",
+      "component": null,
+      "section": "Bloco de código (Code)",
+      "force": "recommended",
+      "before": [
+        3,
+        3,
+        2
+      ],
+      "after": [
+        3,
+        3,
+        2
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-13a4f7278f58",
+      "component": null,
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        33,
+        33,
+        27
+      ],
+      "after": [
+        33,
+        33,
+        27
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-88ff311db57f",
+      "component": null,
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        6,
+        6,
+        5
+      ],
+      "after": [
+        6,
+        6,
+        5
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-5052e0ad6f98",
+      "component": null,
+      "section": "Anatomia",
+      "force": "required",
+      "before": [
+        4,
+        4,
+        4
+      ],
+      "after": [
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-050b99f3bef2",
+      "component": null,
+      "section": "Anatomia",
+      "force": "permitted",
+      "before": [
+        6,
+        6,
+        4
+      ],
+      "after": [
+        6,
+        6,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-81ed4417aa33",
+      "component": null,
+      "section": "3. Gerenciamento de Erros em Empty States",
+      "force": "recommended",
+      "before": [
+        5,
+        5,
+        4
+      ],
+      "after": [
+        5,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-f0771eb86c49",
+      "component": null,
+      "section": "3. Gerenciamento de Erros em Empty States",
+      "force": "recommended",
+      "before": [
+        4,
+        4,
+        13
+      ],
+      "after": [
+        4,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-51fab1e187c7",
+      "component": null,
+      "section": "3. Gerenciamento de Erros em Empty States",
+      "force": "recommended",
+      "before": [
+        5,
+        5,
+        8
+      ],
+      "after": [
+        5,
+        5,
+        8
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-13ddf54b8cbc",
+      "component": null,
+      "section": "3. Gerenciamento de Erros em Empty States",
+      "force": "recommended",
+      "before": [
+        4,
+        4,
+        3
+      ],
+      "after": [
+        4,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-4eb4e257cc4d",
+      "component": null,
+      "section": "1. Navegação Lateral",
+      "force": "recommended",
+      "before": [
+        3,
+        3,
+        23
+      ],
+      "after": [
+        3,
+        3,
+        23
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-bd645b224452",
+      "component": null,
+      "section": "1. Navegação Lateral",
+      "force": "recommended",
+      "before": [
+        2,
+        2,
+        4
+      ],
+      "after": [
+        2,
+        2,
+        4
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-f93493590e7d",
+      "component": null,
+      "section": "1. Navegação Lateral",
+      "force": "recommended",
+      "before": [
+        2,
+        2,
+        3
+      ],
+      "after": [
+        2,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-efe6d7b3c8cb",
+      "component": null,
+      "section": "1. Navegação Lateral",
+      "force": "recommended",
+      "before": [
+        2,
+        2,
+        3
+      ],
+      "after": [
+        2,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-04347aba1c13",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        16,
+        16,
+        9
+      ],
+      "after": [
+        16,
+        16,
+        9
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-d9e534778351",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        2,
+        2,
+        3
+      ],
+      "after": [
+        2,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-be0c7f846e51",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        11,
+        11,
+        18
+      ],
+      "after": [
+        11,
+        11,
+        18
+      ]
+    },
+    {
+      "id": "govbr-3.7.0-pattern-global-a6b6bfc66ba6",
+      "component": null,
+      "section": "Orientações específicas",
+      "force": "recommended",
+      "before": [
+        14,
+        14,
+        3
+      ],
+      "after": [
+        14,
+        14,
+        3
+      ]
+    }
+  ]
+}

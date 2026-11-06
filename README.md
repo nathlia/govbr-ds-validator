@@ -83,6 +83,31 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.3-pre — emenda-2 da base: unidades de especificação (D-167)
+
+Integração da emenda-2 autorizada pela autora na NAT-115 ("ampliar"). O extrator mecânico torna citáveis tabelas de
+Especificações e frases descritivas das páginas oficiais dos componentes, preservando texto literal e proveniência.
+
+- Base `3.7.0-literal-2026-10-15+emenda-2`: **2.449 unidades** com `force:"especificacao"`, dos 36 componentes:
+  1.152 linhas de 227 tabelas e 1.297 frases (S1: 1.151; S2: 146). Designer: 2.300; desenvolvedor: 149.
+  Total servido: 5.490 registros; as 3.007 regras normativas e os 34 exemplos continuam separados.
+- Texto, arquivo, linha, intervalo e hash são conferidos pelo gerador. A base anterior à emenda permanece byte a byte
+  (sha256 `c8c4327d…`); unidades geradas: `322ad1e6…`; rules.jsonl emendado: `ca8f428a…`.
+  Reprodução: `node scripts/kb-spec-units.mjs --check`. Definição T1/S1/S2/X1/ID e relatório em
+  `data/knowledge/versions/3.7.0-literal-2026-10-15/reports/emenda-2/`. S2 usa exclusões auditadas
+  `info`, `definicao` ou `usuario`; o extrator não reclassifica essas frases como obrigação.
+- Especificações não entram no pool, estatísticas, contagens, contexto ou checklist de normas. Podem ser listadas por
+  `get_ds_rules {force:"especificacao"}`; a busca livre as apresenta em bloco separado, quando cabe, sem tirar ou
+  reordenar normas. Um cartão agrupa apenas linhas da **mesma tabela**, identificada pelo arquivo e linha do cabeçalho.
+  `get_component_spec` mostra contagens por faceta e o caminho de listagem; o verify avisa que especificação não obriga.
+- Contratos integrados com A3/A6, conferidos em 06/11: evaluation `590c6f70…`, full `dd6c7795…`, normative
+  `6289e719…`, knowledge-free `c51bf1a3…`. Imagens e locks de campanha precisam fixar os contratos da versão final.
+- **A1 parcial:** cabeçalhos de coluna entram no índice das novas especificações; elas usam pool próprio, sem penalidade
+  de linha de tabela. As linhas normativas antigas mantêm o ranking anterior; a emenda não encerra a perda histórica de
+  auto-recuperação dessas linhas. Não há check de token por parte do componente nesta fatia.
+- **Verificação desta integração e limites:** ver [registro de 06/11](docs/nat111-emenda2-2026-11-06.md).
+  Guarda completa da busca, ensaio MCP vivo, imagens/locks e demais itens da 3.7.3 continuam gates separados.
+
 ## 3.7.2 — candidato embutido, alsoIn de outra rota, componente novo primeiro, cláusulas do componente, força nas best-practice (D-155/D-166)
 
 Motivo: lista única de correções de 04/11, seção A (`planejamento/atual/lista-unica-correcoes-3.7.2-2026-11-04.md`), sobre

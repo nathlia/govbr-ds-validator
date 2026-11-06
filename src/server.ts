@@ -43,6 +43,7 @@ import {
   getEmagValidationTemplate,
   warnOnVersionMismatch,
   NORMATIVE_FORCES,
+  isSpecification,
   type KnowledgeRule,
   type RuleFilter,
   type RuleForce,
@@ -128,7 +129,7 @@ import {
   type ContractError,
 } from "./responses/contract.js";
 import { getDsRules, unknownComponentFailure } from "./tools/getDsRules.js";
-import { fitComponentSpec, specClauses, specRelated } from "./tools/componentSpec.js";
+import { fitComponentSpec, specClauses, specRelated, specSpecification } from "./tools/componentSpec.js";
 import { emagTemplateCitation } from "./responses/retrieval.js";
 import { emagClausesReply } from "./responses/emagClauses.js";
 
@@ -966,9 +967,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           .enum(["accessibility", "component", "development", "foundation", "page", "pattern", "template"])
           .optional(),
         force: z
-          .enum(["required", "prohibited", "recommended", "discouraged", "permitted", "informative", "unclear"])
+          .enum(["required", "prohibited", "recommended", "discouraged", "permitted", "informative", "unclear", "especificacao"])
           .optional()
-          .describe("Força normativa (exemplos: include_evidence)"),
+          .describe("Força normativa (exemplos: include_evidence); 'especificacao' lista só as unidades de especificação (tabelas e frases descritivas, candidatas, não obrigações)"),
         validationStrategy: z
           .enum([
             "dom",
@@ -1060,7 +1061,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const rule = getRuleById(id);
         if (!rule) return json({ error: `Regra '${id}' não encontrada no knowledge base.`, absenceNote: ABSENCE_NOTE });
         return json({
-          kind: rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+          kind: rule.legacy ? "historical" : isSpecification(rule) ? "specification" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
           rule,
           normativeContext: normativeUnit(rule),
           legacyResolution: legacyResolution(rule),
@@ -1076,7 +1077,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           detail: detail === "full" ? "full" : "brief",
           missing: ids.filter((ruleId) => !foundIds.has(ruleId)),
           rules: found.map((rule) => ({
-            kind: rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
+            kind: rule.legacy ? "historical" : isSpecification(rule) ? "specification" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence",
             ...project(rule),
             ...(detail === "full" ? { normativeContext: boundedNormativeUnit(rule, IDS_FULL_UNIT_MAX_CHARS) } : {}),
           })),
@@ -1613,6 +1614,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           // 3.4.0 (A1/A10): texto das cláusulas de prosa do componente; A12: ligações kb-relations.
           clauses: specClauses(spec.name),
           ...specRelated(spec.name),
+          // 3.7.3 (D-167): unidades de especificação (emenda-2), fora de total e do checklist.
+          ...specSpecification(spec.name),
           // 3.5.0 (D-155): todas as obrigações/proibições do componente, com como medir cada uma.
           checklist: { tool: "get_component_spec", arguments: { component: spec.name, view: "checklist" } },
           next: ruleNext.slice(0, 3),

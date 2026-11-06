@@ -285,6 +285,8 @@ const WEAK_FORCES: Record<string, string> = {
   permitted: "permissão (opcional)",
   informative: "informativa",
   unclear: "força indefinida",
+  // 3.7.3 (D-167): unidade de especificação descreve o componente; sozinha não sustenta uma violação.
+  especificacao: "especificação (descreve o componente; não obriga nem proíbe)",
 };
 
 let emagOfClause: Map<string, string> | undefined;

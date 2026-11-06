@@ -36,4 +36,17 @@ describe("unidade distinta (contrato §5.2, estreitada)", () => {
     ]);
     expect(units.map((u) => u.hits.map((h) => h.rule.id))).toEqual([["r1", "r2"], ["t2"]]);
   });
+
+  it("tabelas de especificação distintas na mesma seção preservam cartões próprios", () => {
+    const spec = (id: string, table: string) => ({
+      ...rule(id, `| parte ${id} | --token-${id} |`, "Borda", "Header > Borda", "especificacao"),
+      specification: { kind: "table-row" as const, rule: "T1", table },
+    });
+    const units = groupUnits([
+      hit(spec("r1", "header.md#L502")),
+      hit(spec("r2", "header.md#L506")),
+      hit(spec("r3", "header.md#L502")),
+    ]);
+    expect(units.map((u) => u.hits.map((h) => h.rule.id))).toEqual([["r1", "r3"], ["r2"]]);
+  });
 });

@@ -282,6 +282,7 @@ export function obligationOf(force: RuleForce): Obligation {
     case "permitted":
       return "permissive";
     case "informative":
+    case "especificacao": // 3.7.3 (D-167): descreve o componente, não obriga
       return "informative";
     default:
       return "unclear";

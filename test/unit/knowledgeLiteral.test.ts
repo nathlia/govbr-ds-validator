@@ -48,7 +48,8 @@ describe("served version", () => {
       ...readJsonl(join(KNOWLEDGE, `versions/${LITERAL}/normalized/carried-over.jsonl`)),
     ];
     // 3.6.1: + 3 unidades literais das áreas obrigatórias do Template Base (manifest.amendments).
-    expect(records).toHaveLength(3041);
+    // 3.7.3 (D-167): + 2449 unidades de especificação (emenda-2), force "especificacao" no schema.
+    expect(records).toHaveLength(5490);
     expect(records.filter((r) => !validate(r)).map((r) => r.id)).toEqual([]);
     expect(new Set(records.map((r) => r.id)).size).toBe(records.length);
     expect(getKnowledgeBase().meta.schemaErrors).toEqual([]);
@@ -65,6 +66,7 @@ describe("served version", () => {
       discouraged: 112,
       permitted: 496,
       unclear: 15,
+      especificacao: 2449,
     });
     expect(byForce(getKnowledgeBase().rules)).toEqual({
       required: 1105,
@@ -75,6 +77,7 @@ describe("served version", () => {
       informative: 4,
       unclear: 15,
       example: 34,
+      especificacao: 2449,
     });
     expect(getEvidence()).toHaveLength(34);
   });

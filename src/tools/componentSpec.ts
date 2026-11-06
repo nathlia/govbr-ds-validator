@@ -8,7 +8,7 @@
  *   nomes, pedida à parte), depois encurta as cláusulas, depois troca o exemplo implícito pelo primeiro
  *   que cabe (dito em `exampleChoice`); só então adia o exemplo, como antes.
  */
-import { filterRules, type KnowledgeRule } from "../data/knowledge.js";
+import { filterRules, SPECIFICATION_FORCE, type KnowledgeRule } from "../data/knowledge.js";
 import { relatedFor, relationsLabel } from "../data/relations.js";
 import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTableRow } from "../data/retrieval.js";
@@ -63,6 +63,36 @@ export function specClauses(component: string, max = SPEC_CLAUSES_MAX) {
   };
 }
 
+/**
+ * 3.7.3 (D-167): resumo das unidades de especificação do componente (emenda-2) — tabelas por faceta e frases — com a
+ * listagem que traz os ids. Fora de `rules.total` e do checklist: descrevem, não obrigam.
+ */
+export function specSpecification(component: string) {
+  const units = filterRules({ component, force: SPECIFICATION_FORCE });
+  if (!units.length) return {};
+  const facets = new Map<string, { facet: string; tables: Set<string>; rows: number }>();
+  for (const u of units) {
+    if (u.specification?.kind !== "table-row") continue;
+    const facet = plain(String(u.source.section ?? u.specification.facet ?? ""));
+    const entry = facets.get(facet) ?? { facet, tables: new Set<string>(), rows: 0 };
+    entry.tables.add(String(u.specification.table));
+    entry.rows += 1;
+    facets.set(facet, entry);
+  }
+  const tableRows = units.filter((u) => u.specification?.kind === "table-row").length;
+  return {
+    specification: {
+      modality: "especificação (candidata a investigar)",
+      note: "Unidades de especificação da página do componente (texto literal: linhas das tabelas de Especificações e frases descritivas de comportamento/anatomia). Dizem o token ou o comportamento esperado por parte do componente; não são obrigações. Meça a parte e compare; cite a unidade por id.",
+      units: units.length,
+      tableRows,
+      sentences: units.length - tableRows,
+      facets: [...facets.values()].map((f) => ({ facet: f.facet, tables: f.tables.size, rows: f.rows })),
+      next: { tool: "get_ds_rules", arguments: { component, force: SPECIFICATION_FORCE } },
+    },
+  };
+}
+
 /** Bloco related (camada kb-relations) do componente, ou nada. */
 export function specRelated(component: string) {
   const items = relatedFor({ components: [component] });
@@ -85,6 +115,19 @@ export function fitComponentSpec(
   const budget = opts.budget ?? RESPONSE_BUDGET;
   const fits = () => textSize(response) <= budget;
   if (fits()) return response;
+  // 3.7.3 (D-167): o resumo das especificações cede antes de tudo — primeiro as facetas, depois só a contagem e a
+  // chamada que lista os ids, depois sai: nunca custa à spec o que ela trazia sem a emenda-2.
+  const rulesBlock = response.rules as { specification?: Record<string, unknown> } | undefined;
+  if (rulesBlock?.specification) {
+    const { facets: _facets, note: _note, tableRows: _rows, sentences: _sentences, ...minimal } = rulesBlock.specification;
+    rulesBlock.specification = { ...rulesBlock.specification };
+    delete rulesBlock.specification.facets;
+    if (fits()) return response;
+    rulesBlock.specification = minimal;
+    if (fits()) return response;
+    delete rulesBlock.specification;
+    if (fits()) return response;
+  }
   // 1. tokensUsed: lista de nomes de tokens, a de menor valor para auditar — adiada com a contagem.
   if (Array.isArray(response.tokensUsed) && response.tokensUsed.length) {
     response.tokensUsed = {

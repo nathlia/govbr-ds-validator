@@ -13,20 +13,21 @@ import {
 
 describe("knowledge base loader (D-11)", () => {
   // 2.12.0: a versão servida por padrão é a literal (2.971 regras do corpus + 67 registros herdados).
-  it("loads all 3041 records (3.6.1: +3 áreas obrigatórias do Template Base) of the served version with zero schema errors", () => {
+  it("loads all 5490 records (3.6.1: +3 áreas obrigatórias do Template Base; 3.7.3: +2449 unidades de especificação) of the served version with zero schema errors", () => {
     const kb = getKnowledgeBase();
     expect(kb.meta.schemaErrors).toEqual([]);
-    expect(kb.meta.totalRules).toBe(3041);
+    expect(kb.meta.totalRules).toBe(5490);
     expect(kb.meta.dsVersion).toBe("3.7.0");
-    expect(kb.meta.knowledgeVersion).toBe("3.7.0-literal-2026-10-15+emenda-1");
+    expect(kb.meta.knowledgeVersion).toBe("3.7.0-literal-2026-10-15+emenda-2");
     expect(kb.meta.knowledgeDir).toBe("3.7.0-literal-2026-10-15");
   });
 
-  it("partitions rules into 3007 normative + 34 evidence records", () => {
+  it("partitions rules into 3007 normative + 34 evidence records (+ 2449 specification units, D-167, outside normativeRules)", () => {
     const kb = getKnowledgeBase();
     expect(kb.meta.normativeRules).toBe(3007);
     expect(kb.meta.evidenceRules).toBe(34);
-    expect(kb.meta.normativeRules + kb.meta.evidenceRules).toBe(kb.meta.totalRules);
+    expect(kb.meta.specificationRules).toBe(2449);
+    expect(kb.meta.normativeRules + kb.meta.evidenceRules + kb.meta.specificationRules).toBe(kb.meta.totalRules);
   });
 
   it("indexes rules by deterministic id", () => {

@@ -7,8 +7,8 @@
         "query": "foco visível ao navegar pelo teclado"
       },
       "isError": false,
-      "chars": 2383,
-      "sha256": "f8ef4d5ed84203338f2d4e75c13c1aa9445f0fe63a882a3ef3c19728881702ac"
+      "chars": 3914,
+      "sha256": "b8ca98bfe8081dfcccb9ce83424e193ddf2c9b40f48c6e5b8f75d5fab09e2d8a"
     },
     {
       "args": {
@@ -17,8 +17,8 @@
         "limit": 4
       },
       "isError": false,
-      "chars": 5386,
-      "sha256": "aca84aeda1bec8dd9c12d1597c95122d0742967e3fdb6672853cdf680d923fd0"
+      "chars": 6864,
+      "sha256": "48bdfb5d29d95e27dfb2aa5112860fc654a0eb6028c230c2233cef6079f7df25"
     },
     {
       "args": {
@@ -29,7 +29,7 @@
       "cursorFrom": 1,
       "isError": false,
       "chars": 4374,
-      "sha256": "eae7994d112237c2bf0b46c508425be8b8aa915814afb0f97c8eebc1158a42a2"
+      "sha256": "d7b382670bfb0fd1d94b16271ac207b56822054a354e34243d244a4d4085aa21"
     },
     {
       "args": {
@@ -37,8 +37,8 @@
         "limit": 10
       },
       "isError": false,
-      "chars": 7634,
-      "sha256": "06426e3b09a8997920e9cd16db1d8db985cc8853ce11717b929cb1cd60430c00"
+      "chars": 7643,
+      "sha256": "f36678aa1b949fb86a0baefdd635cb086904bba7e26f9952c1e7d30065a0b3ce"
     },
     {
       "args": {
@@ -48,7 +48,7 @@
       },
       "isError": false,
       "chars": 7830,
-      "sha256": "cf3ead873fb666ebbe9dcdcbf4170fa63a93a61b89402bcbceb261758cc14b31"
+      "sha256": "5b203f6e5e121a4d9fbb3a2054ed5d227538dd3ef514440df24392d3b4987c46"
     },
     {
       "args": {
@@ -57,16 +57,16 @@
         "vocabulary": false
       },
       "isError": false,
-      "chars": 7540,
-      "sha256": "87de259af938927128b4883990c14b5e054bad3a04f0239bbeb291274b58c7a8"
+      "chars": 7862,
+      "sha256": "12434557459055671e54a1ff30668a278031d4ea7ac013b72af4b9a7d3cdf150"
     },
     {
       "args": {
         "query": "aria-current na página ativa"
       },
       "isError": false,
-      "chars": 6764,
-      "sha256": "2f08d7dfc376778450e0ff1414b83a7c1c836fe83fbbfef52a6a66fd35f724bc"
+      "chars": 7572,
+      "sha256": "167e120113aebf43edc80411eb0218b24adb86a6facfbb33c2895165a1fedf0d"
     },
     {
       "args": {
@@ -74,16 +74,16 @@
         "component": "global"
       },
       "isError": false,
-      "chars": 6565,
-      "sha256": "2d5db8f0253c49ae2926a4fb9355a8c79c1d8ae84dabd4d1a43d11df3de1b96b"
+      "chars": 7371,
+      "sha256": "6c4142e58af44b5dd9340ad03115b335e60afc95f9d548b429ddf7b527669e64"
     },
     {
       "args": {
         "query": "WCAG 1.4.3"
       },
       "isError": false,
-      "chars": 5301,
-      "sha256": "45d68634ffcea1b7ebabbdeef475ceb486d82f68a4860526e78d7b98ee6523c4"
+      "chars": 4495,
+      "sha256": "6adfdc8461f3b4522f44ecf0471fe04dab7c67802550b0abb9e573edc87d6042"
     },
     {
       "args": {
@@ -91,8 +91,8 @@
         "component": "table"
       },
       "isError": false,
-      "chars": 6701,
-      "sha256": "dca896c9512dc2bd76f41cb23665d118c25fa251dfbe3fd27e0cb9924b9a449b"
+      "chars": 7783,
+      "sha256": "34b9bf958d35e338978c5f40b613aec729ad16ad2f8ee4d002d6dd09a7b8e2c6"
     },
     {
       "args": {
@@ -100,8 +100,8 @@
         "component": "button"
       },
       "isError": false,
-      "chars": 7387,
-      "sha256": "70bfb0afac31b1451ce42bd7f18f9a3c8ee7acb3407978f5e6a036afc008338d"
+      "chars": 7771,
+      "sha256": "f4b0808035f08bc6edc83aba6d9b0154489a50419e0d11d5332c1540be7d6550"
     },
     {
       "args": {
@@ -109,24 +109,24 @@
         "component": "message"
       },
       "isError": false,
-      "chars": 6845,
-      "sha256": "b928614f3bd6bd20b0f6520a4505eeb468dd19987b60078242e6c248668fa58e"
+      "chars": 7753,
+      "sha256": "184c898718f9cd1ffa24e64b9aad57bf0dbceefa5dc5ea726eef9730656a0441"
     },
     {
       "args": {
         "query": "menu lateral recolhido no celular"
       },
       "isError": false,
-      "chars": 3179,
-      "sha256": "4900a7f364ea310b593bb6fabdfd6458ed3a41969c9688fe815094c8b7d28310"
+      "chars": 3188,
+      "sha256": "dbde5e613745dcb5007f0be145aa7d0c32b202d886568141f5de041b81929f69"
     },
     {
       "args": {
         "query": "imagens sem texto alternativo"
       },
       "isError": false,
-      "chars": 5906,
-      "sha256": "9791d36bbfe3bddef07ff1609087d5a5e9a411f6efebe206fd669dc598121750"
+      "chars": 7305,
+      "sha256": "8958274b6b03217116caa726a73970fcecec7cbe46e49144608dba1b0636f793"
     },
     {
       "args": {
@@ -135,15 +135,15 @@
       },
       "isError": false,
       "chars": 1969,
-      "sha256": "c50397f318c55ff6218f6d664549a0cc31f994f13fc5c6a247db9b2fbdb53b74"
+      "sha256": "4e7629af7a01e8f832f874201b670309f13ce69809c5cd32866109c2bda2de74"
     },
     {
       "args": {
         "query": "xyzzy plugh"
       },
       "isError": false,
-      "chars": 1466,
-      "sha256": "8e5aaa020fc35f385d1b546aaa02b97f3d6a26cdbd2206e071396ef3514efc9f"
+      "chars": 1475,
+      "sha256": "33dc0f932cffd0993d1678ee6c0e187cf3c22c7468abfb472d1a28737c6c4a9e"
     },
     {
       "args": {
@@ -152,7 +152,7 @@
       },
       "isError": false,
       "chars": 2946,
-      "sha256": "a71421524601c6b273a60e8cce7aeb59b1301dd00fa862143b5d504a89464da6"
+      "sha256": "bc2de3a959fa74e2a56f45065a4069e0382cade8da1bb32956ff84c57154ed17"
     },
     {
       "args": {
@@ -169,7 +169,7 @@
       },
       "isError": false,
       "chars": 5447,
-      "sha256": "4985971d26d55f26fe7a20473fdfcba2741694b055c8a49322114ed9747269f8"
+      "sha256": "b82dcfcbe8b9be9400ce9c49dc6d8bad48a8821ab41610feec0c3f5fe4325124"
     },
     {
       "args": {
@@ -177,8 +177,8 @@
         "limit": 3
       },
       "isError": false,
-      "chars": 5575,
-      "sha256": "505463d37df48932108b3ecbae269ce1de726434ca9dc5b67e4c2ec6ca516890"
+      "chars": 7604,
+      "sha256": "4a9e5fa309d1aa824e9be724b38e6af85ebad11be7ad18537c957b16b1599eaf"
     },
     {
       "args": {
@@ -188,7 +188,7 @@
       "cursorFrom": 19,
       "isError": false,
       "chars": 3552,
-      "sha256": "5e293d56550da7a7a275c9eb7f1e1056f33f6b0f42e8ffe96a933c14ffd01aae"
+      "sha256": "ba31980f466a4fcd6312552879850e4f4f99f329c59ab39e8fc711f7a1b13243"
     },
     {
       "args": {
@@ -202,8 +202,8 @@
         }
       },
       "isError": false,
-      "chars": 6036,
-      "sha256": "d0a69f35daaf98748db4ad4e48f44254638850b3d2cd237d6f241889ef6b2b3c"
+      "chars": 6045,
+      "sha256": "2fd95297a925a5da8fe8ced46edd9f73c4064609c14c3be56e169676652d88c7"
     },
     {
       "args": {
@@ -216,16 +216,16 @@
         "query": "link"
       },
       "isError": false,
-      "chars": 6513,
-      "sha256": "165aa4aca42ea2599c9039add60d539c9064e998ff5ba4e1a7798f1920fe0d59"
+      "chars": 6522,
+      "sha256": "8e6846468ef10e0b1e7731a7935a626b22c7c5af06de42cd1187039e896b346c"
     },
     {
       "args": {
         "id": "govbr-3.7.0-accessibility-modal-f36c91d7073c"
       },
       "isError": false,
-      "chars": 5885,
-      "sha256": "6d26a8177f70ee34404e44ff7e1efd2d735747fc9537f97c244639e5a9d9339d"
+      "chars": 5894,
+      "sha256": "2b1e7d710a6059a6dbacd19f6f71509e30f73364ec6e48fb69a0991565e9b387"
     },
     {
       "args": {
@@ -244,8 +244,8 @@
         "limit": 5
       },
       "isError": false,
-      "chars": 2204,
-      "sha256": "6132952594b3a1951a9a1dc2ab013b0f4f94322f44f6cc7b626dd6d6cfb393e2"
+      "chars": 3427,
+      "sha256": "459b50fe88a87fbf98603f4a347b691eb0185a8d517ca0be8a6758a687485a40"
     },
     {
       "args": {
@@ -255,14 +255,14 @@
         "limit": 5
       },
       "isError": false,
-      "chars": 3671,
-      "sha256": "fd1d4d44c9441365b871a8e26e3546ffd208bef979e271f3eb7ce4d017f43299"
+      "chars": 5063,
+      "sha256": "9db9e9cc2a7fdb1046eaa92f2650d6223997b5e7a849a32738665b013c3e8164"
     },
     {
       "args": {},
       "isError": false,
-      "chars": 1505,
-      "sha256": "c63c23f83db9b865a6d7dd9c7ca228145a605d166c43e0bdc815ef7b14f2ba29"
+      "chars": 1540,
+      "sha256": "7ef63370f561b22bfb22d931ab97a19675b7db1149f285e21f50b900fcdec657"
     },
     {
       "args": {
@@ -270,8 +270,8 @@
         "match": "literal"
       },
       "isError": false,
-      "chars": 31438,
-      "sha256": "aa9409a680307195caf3e8aa5255f25aa5455622b941d7d75bed0131de16fdd6"
+      "chars": 31447,
+      "sha256": "98c9388858d06e6cff22ec1c2a1b22fbac1d66df571cc37d0c791b0213e03f7c"
     },
     {
       "args": {
@@ -431,6 +431,19 @@
         "query": "foco",
         "match": "literal"
       }
+    ]
+  },
+  "changed373": {
+    "note": "3.7.3-pre (D-167, emenda-2): a versão literal ganha 2.449 unidades de especificação (force 'especificacao') e passa a se chamar 3.7.0-literal-2026-10-15+emenda-2; o motor vira govbr-lexical/1.3.2 (unidades de especificação fora do pool e da estatística padrão; a linha de tabela de especificação lê o cabeçalho da tabela e não leva o peso de linha de tabela). Diferenças contra a 3.7.2, conferidas resposta a resposta: kb.knowledgeVersion, kb.ranking, cursores (a chave inclui versão e motor) e o bloco novo 'specification' (com a mensagem 'specification') nas respostas de stepsWithSpecificationBlock; tirando isso, cada resposta é idêntica à 3.7.2 — nenhum cartão, ordem, total ou faceta muda.",
+    "stepsWithSpecificationBlock": [
+      0,
+      1,
+      5,
+      9,
+      10,
+      11,
+      13,
+      19
     ]
   }
 }

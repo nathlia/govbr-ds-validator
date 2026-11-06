@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getKnowledgeBase, type KnowledgeBase, type KnowledgeRule } from "./knowledge.js";
+import { getKnowledgeBase, isSpecification, type KnowledgeBase, type KnowledgeRule } from "./knowledge.js";
 import { guardKnowledge } from "./lock.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/versions");
@@ -129,8 +129,11 @@ export function computeNormativeUnit(rule: KnowledgeRule) {
   const base = getKnowledgeBase();
   if (rule.force === "example" || rule.legacy || typeof rule.source.corpusFile !== "string") return undefined;
   const file = rule.source.corpusFile;
+  // 3.7.3 (D-167): uma unidade de especificação nunca é cláusula adjacente de uma norma (a unidade normativa fica como
+  // estava); a de especificação vê as normas e as outras especificações da sua seção.
   const siblings = typeof file === "string" ? base.rules.filter((candidate) =>
     candidate.id !== rule.id && candidate.force !== "example" && !candidate.legacy &&
+    (isSpecification(rule) || !isSpecification(candidate)) &&
     candidate.source.corpusFile === file && candidate.source.sectionPath === rule.source.sectionPath) : [];
   return {
     version: "1.0.0", knowledgeVersion: base.meta.knowledgeVersion,

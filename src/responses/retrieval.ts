@@ -6,7 +6,7 @@
  */
 import { lostExceptionOf } from "../data/lostExceptions.js";
 import type { KnowledgeRule, RuleForce } from "../data/knowledge.js";
-import { NORMATIVE_FORCES, getKnowledgeBase } from "../data/knowledge.js";
+import { NORMATIVE_FORCES, getKnowledgeBase, isSpecification } from "../data/knowledge.js";
 import { normativeUnit, normativeUnitRef, legacyResolution, emagUnits } from "../data/normativeUnits.js";
 import { neededStateFor } from "../data/applicability.js";
 import { isTableRow, rankRules } from "../data/retrieval.js";
@@ -35,6 +35,8 @@ export const CARD_TEXT_MAX = 600;
 export const INDEX_TITLE_MAX = 110;
 /** 3.3.0 (A-12): modalidade mostrada no cartão de uma linha de tabela. */
 export const IMPLEMENTATION_PROPERTY = "propriedade da implementação";
+/** 3.7.3 (D-167): modalidade mostrada no cartão de uma unidade de especificação (emenda-2). */
+export const SPECIFICATION_MODALITY = "especificação (candidata a investigar)";
 /** 3.3.0 (N-02): o rótulo de page.stop mais longo, usado na prova de orçamento. */
 const LONGEST_STOP = "relevance-floor";
 /** 3.3.0 (N-07): acima disto (JSON dos argumentos), a ambiguidade ecoa os argumentos uma vez só. */
@@ -49,6 +51,7 @@ const MODALITY: Record<string, string> = {
   informative: "informativo",
   unclear: "indefinido",
   example: "exemplo",
+  especificacao: SPECIFICATION_MODALITY,
 };
 
 const plain = (text: string) => text.replace(/[*_`]/g, "").replace(/[ \t]+/g, " ").trim();
@@ -78,6 +81,11 @@ function sectionKey(rule: KnowledgeRule): string | null {
  */
 export function unitKey(rule: KnowledgeRule): string {
   const section = sectionKey(rule);
+  // 3.7.3 (D-167): linhas da mesma tabela de especificação se fundem entre si, nunca com linhas normativas.
+  // A seção pode conter várias tabelas (por exemplo, Borda do Header); preserve a identidade da tabela extraída.
+  if (isSpecification(rule) && isTableRow(rule.originalText ?? "")) {
+    return `spec-table:${rule.specification?.table ?? section ?? rule.id}`;
+  }
   if (section && isTableRow(rule.originalText ?? "")) return `table:${section}`;
   return `id:${rule.id}`;
 }
@@ -133,7 +141,8 @@ export function groupUnits(hits: Hit[]): Unit[] {
   const bodyOf = new Map<string, string>();
   for (const hit of hits) {
     const section = sectionKey(hit.rule);
-    if (section && !isTitleRecord(hit.rule) && !isTableRow(hit.rule.originalText ?? "") && !bodyOf.has(section)) {
+    // 3.7.3 (D-167): um título nunca se funde a uma unidade de especificação (o cartão continua citando a norma).
+    if (section && !isTitleRecord(hit.rule) && !isSpecification(hit.rule) && !isTableRow(hit.rule.originalText ?? "") && !bodyOf.has(section)) {
       bodyOf.set(section, unitKey(hit.rule));
     }
   }
@@ -208,8 +217,10 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
   const matched = [...new Set(unit.hits.flatMap((h) => h.matched))];
   const literal = new Set(matched);
   const paraphrase = [...new Set(unit.hits.flatMap((h) => h.paraphraseOnly ?? []))].filter((t) => !literal.has(t));
-  const table = isTableRow(rule.originalText ?? "");
+  const spec = isSpecification(rule);
+  const table = !spec && isTableRow(rule.originalText ?? "");
   if (table) ctx.used.add("table-row");
+  if (spec) ctx.used.add("specification");
   return {
     rank,
     ids: unitIds(unit),
@@ -217,9 +228,12 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     status: "investigate" as const,
     // 3.3.0 (A-12): linha de tabela de API/anatomia é propriedade da implementação, não obrigação de
     // comportamento — a força da tabela na base não vai para o cartão (o registro por id a mantém).
-    ...(table
-      ? { kind: "implementation-property" as const, force: null, modality: IMPLEMENTATION_PROPERTY }
-      : { force: rule.force, modality: MODALITY[rule.force] ?? "indefinido" }),
+    // 3.7.3 (D-167): unidade de especificação com a força e a modalidade próprias, nunca obrigação/recomendação.
+    ...(spec
+      ? { kind: "specification" as const, force: rule.force, modality: SPECIFICATION_MODALITY }
+      : table
+        ? { kind: "implementation-property" as const, force: null, modality: IMPLEMENTATION_PROPERTY }
+        : { force: rule.force, modality: MODALITY[rule.force] ?? "indefinido" }),
     requirement: requirementOf(rule, ctx),
     ...(withWhy
       ? { why: { matched, ...(paraphrase.length ? { matchedInParaphrase: paraphrase } : {}), relation: main.relation, field: main.field } }
@@ -230,7 +244,7 @@ function card(unit: Unit, rank: number, ctx: CardContext, withWhy = true, compac
     source: sourceOf(rule),
     more: moreOf(rule),
     ...(main.conflicts?.length ? { conflicts: main.conflicts } : {}),
-    ...(table ? { note: { code: "table-row" as const } } : {}),
+    ...(table ? { note: { code: "table-row" as const } } : spec ? { note: { code: "specification" as const } } : {}),
     ...(lostExceptionOf(rule) ? { condition: lostExceptionOf(rule) } : {}),
   };
 }
@@ -285,7 +299,16 @@ export interface RetrievalInput {
   scopeComponent?: string | null;
   /** 3.4.0 (A7): termos casados só por aproximação. */
   approximations?: Array<{ term: string; as: string; distance: number }>;
+  /**
+   * 3.7.3 (D-167): unidades de especificação ranqueadas à parte (pool próprio). Vão no bloco `specification` da 1ª
+   * página, depois que os cartões das normas já foram escolhidos: o bloco nunca tira uma norma da página nem muda a ordem.
+   * `next` = os argumentos da chamada que lista todas (force:"especificacao").
+   */
+  specification?: { hits: Hit[]; next: Record<string, unknown> };
 }
+
+/** 3.7.3 (D-167): teto de cartões no bloco `specification` (uma tabela = um cartão, com os ids das linhas). */
+export const SPECIFICATION_BLOCK_MAX = 3;
 
 function groupOf(unit: Unit): string {
   return mainHit(unit).rule.component ?? "global";
@@ -310,7 +333,8 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   const budget = input.budget ?? RESPONSE_BUDGET;
   // 3.3.0 (A-12): linhas de tabela (API/anatomia) depois de toda cláusula de prosa da resposta (ordem estável).
   const grouped = groupUnits(input.hits);
-  const isRow = (u: Unit) => isTableRow(mainHit(u).rule.originalText ?? "");
+  // 3.7.3 (D-167): a linha de tabela de ESPECIFICAÇÃO fica na ordem do ranking (é o que a emenda-2 tornou citável).
+  const isRow = (u: Unit) => !isSpecification(mainHit(u).rule) && isTableRow(mainHit(u).rule.originalText ?? "");
   const units = [...grouped.filter((u) => !isRow(u)), ...grouped.filter(isRow)];
   const first = input.position === 0;
   const ctx: CardContext = {
@@ -427,9 +451,12 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
 
   // 3.4.0 (A12): o bloco related nunca tira um cartão — entra no fim, inteiro, compacto (título + next), mínimo (id + ligação) ou não entra.
   let related: RetrievalInput["related"] | undefined;
+  // 3.7.3 (D-167): o bloco de especificação idem — cartões compactos, ou só id + texto curto, ou não entra.
+  let specBlock: Record<string, unknown> | undefined;
   const compose = (list: ReturnType<typeof card>[], stop: string, nextPosition: number | null) => {
     const matched = units.length;
-    const status = matched === 0 ? "no-match" : ambiguity ? "ambiguous" : gaps.length ? "partial-match" : "candidates";
+    // 3.7.3 (D-167): sem norma mas com o bloco de especificação, "partial-match" (a resposta não está vazia).
+    const status = matched === 0 ? (specBlock ? "partial-match" : "no-match") : ambiguity ? "ambiguous" : gaps.length ? "partial-match" : "candidates";
     const cursor = nextPosition !== null ? encodeCursor(nextPosition, input.cursorKey) : null;
     const nextSteps: NextStep[] = [];
     // 3.4.0 (A4): roteamento pela intenção primeiro (1ª página).
@@ -485,6 +512,7 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       ...(first && input.unmatchedScope === "context" && input.unmatchedTerms.length ? { unmatchedTerms: input.unmatchedTerms } : {}),
       ...(ambiguity ? { ambiguity } : {}),
       results: list,
+      ...(first && specBlock ? { specification: specBlock } : {}),
       ...(first && related?.items.length ? { related } : {}),
       ...(investigation ? { investigation } : {}),
       ...(first ? { gaps } : {}),
@@ -540,6 +568,7 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
   if (nextPosition === null && stop !== "no-match") stop = "relevance-floor";
   if (first && cards.length && input.related?.items.length) {
     const full = input.related;
+    const beforeRelated = new Set(ctx.used);
     // 3.4.1: a ligação inferida leva o kind em todas as formas, para nunca parecer declarada pela cláusula.
     const kindOf = (i: RelatedItem) => (i.kind === "inferred" ? { kind: i.kind } : {});
     const compact = { version: full.version, items: full.items.map((i) => ({ id: i.id, relation: i.relation, ...kindOf(i), title: i.title, next: i.next })) };
@@ -548,6 +577,59 @@ export function retrievalResponse(input: RetrievalInput, wcagNames: Map<string, 
       related = candidate as RetrievalInput["related"];
       if (textSize(compose(cards, stop, nextPosition)) <= budget) break;
       related = undefined;
+    }
+    // compose registra mensagens enquanto mede os candidatos. Um bloco recusado não pode deixar a mensagem
+    // kb-relation na resposta: esse texto não participou da escolha dos cartões e pode ultrapassar o teto.
+    if (!related) {
+      ctx.used.clear();
+      for (const code of beforeRelated) ctx.used.add(code);
+    }
+  }
+  // 3.7.3 (D-167): depois do related (que fica como era), com o que sobra do orçamento.
+  if (first && input.specification?.hits.length) {
+    const specUnits = groupUnits(input.specification.hits);
+    const shown = specUnits.slice(0, SPECIFICATION_BLOCK_MAX);
+    const head = {
+      modality: SPECIFICATION_MODALITY,
+      matched: specUnits.length,
+      ...(specUnits.length > shown.length
+        ? { next: step("request-detail", "todas as unidades de especificação desta consulta", "get_ds_rules", input.specification.next) }
+        : {}),
+    };
+    const before = new Set(ctx.used);
+    const restore = () => {
+      ctx.used.clear();
+      for (const code of before) ctx.used.add(code);
+    };
+    specBlock = { ...head, results: shown.map((u, i) => card(u, i + 1, ctx, true, true)) };
+    if (textSize(compose(cards, stop, nextPosition)) > budget) {
+      // Mínimo: id, ids das linhas, força e texto curto (a modalidade do bloco diz o que é), de 3 cartões a 1.
+      restore();
+      const minimal = (u: Unit) => {
+        const rule = mainHit(u).rule;
+        return { citeAs: rule.id, ids: unitIds(u), kind: "specification", force: rule.force, heading: heading(rule), text: cut(plain(rule.originalText), 160).text };
+      };
+      specBlock = undefined;
+      for (let n = shown.length; n >= 1; n--) {
+        const more = specUnits.length > n;
+        specBlock = {
+          modality: SPECIFICATION_MODALITY,
+          matched: specUnits.length,
+          ...(more ? { next: step("request-detail", "todas as unidades de especificação desta consulta", "get_ds_rules", input.specification.next) } : {}),
+          results: shown.slice(0, n).map(minimal),
+        };
+        if (textSize(compose(cards, stop, nextPosition)) <= budget) break;
+        specBlock = undefined;
+      }
+      // Sem lugar nem para um cartão: fica a contagem e a chamada que as lista (revisão: o bloco não some calado).
+      if (!specBlock) {
+        specBlock = {
+          modality: SPECIFICATION_MODALITY,
+          matched: specUnits.length,
+          next: step("request-detail", "as unidades de especificação desta consulta", "get_ds_rules", input.specification.next),
+        };
+        if (textSize(compose(cards, stop, nextPosition)) > budget) specBlock = undefined;
+      }
     }
   }
   return compose(cards, stop, nextPosition);
@@ -586,6 +668,8 @@ export function asImplementationProperty<T extends Record<string, unknown>>(rule
   // 3.5.0 (revisão, HIGH 2): exceção que a cláusula perdeu em relação ao legado (data/lostExceptions.ts).
   const lost = lostExceptionOf(rule);
   const withCondition = lost ? { ...item, condition: lost } : item;
+  // 3.7.3 (D-167): unidade de especificação sai com a modalidade própria (linha de tabela ou frase).
+  if (isSpecification(rule)) return { ...withCondition, kind: "specification", force: rule.force, modality: SPECIFICATION_MODALITY };
   if (!isTableRow(rule.originalText ?? "")) return withCondition;
   return { ...withCondition, kind: "implementation-property", force: null, modality: IMPLEMENTATION_PROPERTY };
 }
@@ -689,7 +773,8 @@ export function listingResponse(input: ListingInput) {
 
 // ── Lote por ids (§8) ───────────────────────────────────────────────────────────────────────
 
-export function ruleKind(rule: KnowledgeRule): "historical" | "normative" | "evidence" {
+export function ruleKind(rule: KnowledgeRule): "historical" | "normative" | "evidence" | "specification" {
+  if (!rule.legacy && isSpecification(rule)) return "specification";
   return rule.legacy ? "historical" : NORMATIVE_FORCES.includes(rule.force as RuleForce) ? "normative" : "evidence";
 }
 
@@ -715,7 +800,7 @@ export function lookupCard(rule: KnowledgeRule, rank: number, used: Set<MessageC
 
 /** 1ª cláusula que carrega obrigação (required/prohibited), não título; senão a 1ª de prosa; senão null. */
 function obligationClause(rules: KnowledgeRule[]): KnowledgeRule | null {
-  const prose = rules.filter((r) => !isTitleRecord(r) && !r.legacy && r.force !== "example");
+  const prose = rules.filter((r) => !isTitleRecord(r) && !r.legacy && r.force !== "example" && !isSpecification(r));
   return prose.find((r) => r.force === "required" || r.force === "prohibited") ?? prose[0] ?? null;
 }
 

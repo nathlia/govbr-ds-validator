@@ -349,7 +349,8 @@ describe("3.6.1 revisão — busca sem contaminação pelo rótulo de força das
       const top = (r.data.results as Array<{ citeAs?: string; id?: string }>).slice(0, 3).map((x) => x.citeAs ?? x.id ?? "");
       expect(top.some((id) => id.startsWith("govbr-3.7.0-template-global-"))).toBe(false);
       expect(top[0]).toMatch(/-input-/);
-      expect(r.data.kb.ranking).toBe("govbr-lexical/1.3.1");
+      // 3.7.3 (D-167): motor 1.3.2 (unidades de especificação fora do pool padrão); a ordem das normas é a mesma.
+      expect(r.data.kb.ranking).toBe("govbr-lexical/1.3.2");
     } finally {
       await client.close();
     }
