@@ -28,6 +28,7 @@ export function pageInvestigateClauses(max = 3) {
       return {
         citeAs: rule.id, text: short(plain(rule.originalText)), how: procedureLine(procedure),
         ...(procedure.when ? { when: procedure.when } : {}),
+        ...(procedure.context ? { context: procedure.context } : {}),
       };
     }),
   };
@@ -51,7 +52,7 @@ export function pageChecklist(cursor?: string) {
         automatic: oracleFullyMeasures(rule.id), strategy: rule.validationStrategy,
         measurability: measurabilityOf(rule),
         ...(oracle.length ? { oracle } : {}),
-        ...(procedure ? { how: procedureLine(procedure), ...(procedure.when ? { when: procedure.when } : {}) }
+        ...(procedure ? { how: procedureLine(procedure), ...(procedure.when ? { when: procedure.when } : {}), ...(procedure.context ? { procedure } : {}) }
           : { how: "Leia a cláusula completa e registre a medida ou a dúvida; esta lista não deriva valor esperado nem decide aplicabilidade." }),
       },
     };

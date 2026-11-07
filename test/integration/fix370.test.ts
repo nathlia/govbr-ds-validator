@@ -306,7 +306,8 @@ describe("3.7.0 item 2 — investigate carrega as cláusulas mensuráveis sem ch
           expect(["required", "prohibited"]).toContain(rule.force);
           expect(oracleMeasuresFor(c.citeAs), `${c.citeAs} já é medida por check`).toEqual([]);
           expect(c.text.length).toBeGreaterThan(0);
-          expect(c.how).toMatch(/ → .* → espera: /);
+          if (checklist.procedureOf(rule, item.component)?.context) expect(c.how).toMatch(/Contexto e procedimento diferidos.*checklist/);
+          else expect(c.how).toMatch(/ → .* → espera: /);
           // revisão 3.7.0 (ALTA): só com procedimento lido do texto — nunca o genérico "o elemento/atributo citado → presente"
           expect(checklist.procedureOf(rule, item.component), c.citeAs).not.toBeNull();
           expect(c.how).not.toMatch(/elemento\/atributo citado/);

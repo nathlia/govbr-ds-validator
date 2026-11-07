@@ -15,6 +15,8 @@ import { CONTRACT, MESSAGES, RESPONSE_BUDGET, budgetPage, step, textSize } from 
 import { oracleFullyMeasures, oracleMeasuresFor, type OracleMeasure } from "./oracleCoverage.js";
 import { getComponentSpecs } from "../data/load.js";
 import { BUTTON_LABEL_ANATOMY, BUTTON_LABEL_LEGACY, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
+import { literalProcedure } from "./literalProcedures.js";
+import type { procedureScope } from "./procedureScope.js";
 
 export const CHECKLIST_TEXT_MAX = 180;
 const STRONG = new Set(["required", "prohibited"]);
@@ -144,6 +146,8 @@ const NOT_A_PLACE = /navega|\bfoco\b|teclado|\btab\b|swipe|arrast/i;
 const TOUCH = /dispositivos? m[óo]ve(l|is)|\bmobile\b|\btouch\b|\btoque\b/i;
 
 export interface Procedure {
+  /** Escopo herdado literal; formas compactas devem diferir, não apagar esse contexto. */
+  context?: NonNullable<ReturnType<typeof procedureScope>>;
   /** O que selecionar na página. */
   select: string;
   /** O que medir nele. */
@@ -190,6 +194,8 @@ export function procedureOf(rule: KnowledgeRule, component?: string | null): Pro
   const out = (measure: string, expect: string, sel = select): Procedure => ({ select: sel, measure, expect, ...(when ? { when } : {}) });
   const anatomy = ANATOMY_ROW.exec(text);
   if (anatomy) return out(`a parte "${anatomy[1].trim()}" em cada ${select}`, "presente e visível");
+  const literal = literalProcedure(rule, select);
+  if (literal) return literal;
   if (CONDITIONAL.test(text) || (rule.conditions ?? []).length > 0) return null;
   const size = AREA.test(text) ? SIZE.exec(text) : null;
   if (size) return out("getBoundingClientRect() da área clicável", `≥ ${size[1]}×${size[2]}px`, root ? `${select} interativo` : "controle (button, a, [role=button]) com ícone");
@@ -259,7 +265,7 @@ function measureOf(rule: KnowledgeRule, component?: string): Record<string, unkn
   // dizem que é juízo — nada de "espera:" que a cláusula não diz.
   const proc = procedureOf(rule, component);
   const base = manualMeasure(rule);
-  if (proc) return { automatic: false, strategy: rule.validationStrategy, ...base, how: procedureLine(proc), ...(proc.when ? { when: proc.when } : {}) };
+  if (proc) return { automatic: false, strategy: rule.validationStrategy, ...base, how: procedureLine(proc), ...(proc.when ? { when: proc.when } : {}), ...(proc.context ? { procedure: proc } : {}) };
   const keepsStrategy = ["keyboard-interaction", "responsive-viewport", "source-code", "visual", "manual"].includes(rule.validationStrategy);
   const { properties: _p, ...rest } = base;
   return { automatic: false, strategy: rule.validationStrategy, ...(keepsStrategy ? base : { ...rest, how: JUDGEMENT_HOW }) };
@@ -291,7 +297,7 @@ export function investigateClauses(component: string, max = 2): { total: number;
     total: ranked.length,
     clauses: ranked.slice(0, max).map(({ rule }) => {
       const proc = procedureOf(rule, component)!;
-      return { citeAs: rule.id, text: cut(plain(rule.originalText), 90), how: procedureLine(proc, 150), short: procedureShort(proc) };
+    return { citeAs: rule.id, text: cut(plain(rule.originalText), 90), how: proc.context ? "Contexto e procedimento diferidos: leia o checklist deste componente (next)." : procedureLine(proc, 150), short: procedureShort(proc) };
     }),
   };
 }
@@ -301,6 +307,7 @@ export function investigateClauses(component: string, max = 2): { total: number;
  * padrão — sem o seletor (o componente já está na chave) e sem "espera:"; o valor que a cláusula diz fica. ≤ 70 caracteres.
  */
 export function procedureShort(p: Procedure): string {
+  if (p.context) return "contexto/procedimento: checklist deste componente";
   const part = /^a parte "(.+)" em cada /.exec(p.measure);
   const touch = p.when ? " (toque/móvel)" : "";
   if (part) return cut(`parte "${part[1]}" ${p.expect}`, 70);
