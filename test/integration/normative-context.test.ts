@@ -60,8 +60,9 @@ async function connect(profile: ServerOptions["toolProfile"], clientName: string
   return client;
 }
 
+// A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
 async function call(client: Client, name: string, args: Record<string, unknown>) {
-  return JSON.parse(textOf(await client.callTool({ name, arguments: args })));
+  return JSON.parse(textOf(await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args })));
 }
 
 let evaluation: Client;
@@ -254,8 +255,12 @@ describe("get_ds_rules context — contract", () => {
 });
 
 describe("scan_page investigate on a neutral-domain fixture (3.0.0; normativeContext da 2.9.0)", () => {
+  // A5 exige escopo literal versionado; o snapshot não literal acima continua isolado nos testes legados.
+  beforeAll(() => { useKnowledgeVersion(undefined); resetApplicabilityCache(); });
+  afterAll(() => { useKnowledgeVersion("3.7.0"); resetApplicabilityCache(); });
   it("lists ALL found components, by required clauses no check measures (ties in DOM order), each with the checklist step (3.5.0, revisão Fable P1)", async () => {
     const scan = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure"], limit: 5 });
+    expect(scan.kind, JSON.stringify(scan)).not.toBe("error");
     expect(scan.normativeContext).toBeUndefined();
     const inv = scan.investigate;
     expect(inv.retrieval).toBe("automatic");
@@ -291,7 +296,9 @@ describe("scan_page investigate on a neutral-domain fixture (3.0.0; normativeCon
     expect(next.investigate).toBeUndefined();
     // cursor 0 é a primeira página.
     const zero = await call(evaluation, "scan_page", { url: baseUrl, checks: ["structure", "axe"], limit: 1, cursor: 0 });
-    expect(zero.investigate).toEqual({ ...first.investigate, items: first.investigate.items.map((i: { stateRef: string }) => ({ ...i, stateRef: zero.scanId })) });
+    expect(zero.investigate).toEqual({ ...first.investigate,
+      page: { ...first.investigate.page, stateRef: zero.scanId },
+      items: first.investigate.items.map((i: { stateRef: string }) => ({ ...i, stateRef: zero.scanId })) });
   });
   it("profiles without norms get no normative projection", async () => {
     const deterministic = await connect("deterministic", "sem-normas");

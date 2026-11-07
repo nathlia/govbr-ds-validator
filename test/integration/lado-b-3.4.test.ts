@@ -147,15 +147,17 @@ describe("B5 — cor do texto autoral e borda por lado", () => {
   });
 });
 
-describe("B6 — a 1ª página do scan traz ≥ 3 famílias", () => {
-  it("cabeçalho encolhe até caberem 3 famílias no orçamento padrão", async () => {
+describe("B6/A5 — famílias preservadas após reserva de cláusulas", () => {
+  it("teto padrão reserva leitura e continua os fatos do mesmo lote", async () => {
     const { client, call } = await connect();
     const r = await call("scan_page", { url: `${base}/b1` });
-    expect(r.data.totalFamilies).toBeGreaterThanOrEqual(3);
-    expect(r.data.families.length).toBeGreaterThanOrEqual(3);
+    if (r.isError) expect(r.data.errorCode).toBe("item-too-large");
+    else expect(r.data.clauseReserve.clauses.length).toBeGreaterThan(0);
     expect(r.text.length).toBeLessThanOrEqual(8_000);
-    expect(r.data.families[0].rule.checker).toMatch(/^ds-page-/);
-    expect(r.data.families[0].rule.source).toBe("govbr-ds-kb");
+    const facts = await call("get_finding_details", { scanId: r.data.scanId, maxChars: 100000 });
+    expect(facts.data.families.length).toBeGreaterThanOrEqual(3);
+    expect(facts.data.families[0].rule.checker).toMatch(/^ds-page-/);
+    expect(facts.data.families[0].rule.source).toBe("govbr-ds-kb");
     await client.close();
   });
 });

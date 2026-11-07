@@ -90,7 +90,7 @@ async function connect(profile: "evaluation" | "knowledge-free" = "evaluation") 
   await srv.connect(b);
   await client.connect(a);
   const call = async (name: string, args: Record<string, unknown>) => {
-    const r = await client.callTool({ name, arguments: args });
+    const r = await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args });
     const text = (r.content as Array<{ text: string }>).map((c) => c.text).join("");
     return { text, isError: Boolean(r.isError), data: JSON.parse(text) as Record<string, any> };
   };

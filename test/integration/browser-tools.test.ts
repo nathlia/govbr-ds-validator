@@ -262,6 +262,7 @@ describe("scan_page aggregate fast path", () => {
       tokenChecks: ["color", "font", "radius"],
       components: ["button"],
       limit: 200,
+      maxChars: 100_000, // A5: teste de inventário/cache, sem compactação da projeção.
     };
     const requestsBefore = documentRequests;
     const first = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: args })));
@@ -310,7 +311,7 @@ describe("scan_page aggregate fast path", () => {
 
   it("reproduces interactions before fingerprinting instead of assuming browser state is shared", async () => {
     const baseArgs = {
-      maxChars: 20000, // Este teste inspeciona o diff completo, sem a compactação do cabeçalho.
+      maxChars: 100000, // A5: este teste inspeciona o diff completo, sem compactação do cabeçalho.
       view: "findings",
       url: baseUrl,
       selectors: ["#state-toggle"],

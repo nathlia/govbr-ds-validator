@@ -151,6 +151,7 @@ import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
+import { reserveCandidates } from "./tools/clauseReserve.js";
 import { pageChecklist, pageInvestigateClauses } from "./tools/pageChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
@@ -1757,7 +1758,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
     .describe(
       knowledgeFree
         ? "Orçamento da resposta inteira em caracteres (padrão 8000): cabeçalho e checksRun entram na conta; as famílias ficam com o resto, com cursor"
-        : "Orçamento da resposta inteira em caracteres (padrão 8000): cabeçalho, checksRun, investigate e observações entram na conta; as famílias ficam com o resto, com cursor",
+        : "Orçamento da resposta inteira em caracteres (padrão 8000). Na primeira página, 20% para leitura literal contextual deduplicada de cláusulas mensuráveis inteiras; fatos no restante, com cursor. Unidade e piso que não cabem: recusa explícita.",
     );
 
   /** 3.3.0 (N-09): diff entre páginas diferentes é dito, não escondido. */
@@ -2109,7 +2110,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
         };
         const response = assembleScan(head, first ? result.observations : null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
           batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }, scanId),
-          { firstScanPage: first },
+          { firstScanPage: first, ...(hasNorms && first ? { clauseCandidates: reserveCandidates([
+            ...(investigate?.items ?? []).map(i => i.component), ...(investigate?.more?.components ?? []),
+          ]) } : {}) },
         );
         markDeliveredTexts(response);
         if (response.kind === "error") return fail(response as ContractError);

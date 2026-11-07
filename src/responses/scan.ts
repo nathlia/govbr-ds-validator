@@ -7,6 +7,7 @@ import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
 import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
 import { CROSS_ROUTE, sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
+import { selectReserve, type ReserveCandidate } from "../tools/clauseReserve.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -769,10 +770,11 @@ export function assembleScan(
   scanId: string,
   maxChars: number,
   page: (familyBudget: number) => Record<string, unknown>,
-  options: { firstScanPage?: boolean } = {},
+  options: { firstScanPage?: boolean; clauseCandidates?: ReserveCandidate[] } = {},
 ) {
   // 3.6.2: a 1ª página de um scan_page (1º scan ou posterior) monta por prioridade — famílias antes de tudo — e nunca
   // passa do teto pedido. Continuações seguem o caminho de sempre (≥ 1 item para o cursor andar).
+  if (options.firstScanPage && options.clauseCandidates) return assembleReservedScan(head, observations, scanId, maxChars, page, options.clauseCandidates);
   if (options.firstScanPage) return assembleFirstScanPage(head, observations, scanId, maxChars, page);
   const response = assembleScanPage(head, observations, scanId, maxChars, page, options);
   const ceiled = enforceCeiling(response, maxChars, scanId);
@@ -782,6 +784,41 @@ export function assembleScan(
   // Sem espaço para o campo certo, ele sai (nunca o tamanho só da lista, que mentia sobre a resposta).
   const { responseCharsEstimate: _r, ...rest } = ceiled;
   return rest;
+}
+
+/** A5: monta fatos no espaço restante e só depois fixa a reserva, fora de qualquer compactador. */
+function assembleReservedScan(
+  head: Record<string, unknown>, observations: Observation[] | null, scanId: string,
+  maxChars: number, page: (budget: number) => Record<string, unknown>, candidates: ReserveCandidate[],
+): Record<string, unknown> {
+  const build = (budget: number) => {
+    const selected = selectReserve(candidates, budget);
+    if (selected.unavailable) return null;
+    // Exatamente a propriedade serializada + vírgula; margem apenas para o número de tamanho final.
+    const fixed = textSize({ clauseReserve: selected.block }) - 1;
+    const remaining = budget - fixed - 16;
+    if (remaining < 300) return null;
+    const facts = assembleFirstScanPage(head, observations, scanId, remaining, page);
+    if (facts.kind === "error") return null;
+    const out: Record<string, unknown> = { ...facts, clauseReserve: selected.block };
+    if (typeof out.responseCharsEstimate === "number") {
+      for (let i = 0; i < 4; i++) out.responseCharsEstimate = textSize(out);
+    }
+    return textSize(out) <= budget ? out : null;
+  };
+  const result = build(maxChars);
+  if (result) return result;
+  // A quota cresce com o orçamento: só sugere um teto cuja reserva E piso realmente couberam.
+  const nextBudget = [2000, 4000, 8000, 12000, 20000, 40000, 60000, 80000, 100000]
+    .find(b => b > maxChars && build(b) !== null);
+  return {
+    contract: CONTRACT, kind: "error", errorCode: "item-too-large", field: "maxChars", scanId,
+    error: "Reserva de cláusulas não entregue. Lote de fatos preservado; pendências da sessão não entregues. Repetir a receita é nova observação.",
+    reason: selectReserve(candidates, maxChars).unavailable ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget",
+    ...(nextBudget ? { retry: { maxChars: nextBudget, note: "Refaça a receita: nova observação, não snapshot das pendências antigas." } } : {}),
+    next: [step("request-detail", "lote preservado", "get_finding_details", { scanId, maxChars: 8000 }),
+      step("request-detail", "globais", "get_page_rules", { view: "checklist" })],
+  };
 }
 
 /**

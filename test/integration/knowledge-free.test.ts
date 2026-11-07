@@ -52,7 +52,8 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b48
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "6282fa971868378d10f0daf4b878fdca1230491f716ece3acd6863feb077aad6";
+// A5: maxChars descreve a reserva de leitura contextual. Contrato anterior: 6282fa97….
+const EVALUATION_TOOLS_SHA256_3_0_0 = "00377b4b33a023560dbf4be3f2cbbf4eb777b004e334c0c6e3847f5f81a9a738";
 // 3.7.3-pre.1 A2: get_page_rules ganha view:checklist; contrato da emenda-2 anterior:
 // 590c6f701d6717b8270e7378393895e86ae1a024cb506a1b08339f9a21077471. Knowledge-free inalterado.
 // A3: get_emag_rules ganha clauseCursor para continuar todas as cláusulas, sem corte nos primeiros dez ids.
@@ -304,7 +305,7 @@ describe("scan_page só axe", () => {
     const ev = await connect("evaluation");
     const url = `${base}/axe`;
     const a = (await call(kf, "scan_page", { url, view: "findings", detail: "full" })).data;
-    const b = (await call(ev, "scan_page", { url, checks: ["axe"], view: "findings", detail: "full" })).data;
+    const b = (await call(ev, "scan_page", { url, checks: ["axe"], view: "findings", detail: "full", maxChars: 100_000 })).data;
     expect(a.coverage).not.toHaveProperty("componentsFound");
     expect(a.coverage).not.toHaveProperty("componentsRequested");
     expect(a.coverage).not.toHaveProperty("evidenceSelectors");

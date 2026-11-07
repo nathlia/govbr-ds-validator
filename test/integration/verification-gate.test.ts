@@ -374,11 +374,11 @@ describe("verify_finding — page constraints (2.7.0)", () => {
   });
 
   it("scan_page runs the page check by default and reports the three constraints on this fixture", async () => {
-    const text = textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } }));
+    const text = textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["page"] } }));
     const res = JSON.parse(text);
     expect(res.coverage.checks).toEqual(["page"]);
     for (const id of ["ds-page-header", "ds-page-footer", "ds-page-skip-link"]) expect(text, id).toContain(id);
-    const byDefault = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page } })));
+    const byDefault = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page } })));
     expect(byDefault.coverage.checks).toContain("page");
   });
 });
@@ -485,7 +485,7 @@ describe("verify_finding — D-27 decided on the server (2.15.0)", () => {
       expect(tag?.rule.id, detail).toBe("govbr-3.7.0-accessibility-global-7c91abad32ce");
       expect(tag?.rule.implements, detail).toBeUndefined();
     }
-    const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["page"] } })));
+    const families = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["page"] } })));
     const footer = (families.families as Array<Record<string, any>>).find((f) => f.rule.checker === "ds-page-footer");
     // 3.6.1: cita a área de rodapé obrigatória (unidade literal); o excerto herdado vem em implements como contexto.
     expect(footer?.rule.id).toBe("govbr-3.7.0-template-global-79cf9ea963ee");
@@ -558,16 +558,16 @@ describe("silence is not conformance (2.15.0)", () => {
 
 describe("scan_page.checksRun (3.0.0; checksOmitted da 2.15.0)", () => {
   it("lists, in this state, the checks that did not run and what was left unmeasured — always, with fixed limits and the exact completing call", async () => {
-    const narrowed = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["axe", "structure"] } })));
+    const narrowed = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["axe", "structure"] } })));
     expect(narrowed.checksRun.executed.map((i: { check: string }) => i.check)).toEqual(["axe", "structure"]);
     expect(narrowed.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
     expect(narrowed.checksRun.omitted[0].why).toContain("tokens");
     expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
     expect(narrowed.checksRun.coverageNote).toBe(MESSAGES["scan-coverage"]);
     expect(narrowed.checksRun.limits.map((l: { code: string }) => l.code)).toEqual(expect.arrayContaining(["no-state-semantics", "single-state"]));
-    const sub = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page, checks: ["tokens"], tokenChecks: ["font"], components: ["button"] } })));
+    const sub = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["tokens"], tokenChecks: ["font"], components: ["button"] } })));
     expect(sub.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
-    const full = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { url: page } })));
+    const full = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page } })));
     expect(full.checksRun.omitted).toEqual([]);
     expect(full.checksRun.completeOmitted).toBeNull();
     expect(full.checksRun.limits.length).toBeGreaterThan(0);

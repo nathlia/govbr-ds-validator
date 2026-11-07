@@ -15,17 +15,17 @@ const freeze = <T>(value: T): T => {
   }
   return value;
 };
-export function procedureScope(rule: KnowledgeRule): Scope {
+export function procedureScope(rule: KnowledgeRule, maxChars = 4000): Scope {
   const version = getKnowledgeBase().meta.knowledgeDir;
-  const key = JSON.stringify([version, rule.source, rule.originalText]);
+  const key = JSON.stringify([version, rule.source, rule.originalText, maxChars]);
   const old = memo.get(rule);
   if (old?.key === key) return old.value;
-  const value = freeze(computeScope(rule, version));
+  const value = freeze(computeScope(rule, version, maxChars));
   memo.set(rule, { key, value });
   return value;
 }
 
-function computeScope(rule: KnowledgeRule, version: string) {
+function computeScope(rule: KnowledgeRule, version: string, maxChars = 4000) {
   if (typeof rule.source.corpusFile !== "string") return null;
   const base = resolve(dirname(fileURLToPath(import.meta.url)), "../../data/knowledge/versions", version, "corpus");
   const path = resolve(base, rule.source.corpusFile);
@@ -48,7 +48,7 @@ function computeScope(rule: KnowledgeRule, version: string) {
       : headings[h.index + 1]?.index ?? text.length }));
   const scope = ranges.map(r => text.slice(r.start, r.end).trim()).filter(Boolean).join("\n\n");
   // Sem contexto integral transportável, não derivar uma expectativa isolada.
-  if (scope.length > 4000) return null;
+  if (scope.length > maxChars) return null;
   return { kind: "literal-scope" as const, text: scope,
     source: { url: rule.source.url, corpusFile: rule.source.corpusFile, knowledgeVersion: version,
       snapshotSha256: createHash("sha256").update(text).digest("hex"), ranges, coordinates: "UTF-16; LF-normalized; end exclusive" } };

@@ -134,8 +134,9 @@ async function connect(name: string, toolProfile?: "full" | "evaluation"): Promi
   return c;
 }
 
+// A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
 async function call(c: Client, name: string, args: Record<string, unknown>) {
-  const result = await c.callTool({ name, arguments: args });
+  const result = await c.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args });
   return { isError: Boolean(result.isError), data: JSON.parse(textOf(result)) };
 }
 

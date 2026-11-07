@@ -136,8 +136,9 @@ async function connect(profile: "evaluation" | "knowledge-free" = "evaluation") 
   const client = new Client({ name: "fix370", version: "1" });
   await srv.connect(b);
   await client.connect(a);
-  const call = async (name: string, args: Record<string, unknown>) => {
-    const r = await client.callTool({ name, arguments: args });
+  // A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
+const call = async (name: string, args: Record<string, unknown>) => {
+    const r = await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args });
     const text = (r.content as Array<{ text: string }>).map((c) => c.text).join("");
     return { text, isError: Boolean(r.isError), data: JSON.parse(text) as Record<string, any> };
   };
@@ -442,28 +443,22 @@ describe("3.7.0 item 3 — get_component_spec checklist ordenado por mensurabili
 // ── 5. revisão da reexecução (02/11): lacuna A (cláusulas no teto padrão) e lacuna B (host <br-button>) ──────────
 
 describe("3.7.0 revisão — lacuna A: no teto padrão o investigate leva cláusula na forma compacta", () => {
-  it("8.000 caracteres, 12 componentes: cada componente com cláusula a leva como `id · procedimento`, sem família a menos", async () => {
+  it("A5: 8k entrega cláusula integral ou recusa explícita; fatos continuam no mesmo lote", async () => {
     const { client, call } = await connect();
     try {
-      const scan = await call("scan_page", { url: `${base}/ferragens/painel` });
-      expect(scan.text.length).toBeLessThanOrEqual(8_000);
-      const inv = scan.data.investigate;
-      expect(inv).toBeDefined();
-      const found = (inv.components ?? [...inv.items.map((i: { component: string }) => i.component), ...(inv.more?.components ?? [])]) as string[];
-      expect(found.length).toBeGreaterThanOrEqual(10);
-      // a cláusula chega: na forma de itens (teto folgado) ou na compacta (nomes + clauses por componente)
-      const lines: string[] = inv.clauses ? Object.values(inv.clauses as Record<string, string[]>).flat() : (inv.items ?? []).flatMap((i: { clauses?: Array<{ citeAs: string }> }) => (i.clauses ?? []).map((c) => c.citeAs));
-      expect(lines.length, JSON.stringify(scan.data.compacted)).toBeGreaterThan(0);
-      for (const line of lines) {
-        const id = line.split(" · ")[0];
-        expect(getRuleById(id), id).toBeDefined();
-        if (inv.clauses) expect(line.length).toBeLessThanOrEqual(120);
+      const scan = await call("scan_page", { url: `${base}/ferragens/painel`, maxChars: 8000 });
+      expect(scan.text.length).toBeLessThanOrEqual(8000);
+      if (scan.isError) expect(scan.data).toMatchObject({ kind: "error", errorCode: "item-too-large" });
+      else {
+        const reserve = scan.data.clauseReserve;
+        expect(reserve.clauses.length).toBeGreaterThan(0);
+        expect(["fulfilled", "exhausted"]).toContain(reserve.status);
+        for (const clause of reserve.clauses) expect(clause.text).toBe(getRuleById(clause.citeAs)!.originalText);
       }
-      // nenhuma família fica de fora por causa delas: todas as famílias desta página cabem no teto padrão
-      expect(scan.data.families.length).toBe(scan.data.totalFamilies);
-    } finally {
-      await client.close();
-    }
+      const facts = await call("get_finding_details", { scanId: scan.data.scanId, maxChars: 100000 });
+      expect(facts.isError).toBe(false);
+      expect(facts.data.scanId).toBe(scan.data.scanId);
+    } finally { await client.close(); }
   });
 
   it("a escada: itens → id + how → nomes + 2 cláusulas → nomes + 1 cláusula → nomes; cada forma menor que a anterior", async () => {

@@ -78,8 +78,9 @@ async function connect(profile: Profile = "evaluation", events?: ToolTelemetryEv
   const client = new Client({ name: "fix363", version: "1" });
   await srv.connect(b);
   await client.connect(a);
-  const call = async (name: string, args: Record<string, unknown>) => {
-    const r = await client.callTool({ name, arguments: args });
+  // A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
+const call = async (name: string, args: Record<string, unknown>) => {
+    const r = await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args });
     const text = (r.content as Array<{ text: string }>).map((c) => c.text).join("");
     let data: Record<string, any> = {};
     try {
@@ -481,8 +482,8 @@ describe("3.6.3 item 5 — a pendência de um elemento que reaparece em outra ro
         );
       const pid = (data: Record<string, any>) => ids(data, "contrast-incomplete")[0];
       // A identidade é conferida na forma completa; o orçamento padrão pode compactar items em ids.
-      const a = await call("scan_page", { url: `${base}/emprestimos`, checks: ["axe"], maxChars: 20000 });
-      const b = await call("scan_page", { url: `${base}/reservas`, checks: ["axe"], maxChars: 20000 });
+      const a = await call("scan_page", { url: `${base}/emprestimos`, checks: ["axe"], maxChars: 100000 });
+      const b = await call("scan_page", { url: `${base}/reservas`, checks: ["axe"], maxChars: 100000 });
       expect(pid(a.data)).toBeDefined();
       expect(pid(b.data)).toBe(pid(a.data));
       // o título é do documento: um id por rota

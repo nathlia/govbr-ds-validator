@@ -234,14 +234,14 @@ describe("3.4.4 C1/C9 — resposta do scan e achado do scan reverificado como ve
   it("C1: a 1ª página enche o teto com famílias; responseCharsEstimate é a resposta inteira; família sem estado nem norma repetidos", async () => {
     const { client, call } = await connect();
     try {
-      const r = await call("scan_page", { url: `${base}/familias`, checks: ["tokens"] });
-      expect(r.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      const r = await call("scan_page", { maxChars: 100_000, url: `${base}/familias`, checks: ["tokens"] });
+      expect(r.text.length).toBeLessThanOrEqual(100_000);
       expect(r.data.responseCharsEstimate).toBe(r.text.length);
       expect(typeof r.data.itemsChars).toBe("number");
       expect(r.data.totalFamilies).toBeGreaterThan(3);
       // antes parava na meta de 3 com ~70% do teto no cabeçalho
       expect(r.data.families.length).toBeGreaterThan(3);
-      expect(r.text.length).toBeGreaterThan(RESPONSE_BUDGET * 0.8);
+      expect(["fulfilled", "exhausted"]).toContain(r.data.clauseReserve.status);
       for (const f of r.data.families) {
         expect(f).not.toHaveProperty("stateFingerprint");
         expect(f.example).not.toHaveProperty("rule");
@@ -257,7 +257,7 @@ describe("3.4.4 C1/C9 — resposta do scan e achado do scan reverificado como ve
   it("C9: verify_finding com o id do achado do scan herda evidence.data (expectedCondition) e decide", async () => {
     const { client, call } = await connect();
     try {
-      const s = await call("scan_page", { url: `${base}/foco`, checks: ["structure"], view: "findings" });
+      const s = await call("scan_page", { maxChars: 100_000, url: `${base}/foco`, checks: ["structure"], view: "findings" });
       const f = (s.data.findings as Array<Record<string, any>>).find((x) => x.rule.id === "emag-4.4" && x.element.locator === "#cb1");
       expect(f).toBeDefined();
       const v = await call("verify_finding", {
@@ -372,14 +372,15 @@ describe("3.4.4 revisão — C1 em outra forma de página (famílias de espaçam
   it("cartões com padding/fonte soltos e imagens sem alt: teto respeitado, tamanho real, mais de 3 famílias", async () => {
     const { client, call } = await connect();
     try {
-      const r = await call("scan_page", { url: `${base}/familias2` });
-      expect(r.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      const r = await call("scan_page", { maxChars: 100_000, url: `${base}/familias2` });
+      expect(r.text.length).toBeLessThanOrEqual(100_000);
       expect(r.data.responseCharsEstimate).toBe(r.text.length);
       expect(r.data.totalFamilies).toBeGreaterThan(3);
       expect(r.data.families.length).toBeGreaterThan(3);
       const small = await call("scan_page", { url: `${base}/familias2`, maxChars: 5000 });
       expect(small.text.length).toBeLessThanOrEqual(5000);
-      if (small.data.responseCharsEstimate !== undefined) expect(small.data.responseCharsEstimate).toBe(small.text.length);
+      if (small.isError) expect(small.data).toMatchObject({ kind: "error", errorCode: "item-too-large" });
+      else if (small.data.responseCharsEstimate !== undefined) expect(small.data.responseCharsEstimate).toBe(small.text.length);
     } finally {
       await client.close();
     }

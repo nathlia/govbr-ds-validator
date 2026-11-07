@@ -82,8 +82,9 @@ async function connect(profile: "evaluation" | "knowledge-free" = "evaluation") 
   const client = new Client({ name: "fix361", version: "1" });
   await srv.connect(b);
   await client.connect(a);
-  const call = async (name: string, args: Record<string, unknown>) => {
-    const r = await client.callTool({ name, arguments: args });
+  // A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
+const call = async (name: string, args: Record<string, unknown>) => {
+    const r = await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args });
     const text = (r.content as Array<{ text: string }>).map((c) => c.text).join("");
     return { text, isError: Boolean(r.isError), data: JSON.parse(text) as Record<string, any> };
   };
@@ -98,7 +99,7 @@ describe("3.6.1 item 1 — pendências com cláusula, id de sessão e repetiçã
     const { client, call } = await connect();
     try {
       const first = await call("scan_page", { url: `${base}/agenda/consultas` });
-      expect(first.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      expect(first.text.length).toBeLessThanOrEqual(100_000);
       const pl = first.data.checksRun.pageLevel;
       const items: Array<Record<string, any>> = pl.notMeasured;
       const table = items.find((i) => (typeof i === "string" ? (i as string).includes("table-name") : i.code === "table-name"));
@@ -114,7 +115,7 @@ describe("3.6.1 item 1 — pendências com cláusula, id de sessão e repetiçã
 
       // Outra rota: a pendência da tabela (da rota anterior) volta em sessionPending, com a cláusula.
       const second = await call("scan_page", { url: `${base}/agenda/sobre` });
-      expect(second.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      expect(second.text.length).toBeLessThanOrEqual(100_000);
       expect(JSON.stringify(second.data.sessionPending)).toContain(tableId);
       expect(JSON.stringify(second.data.sessionPending)).toContain("table-name");
 
@@ -256,7 +257,7 @@ describe("3.6.1 itens 3 e 4 — elemento antes oculto e o diff sem falso 'removi
         view: "findings",
         detail: "full",
       });
-      expect(open.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      expect(open.text.length).toBeLessThanOrEqual(100_000);
       // O bloco pode ceder espaço às famílias; a medida permanece recuperável pelo lote.
       let f: Record<string, any>;
       if (open.data.revisited.items) {

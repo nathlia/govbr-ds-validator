@@ -221,16 +221,15 @@ describe("3.5.0 item 1 / P8 — checksRun.pageLevel: o medido e o que nenhum che
   it("no scan_page: pageLevel em checksRun, cabe no teto e, no aperto, fica só como códigos (último recurso); knowledge-free não tem", async () => {
     const { client, call } = await connect();
     try {
-      const r = await call("scan_page", { url: `${base}/tabelas` });
-      expect(r.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      const r = await call("scan_page", { url: `${base}/tabelas`, maxChars: 100_000 });
+      expect(r.text.length).toBeLessThanOrEqual(100_000);
       expect(r.data.checksRun.pageLevel.measured).toEqual(expect.arrayContaining(["header/footer", "skip-link", "placeholder-label"]));
       expect(r.data.checksRun.pageLevel.notMeasured.map((i: { code: string }) => i.code)).toContain("table-name");
       const small = await call("scan_page", { url: `${base}/tabelas`, maxChars: 1_500 });
-      const pl = small.data.checksRun.pageLevel;
-      // no aperto extremo fica a contagem + next (nunca some); os itens inteiros vêm pela continuação
-      expect(pl).toBeDefined();
-      expect(pl.count).toBeGreaterThan(0);
-      expect(pl.next).toMatchObject({ tool: "get_finding_details", arguments: { view: "observations" } });
+      // A5: o teto extremo recusa a reserva indivisível, com lote preservado para leitura exata.
+      expect(small.isError).toBe(true);
+      expect(small.data).toMatchObject({ kind: "error", errorCode: "item-too-large", scanId: expect.any(String) });
+      expect(small.text.length).toBeLessThanOrEqual(1_500);
       // revisão (MED): o cabeçalho do ledger leva só códigos + contagem; os itens inteiros paginam como observações.
       const details = await call("get_finding_details", { scanId: r.data.scanId });
       expect(details.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);

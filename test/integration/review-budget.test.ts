@@ -82,6 +82,24 @@ describe("revisão: toda resposta inicial no teto de 8.000, em todos os perfis",
       within("scan_page", scan.text);
       const compare = await call("scan_page", { url, checks: ["tokens"], tokenChecks: ["color"], compareToScanId: scan.data.scanId });
       within("scan_page compare", compare.text);
+      // A5: o piso pode diferir o diff inteiro para preservar a cláusula integral.
+      if (!compare.data.stateDiff?.findings) {
+        const diff = await call("get_finding_details", { scanId: compare.data.scanId, view: "diff" });
+        within("diff diferido", diff.text);
+        expect(diff.isError).toBe(false);
+        expect(diff.data).toMatchObject({ kind: "finding-diff", scanId: compare.data.scanId, previousScanId: scan.data.scanId });
+        let seen = diff.data.count;
+        let next = diff.data.next?.arguments;
+        for (let guard = 0; next && guard < 200; guard++) {
+          const more = await call("get_finding_details", next);
+          within("diff diferido continuação", more.text);
+          expect(more.isError).toBe(false);
+          seen += more.data.count;
+          next = more.data.next?.arguments;
+        }
+        expect(next).toBeUndefined();
+        expect(seen).toBe(diff.data.total);
+      } else {
       expect(compare.data.stateDiff.findings).toMatchObject({ added: expect.any(Number), removed: expect.any(Number) });
       // 3.6.1: no aperto da 1ª página os ids do diff podem ir para a continuação (view:diff), antes das pendências.
       expect(compare.data.stateDiff.findings.addedIds?.length ?? 0).toBeLessThanOrEqual(10);
@@ -96,6 +114,7 @@ describe("revisão: toda resposta inicial no teto de 8.000, em todos os perfis",
         }
         // 3.6.1 (item 4): as linhas "not-remeasured" (check que não rodou neste scan) também paginam.
         expect(seen).toBe(compare.data.stateDiff.findings.added + compare.data.stateDiff.findings.removed + compare.data.stateDiff.findings.evidenceChanged + (compare.data.stateDiff.findings.notRemeasured ?? 0));
+      }
       }
       for (const [name, args] of [
         ["check_component_structure", { url }],

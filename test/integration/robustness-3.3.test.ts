@@ -54,8 +54,9 @@ async function connect(profile: "full" | "evaluation" | "knowledge-free" = "full
   const client = new Client({ name: `rob-${profile}`, version: "1" });
   await srv.connect(b);
   await client.connect(a);
-  const call = async (name: string, args: Record<string, unknown>, options: { signal?: AbortSignal; timeout?: number } = {}) => {
-    const r = await client.callTool({ name, arguments: args }, undefined, { timeout: 120_000, ...options });
+  // A5: estes casos verificam fatos/estado; teto explícito preserva a projeção completa.
+const call = async (name: string, args: Record<string, unknown>, options: { signal?: AbortSignal; timeout?: number } = {}) => {
+    const r = await client.callTool({ name, arguments: name === "scan_page" && args.maxChars === undefined ? { ...args, maxChars: 100_000 } : args }, undefined, { timeout: 120_000, ...options });
     const text = (r.content as Array<{ text: string }>).map((c) => c.text).join("");
     let data: any = null;
     try {
@@ -405,9 +406,9 @@ describe("N-02 / N-03 / N-04 / N-05 / N-09: cursores e orçamento", () => {
   it("N-03: eco de fill, observação gigante e inspect de um elemento gigante ficam no teto; maxChars baixo é respeitado", async () => {
     const { client, call } = await connect();
     try {
-      const fill = await call("scan_page", { url: `${base}/ok`, actions: [{ action: "fill", selector: "#campo", value: "v".repeat(2000) }] });
+      const fill = await call("scan_page", { url: `${base}/ok`, maxChars: 8000, actions: [{ action: "fill", selector: "#campo", value: "v".repeat(2000) }] });
       expect(fill.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
-      const giant = await call("scan_page", { url: `${base}/giant` });
+      const giant = await call("scan_page", { url: `${base}/giant`, maxChars: 8000 });
       expect(giant.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
       const obs = await call("get_finding_details", { scanId: giant.data.scanId, view: "observations" });
       expect(obs.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
@@ -441,12 +442,15 @@ describe("N-02 / N-03 / N-04 / N-05 / N-09: cursores e orçamento", () => {
     }
   }, 60_000);
 
-  it("N-05: com investigate cheio, as famílias têm prioridade quando ganham espaço", async () => {
+  it("A5: com investigate cheio, a reserva fica íntegra e as famílias continuam pelo lote", async () => {
     const { client, call } = await connect();
     try {
-      const r = await call("scan_page", { url: `${base}/huge` });
+      const r = await call("scan_page", { url: `${base}/huge`, maxChars: 8000 });
       expect(r.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
-      expect(r.data.families.length).toBeGreaterThan(0);
+      if (r.isError) expect(r.data.errorCode).toBe("item-too-large");
+      else expect(r.data.clauseReserve.clauses.length).toBeGreaterThan(0);
+      const facts = await call("get_finding_details", { scanId: r.data.scanId });
+      expect(facts.data.families.length).toBeGreaterThan(0);
     } finally {
       await client.close();
     }

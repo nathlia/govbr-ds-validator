@@ -10,6 +10,7 @@ import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { resetKnowledgeLock } from "../../src/data/lock.js";
 import { pageInvestigateClauses } from "../../src/tools/pageChecklist.js";
+import { getRuleById } from "../../src/data/knowledge.js";
 import type { ToolTelemetryEvent } from "../../src/telemetry.js";
 
 let http: Server;
@@ -44,7 +45,7 @@ describe("A2 — globais no primeiro scan MCP", () => {
   it("entrega cláusulas globais mesmo sem componentes DS, com próximo passo válido", async () => {
     const client = await connect("evaluation");
     try {
-      const data = await scan(client, "/plain", 20000);
+      const data = await scan(client, "/plain", 100000);
       expect(data.investigate.page.stateRef).toBe(data.scanId);
       expect(data.investigate.page.clauses.map((c: { citeAs: string }) => c.citeAs)).toEqual(pageInvestigateClauses().clauses.map((c) => c.citeAs));
       expect(data.investigate.page.note).toMatch(/não são veredito nem pendingId/);
@@ -84,8 +85,52 @@ describe("A2 — globais no primeiro scan MCP", () => {
     try {
       const data = await scan(client, "/plain", 8000);
       expect(data).not.toHaveProperty("investigate");
+      expect(data).not.toHaveProperty("clauseReserve");
       expect(events).toHaveLength(1);
       expect(events[0].knowledgeLockAttempts).toBe(0);
     } finally { await client.close(); resetKnowledgeLock(); }
+  });
+});
+
+describe("A5 — reserva no MCP e recuperação do lote", () => {
+  it("serve cláusula forte literal, procedimento e contexto sem registrar pendingId", async () => {
+    const client = await connect("evaluation");
+    try {
+      const data = await scan(client, "/component", 8000);
+      const reserve = data.clauseReserve;
+      expect(reserve.targetChars).toBe(1600);
+      expect(reserve.contentChars).toBeGreaterThanOrEqual(reserve.targetChars);
+      expect(reserve.literalChars + reserve.contextChars + reserve.procedureChars).toBe(reserve.contentChars);
+      expect(reserve.clauses.length).toBeGreaterThan(0);
+      for (const clause of reserve.clauses) {
+        const rule = getRuleById(clause.citeAs)!;
+        expect(clause).toMatchObject({ text: rule.originalText, force: rule.force, conditions: rule.conditions, exceptions: rule.exceptions });
+        expect(clause.procedure).toMatchObject({ select: expect.any(String), measure: expect.any(String), expect: expect.any(String) });
+        expect(reserve.contexts[clause.context].text).toContain(rule.originalText);
+        expect(clause).not.toHaveProperty("pendingId");
+      }
+      const details = await client.callTool({ name: "get_finding_details", arguments: { scanId: data.scanId, maxChars: 100000 } });
+      expect(details.isError).toBeFalsy();
+      const full = JSON.parse((details.content as Array<{ text: string }>)[0].text);
+      expect(full.scanId).toBe(data.scanId);
+      expect(full.families.length).toBe(full.totalFamilies);
+      expect(full.totalFamilies).toBeGreaterThan(0);
+    } finally { await client.close(); }
+  });
+
+  it("recusa sob teto; retry demonstrado cabe com quota recalculada e fatos antigos recuperáveis", async () => {
+    const client = await connect("evaluation");
+    try {
+      const data = await scan(client, "/component", 1000, true);
+      expect(data.kind).toBe("error");
+      expect(data).not.toHaveProperty("clauseReserve");
+      expect(data.retry.maxChars).toBeGreaterThan(1000);
+      const retried = await scan(client, "/component", data.retry.maxChars);
+      expect(retried.clauseReserve.targetChars).toBe(Math.ceil(data.retry.maxChars * .2));
+      expect(retried.scanId).not.toBe(data.scanId);
+      const result = await client.callTool({ name: "get_finding_details", arguments: { scanId: data.scanId, maxChars: 100000 } });
+      expect(result.isError).toBeFalsy();
+      expect(JSON.parse((result.content as Array<{ text: string }>)[0].text).scanId).toBe(data.scanId);
+    } finally { await client.close(); }
   });
 });
