@@ -35,9 +35,10 @@ import {
 
 export type PageScanCheck = "tokens" | "structure" | "axe" | "page";
 
-/** 3.4.0 (B5): elementos de texto e separadores cuja cor o scan confere além de DEFAULT_SELECTOR. */
+/** Texto/separadores adicionais: cor (B5) e observação de tamanho autoral (A8), além de DEFAULT_SELECTOR. */
 export const TEXT_COLOR_SELECTOR =
   "p, span, label, li, dt, dd, h1, h2, h3, h4, h5, h6, small, strong, em, b, td, th, caption, legend, figcaption, blockquote, hr";
+const TEXT_FONT_SELECTOR = TEXT_COLOR_SELECTOR.replace(/, hr$/, "");
 export type PageScanAction = PageAction;
 
 export interface PageScanRequest {
@@ -408,7 +409,12 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     let elementsInspected = 0;
     let componentsFound: string[] = [];
     /** 3.6.1: localizadores que o check de tokens mediu neste scan (para não revisitar o que já foi medido). */
-    const tokenMeasured = new Set<string>();
+    const tokenMeasured = new Map<string, Set<TokenCheck>>();
+    const markTokensMeasured = (locator: string, measured: TokenCheck[]) => {
+      const kinds = tokenMeasured.get(locator) ?? new Set<TokenCheck>();
+      for (const kind of measured) kinds.add(kind);
+      tokenMeasured.set(locator, kinds);
+    };
 
     if (checks.includes("tokens") || checks.includes("structure")) {
       const properties = checks.includes("tokens") ? tokenProperties(activeTokenChecks) : [];
@@ -426,7 +432,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         // 3.4.4 (C3/C4/C5): internos de web component do DS, terceiros embutidos pelo DS e elementos não
         // renderizados não geram achado de estilo — viram observação com o motivo (ownership.ts).
         const tokenScope = partitionByOwnership(evidence.elements, true);
-        for (const element of tokenScope.page) tokenMeasured.add(element.locator);
+        for (const element of tokenScope.page) markTokensMeasured(element.locator, activeTokenChecks);
         rawFindings.push(
           ...checkTokenCompliance({ url: request.url }, tokenScope.page, getTokenRegistry(), activeTokenChecks)
         );
@@ -436,20 +442,24 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
         if (activeTokenChecks.includes("font")) {
           observations.push(...collectTokenObservations({ url: request.url }, tokenScope.page, getTokenRegistry()));
         }
-        // 3.4.0 (B5, V-09): texto autoral fora dos controles (`p`, `span`, títulos, células, `hr`) também
-        // tem a cor conferida — só a cor, só elementos exibidos, e com a mesma exigência de autoria (cor
-        // herdada ou da folha do DS não conta). Com seletores explícitos, os descendentes já entram (B8).
-        if (activeTokenChecks.includes("color") && normalized.selectors.length === 0) {
-          const text = await inspectPageComputedStyles(page, request.url, TEXT_COLOR_SELECTOR, ["backgroundColor", "color", "borderColor"]);
+        // A8: tamanho fora da escala em títulos/texto autoral é observação, nunca achado (D-32).
+        // Com seletores explícitos os descendentes já entram; não ampliar o escopo pedido.
+        if ((activeTokenChecks.includes("color") || activeTokenChecks.includes("font")) && normalized.selectors.length === 0) {
+          const color = activeTokenChecks.includes("color");
+          const font = activeTokenChecks.includes("font");
+          const properties: StyleProperty[] = [...(color ? ["backgroundColor", "color", "borderColor"] as StyleProperty[] : []), ...(font ? ["fontSize"] as StyleProperty[] : [])];
+          const text = await inspectPageComputedStyles(page, request.url, color ? TEXT_COLOR_SELECTOR : TEXT_FONT_SELECTOR, properties, { renderedText: font });
           const known = new Set(evidence.elements.map((element) => element.locator));
           const authoredText = text.elements.filter((element) => ownershipOf(element) === "page" && !known.has(element.locator));
           elementsInspected += authoredText.length;
-          for (const element of authoredText) tokenMeasured.add(element.locator);
-          rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
-          // 3.4.4 (revisão, L6): o texto fora da autoria da página (dentro de componente do DS, de terceiros ou
-          // oculto neste estado) não some em silêncio — vira observação com o motivo, como nos outros checks.
-          const outsideText = text.elements.filter((element) => ownershipOf(element) !== "page" && !known.has(element.locator));
-          observations.push(...demoteToObservations(checkTokenCompliance({ url: request.url }, outsideText, getTokenRegistry(), ["color"]), outsideText));
+          if (font) observations.push(...collectTokenObservations({ url: request.url }, authoredText.filter(element => element.tagName.toLowerCase() !== "hr" && element.content.hasRenderedText === true), getTokenRegistry()));
+          if (color) {
+            for (const element of authoredText) markTokensMeasured(element.locator, ["color"]);
+            rawFindings.push(...checkTokenCompliance({ url: request.url }, authoredText, getTokenRegistry(), ["color"]));
+            // 3.4.4 (revisão, L6): cor fora da autoria da página conserva motivo e norma como observação.
+            const outsideText = text.elements.filter((element) => ownershipOf(element) !== "page" && !known.has(element.locator));
+            observations.push(...demoteToObservations(checkTokenCompliance({ url: request.url }, outsideText, getTokenRegistry(), ["color"]), outsideText));
+          }
         }
       }
       if (checks.includes("structure")) {
@@ -473,7 +483,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const revisitFindings: Finding[] = [];
     if (revisit.length) {
       const covered = (r: (typeof revisit)[number]) =>
-        checks.includes("tokens") && activeTokenChecks.includes(TOKEN_CHECK_OF[r.checker]) && tokenMeasured.has(r.locator);
+        checks.includes("tokens") && activeTokenChecks.includes(TOKEN_CHECK_OF[r.checker]) && tokenMeasured.get(r.locator)?.has(TOKEN_CHECK_OF[r.checker]);
       const todo = revisit.filter((r) => !covered(r));
       const evidence = todo.length
         ? await inspectPageComputedStyles(page, request.url, [...new Set(todo.map((r) => r.locator))], ["backgroundColor", "color", "borderColor", "fontFamily", "fontSize", "borderRadius", "padding", "margin"])

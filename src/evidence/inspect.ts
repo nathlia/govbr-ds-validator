@@ -74,6 +74,8 @@ export interface InspectOptions {
    * abertos), até DESCENDANT_SCOPE_LIMIT. `scan_page{selectors}` usa: o escopo é a região, não só a raiz.
    */
   descendants?: boolean;
+  /** A8: texto renderizado para a passagem adicional de fonte; não muda o indicador legado. */
+  renderedText?: boolean;
 }
 
 /** Collect evidence from an already-loaded page so aggregate scans share one exact DOM state. */
@@ -101,7 +103,7 @@ export async function inspectPageComputedStyles(
   try {
   // 3.4.4 (revisão, L5): só host com tag de componente do DS (br-<componente do catálogo>) conta como DS.
   const dsHosts = isKnowledgeLocked() ? [] : Object.keys(getComponentSpecs().components).map((name) => `br-${name}`);
-  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts, dsFacts }) => {
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts, dsFacts, renderedText }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -463,6 +465,7 @@ export async function inspectPageComputedStyles(
           content: {
             textContent: text.slice(0, 100),
             hasVisibleText: text.length > 0,
+            ...(renderedText ? { hasRenderedText: el instanceof HTMLElement && el.innerText.trim().length > 0 } : {}),
             hasIconOnly,
             labelledbyText,
             descendantAlt: descendantAlt || null,
@@ -529,6 +532,7 @@ export async function inspectPageComputedStyles(
       dsHosts,
       dsFacts: !isKnowledgeLocked(),
       descendants: options.descendants === true,
+      renderedText: options.renderedText === true,
       descendantLimit: DESCENDANT_SCOPE_LIMIT,
     });
 

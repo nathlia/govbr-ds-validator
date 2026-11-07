@@ -60,6 +60,8 @@ export interface ElementEvidence {
   content: {
     textContent: string;
     hasVisibleText: boolean;
+    /** Opt-in A8: innerText, exclui descendentes ocultos; sem reclassificar hasVisibleText legado. */
+    hasRenderedText?: boolean;
     hasIconOnly: boolean;
     /**
      * Texto que `aria-labelledby` resolve: os ids procurados na MESMA árvore do elemento (documento
