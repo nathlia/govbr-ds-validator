@@ -383,7 +383,7 @@ describe("3.7.2 A4 — get_ds_rules com component aponta as outras cláusulas me
 describe("3.7.2 A5 — best-practice do axe traz a norma obrigatória do e-MAG como referência secundária", () => {
   const bp = (id: string, help = "e") => ({ rule: { id, source: "axe-core", description: "x" }, evidence: { observed: "o", expected: help, data: { bestPractice: true } } }) as unknown as Finding;
 
-  it("cláusulas fortes da recomendação ranqueadas contra o help do axe (até 2 acima do piso); sem casamento, só emag-N.N", () => {
+  it("cláusulas fortes da recomendação filtradas por tópico (até 2 acima do piso); sem casamento, só emag-N.N", () => {
     const cases = [
       ["empty-table-header", "3.10", "Table header text should not be empty"],
       ["page-has-heading-one", "1.3", "Page should contain a level-one heading"],
@@ -395,6 +395,7 @@ describe("3.7.2 A5 — best-practice do axe traz a norma obrigatória do e-MAG c
       const refs = bestPracticeReferences(bp(rule, help))!;
       expect(refs.at(-1)).toEqual({ id: `emag-${rec}` });
       const kb = refs.filter((r) => r.id.startsWith("govbr-"));
+      if (rule === "empty-table-header") expect(kb).toEqual([]);
       expect(kb.length).toBeLessThanOrEqual(2);
       if (kb.length) withClause += 1;
       for (const r of kb) {
@@ -449,7 +450,7 @@ describe("3.7.2 A5 — best-practice do axe traz a norma obrigatória do e-MAG c
       const scan = await call("scan_page", { url: `${base}/padaria/tabela`, checks: ["axe"], maxChars: 60_000 });
       const fam = (scan.data.families as Array<Record<string, any>>).find((f) => f.rule.id === "empty-table-header")!;
       expect(fam).toBeDefined();
-      expect(fam.rule.references).toEqual(expect.arrayContaining([{ id: "emag-3.10" }]));
+      expect(fam.rule.references).toEqual([{ id: "emag-3.10" }]);
     } finally {
       await client.close();
     }

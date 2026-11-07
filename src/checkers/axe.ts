@@ -13,6 +13,7 @@ import { findEmagRule } from "../data/load.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import { getKnowledgeBase, getRuleById } from "../data/knowledge.js";
 import { rankRules } from "../data/retrieval.js";
+import { referenceTopic, REFERENCE_TOPICS_VERSION } from "./referenceTopics.js";
 import { withPage } from "../evidence/browser.js";
 import { SHADOW_STEP } from "../evidence/inspect.js";
 import type { Page } from "playwright";
@@ -83,8 +84,9 @@ const BEST_PRACTICE_TO_EMAG: Record<string, string> = {
  * 3.7.2 (rastreio dev-371-b §2/§7): a família de uma regra só best-practice do axe (nenhum critério WCAG) vinha sem a força
  * do DS/e-MAG — o agente caía num critério WCAG que o juiz contestou. Agora ela traz, como referências SECUNDÁRIAS, o id da
  * recomendação e-MAG do mesmo assunto e as cláusulas obrigatórias (required/prohibited) dela que casam com o texto da regra
- * do axe (help): revisão MÉDIA 5 — as cláusulas fortes da recomendação são ranqueadas contra o help pelo motor de busca
- * (rankRules, o mesmo do get_ds_rules, com o piso dele); ficam até 2 acima do piso. Nenhuma acima do piso: só `emag-N.N`.
+ * do axe: 3.7.3/A7 filtra pelo tópico antes de ranquear, com consulta descritiva desse tópico e o motor léxico existente.
+ * Help desconhecido, tópico sem âncora literal ou nenhuma candidata acima do piso: só `emag-N.N`.
+ * A referência é candidata a ler, não prova de que a cláusula rege o fato ou de que seu predicado foi medido.
  * Só ids que a base tem (emagUnits). O achado continua sendo da regra do axe: a referência é a norma a ler antes de citar.
  */
 const referencesMemo = new Map<string, Array<{ id: string; force?: string }> | undefined>();
@@ -93,7 +95,7 @@ export function bestPracticeReferences(finding: Pick<Finding, "rule" | "evidence
   const rec = AXE_TO_EMAG[finding.rule.id] ?? BEST_PRACTICE_TO_EMAG[finding.rule.id];
   if (!rec) return undefined;
   const help = String(finding.evidence.expected ?? "");
-  const key = `${getKnowledgeBase().meta.knowledgeVersion}\u0001${finding.rule.id}\u0001${rec}\u0001${help}`;
+  const key = `${REFERENCE_TOPICS_VERSION}\u0001${getKnowledgeBase().meta.knowledgeVersion}\u0001${finding.rule.id}\u0001${rec}\u0001${help}`;
   if (referencesMemo.has(key)) return referencesMemo.get(key);
   let out: Array<{ id: string; force?: string }> | undefined;
   try {
@@ -101,7 +103,8 @@ export function bestPracticeReferences(finding: Pick<Finding, "rule" | "evidence
       .filter((c) => c.force === "required" || c.force === "prohibited")
       .map((c) => getRuleById(c.id))
       .filter((r): r is NonNullable<typeof r> => Boolean(r));
-    const ranked = strong.length && help.trim() ? rankRules({ text: help, component: null, pool: strong }).results.slice(0, 2) : [];
+    const topic = referenceTopic(finding.rule.id, help, strong);
+    const ranked = topic?.candidates.length ? rankRules({ text: topic.query, component: null, pool: topic.candidates }).results.slice(0, 2) : [];
     out = [...ranked.map((s) => ({ id: s.rule.id, force: s.rule.force })), { id: `emag-${rec}` }];
   } catch {
     out = undefined;
