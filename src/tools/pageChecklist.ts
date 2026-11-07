@@ -18,6 +18,21 @@ export function pageChecklistRules() {
       Number(oracleFullyMeasures(a.id)) - Number(oracleFullyMeasures(b.id)));
 }
 
+/** Cláusulas globais mensuráveis, sem decisão integral do oráculo; não são pendências registradas. */
+export function pageInvestigateClauses(max = 3) {
+  const rules = pageChecklistRules().filter((rule) => !oracleFullyMeasures(rule.id) && procedureOf(rule) !== null);
+  return {
+    total: rules.length,
+    clauses: rules.slice(0, max).map((rule) => {
+      const procedure = procedureOf(rule)!;
+      return {
+        citeAs: rule.id, text: short(plain(rule.originalText)), how: procedureLine(procedure),
+        ...(procedure.when ? { when: procedure.when } : {}),
+      };
+    }),
+  };
+}
+
 /** Resposta MCP paginada. Não registra pendências. */
 export function pageChecklist(cursor?: string) {
   const rules = pageChecklistRules();

@@ -151,7 +151,7 @@ import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
-import { pageChecklist } from "./tools/pageChecklist.js";
+import { pageChecklist, pageInvestigateClauses } from "./tools/pageChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
@@ -2060,7 +2060,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return undefined;
         })();
         const newComponents = new Set(previousScan ? (result.coverage.componentsFound ?? []).filter((c) => !(previousScan.components ?? []).includes(c)) : []);
-        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c), newComponents) : undefined;
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c), newComponents, pageInvestigateClauses()) : undefined;
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
@@ -2112,6 +2112,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           { firstScanPage: first },
         );
         markDeliveredTexts(response);
+        if (response.kind === "error") return fail(response as ContractError);
         return ok(response);
       }
     )
@@ -2206,12 +2207,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(units ? { units } : {}),
         absenceNote: ABSENCE_NOTE_KNOWLEDGE_FREE,
       };
-      return ok(
-        assembleScan(head, null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
+      const response = assembleScan(head, null, scanId, maxChars ?? SCAN_DEFAULT_MAX_CHARS, (budget) =>
           batchView(result.findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }),
           { firstScanPage: !cursor },
-        ),
-      );
+        );
+      return response.kind === "error" ? fail(response as ContractError) : ok(response);
     })
   );
 

@@ -169,8 +169,18 @@ export function investigateFor(
    * formas compactas, no aviso, na dica e no `next`), antes da ordem por obrigações sem medida.
    */
   newComponents: ReadonlySet<string> = new Set(),
+  globalClauses?: { total: number; clauses: Array<{ citeAs: string; text: string; how: string; when?: string }> },
 ) {
-  if (!componentsInDomOrder.length) return undefined;
+  const page = globalClauses ? {
+    stateRef: scanId,
+    note: "Cláusulas globais candidatas: confira aplicabilidade e meça no estado; não são veredito nem pendingId registrado.",
+    total: globalClauses.total,
+    clauses: globalClauses.clauses,
+    next: { tool: "get_page_rules", arguments: { view: "checklist" } },
+  } : undefined;
+  if (!componentsInDomOrder.length) return page ? {
+    page, items: [], more: null, next: page.next, doNotRepeat: MESSAGES["scan-no-repeat"],
+  } : undefined;
   const isNew = (c: string) => (newComponents.has(c) ? 1 : 0);
   const ranked = componentsInDomOrder
     .map((component, i) => ({ component, i, s: strong(component) }))
@@ -209,6 +219,7 @@ export function investigateFor(
   // chegava a todos — um orçamento maior mostrava MENOS componentes. Os de `more` levam a forma compacta deles.
   const moreClauses = Object.fromEntries(rest.filter((c) => compact.byComponent[c]).map((c) => [c, compact.byComponent[c]]));
   return {
+    ...(page ? { page } : {}),
     ...(Object.keys(compact.byComponent).length ? { [COMPACT_CLAUSES]: compact } : {}),
     note: "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
     ...(fresh.length ? { newInState: fresh, newNote: "newInState: componentes que não estavam no estado anterior da sessão — vêm primeiro." } : {}),
@@ -225,6 +236,28 @@ export function investigateFor(
 
 /** 3.7.2: os componentes novos no estado, levados às formas compactas do investigate (só quando há). */
 const newOf = (inv: { newInState?: unknown }) => (Array.isArray(inv.newInState) && inv.newInState.length ? { newInState: inv.newInState as string[] } : {});
+
+/** Leitura global tem continuação própria, mesmo quando o bloco de componentes encolhe. */
+const pageOf = (inv: object) => ("page" in inv ? { page: inv.page } : {});
+
+type GlobalClause = { citeAs: string; text?: string; how: string; when?: string };
+function investigatePageOne(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { page?: { clauses?: GlobalClause[] } } | undefined;
+  if (!inv?.page?.clauses || inv.page.clauses.length <= 1) return null;
+  return { ...r, investigate: { ...inv, page: { ...inv.page, clauses: inv.page.clauses.slice(0, 1) } } };
+}
+function investigatePagePointer(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { page?: { total: number; clauses?: GlobalClause[]; next: unknown } } | undefined;
+  if (!inv?.page?.clauses) return null;
+  return { ...r, investigate: { ...inv, page: { total: inv.page.total, deferred: true, next: inv.page.next } } };
+}
+
+/** O ponteiro textual mínimo cede os metadados antes de uma família de fatos. */
+function investigatePageTiny(r: Record<string, unknown>): Record<string, unknown> | null {
+  const inv = r.investigate as { page?: { next?: unknown } } | undefined;
+  if (!inv?.page || typeof inv.page.next === "string") return null;
+  return { ...r, investigate: { ...inv, page: { next: "get_page_rules(view:checklist)" } } };
+}
 
 // ── Observações (S-03) ──────────────────────────────────────────────────────────────────────
 
@@ -294,12 +327,12 @@ function investigateNames(r: Record<string, unknown>): Record<string, unknown> |
   const hint = compact ? nextHintFor(Object.keys(compact.byComponent)) : null;
   const next = inv.next && hint ? { ...inv.next, hint } : inv.next;
   // 3.7.0: da forma compacta (nomes + cláusulas, ou o aviso) para só os nomes.
-  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, ...newOf(inv as never), next } } : null;
+  if (inv.components) return (inv as { clauses?: unknown; investigateNote?: unknown }).clauses || (inv as { investigateNote?: unknown }).investigateNote ? { ...r, investigate: { components: inv.components, ...pageOf(inv), ...newOf(inv as never), next } } : null;
   const names = [
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
-  return { ...r, investigate: { components: names, ...newOf(inv as never), next } };
+  return { ...r, investigate: { components: names, ...pageOf(inv), ...newOf(inv as never), next } };
 }
 
 /** 3.7.1: o último degrau do investigate — o next sem a dica (fica o passo). */
@@ -339,6 +372,7 @@ function investigateCompact(perComponent: number, maxComponents = Infinity) {
       investigate: {
         [COMPACT_CLAUSES]: compact,
         components: names,
+        ...pageOf(inv),
         ...newOf(inv as never),
         clauses: byComponent,
         ...(compact.total > shown ? { clausesMore: compact.total - shown } : {}),
@@ -381,7 +415,7 @@ function investigateNudge(r: Record<string, unknown>): Record<string, unknown> |
     ...(inv.items ?? []).map((i) => (i.requiredUnmeasured !== undefined ? `${i.component}:${i.requiredUnmeasured}` : i.component)),
     ...(inv.more?.components ?? []),
   ];
-  return { ...r, investigate: { [COMPACT_CLAUSES]: compact, components: names, ...newOf(inv as never), investigateNote: note, next: inv.next } };
+  return { ...r, investigate: { [COMPACT_CLAUSES]: compact, components: names, ...pageOf(inv), ...newOf(inv as never), investigateNote: note, next: inv.next } };
 }
 
 type InvestigateItem = { component: string; clauses?: Array<{ citeAs: string; text?: string; how: string }>; clausesMore?: number };
@@ -458,6 +492,8 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
     // 3.5.0: os blocos novos cedem primeiro. 3.7.0: as cláusulas empurradas descem em degraus antes dos nomes.
     ["investigate.clauses → id + how", investigateClausesShort],
+    ["investigate.page → primeira cláusula", investigatePageOne],
+    ["investigate.page → checklist", investigatePagePointer],
     ["investigate → nomes + 2 cláusulas", investigateCompact(2)],
     ["investigate → nomes + 1 cláusula", investigateCompact(1)],
     ["investigate → nomes + aviso", investigateNudge],
@@ -833,6 +869,8 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // que tem continuação no ledger (observações, cobertura, estado, ids do diff, deduplicação) e ANTES das pendências desta
     // página; em degraus (letra → só id + procedimento → a 1ª por componente → nomes + next), nunca some e nunca tira família.
     ["investigate.clauses → id + how", onHead(investigateClausesShort)],
+    ["investigate.page → primeira cláusula", onHead(investigatePageOne)],
+    ["investigate.page → checklist", onHead(investigatePagePointer)],
     ["investigate → nomes + 2 cláusulas", onHead(investigateCompact(2))],
     ["investigate → nomes + 1 cláusula", onHead(investigateCompact(1))],
     // 3.7.0 (revisão da reexecução, lacuna A): no teto padrão a 1ª página está cheia de famílias — a cobertura e o estado (com
@@ -891,6 +929,7 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // 3.7.0 (decisão de 02/11): o aviso do investigate (componentes cujas cláusulas não couberam + a chamada) fica até as
     // pendências estarem no piso de ids (nenhuma pendência some) — só então nomes + next, o último degrau antes dos acréscimos.
     ["investigate → nomes", onHead(investigateNames)],
+    ["investigate → chamada global curta", onHead(investigatePageTiny)],
     // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
     // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
     // 3.6.5 (reexecução das chamadas reais): os acréscimos da 3.6.5 nunca tiram família da 1ª página — encolhem por último,
@@ -1038,7 +1077,13 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
   const spIds = (sp: { ids?: string[]; items?: Array<{ code: string; ids: string[] }> }) => sp.ids ?? (sp.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
   return [
     (x) => (x.compacted ? { ...x, compacted: (x.compacted as unknown[]).length } : x),
-    (x) => (x.investigate ? { ...x, investigate: { next: (x.investigate as { next?: unknown }).next } } : x),
+    (x) => {
+      const inv = x.investigate as { next?: unknown; page?: { total?: number; next: unknown } } | undefined;
+      return inv ? { ...x, investigate: {
+        ...(inv.page ? { page: typeof inv.page.next === "string" ? inv.page : { total: inv.page.total, deferred: true, next: inv.page.next } } : {}),
+        next: inv.next,
+      } } : x;
+    },
     (x) => (x.stateDiff ? { ...x, stateDiff: { previousScanId: (x.stateDiff as { previousScanId?: unknown }).previousScanId, stateChanged: (x.stateDiff as { stateChanged?: unknown }).stateChanged, next: { tool: "get_finding_details", arguments: { scanId, view: "diff" } } } } : x),
     (x) => (x.summary ? { ...x, summary: { total: (x.summary as { total?: unknown }).total } } : x),
     (x) => (x.coverage ? { ...x, coverage: { checks: (x.coverage as { checks?: unknown }).checks, full } } : x),
@@ -1082,6 +1127,26 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
         complete: x.complete, partial: x.partial, nextCursor: x.nextCursor, next: x.next, absenceNote: x.absenceNote,
         compacted: "tudo (inteiro no ledger: get_finding_details)",
       };
+    },
+    // Teto de 1k: evite metadados repetidos, sem perder janela, limites ou continuações.
+    (x) => {
+      const { status: _s, ...rest } = x;
+      const inv = x.investigate as { next?: unknown; page?: { next?: unknown } } | undefined;
+      const duplicateNext = inv?.page && (JSON.stringify(inv.next) === JSON.stringify(inv.page.next) ||
+        (typeof inv.page.next === "string" && (inv.next as { tool?: string } | undefined)?.tool === "get_page_rules"));
+      const next = inv?.next as { hint?: string } | undefined;
+      const { hint: _h, ...nextWithoutHint } = next ?? {};
+      return {
+        ...rest,
+        ...(inv ? { investigate: { ...inv, ...(duplicateNext ? { next: undefined } : { next: nextWithoutHint }) } } : {}),
+        absenceNote: "Zero achados não é conformidade.",
+        compacted: "ledger: get_finding_details(scanId)",
+      };
+    },
+    // O identificador do lote recupera fingerprint; totais e cursor conservam seu contrato.
+    (x) => {
+      const { stateFingerprint: _f, ...rest } = x;
+      return { ...rest, ...(x.units ? { units: { rule: "um achado por rota/estado" } } : {}) };
     },
   ];
 }
@@ -1206,8 +1271,19 @@ function assembleFirstScanPage(
     if (textSize(out) <= maxChars) break;
     out = f(out);
   }
-  // Nem o envelope mínimo cabe (teto muito baixo para o que o scan precisa dizer): devolvido assim mesmo, e dito.
-  if (textSize(out) > maxChars) out = { ...out, exceedsMaxChars: { maxChars, note: "O mínimo desta resposta não cabe no orçamento pedido; peça maxChars maior." } };
+  // O piso não é uma licença para estourar o teto ou apagar pendências de outras rotas.
+  // O lote continua no ledger. A sessão não tem paginação exata: a nova receita é nova observação.
+  if (textSize(out) > maxChars) {
+    const inv = out.investigate as { page?: { next?: string | { tool: string; arguments: Record<string, unknown> } }; next?: { tool: string; arguments: Record<string, unknown> } } | undefined;
+    const next = [step("request-detail", "lote preservado", "get_finding_details", { scanId, maxChars: 8000 })];
+    if (inv?.page?.next) next.push(step("request-detail", "globais", "get_page_rules", { view: "checklist" }));
+    if (inv?.next && inv.next.tool !== "get_page_rules") next.push(step("request-detail", "componente", inv.next.tool, inv.next.arguments));
+    return {
+      contract: CONTRACT, kind: "error", errorCode: "item-too-large", field: "maxChars", scanId,
+      error: "O piso do scan não cabe. O lote foi preservado; pendências da sessão não foram entregues. Para revê-las, refaça a receita com maxChars ≥ 8000 (nova observação).",
+      next,
+    };
+  }
   return out;
 }
 

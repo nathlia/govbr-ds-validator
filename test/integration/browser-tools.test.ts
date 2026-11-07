@@ -310,6 +310,7 @@ describe("scan_page aggregate fast path", () => {
 
   it("reproduces interactions before fingerprinting instead of assuming browser state is shared", async () => {
     const baseArgs = {
+      maxChars: 20000, // Este teste inspeciona o diff completo, sem a compactação do cabeçalho.
       view: "findings",
       url: baseUrl,
       selectors: ["#state-toggle"],

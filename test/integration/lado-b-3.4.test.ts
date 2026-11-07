@@ -167,7 +167,7 @@ describe("B7 — ação navigate e HTTP do estado não alcançado", () => {
     expect(direto.data.status).toBe("state-not-reached");
     expect(direto.data.limitation.httpStatus).toBe(404);
     expect(direto.data.limitation.detail).toContain("HTTP 404");
-    const nav = await call("scan_page", { url: `${base}/app`, actions: [{ action: "navigate", path: "/app/lista" }], arrival: { visible: "table", path: "/app/lista" } });
+    const nav = await call("scan_page", { url: `${base}/app`, maxChars: 20000, actions: [{ action: "navigate", path: "/app/lista" }], arrival: { visible: "table", path: "/app/lista" } });
     expect(nav.data.status).toBe("scanned");
     expect(nav.data.coverage.actionsApplied).toEqual([{ action: "navigate", path: "/app/lista" }]);
     await client.close();

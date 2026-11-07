@@ -359,7 +359,16 @@ describe("N-02 / N-03 / N-04 / N-05 / N-09: cursores e orçamento", () => {
     const { client, call } = await connect();
     try {
       for (const opts of [{ memberLimit: 500 }, { maxChars: 1_000 }]) {
-        const scan = await call("scan_page", { url: `${base}/huge`, checks: ["tokens"], ...opts });
+        let scan = await call("scan_page", { url: `${base}/huge`, checks: ["tokens"], ...opts });
+        // Um piso indivisível recusa dentro do teto; o lote continua recuperável sem novo scan.
+        if (scan.isError) {
+          expect(opts.maxChars).toBe(1000);
+          expect(scan.text.length).toBeLessThanOrEqual(1000);
+          expect(scan.data).toMatchObject({ errorCode: "item-too-large", field: "maxChars", scanId: expect.any(String) });
+          const next = scan.data.next.find((n: { tool: string }) => n.tool === "get_finding_details");
+          scan = await call(next.tool, next.arguments);
+          expect(scan.isError).toBeFalsy();
+        }
         const scanId = scan.data.scanId;
         const total = scan.data.totalFindings ?? scan.data.summary.total;
         // Um único cursor coerente: o de partial é o do topo, e o que não veio não conta como devolvido.

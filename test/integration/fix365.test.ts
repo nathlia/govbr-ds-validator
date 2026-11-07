@@ -392,13 +392,14 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
         expect(i.pendingId).toBeDefined();
       }
       // o próximo scan devolve as cláusulas no sub-bloco checklist, por componente (sem a cláusula da 1ª como se fosse de todas)
-      const next = await call("scan_page", { url: `${base}/oficina/aviso`, checks: ["axe"] });
+      // Inspeção da forma completa do checklist; compactação é exercitada no teste de orçamento abaixo.
+      const next = await call("scan_page", { url: `${base}/oficina/aviso`, checks: ["axe"], maxChars: 20000 });
       const block = next.data.sessionPending.checklist as { count: number; components: Array<Record<string, any>> };
       expect(block.count).toBe(pending.length);
       const message = block.components.find((c) => c.component === "message");
       expect(message).toMatchObject({ count: pending.length });
       expect(JSON.stringify(next.data.sessionPending)).not.toMatch(/"rule"/);
-      expect(next.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+      expect(next.text.length).toBeLessThanOrEqual(20000);
       // pendingResolved fecha uma; verify_finding citando a cláusula fecha outra
       const [a, b] = pending;
       const resolved = await call("scan_page", { url: `${base}/oficina/aviso`, checks: ["axe"], pendingResolved: [{ id: a.pendingId, status: "conforme", reason: "medido na página" }] });
@@ -436,7 +437,7 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
       // 3.6.6 (revisão: o teste passava com zero pendingId): a pendência registrada é a que a página mostrou com id
       const shown1 = served1.filter((i) => i.pendingId);
       expect(shown1.length, "pendingId à vista na 1ª página").toBeGreaterThan(0);
-      const after1 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"] });
+      const after1 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"], maxChars: 20000 });
       expect(after1.data.sessionPending.checklist.count).toBe(served1.length);
       expect(after1.data.sessionPending.checklist.count).toBe(shown1.length);
       const p2 = await call("get_component_spec", { component: "tab", view: "checklist", cursor: p1.data.nextCursor });
@@ -444,7 +445,7 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
       expect(served2.length).toBeGreaterThan(0);
       const shown2 = served2.filter((i) => i.pendingId);
       expect(shown2.length, "pendingId à vista na 2ª página").toBeGreaterThan(0);
-      const after2 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"] });
+      const after2 = await call("scan_page", { url: `${base}/oficina/abas`, checks: ["axe"], maxChars: 20000 });
       expect(after2.data.sessionPending.checklist.count).toBe(served1.length + served2.length);
       expect(after2.data.sessionPending.checklist.count).toBe(shown1.length + shown2.length);
     } finally {

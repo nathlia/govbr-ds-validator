@@ -30,6 +30,9 @@ candidatas. Atribuir estado a cada cláusula no relatório continua sendo tarefa
 do agente. Cláusulas globais inline no `investigate`/`next` ficam para a fatia
 seguinte; esta entrega não encerra A2 nem a versão 3.7.3.
 
+Continuação na 3.7.3-pre.2: [cláusulas globais no scan](nat111-a2-inline-2026-11-06.md).
+O relato e os números abaixo continuam sendo evidência da pre.1.
+
 ## Verificação
 
 Seis testes unitários e quatro MCP: união exata sem duplicata, e-MAG incluído,

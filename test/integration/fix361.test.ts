@@ -257,10 +257,19 @@ describe("3.6.1 itens 3 e 4 — elemento antes oculto e o diff sem falso 'removi
         detail: "full",
       });
       expect(open.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
-      expect(open.data.revisited.items[0].locator).toContain("divisor");
-      const ids = open.data.revisited.items[0].now;
-      expect(Array.isArray(ids)).toBe(true);
-      const f = (open.data.findings as Array<Record<string, any>>).find((x) => x.id === ids[0])!;
+      // O bloco pode ceder espaço às famílias; a medida permanece recuperável pelo lote.
+      let f: Record<string, any>;
+      if (open.data.revisited.items) {
+        expect(open.data.revisited.items[0].locator).toContain("divisor");
+        const ids = open.data.revisited.items[0].now;
+        expect(Array.isArray(ids)).toBe(true);
+        f = (open.data.findings as Array<Record<string, any>>).find((x) => x.id === ids[0])!;
+      } else {
+        expect(open.data.revisited.count).toBeGreaterThan(0);
+        const details = await call("get_finding_details", { scanId: open.data.scanId, view: "findings", detail: "full", maxChars: 20000 });
+        expect(details.isError).toBeFalsy();
+        f = details.data.findings.find((x: Record<string, any>) => x.element.locator.includes("divisor"));
+      }
       expect(f.rule.checker).toBe("ds-token-color");
       expect(open.data.checksRun.omittedNote).toMatch(/Omitido ≠ conforme/);
       // item 4: os achados de tokens/estrutura/página do 1º scan não "sumiram": não foram medidos de novo

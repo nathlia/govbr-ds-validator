@@ -480,8 +480,9 @@ describe("3.6.3 item 5 — a pendência de um elemento que reaparece em outra ro
           typeof i === "string" ? (i.includes(`:${code}`) ? [i.split(":")[0]] : []) : i.code === code && i.pendingId ? [i.pendingId] : [],
         );
       const pid = (data: Record<string, any>) => ids(data, "contrast-incomplete")[0];
-      const a = await call("scan_page", { url: `${base}/emprestimos`, checks: ["axe"] });
-      const b = await call("scan_page", { url: `${base}/reservas`, checks: ["axe"] });
+      // A identidade é conferida na forma completa; o orçamento padrão pode compactar items em ids.
+      const a = await call("scan_page", { url: `${base}/emprestimos`, checks: ["axe"], maxChars: 20000 });
+      const b = await call("scan_page", { url: `${base}/reservas`, checks: ["axe"], maxChars: 20000 });
       expect(pid(a.data)).toBeDefined();
       expect(pid(b.data)).toBe(pid(a.data));
       // o título é do documento: um id por rota
