@@ -134,6 +134,7 @@ export const textSize = (data: unknown) => JSON.stringify(data).length;
 /** Códigos de erro (§6) e os acrescentados pela 3.0.0 para os erros que já existiam. */
 export type ErrorCode =
   | "invalid-combination"
+  | "item-too-large"
   | "empty-context"
   | "unknown-component"
   | "unknown-id"

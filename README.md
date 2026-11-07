@@ -83,6 +83,15 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.3-pre.1 — checklist global/página (NAT-111, A2)
+
+`get_page_rules {view:"checklist"}` lista as 415 cláusulas globais obrigatórias/proibidas não-título,
+incluindo e-MAG, por mensurabilidade e cobertura parcial explícita. Continue pelo cursor publicado;
+cada resposta cabe em 8k. A lista não decide aplicabilidade nem registra pendência de sessão.
+Índice/categorias anteriores preservados; knowledge-free continua sem essa ferramenta e com o
+mesmo contrato. Ver [contrato e verificações](docs/nat111-a2-checklist-global-2026-11-06.md).
+O inline global no `investigate`/`next` ainda não faz parte desta fatia.
+
 ## 3.7.3-pre — emenda-2 da base: unidades de especificação (D-167)
 
 Integração da emenda-2 autorizada pela autora na NAT-115 ("ampliar"). O extrator mecânico torna citáveis tabelas de

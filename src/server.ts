@@ -151,6 +151,7 @@ import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
+import { pageChecklist } from "./tools/pageChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
 import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
 import { verificationEnvelope } from "./responses/verify.js";
@@ -1362,8 +1363,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
     {
       title: "Diretrizes de página do gov.br DS",
       description:
-        "Consulta diretrizes de página por categoria. Sem categoria, retorna o índice e as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order, ds-page-title: regiões obrigatórias do Template Base, salto para o conteúdo, o salto como primeiro a receber o foco e o título do documento), cada uma com a norma que o achado cita (citeAs), verificáveis pelo scan_page e pelo verify_finding.",
+        "Consulta diretrizes de página por categoria. view:checklist lista cláusulas globais obrigatórias/proibidas do DS e e-MAG por mensurabilidade, sem decidir aplicabilidade; continue pelo cursor. Sem categoria nem view, retorna o índice e as restrições de página (checks ds-page-header, ds-page-footer, ds-page-skip-link, ds-page-focus-order, ds-page-title: regiões obrigatórias do Template Base, salto para o conteúdo, o salto como primeiro a receber o foco e o título do documento), cada uma com a norma que o achado cita (citeAs), verificáveis pelo scan_page e pelo verify_finding.",
       inputSchema: strictInput("get_page_rules", {
+        view: z.enum(["checklist"]).optional().describe("Sem category: catálogo global paginado, não veredito nem pendência registrada"),
         category: z
           .enum([
             "page_structure",
@@ -1381,15 +1383,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
             "minimum_standard",
           ])
           .optional(),
-        cursor: z.string().max(40).optional().describe("Com category: continuação devolvida em page.cursor"),
+        cursor: z.string().max(40).optional().describe("Com category ou view:checklist: continuação devolvida em page.cursor"),
       }),
       annotations: { readOnlyHint: true },
     },
-    instrumentTool(telemetry, "get_page_rules", async ({ category, cursor }) => {
+    instrumentTool(telemetry, "get_page_rules", async ({ category, cursor, view }) => {
+      if (view === "checklist") {
+        if (category !== undefined) return fail({
+          error: "view:checklist não pode ser combinado com category.", errorCode: "invalid-combination", field: "category",
+          next: [step("request-detail", "o checklist global", "get_page_rules", { view: "checklist" })],
+        });
+        return pageChecklist(cursor);
+      }
       const pageRules = getPageRules();
       // 3.3.0 (N-13): cursor sem category não continua nada — erro, não índice em silêncio.
       if (!category && cursor !== undefined) {
-        return fail({ error: "cursor só vale com category (continuação das seções de uma categoria).", errorCode: "invalid-combination", field: "cursor", next: [step("request-detail", "o índice de categorias", "get_page_rules", {})] });
+        return fail({ error: "cursor só vale com category ou view:checklist (continuação da consulta correspondente).", errorCode: "invalid-combination", field: "cursor", next: [step("request-detail", "o índice de categorias", "get_page_rules", {})] });
       }
       // 2.7.0: as restrições citáveis de página acompanham o índice e as categorias que as sustentam,
       // como as restrições estruturais acompanham get_component_spec (D-29).

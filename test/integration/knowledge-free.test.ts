@@ -52,7 +52,9 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b48
  * (gate da NAT-86). 2.17.0 (NAT-97) muda de propósito o get_ds_rules: descrição de query, novos
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
-const EVALUATION_TOOLS_SHA256_3_0_0 = "590c6f701d6717b8270e7378393895e86ae1a024cb506a1b08339f9a21077471";
+const EVALUATION_TOOLS_SHA256_3_0_0 = "6282fa971868378d10f0daf4b878fdca1230491f716ece3acd6863feb077aad6";
+// 3.7.3-pre.1 A2: get_page_rules ganha view:checklist; contrato da emenda-2 anterior:
+// 590c6f701d6717b8270e7378393895e86ae1a024cb506a1b08339f9a21077471. Knowledge-free inalterado.
 // A3: get_emag_rules ganha clauseCursor para continuar todas as cláusulas, sem corte nos primeiros dez ids.
 // Emenda-2 antes da A3: 036750a1ee5d1a630c6d29677cb147898535dfe1009882120c2f59264539785a.
 // 3.6.1–3.7.2: 3807ad9534e64155cc8d38bdcdfb16413ec195d482d119cedb16776420aa8063. 3.7.3 (D-167) muda de propósito: o
