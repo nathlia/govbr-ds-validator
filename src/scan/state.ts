@@ -15,6 +15,9 @@
  * documento, innerHTML de cada shadow root aberto (com o caminho do host), controles de formulário e
  * ARIA de estado em todas as árvores abertas (valor, checked, expanded, selected, open), o caminho do
  * foco e a lista de hosts de raiz fechada. Scanner, cache e portão usam igualdade EXATA deste hash.
+ * A8/pre.7 acrescenta nome/tipo/tamanho de arquivos em inputs preenchidos; inputs vazios conservam
+ * a representação anterior. Bytes e lastModified não são observados: a igualdade não prova conteúdo
+ * ou timestamps de arquivos. Builds anteriores não atestam esse novo observável.
  * A única normalização são duas renomeações consistentes de valores que um framework sorteia a cada
  * carga (STATE_IDENTITY_NORMALIZATIONS, abaixo); qualquer outra exige política nova, testada, que
  * preserve diferenças relevantes. Fingerprints de políticas diferentes nunca são iguais (política e
@@ -376,6 +379,8 @@ async function collectRawState(page: Page): Promise<RawState> {
         id: element.id || null,
         name: element.getAttribute("name"),
         value: "value" in control ? control.value : null,
+        // Metadados observáveis; timestamps do navegador e bytes não entram no hash.
+        ...(control.type === "file" && control.files?.length ? { files: Array.from(control.files, (file) => ({ name: file.name, mimeType: file.type, size: file.size })) } : {}),
         checked: "checked" in control ? control.checked : null,
         open: "open" in control ? Boolean(control.open) : null,
         expanded: element.getAttribute("aria-expanded"),

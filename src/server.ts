@@ -1938,7 +1938,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         components: z.array(z.string()).min(1).max(36).optional().describe("Componentes estruturais a validar"),
         actions: PageActionsSchema
           .optional()
-          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
+          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press/upload/drop com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
         arrival: ArrivalSchema
           .optional()
           .describe("Condições que mostram que o estado pedido foi alcançado (caminho, diálogo aberto, erro visível, controle expandido, foco, elemento visível); não satisfeitas, nada é varrido"),
@@ -2132,7 +2132,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         selectors: z.array(z.string()).min(1).max(50).optional().describe("Escopos CSS combinados na mesma carga"),
         actions: PageActionsSchema
           .optional()
-          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
+          .describe("Ações reproduzidas nesta mesma página antes do fingerprint e da varredura. click/fill/press/upload/drop com seletor exigem exatamente um elemento: zero ou mais de um interrompem a receita e o estado fica não alcançado"),
         arrival: ArrivalSchema
           .optional()
           .describe("Condições que mostram que o estado pedido foi alcançado (caminho, diálogo aberto, erro visível, controle expandido, foco, elemento visível); não satisfeitas, nada é varrido"),

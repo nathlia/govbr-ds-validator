@@ -4,7 +4,7 @@
  *
  * 2.10.0 (NAT-82): a reprodução deixa de escolher em silêncio. Até a 2.9.0 cada passo agia sobre
  * `locator(...).first()`: um seletor com dois alvos agia no primeiro e o resultado parecia o estado
- * pedido. Agora um passo com alvo singular (click, fill, press com seletor) exige exatamente um
+ * pedido. Agora um passo com alvo singular (click, fill, press com seletor; A8: upload/drop) exige exatamente um
  * elemento; zero ou mais de um interrompem a receita com um motivo tipado, e quem chamou recebe o
  * passo, a cardinalidade e o motivo. Uma espera por seletor é condição de chegada, não alvo: basta
  * um elemento visível, e a cardinalidade é registrada.
@@ -15,10 +15,28 @@ import type { Page } from "playwright";
 /** Caminho da mesma origem: uma barra inicial (não duas), sem barra invertida nem espaço. */
 const SAME_ORIGIN_PATH = /^\/(?![/\\])[^\\\s]*$/;
 
+export const SYNTHETIC_FILE_MAX_BYTES = 1_048_576;
+export const RECIPE_FILE_BUDGET_BYTES = 5 * SYNTHETIC_FILE_MAX_BYTES;
+/** Conteúdo determinístico de zeros; nunca um caminho ou arquivo do computador. */
+export const SyntheticFileSchema = z.object({
+  name: z.string().min(1).max(120).regex(/^[^/\\:\x00-\x1f\x7f\u2028\u2029]+(?![\s\S])/).refine((name) => name.trim().length > 0 && name !== "." && name !== "..", "nome simples de arquivo"),
+  mimeType: z.string().min(1).max(100).regex(/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+(?![\s\S])/),
+  size: z.number().int().min(0).max(SYNTHETIC_FILE_MAX_BYTES),
+}).strict();
+export type SyntheticFile = z.infer<typeof SyntheticFileSchema>;
+
 export const PageActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("click"), selector: z.string() }),
   z.object({ action: z.literal("fill"), selector: z.string(), value: z.string().max(2_000) }),
   z.object({ action: z.literal("press"), key: z.string(), selector: z.string().optional() }),
+  z.object({
+    action: z.literal("upload"), selector: z.string().min(1),
+    files: z.array(SyntheticFileSchema).max(5).describe("Arquivos sintéticos de zeros; [] limpa input file. Não lê arquivos locais."),
+  }).strict(),
+  z.object({
+    action: z.literal("drop"), selector: z.string().min(1),
+    files: z.array(SyntheticFileSchema).min(1).max(5).describe("dragenter/dragover/drop sintéticos com DataTransfer. Não prova aceitação; declare arrival."),
+  }).strict(),
   z.object({
     action: z.literal("wait"),
     selector: z.string().optional(),
@@ -51,6 +69,8 @@ export const PageActionsSchema = z
         message: `a soma das esperas fixas (wait.ms) é ${total} ms, acima do orçamento de ${RECIPE_WAIT_BUDGET_MS} ms por receita; use wait com selector (espera pela condição) ou menos esperas`,
       });
     }
+    const bytes = actions.reduce((sum, a) => sum + ("files" in a ? a.files.reduce((n, file) => n + file.size, 0) : 0), 0);
+    if (bytes > RECIPE_FILE_BUDGET_BYTES) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `arquivos sintéticos excedem ${RECIPE_FILE_BUDGET_BYTES} bytes por receita` });
   });
 
 export type PageAction = z.infer<typeof PageActionSchema>;
@@ -90,6 +110,10 @@ export interface ReplayStep {
   /** 3.4.0: caminho do navigate. */
   path?: string;
   ms?: number;
+  files?: SyntheticFile[];
+  /** Aplicar evento não atesta que o aplicativo aceitou o arquivo. */
+  method?: "set-input-files" | "synthetic-drag-events";
+  limitation?: string;
   /** Elementos que o seletor resolveu no momento do passo (null quando o passo não tem seletor). */
   matched: number | null;
 }
@@ -155,6 +179,8 @@ function stepOf(index: number, action: PageAction, matched: number | null): Repl
     ...(action.action === "fill" ? { value: action.value } : {}),
     ...(action.action === "wait" && action.ms !== undefined ? { ms: action.ms } : {}),
     ...(action.action === "navigate" ? { path: action.path } : {}),
+    ...("files" in action ? { files: action.files.map((file) => ({ ...file })), method: action.action === "upload" ? "set-input-files" as const : "synthetic-drag-events" as const } : {}),
+    ...("files" in action ? { limitation: "Arquivos sintéticos de zeros; aplicação do passo não prova aceitação. Declare arrival. Bytes não validam o formato MIME." + (action.action === "upload" ? " Timestamp do upload não é determinístico." : " Eventos sem gesto físico/isTrusted; lastModified=0.") } : {}),
     matched,
   };
 }
@@ -295,6 +321,24 @@ export async function applyActions(page: Page, actions: PageAction[], observe?: 
     try {
       if (action.action === "click") await target.click({ timeout: ACTION_TIMEOUT_MS });
       else if (action.action === "fill") await target.fill(action.value, { timeout: ACTION_TIMEOUT_MS });
+      else if (action.action === "upload") {
+        await target.setInputFiles(action.files.map((file) => ({ name: file.name, mimeType: file.mimeType, buffer: Buffer.alloc(file.size) })), { timeout: ACTION_TIMEOUT_MS });
+      } else if (action.action === "drop") {
+        // Eventos explícitos; não simula gesto físico, isTrusted nem aceitação pela página.
+        const transfer = await page.evaluateHandle((files) => {
+          const transfer = new DataTransfer();
+          for (const file of files) transfer.items.add(new File([new Uint8Array(file.size)], file.name, { type: file.mimeType, lastModified: 0 }));
+          return transfer;
+        }, action.files);
+        try {
+          for (const type of ["dragenter", "dragover", "drop"]) {
+            // Re-resolve estritamente em cada evento; um handler pode trocar o DOM.
+            await target.dispatchEvent(type, { bubbles: true, cancelable: true, composed: true, dataTransfer: transfer }, { timeout: ACTION_TIMEOUT_MS });
+          }
+        } finally {
+          await transfer.dispose().catch(() => undefined);
+        }
+      }
       else await target.press(action.key, { timeout: ACTION_TIMEOUT_MS });
     } catch (error) {
       const now = strictModeCount(error);

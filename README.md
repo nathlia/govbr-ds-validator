@@ -1198,8 +1198,22 @@ state SHA-256 plus normalized scope. A changed DOM, route, viewport, focus, cont
 or check set cannot reuse an earlier scan. The MCP process is fresh per battery run, so evidence
 does not cross experimental executions.
 Interactive states must be reproduced through `scan_page.actions`; the validator cannot inherit the
-state of another MCP server's browser. Supported actions are bounded click, fill, key press and wait;
-since 2.10.0 a targeted step needs exactly one element (see *Replayable states* below).
+state of another MCP server's browser. Supported actions are bounded click, fill, key press, wait,
+same-origin SPA navigation, and synthetic file `upload`/`drop`.
+Both file actions take `selector` and `files: [{name, mimeType, size}]`. Names are simple (no path),
+MIME types are lowercase ASCII, and contents are zero bytes generated in memory. Limits are five
+files per action, 1 MiB per file and 5 MiB per recipe. `upload` targets an input file; `files:[]`
+clears it. `drop` dispatches untrusted dragenter/dragover/drop with DataTransfer, re-resolving the
+unique locator per event. It does not simulate a physical gesture or prove application acceptance;
+declare `arrival`. Neither action reads local files or produces a valid file format merely from
+its MIME type. Upload timestamps are browser-generated; drop uses lastModified=0. Replay records
+metadata, method and limits. Fingerprints add name/type/size of populated file inputs, excluding
+bytes and timestamps; empty input representation stays unchanged. Existing campaign locks stay frozen.
+Since 2.10.0 a targeted step needs exactly one element (see *Replayable states* below).
+In pre.7 the shared file schema adds 2,944 serialized `tools/list` characters to each profile:
+evaluation 26,883→29,827, knowledge-free 15,490→18,434 and full 36,534→39,478.
+The evaluation surface gate is explicitly 31,000 characters and 77% of full (measured 75.55%).
+This is schema cost, not measured agent usage; D-181 records the change and new contract hashes.
 
 **Gate + report**:
 - `verify_finding (finding, live?, actions?, stateFingerprint?, arrival?, scanId?)` — separate checks (rule exists · applicable · evidence consistent · violation verified); `confirmed` only when a predicate verified the violation on every asserted element in the reproduced state (see *Verification gate* below)

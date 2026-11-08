@@ -19,7 +19,7 @@ import { contrastPending, notJudgedFor, type NotJudgedItem } from "./notJudged.j
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
-import { applyActions, type Arrival, type PageAction, type ReplayObserver, type ReplayResult } from "./actions.js";
+import { applyActions, type Arrival, type PageAction, type ReplayObserver, type ReplayResult, type SyntheticFile } from "./actions.js";
 import {
   oracleViewport,
   STATE_IDENTITY_NORMALIZATIONS,
@@ -125,7 +125,7 @@ export interface PageScanResult {
     /** Ausente no perfil knowledge-free (2.14.0). */
     componentsFound?: string[];
     axe?: { engine: { name: string; version: string }; passes: number; incomplete: number; incompleteRules?: Array<{ rule: string; nodes: number; example: string | null; help?: string }> };
-    actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string; path?: string }>;
+    actionsApplied: Array<{ action: PageScanAction["action"]; selector?: string; key?: string; path?: string; files?: SyntheticFile[]; method?: "set-input-files" | "synthetic-drag-events" }>;
   };
   deduplication: {
     input: number;
@@ -632,6 +632,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           ...("selector" in action && action.selector ? { selector: action.selector } : {}),
           ...(action.action === "navigate" ? { path: action.path } : {}),
           ...(action.action === "press" ? { key: action.key } : {}),
+          ...("files" in action ? { files: action.files.map((file) => ({ ...file })), method: action.action === "upload" ? "set-input-files" as const : "synthetic-drag-events" as const } : {}),
         })),
         ...(axe ? { axe } : {}),
       },
@@ -694,6 +695,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
           ...("selector" in action && action.selector ? { selector: action.selector } : {}),
           ...(action.action === "navigate" ? { path: action.path } : {}),
           ...(action.action === "press" ? { key: action.key } : {}),
+          ...("files" in action ? { files: action.files.map((file) => ({ ...file })), method: action.action === "upload" ? "set-input-files" as const : "synthetic-drag-events" as const } : {}),
         })),
         axe: { engine: result.engine, passes: result.passeCount, incomplete: result.incompleteCount, ...(result.incompleteRules.length ? { incompleteRules: result.incompleteRules } : {}) },
       },

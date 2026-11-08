@@ -37,7 +37,9 @@ import type { ToolTelemetryEvent } from "../../src/telemetry.js";
  * sha256 do `tools/list` do perfil, fixado (plano §5.3). O runner confere o mesmo valor na ponte.
  * Mudou de propósito? Atualize aqui E declare a mudança: é diferença de tratamento do braço.
  */
-const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b4865868d569893997bb48bd";
+// A8/pre.7: upload/drop de arquivos sintéticos no esquema compartilhado scan/verify.
+// Contrato anterior pre.6: c51bf1a3fc1bfc2d333c589656d48106418c8bf0b4865868d569893997bb48bd.
+const KNOWLEDGE_FREE_TOOLS_SHA256 = "5b9c59aaa490f5de2a4a497eda8a2e3dbedd25b2a8288fed8eb049f7233d40dc";
 // 3.7.3 A6: get_finding_details aceita observations (pendências do axe do próprio lote).
 // 3.4.0–3.7.2: f358152ab77b8b6930687c1b12206f3821170600d52c0fda0a3dde8d0774bf44.
 // 3.3.0: 8bdb5e35ed3346a91b227b45034d64c849f1d21baeb6d5affc995a4ea02c7dee. 3.4.0 (B7) muda de propósito: a ação
@@ -53,7 +55,8 @@ const KNOWLEDGE_FREE_TOOLS_SHA256 = "c51bf1a3fc1bfc2d333c589656d48106418c8bf0b48
  * parâmetros match e vocabulary. Campanhas novas precisam fixar este valor.
  */
 // A5: maxChars descreve a reserva de leitura contextual. Contrato anterior: 6282fa97….
-const EVALUATION_TOOLS_SHA256_3_0_0 = "00377b4b33a023560dbf4be3f2cbbf4eb777b004e334c0c6e3847f5f81a9a738";
+// A8/pre.7: ações sintéticas; pre.6 = 00377b4b33a023560dbf4be3f2cbbf4eb777b004e334c0c6e3847f5f81a9a738.
+const EVALUATION_TOOLS_SHA256_3_0_0 = "04ae14378db09bd4cdef48841e3d1a9388b701e18279fe08a04267af3c74614c";
 // 3.7.3-pre.1 A2: get_page_rules ganha view:checklist; contrato da emenda-2 anterior:
 // 590c6f701d6717b8270e7378393895e86ae1a024cb506a1b08339f9a21077471. Knowledge-free inalterado.
 // A3: get_emag_rules ganha clauseCursor para continuar todas as cláusulas, sem corte nos primeiros dez ids.
