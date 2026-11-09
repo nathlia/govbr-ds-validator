@@ -83,6 +83,15 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.3 — versão da lista única 3.7.3 (NAT-111, D-184)
+
+Fecha a lista única de 04/11: a 3.7.2 mais a emenda-2 da base (D-167/D-174) e as pré-versões
+pre.1…pre.8 abaixo (A2 checklist global/página e globais no investigate, A3 cláusulas e-MAG e alcance
+parcial, A4 procedimentos com escopo literal, A5 reserva de leitura contextual, A6 observations no
+knowledge-free, A7 referências e-MAG por tópico, A8 fontes, upload/drop sintéticos e estado ARIA ×
+nativo). Nenhuma mudança de comportamento em relação à pre.8: só a versão. A1 (auto-recuperação das 74
+linhas normativas antigas) fica parcial e declarada.
+
 ## 3.7.3-pre.8 — estado ARIA × estado nativo (NAT-111, A8)
 
 O scan mede, no estado alcançado (inclusive depois de `actions`), se `aria-checked/selected/expanded/
