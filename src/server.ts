@@ -149,7 +149,7 @@ export function startupChecks(): Promise<void> {
 }
 import { getGuidance } from "./data/guidance.js";
 import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
-import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf } from "./scan/session.js";
+import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
 import { pageChecklist, pageInvestigateClauses } from "./tools/pageChecklist.js";
@@ -1826,7 +1826,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const e = entries[i];
       // 3.6.3 (revisão HIGH 1): resolvida NESTA rota (a mesma pendência pode seguir aberta noutra).
       const slot = slotOf(e, route);
-      return { ...item, pendingId: e.id, ...(slot?.status === "resolved" ? { resolved: slot.resolution?.status ?? slot.resolution?.by ?? true } : {}) };
+      return {
+        ...item,
+        pendingId: e.id,
+        ...(slot?.status === "resolved" ? { resolved: slot.resolution?.status ?? slot.resolution?.by ?? true } : {}),
+        // 3.7.4 (D2): verificada em parte nesta rota — quantos elementos já decididos e os que faltam.
+        ...(slot?.status === "open" && slot.decided?.length
+          ? (() => { const rest = slotRemaining(slot); return { decided: slot.decided!.length, remaining: rest.slice(0, 3).map((l) => clip(l, 120)), ...(rest.length > 3 ? { remainingMore: rest.length - 3 } : {}) }; })()
+          : {}),
+      };
     });
   };
 
@@ -1840,6 +1848,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
     for (const i of ((response.sessionPending as { items?: unknown[] } | undefined)?.items ?? [])) {
       const item = i as { code?: string; rule?: { text?: string } };
       if (item.code && item.rule?.text) session.markDelivered(item.code);
+    }
+  };
+
+  /** 3.7.4 (D1): os contextos da reserva que saíram com texto nesta resposta voltam, nos próximos scans, só pela referência. */
+  const markDeliveredContexts = (response: Record<string, unknown>, scanId: string) => {
+    if (response.kind === "error") return;
+    const contexts = (response.clauseReserve as { contexts?: Record<string, { text?: unknown; kind?: string; source?: { ranges?: Array<{ start: number; end: number }> } }> } | undefined)?.contexts;
+    for (const [key, ctx] of Object.entries(contexts ?? {})) {
+      if (typeof ctx.text !== "string") continue;
+      session.markContextDelivered(key, scanId, ctx.kind === "literal-window" ? (ctx.source?.ranges ?? []) : "full");
     }
   };
 
@@ -2112,9 +2130,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
           batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }, scanId),
           { firstScanPage: first, ...(hasNorms && first ? { clauseCandidates: reserveCandidates([
             ...(investigate?.items ?? []).map(i => i.component), ...(investigate?.more?.components ?? []),
-          ]) } : {}) },
+          ]), contextDelivered: (key: string, ranges?: Array<{ start: number; end: number }>) => session.contextDelivered(key, ranges) } : {}) },
         );
         markDeliveredTexts(response);
+        markDeliveredContexts(response, scanId);
         if (response.kind === "error") return fail(response as ContractError);
         return ok(response);
       }
@@ -2731,7 +2750,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
                 }
               : { needed: interaction.needed, steps: interaction.steps, text: interaction.text, stateSteps: [...recipeActions, ...interaction.steps], note: INTERACTION_NOTE };
       // 3.6.1 (D-155, item 1): verificar uma das normas de uma pendência, na rota dela, a resolve (qualquer veredito).
-      const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict, { live: verification.binding?.live === true, reached, actions: recipeActions.length });
+      const { resolved: pendingResolved, partial: pendingPartial } = session.resolveByVerifyDetailed(candidate, stored.verificationId, verification.verdict, { live: verification.binding?.live === true, reached, actions: recipeActions.length });
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
       // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
@@ -2746,6 +2765,17 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(stateWarning ? { stateWarning } : {}),
         ...(interactionBlock ? { interaction: interactionBlock } : {}),
         ...(pendingResolved.length ? { pendingResolved } : {}),
+        // 3.7.4 (D2): pendência de N elementos com só parte decidida — continua aberta (mesmo pendingId) com os que faltam.
+        ...(pendingPartial.length
+          ? { pendingPartial: pendingPartial.slice(0, 5).map((p) => ({
+                id: p.id,
+                decided: p.decided.slice(-3).map((l) => clip(l, 120)),
+                decidedCount: p.decided.length,
+                remaining: p.remaining.slice(0, 5).map((l) => clip(l, 120)),
+                remainingCount: p.remaining.length,
+              })),
+              pendingPartialNote: "Este verify decidiu só os elementos em decided; a pendência segue aberta até cada elemento em remaining ser verificado (ou declarado em pendingResolved)." }
+          : {}),
         // 3.6.3 (revisão HIGH 1): a mesma pendência em outras rotas segue aberta até ser medida lá.
         ...(pendingResolved.length && session.stillOpen(pendingResolved).length ? { pendingStillOpen: session.stillOpen(pendingResolved) } : {}),
       });

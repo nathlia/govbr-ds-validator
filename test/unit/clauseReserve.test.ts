@@ -30,12 +30,19 @@ describe("A5 reserva íntegra de leitura contextual", () => {
     expect(a.literalChars + a.contextChars + a.procedureChars).toBe(a.contentChars);
   });
 
-  it("mantém prefixo, unidade grande e contexto completo; nunca troca por outra mais barata", () => {
+  it("mantém prefixo e unidade grande; contexto acima da quota só por referência (nunca cortado); nunca troca por outra mais barata", () => {
     const first = candidate("C1", "obrigação", "escopo ".repeat(2000));
     const second = candidate("C2", "outra norma");
     const selected = selectReserve([first, second], 1000).block;
-    expect(selected.clauses.map(c => c.citeAs)).toEqual(["C1"]);
-    expect(Object.values(selected.contexts!)[0].text).toBe(first.context!.text);
+    // 3.7.4 (D1): a quota vale para o contexto — o de C1 (14k) vai por referência; C1 continua a 1ª, inteira.
+    expect(selected.clauses[0]).toMatchObject({ citeAs: "C1", text: "obrigação" });
+    const ctx = (selected.contexts as Record<string, Record<string, unknown>>)[selected.clauses[0].context as string];
+    expect(ctx).toMatchObject({ status: "deferred", chars: first.context!.text.length, next: { tool: "get_ds_rules", arguments: { id: "C1" } } });
+    expect(ctx).not.toHaveProperty("text");
+    expect(selected.contentChars).toBeLessThanOrEqual(selected.targetChars);
+    // contexto que cabe na quota vai inteiro
+    const roomy = selectReserve([first], 100_000).block;
+    expect(Object.values(roomy.contexts as Record<string, { text?: string }>)[0].text).toBe(first.context!.text);
     const r = scan([first, second], 1000);
     expect(r).toMatchObject({ kind: "error", errorCode: "item-too-large", scanId: "S-test" });
     expect(r.clauseReserve).toBeUndefined();
@@ -57,9 +64,12 @@ describe("A5 reserva íntegra de leitura contextual", () => {
       expect(textSize(r)).toBeLessThanOrEqual(budget);
       if (r.kind === "error") continue;
       const block = r.clauseReserve as ReturnType<typeof selectReserve>["block"];
+      // 3.7.4 (D1): fatos primeiro — com a página toda de fatos e nenhuma cláusula cabendo, a reserva sai adiada.
+      expect((r.families as unknown[]).length).toBe(1);
+      if (block.status === "deferred-by-facts") continue;
       expect(block.targetChars).toBe(Math.ceil(budget * .2));
       expect(block.clauses).toHaveLength(1);
-      expect(block.status === "fulfilled" ? block.contentChars >= block.targetChars : block.status === "exhausted").toBe(true);
+      expect(block.status === "fulfilled" ? block.contentChars >= block.targetChars : ["exhausted", "floor", "limited-by-facts"].includes(block.status)).toBe(true);
       expect(block.clauses[0]).toMatchObject({ text: candidates[0].rule.originalText, force: candidates[0].rule.force });
       if (r.responseCharsEstimate !== undefined) expect(r.responseCharsEstimate).toBe(textSize(r));
     }

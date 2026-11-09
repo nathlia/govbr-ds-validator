@@ -452,7 +452,7 @@ describe("3.7.0 revisão — lacuna A: no teto padrão o investigate leva cláus
       else {
         const reserve = scan.data.clauseReserve;
         expect(reserve.clauses.length).toBeGreaterThan(0);
-        expect(["fulfilled", "exhausted"]).toContain(reserve.status);
+        expect(["fulfilled", "exhausted", "quota-reached", "limited-by-facts", "floor"]).toContain(reserve.status); // 3.7.4 (D1)
         for (const clause of reserve.clauses) expect(clause.text).toBe(getRuleById(clause.citeAs)!.originalText);
       }
       const facts = await call("get_finding_details", { scanId: scan.data.scanId, maxChars: 100000 });

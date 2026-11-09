@@ -315,7 +315,11 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   return items;
 }
 
-export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unknown };
+/**
+ * 3.7.4 (D2): `remaining` = os elementos ainda sem decisão de uma pendência de elementos que um verify_finding decidiu em
+ * parte (`decided` = quantos já foram decididos nesta rota); ela continua aberta com o mesmo pendingId.
+ */
+export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unknown; decided?: number; remaining?: string[] };
 
 /** Na resposta: até 2 exemplos (o item inteiro fica no ledger); 3.6.1: com o id da pendência da sessão. */
 function compactItem(item: PendingItem, withText: (code: string) => boolean = () => true) {
@@ -387,15 +391,36 @@ export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
 }
 
 /**
+ * 3.7.4 (D3): a cláusula de COMPONENTE do DS que a pendência cita — um id da base que não é cláusula e-MAG (as e-MAG da
+ * base aparecem pelo identificador `emag-x.y`). Só ids `govbr-…` são consultados na base (o perfil sem conhecimento só tem
+ * `wcag-…`: a trava não é tocada).
+ */
+function dsComponentNorm(all: string[]): string | undefined {
+  return all.find((n) => {
+    if (!n.startsWith("govbr-")) return false;
+    try {
+      const r = getRuleById(n);
+      return Boolean(r) && r!.standard !== "eMAG";
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
  * As normas curtas de uma pendência. 3.6.3: o critério WCAG antes do e-MAG quando os dois existem (o WCAG é o que o
  * agente consegue medir e citar nos dois perfis); senão a 1ª da lista.
+ * 3.7.4 (D3; teste à mão da 3.7.3, P-06 do Switch): com uma cláusula de componente do DS (`rule` ou `norms`), ela vem
+ * PRIMEIRO e a segunda é o WCAG (ou, sem WCAG, o e-MAG) — a linha compacta é a que o agente lê primeiro e deve mostrar a
+ * cláusula citável do componente, como a do Button. Sem ela, como antes: WCAG, e-MAG; senão a 1ª da lista.
  */
 function shortNorms(norms: string[] | undefined, rule?: { id: string }): string[] {
-  const all = [...(norms ?? []), ...(rule ? [rule.id] : [])];
+  const all = [...(rule ? [rule.id] : []), ...(norms ?? [])];
+  const ds = dsComponentNorm(all);
   const wcag = all.find((n) => n.startsWith("wcag-"));
   const emag = all.find((n) => n.startsWith("emag-"));
-  const out = [wcag, emag].filter((n): n is string => Boolean(n));
-  return out.length ? out : all.slice(0, 1);
+  const out = (ds ? [ds, wcag ?? emag] : [wcag, emag]).filter((n): n is string => Boolean(n));
+  return out.length ? out : [...(norms ?? []), ...(rule ? [rule.id] : [])].slice(0, 1);
 }
 
 const SHORT_TASK_MAX = 72;
@@ -417,7 +442,8 @@ export function pendingLine(i: PendingItem): string {
   const where = i.measured?.length
     ? i.measured.slice(0, 2).map(measuredText).join("; ")
     : [
-        ...(i.examples ?? []).slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX)),
+        // 3.7.4 (D2): verificada em parte — a linha mostra os elementos que faltam.
+        ...(i.remaining?.length ? [`falta ${i.remaining.slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX)).join(", ")}`] : (i.examples ?? []).slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX))),
         ...(i.observed ? [clip(i.observed, SHORT_TASK_MAX)] : []),
       ].join("; ");
   return `${i.pendingId ? `${i.pendingId}:` : ""}${i.code}${i.count !== undefined ? `:${i.count}` : ""}${norms.length ? `⇒${norms.join(",")}` : ""}${i.resolved !== undefined ? "✓" : ""}${where ? ` @${where}` : ""} · ${clip(i.todo, SHORT_TASK_MAX)}`;

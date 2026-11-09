@@ -99,14 +99,17 @@ describe("A5 — reserva no MCP e recuperação do lote", () => {
       const data = await scan(client, "/component", 8000);
       const reserve = data.clauseReserve;
       expect(reserve.targetChars).toBe(1600);
-      expect(reserve.contentChars).toBeGreaterThanOrEqual(reserve.targetChars);
+      // 3.7.4 (D1): a quota é teto do conteúdo (a 1ª cláusula inteira é piso); fatos primeiro.
+      if (reserve.clauses.length > 1) expect(reserve.contentChars).toBeLessThanOrEqual(reserve.targetChars);
       expect(reserve.literalChars + reserve.contextChars + reserve.procedureChars).toBe(reserve.contentChars);
       expect(reserve.clauses.length).toBeGreaterThan(0);
       for (const clause of reserve.clauses) {
         const rule = getRuleById(clause.citeAs)!;
         expect(clause).toMatchObject({ text: rule.originalText, force: rule.force, conditions: rule.conditions, exceptions: rule.exceptions });
         expect(clause.procedure).toMatchObject({ select: expect.any(String), measure: expect.any(String), expect: expect.any(String) });
-        expect(reserve.contexts[clause.context].text).toContain(rule.originalText);
+        const ctx = reserve.contexts[clause.context];
+        if (typeof ctx.text === "string") expect(ctx.text).toContain(rule.originalText);
+        else expect(ctx).toMatchObject({ status: expect.stringMatching(/^(deferred|delivered)$/), next: { tool: "get_ds_rules", arguments: { id: clause.citeAs } } });
         expect(clause).not.toHaveProperty("pendingId");
       }
       const details = await client.callTool({ name: "get_finding_details", arguments: { scanId: data.scanId, maxChars: 100000 } });
@@ -115,6 +118,26 @@ describe("A5 — reserva no MCP e recuperação do lote", () => {
       expect(full.scanId).toBe(data.scanId);
       expect(full.families.length).toBe(full.totalFamilies);
       expect(full.totalFamilies).toBeGreaterThan(0);
+    } finally { await client.close(); }
+  });
+
+  it("3.7.4 (D1): contexto entregue num scan volta no seguinte da mesma sessão só como referência", async () => {
+    const client = await connect("evaluation");
+    try {
+      const first = (await scan(client, "/component", 20000)).clauseReserve;
+      const shown = Object.entries(first.contexts as Record<string, { text?: string; kind: string }>).filter(([, c]) => typeof c.text === "string" && c.kind === "literal-scope");
+      expect(shown.length).toBeGreaterThan(0);
+      const data = await scan(client, "/component", 20000);
+      for (const [key] of shown) {
+        expect(data.clauseReserve.contexts[key]).toMatchObject({ status: "delivered", deliveredIn: expect.stringMatching(/^S-/), next: { tool: "get_ds_rules" } });
+        expect(data.clauseReserve.contexts[key]).not.toHaveProperty("text");
+      }
+      // outra sessão MCP recebe o texto de novo
+      const other = await connect("evaluation");
+      try {
+        const fresh = (await scan(other, "/component", 20000)).clauseReserve;
+        expect(fresh.contexts[shown[0][0]].text).toBe(shown[0][1].text);
+      } finally { await other.close(); }
     } finally { await client.close(); }
   });
 

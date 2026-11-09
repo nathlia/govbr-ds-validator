@@ -278,7 +278,19 @@ describe("MCP: pendência registrada e fechada pelo verify_finding com a mesma r
         expect(other.pendingResolved ?? []).not.toContain(target!.pendingId);
         const verified = await call("verify_finding", { finding, live: true, actions: [{ action: "click", selector: "label[for='sw-stale']" }] });
         expect(verified.verification.verdict).toBe(profile === "evaluation" ? "confirmed" : "unverifiable");
-        expect(verified.pendingResolved).toContain(target!.pendingId);
+        // 3.7.4 (D2): a pendência cobre vários elementos (evaluation: os dois switches; knowledge-free: todos os não
+        // verificados) — decidir um deixa os outros abertos, com o mesmo pendingId; o último fecha.
+        expect(verified.pendingResolved ?? []).not.toContain(target!.pendingId);
+        expect(verified.pendingPartial).toEqual([expect.objectContaining({ id: target!.pendingId, decided: ["#sw-stale"] })]);
+        const remaining = verified.pendingPartial[0].remaining as string[];
+        expect(remaining).toContain("#sw-ok");
+        if (profile === "evaluation") expect(remaining).toEqual(["#sw-ok"]);
+        let last: Record<string, unknown> = verified;
+        for (const locator of remaining) {
+          last = await call("verify_finding", { finding: { ...finding, id: `F-${locator}`, element: { ...finding.element, locator } }, live: true, actions: [{ action: "click", selector: locator }] });
+        }
+        expect(last.pendingResolved).toContain(target!.pendingId);
+        expect(last).not.toHaveProperty("pendingPartial");
       } finally { await client.close(); await service.close(); }
     };
     if (profile === "knowledge-free") { await runKnowledgeLocked(run); expect(knowledgeLockAttempts()).toEqual({ attempts: 0, loaders: [] }); }

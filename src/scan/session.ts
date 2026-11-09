@@ -82,7 +82,20 @@ export interface PendingSlot {
   /** Elementos citados nesta rota. */
   locators: string[];
   scans: string[];
+  /**
+   * 3.7.4 (D2): pendência de elementos (`elementBound`) — os elementos já decididos por verify_finding nesta rota. A rota só
+   * fecha quando todos os `locators` foram decididos; até lá fica aberta (mesmo pendingId) com os que faltam.
+   */
+  decided?: string[];
 }
+
+/** 3.7.4 (D2): os elementos de uma rota da pendência ainda sem decisão (pendência de elementos parcialmente verificada). */
+export function slotRemaining(slot: PendingSlot): string[] {
+  return slot.decided?.length ? slot.locators.filter((l) => !slot.decided!.includes(l)) : slot.locators;
+}
+
+/** 3.7.4 (D2): verify que decidiu só parte dos elementos de uma pendência (ela continua aberta com o resto). */
+export type PendingPartial = { id: string; decided: string[]; remaining: string[] };
 
 export interface PendingEntry {
   id: string;
@@ -186,6 +199,8 @@ export class ScanSession {
   private counter = 0;
   /** 3.6.1 (revisão H1): códigos cuja cláusula (texto) já saiu numa resposta desta sessão; repetições só com o id. */
   private readonly delivered = new Set<string>();
+  /** 3.7.4 (D1): contextos da reserva de cláusulas entregues nesta sessão (chave do escopo → 1ª entrega e faixas). */
+  private readonly contexts = new Map<string, { scanId: string; full: boolean; ranges: Array<{ start: number; end: number }> }>();
   /** 3.6.5 (item 4): assinatura de evidência → onde a família foi vista (scan, rota, estado). */
   private readonly sightings = new Map<string, FamilySighting[]>();
   /**
@@ -231,6 +246,25 @@ export class ScanSession {
 
   textDelivered(code: string): boolean {
     return this.delivered.has(code);
+  }
+
+  /**
+   * 3.7.4 (D1): contexto literal da reserva já entregue nesta sessão MCP — inteiro, ou as faixas pedidas cobertas pelas
+   * janelas já entregues. Devolve o scanId da 1ª entrega (a referência que volta no lugar do texto).
+   */
+  contextDelivered(key: string, ranges?: Array<{ start: number; end: number }>): string | undefined {
+    const seen = this.contexts.get(key);
+    if (!seen) return undefined;
+    if (seen.full) return seen.scanId;
+    if (!ranges?.length) return undefined;
+    return ranges.every((r) => seen.ranges.some((d) => d.start <= r.start && r.end <= d.end)) ? seen.scanId : undefined;
+  }
+
+  markContextDelivered(key: string, scanId: string, ranges: "full" | Array<{ start: number; end: number }>): void {
+    const seen = this.contexts.get(key) ?? { scanId, full: false, ranges: [] };
+    if (ranges === "full") seen.full = true;
+    else seen.ranges.push(...ranges.map((r) => ({ start: r.start, end: r.end })));
+    this.contexts.set(key, seen);
   }
 
   markDelivered(code: string): void {
@@ -444,6 +478,17 @@ export class ScanSession {
    * (`P-NN` ou `P-NN@/rota`).
    */
   resolveByVerify(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number }): string[] {
+    return this.resolveByVerifyDetailed(finding, verificationId, verdict, measured).resolved;
+  }
+
+  /**
+   * 3.7.4 (D2; teste à mão da 3.7.3): a pendência de elementos (`elementBound`) presa a N elementos só fecha a rota quando
+   * cada um deles foi decidido por um verify_finding; o verify de um só registra a decisão dele e devolve o item em
+   * `partial` (mesmo pendingId, com os elementos que faltam). As demais pendências seguem como antes (qualquer verify
+   * na rota com a norma fecha).
+   */
+  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number }): { resolved: string[]; partial: PendingPartial[] } {
+    const partial: PendingPartial[] = [];
     const route = routeKeyOf(finding.element.page);
     const cited = citedNorms(finding.rule);
     const resolved: string[] = [];
@@ -464,11 +509,19 @@ export class ScanSession {
           ? here.status === "open" ? [here] : []
           : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
       for (const slot of targets) {
+        if (entry.elementBound) {
+          slot.decided = [...new Set([...(slot.decided ?? []), finding.element.locator])];
+          const remaining = slotRemaining(slot);
+          if (remaining.length) {
+            partial.push({ id: slotLabel(entry, slot.route), decided: [...slot.decided], remaining });
+            continue;
+          }
+        }
         resolveSlot(entry, slot, resolution);
         resolved.push(slotLabel(entry, slot.route));
       }
     }
-    return resolved;
+    return { resolved, partial };
   }
 
   /** 3.6.3: as rotas ainda abertas das pendências citadas (rótulos `P-NN@/rota`). */
@@ -490,6 +543,7 @@ export class ScanSession {
     const unknown: string[] = [];
     const needsReason: string[] = [];
     const recordAsFinding: Array<{ id: string; code: string; route: string; cite: string | null; norms: string[] }> = [];
+    const partialVerify: Array<{ id: string; verified: string[]; verifiedCount: number; declared: string[]; declaredCount: number }> = [];
     for (const r of list) {
       const entry = this.byId.get(r.id);
       if (!entry) {
@@ -505,6 +559,12 @@ export class ScanSession {
       const here = currentRoute ? slotOf(entry, currentRoute) : undefined;
       const targets = here ? [here] : entry.slots.filter((x) => x.status === "open");
       for (const slot of targets) {
+        // 3.7.4 (D2): a declaração vale para o item inteiro; se um verify decidiu só parte dos elementos, diz qual parte.
+        if (slot.status === "open" && slot.decided?.length) {
+          const declared = slotRemaining(slot);
+          partialVerify.push({ id: slotLabel(entry, slot.route), verified: slot.decided.slice(0, 3).map((l) => clip(l, 120)), verifiedCount: slot.decided.length,
+            declared: declared.slice(0, 3).map((l) => clip(l, 120)), declaredCount: declared.length });
+        }
         resolveSlot(entry, slot, resolution);
         resolved.push(slotLabel(entry, slot.route));
       }
@@ -520,6 +580,9 @@ export class ScanSession {
       ...(needsReason.length ? { needsReason, needsReasonNote: "'conforme' e 'não se aplica' exigem reason (o que você mediu): estas continuam abertas." } : {}),
       ...(recordAsFinding.length
         ? { recordAsFinding, recordNote: "Violada: registre cada uma como achado na sua inspeção, citando cite (cláusula obrigatória), e submeta-o a verify_finding." }
+        : {}),
+      ...(partialVerify.length
+        ? { partialVerify, partialVerifyNote: "verify_finding decidiu só os elementos em verified; os de declared fecharam pela sua declaração (status/reason), não por medida." }
         : {}),
     };
   }
@@ -616,12 +679,15 @@ export function sessionPendingBlock(
     const rule = entries[0].rule;
     const labels = entries.map(label);
     const partial = entries.filter((e) => label(e).includes("×")).slice(0, 3);
+    const halfDone = entries.flatMap((e) => openSlots(e).filter((x) => x.decided?.length).map((x) => [label(e), slotRemaining(x).slice(0, 3).map((l) => clip(l, 60))] as const));
     return {
       code,
       routes: new Set(entries.flatMap((e) => openSlots(e).map((x) => x.route))).size,
       ids: labels.slice(0, 3),
       ...(labels.length > 3 ? { more: labels.length - 3 } : {}),
       ...(partial.length ? { openOn: Object.fromEntries(partial.map((e) => [e.id, openSlots(e).slice(0, 3).map((x) => shortRoute(x.route))])) } : {}),
+      // 3.7.4 (D2): verificada em parte — os elementos que faltam decidir (até 3 por pendência).
+      ...(halfDone.length ? { remaining: Object.fromEntries(halfDone.slice(0, 3)) } : {}),
       ...(rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });
@@ -687,12 +753,15 @@ export function sessionPendingChecklistCount<T extends { checklist?: unknown }>(
 }
 
 /** Encolhimento do teto: sem textos; depois só ids. */
-export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[] }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
+export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[]; remaining?: Record<string, readonly string[]> }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
   const checklist = checklistIds(block.checklist);
   const ids = (block.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
+  // 3.7.4 (D2): verificada em parte — os elementos que faltam ficam também na forma de ids.
+  const remaining = Object.assign({}, ...(block.items ?? []).map((i) => i.remaining ?? {})) as Record<string, readonly string[]>;
   return {
     count: block.count ?? 0,
     ...(ids.length || !checklist ? { ids } : {}),
+    ...(Object.keys(remaining).length ? { remaining } : {}),
     ...(block.lowSignal ? { lowSignal: block.lowSignal } : {}),
     ...(checklist ? { checklist } : {}),
   };

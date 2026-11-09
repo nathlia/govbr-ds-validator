@@ -7,7 +7,7 @@ import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
 import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
 import { CROSS_ROUTE, sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
-import { selectReserve, type ReserveCandidate } from "../tools/clauseReserve.js";
+import { deferredReserve, selectReserve, type ContextDelivered, type ReserveCandidate } from "../tools/clauseReserve.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -771,11 +771,11 @@ export function assembleScan(
   scanId: string,
   maxChars: number,
   page: (familyBudget: number) => Record<string, unknown>,
-  options: { firstScanPage?: boolean; clauseCandidates?: ReserveCandidate[] } = {},
+  options: { firstScanPage?: boolean; clauseCandidates?: ReserveCandidate[]; contextDelivered?: ContextDelivered } = {},
 ) {
   // 3.6.2: a 1ª página de um scan_page (1º scan ou posterior) monta por prioridade — famílias antes de tudo — e nunca
   // passa do teto pedido. Continuações seguem o caminho de sempre (≥ 1 item para o cursor andar).
-  if (options.firstScanPage && options.clauseCandidates) return assembleReservedScan(head, observations, scanId, maxChars, page, options.clauseCandidates);
+  if (options.firstScanPage && options.clauseCandidates) return assembleReservedScan(head, observations, scanId, maxChars, page, options.clauseCandidates, options.contextDelivered);
   if (options.firstScanPage) return assembleFirstScanPage(head, observations, scanId, maxChars, page);
   const response = assembleScanPage(head, observations, scanId, maxChars, page, options);
   const ceiled = enforceCeiling(response, maxChars, scanId);
@@ -787,35 +787,178 @@ export function assembleScan(
   return rest;
 }
 
-/** A5: monta fatos no espaço restante e só depois fixa a reserva, fora de qualquer compactador. */
+/**
+ * A5 + 3.7.4 (D1, teste à mão da 3.7.3): FATOS PRIMEIRO. A 1ª página de fatos é montada como sem reserva; a reserva
+ * ocupa o que sobra, até a sua quota. Se não sobra espaço, ela pode encolher o cabeçalho que tem continuação, mas nunca
+ * tira família/achado da página nem encolhe as pendências desta página ou os acréscimos das famílias. Com todos os
+ * fatos na página e nenhuma cláusula inteira cabendo, a reserva sai declarada como adiada (deferred-by-facts). Só quando
+ * os fatos já não cabem inteiros o piso (uma cláusula inteira, contexto por referência) pode custar família — e, se nem
+ * ele com uma família couber, a recusa da A5 (lote preservado, retry demonstrado).
+ */
+const PROTECTED_PARTS = (labels: unknown) =>
+  Array.isArray(labels) ? new Set((labels as string[]).filter((l) => l.startsWith("extras") || l.startsWith("families") || l.startsWith("findings"))) : null;
+/**
+ * A forma das pendências desta página: 0 inteira, 1 linha com lugar e tarefa (curta/mínima), 3 só código⇒norma, 4 códigos,
+ * ids ou contagem. A reserva pode levar as pendências até a linha com tarefa (o item inteiro fica no ledger), nunca abaixo.
+ */
+function pageLevelRank(r: Record<string, unknown>): number {
+  const pl = (r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: unknown; ids?: unknown } } | undefined)?.pageLevel;
+  if (!pl) return 0;
+  if (pl.count !== undefined || pl.ids !== undefined || !Array.isArray(pl.notMeasured)) return 4;
+  if (pl.notMeasured.every((i) => typeof i === "object")) return 0;
+  return pl.notMeasured.every((i) => typeof i !== "string" || i.includes(" · ")) ? 1 : 3;
+}
+
 function assembleReservedScan(
   head: Record<string, unknown>, observations: Observation[] | null, scanId: string,
   maxChars: number, page: (budget: number) => Record<string, unknown>, candidates: ReserveCandidate[],
+  delivered?: ContextDelivered,
 ): Record<string, unknown> {
-  const build = (budget: number) => {
-    const selected = selectReserve(candidates, budget);
-    if (selected.unavailable) return null;
-    // Exatamente a propriedade serializada + vírgula; margem apenas para o número de tamanho final.
-    const fixed = textSize({ clauseReserve: selected.block }) - 1;
-    const remaining = budget - fixed - 16;
-    if (remaining < 300) return null;
-    const facts = assembleFirstScanPage(head, observations, scanId, remaining, page);
-    if (facts.kind === "error") return null;
-    const out: Record<string, unknown> = { ...facts, clauseReserve: selected.block };
+  const allItems = listedItems(page(1_000_000));
+  const attach = (facts: Record<string, unknown>, block: Record<string, unknown>, budget: number) => {
+    const out: Record<string, unknown> = { ...facts, clauseReserve: block };
     if (typeof out.responseCharsEstimate === "number") {
       for (let i = 0; i < 4; i++) out.responseCharsEstimate = textSize(out);
     }
     return textSize(out) <= budget ? out : null;
   };
-  const result = build(maxChars);
-  if (result) return result;
+  const blockSize = (block: Record<string, unknown>) => textSize({ clauseReserve: block }) - 1;
+  const stripped = (b: number) => {
+    let p = familyAlsoInOut(familyNotesOut(page(b)));
+    for (const extra of EXTRAS_BY_FAMILY) p = familyExtraFrom(p, extra, 0);
+    const { familyHint: _h, familyKey: _k, evidenceSignatureKey: _e, ...rest } = p;
+    return rest;
+  };
+  /** Limite superior barato: a lista de fatos, sem acréscimos nem cabeçalho, no maior orçamento que cabe no teto. */
+  const factsCouldFit = (budget: number) => {
+    let lo = 200;
+    let hi = 2 * budget;
+    if (listedItems(page(hi)) < allItems) return false;
+    if (textSize(stripped(hi)) <= budget) return true;
+    for (let i = 0; i < 12 && hi - lo > 50; i++) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (textSize(stripped(mid)) <= budget) lo = mid; else hi = mid;
+    }
+    return listedItems(page(lo)) >= allItems;
+  };
+  type Outcome = { ok: Record<string, unknown> } | { refuse: "literal-scope-unavailable" | "indivisible-content-and-floor-exceed-budget" };
+  /**
+   * Custo: cada montagem da página de fatos refaz a escada; com fatos que não cabem inteiros a escada já está no fim (o
+   * cabeçalho no piso), então só a forma que cabe no que sobrou e o piso são tentados (revisão de custo, página de 635
+   * famílias: 7 montagens custavam ~65 s).
+   */
+  const attempt = (budget: number): Outcome => {
+    const built = new Map<number, Record<string, unknown>>();
+    const factsWithin = (room: number) => {
+      let f = built.get(room);
+      if (!f) built.set(room, (f = assembleFirstScanPage(head, observations, scanId, room, page)));
+      return f;
+    };
+    const full = selectReserve(candidates, budget, { delivered });
+    if (full.unavailable && !full.block.clauses.length) return { refuse: "literal-scope-unavailable" };
+    const floor = selectReserve(candidates, budget, { delivered, minimal: true }).block;
+    // Nem a lista de fatos sozinha, sem cabeçalho, cabe inteira no teto: os fatos não cabem — a página leva o piso (uma
+    // cláusula inteira) e os fatos que couberem com ele, numa montagem só (a escada de uma página que não cabe é cara).
+    // Revisão MED 2: "não cabem" decidido pela lista de fatos já sem os acréscimos e sem as chaves constantes (o que a
+    // escada retira no fim), no maior orçamento de famílias cuja lista sozinha cabe no teto — sem cabeçalho nenhum.
+    if (floor.clauses.length && !factsCouldFit(budget)) {
+      const room = budget - blockSize(floor) - 24;
+      const f = room >= 300 ? factsWithin(room) : null;
+      const out = f && f.kind !== "error" && (allItems === 0 || listedItems(f) >= 1) ? attach(f, floor, budget) : null;
+      return out ? { ok: out } : { refuse: "indivisible-content-and-floor-exceed-budget" };
+    }
+    const facts = factsWithin(budget);
+    if (facts.kind === "error") return { refuse: "indivisible-content-and-floor-exceed-budget" };
+    const listed = listedItems(facts);
+    const complete = listed >= allItems;
+    const guarded = PROTECTED_PARTS(facts.compacted) ?? new Set<string>();
+    const pendingFloor = Math.max(pageLevelRank(facts), 1);
+    const keepsFacts = (r: Record<string, unknown>) => {
+      if (r.kind === "error" || listedItems(r) < listed || pageLevelRank(r) > pendingFloor) return false;
+      const p = PROTECTED_PARTS(r.compacted);
+      return p !== null ? [...p].every((l) => guarded.has(l)) : r.compacted === undefined;
+    };
+    const withReserve = (block: Record<string, unknown>, mustKeep: boolean) => {
+      const room = budget - blockSize(block) - 24;
+      if (room < 300) return null;
+      const f = factsWithin(room);
+      if (mustKeep ? !keepsFacts(f) : f.kind === "error" || (allItems > 0 && listedItems(f) < 1)) return null;
+      return attach(f, block, budget);
+    };
+    // A reserva até a quota; se não cabe no que sobrou, encolhe o cabeçalho com continuação (investigate, cobertura,
+    // estado, observações; pendências até a linha com tarefa) — nunca tira fato nem os acréscimos das famílias. Formas
+    // da maior à menor; a 1ª que cabe fica. A que cabe no espaço que sobrou não mexe na página de fatos.
+    const leftover = budget - textSize(facts) - 24;
+    // A escada já chegou às pendências desta página ou aos acréscimos das famílias: o cabeçalho com continuação está no
+    // piso e a reserva não tem o que encolher sem tirar o que é protegido — nenhuma remontagem (custo).
+    const headerAtFloor = facts.compacted !== undefined && (!Array.isArray(facts.compacted) ||
+      (facts.compacted as string[]).some((l) => l === "pageLevel" || l.startsWith("extras")));
+    if (!candidates.length) {
+      const out = attach(facts, full.block, budget) ?? withReserve(full.block, true);
+      if (out) return { ok: out };
+    }
+    const variants = [full.block, floor];
+    // blockSize = textSize do bloco + 15 (a chave): o teto do selectReserve é o do bloco sozinho.
+    for (const cap of [Math.floor(blockSize(full.block) * .5), leftover - 16]) {
+      const v = selectReserve(candidates, budget, { delivered, maxBlockChars: cap }).block;
+      if (v.clauses.length) variants.push(v);
+    }
+    let floorResult: Record<string, unknown> | null | undefined;
+    const floorFits = () => (floorResult === undefined ? (floorResult = withReserve(floor, true)) : floorResult) !== null;
+    const seen = new Set<number>();
+    for (const v of variants.filter((x) => x.clauses.length).sort((x, y) => blockSize(y) - blockSize(x))) {
+      const size = blockSize(v);
+      if (seen.has(size)) continue;
+      seen.add(size);
+      if (size <= leftover) {
+        const out = attach(facts, v, budget);
+        if (out) return { ok: out };
+      }
+      // Fatos que não cabem inteiros: o cabeçalho já está no piso da escada — só o piso tenta encolher mais. Com fatos
+      // inteiros, só a forma da quota e o piso remontam a página (revisão MED 6: cada remontagem refaz a escada).
+      if (headerAtFloor || (!complete && v !== floor)) continue;
+      // Se nem o piso cabe encolhendo o cabeçalho, uma forma maior também não: o piso é tentado antes.
+      if (v !== floor && floor.clauses.length && !floorFits()) continue;
+      const out = withReserve(v, true);
+      if (out) return { ok: out };
+    }
+    // 3) todos os fatos na página e nenhuma cláusula inteira cabe sem tirá-los: reserva adiada, declarada.
+    if (complete) {
+      for (const tiny of [false, true]) {
+        const block = deferredReserve(candidates, budget, tiny);
+        const out = attach(facts, block, budget) ?? (tiny && !headerAtFloor ? withReserve(block, true) : null);
+        if (out) return { ok: out };
+      }
+      // O aviso mínimo pode encolher qualquer parte do cabeçalho, nunca tirar fato; sem nem isso, só os fatos.
+      for (const tiny of [deferredReserve(candidates, budget, true), { status: "deferred-by-facts" }]) {
+        const direct = attach(facts, tiny, budget);
+        if (direct) return { ok: direct };
+        const f = factsWithin(budget - blockSize(tiny) - 24);
+        const out = f.kind !== "error" && listedItems(f) >= listed ? attach(f, tiny, budget) : null;
+        if (out) return { ok: out };
+      }
+      return { ok: facts };
+    }
+    // 4) os fatos já não cabem inteiros: o piso pode custar família (fica ao menos uma).
+    if (floor.clauses.length) {
+      const out = withReserve(floor, false);
+      if (out) return { ok: out };
+    }
+    return { refuse: full.unavailable && !floor.clauses.length ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget" };
+  };
+  const result = attempt(maxChars);
+  if ("ok" in result) return result.ok;
   // A quota cresce com o orçamento: só sugere um teto cuja reserva E piso realmente couberam.
-  const nextBudget = [2000, 4000, 8000, 12000, 20000, 40000, 60000, 80000, 100000]
-    .find(b => b > maxChars && build(b) !== null);
+  const nextBudget = result.refuse === "literal-scope-unavailable" ? undefined
+    : [2000, 4000, 8000, 12000, 20000, 40000, 60000, 80000, 100000].find((b) => {
+      // Revisão MED 1: o retry sugerido entrega de fato ao menos uma cláusula inteira (não só os fatos com a reserva adiada).
+      const r = attempt(b);
+      return "ok" in r && Array.isArray((r.ok.clauseReserve as { clauses?: unknown[] } | undefined)?.clauses) && ((r.ok.clauseReserve as { clauses: unknown[] }).clauses.length > 0 || !candidates.length);
+    });
   return {
     contract: CONTRACT, kind: "error", errorCode: "item-too-large", field: "maxChars", scanId,
     error: "Reserva de cláusulas não entregue. Lote de fatos preservado; pendências da sessão não entregues. Repetir a receita é nova observação.",
-    reason: selectReserve(candidates, maxChars).unavailable ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget",
+    reason: result.refuse,
     ...(nextBudget ? { retry: { maxChars: nextBudget, note: "Refaça a receita: nova observação, não snapshot das pendências antigas." } } : {}),
     next: [step("request-detail", "lote preservado", "get_finding_details", { scanId, maxChars: 8000 }),
       step("request-detail", "globais", "get_page_rules", { view: "checklist" })],

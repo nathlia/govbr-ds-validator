@@ -83,6 +83,32 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.4 — defeitos do teste à mão da 3.7.3 (NAT-111)
+
+- **Reserva de cláusulas, fatos primeiro (D1).** A 1ª página de fatos do `scan_page` é montada como sem
+  reserva; `clauseReserve` (agora `clause-reserve/1.1.0`) ocupa o que sobra, até a quota de 20% do teto,
+  e só encolhe o cabeçalho que tem continuação (investigate, cobertura, estado, observações; pendências até
+  a linha com tarefa) — nunca tira família/achado nem os acréscimos das famílias. A cláusula vai sempre
+  inteira; o contexto literal entra inteiro só se cabe na quota restante, senão como `literal-window`
+  (títulos da cadeia, cabeçalho da tabela, linha(s) da cláusula e vizinhas, com `source.ranges` do mesmo
+  snapshot e `[…]` nos saltos), senão por referência (`deferred`, `next: get_ds_rules{id}`). Contexto já
+  entregue nesta sessão MCP volta como `delivered` (`deliveredIn` = scan da 1ª entrega). Com todos os
+  fatos na página e nenhuma cláusula inteira cabendo: `status: "deferred-by-facts"`. Fatos que não cabem
+  inteiros: o piso (uma cláusula inteira, contexto por referência) pode custar família, nunca a última; sem
+  nem isso, a recusa `item-too-large` da A5 (lote preservado, retry demonstrado).
+- **Pendência presa a N elementos (D2).** Pendência `elementBound` (`aria-state-unverified`,
+  `aria-native-mismatch`, `icon-only-embedded`) só fecha quando cada elemento foi decidido por
+  `verify_finding`; o verify de um só devolve `pendingPartial` (mesmo `pendingId`, `decided`/`remaining`)
+  e a pendência segue aberta, com `remaining` em `checksRun.pageLevel` e em `sessionPending`.
+  `pendingResolved` do agente continua fechando o item inteiro; se um verify decidiu só parte, a resposta
+  diz qual (`partialVerify`).
+- **Linha compacta (D3).** Com cláusula de componente do DS, ela vem primeiro (`P-06:aria-state-unverified:2⇒
+  …switch-364149c5aea4,wcag-4.1.2`); sem ela, WCAG e e-MAG como antes.
+- **Checkbox pai (O1).** O procedimento derivado de cláusula aberta por finalidade ("Para indicar que um
+  checkbox é "pai", deve-se…") restringe o sujeito no `select`; força e mensurabilidade iguais.
+
+`tools/list` e instruções inalterados. Ver [registro](docs/nat111-374-teste-maos-2026-11-09.md).
+
 ## 3.7.3 — versão da lista única 3.7.3 (NAT-111, D-184)
 
 Fecha a lista única de 04/11: a 3.7.2 mais a emenda-2 da base (D-167/D-174) e as pré-versões

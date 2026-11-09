@@ -241,7 +241,8 @@ describe("3.4.4 C1/C9 — resposta do scan e achado do scan reverificado como ve
       expect(r.data.totalFamilies).toBeGreaterThan(3);
       // antes parava na meta de 3 com ~70% do teto no cabeçalho
       expect(r.data.families.length).toBeGreaterThan(3);
-      expect(["fulfilled", "exhausted"]).toContain(r.data.clauseReserve.status);
+      // 3.7.4 (D1): fatos primeiro — a reserva pode vir limitada pelos fatos, na quota, no piso ou adiada (declarado).
+      expect(["fulfilled", "exhausted", "quota-reached", "limited-by-facts", "floor", "deferred-by-facts"]).toContain(r.data.clauseReserve.status);
       for (const f of r.data.families) {
         expect(f).not.toHaveProperty("stateFingerprint");
         expect(f.example).not.toHaveProperty("rule");

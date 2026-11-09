@@ -169,8 +169,12 @@ describe("3.7.2 A1 — C01 aponta o botão embutido em Input/Select como candida
       expect(v.data.verdict).not.toBe("rejected");
       expect(v.data.verdict).not.toBe("confirmed");
       expect(v.text).toMatch(/exemplo oficial/);
+      // 3.7.4 (D2): o verify em #lupa decidiu só um dos dois elementos — a pendência segue aberta com #gatilho.
+      expect(v.data.pendingPartial).toEqual([expect.objectContaining({ id: cand.pendingId, decided: ["#lupa"], remaining: ["#gatilho"] })]);
       const ok = await call("scan_page", { url: `${base}/padaria/simples`, checks: ["structure"], maxChars: 60_000 });
-      expect(JSON.stringify(ok.data)).not.toMatch(/icon-only-embedded/);
+      // a página sem botão embutido não abre a pendência; a de /padaria/busca segue na sessão, com o que falta
+      expect(JSON.stringify(ok.data.checksRun.pageLevel)).not.toMatch(/icon-only-embedded/);
+      expect(ok.data.sessionPending.items.find((i: { code: string }) => i.code === "icon-only-embedded")).toMatchObject({ remaining: { [cand.pendingId]: ["#gatilho"] } });
     } finally {
       await client.close();
     }
@@ -492,7 +496,16 @@ describe("3.7.2 revisão — pendência de elementos, estado anterior com invent
         severity: "moderate", nature: "syntactic", mode: "display", pathway: "heuristic",
       };
       const v2 = await call("verify_finding", { live: true, finding: onLupa });
-      expect(JSON.stringify(v2.data.pendingResolved ?? [])).toContain(cand.pendingId);
+      // 3.7.4 (D2): um dos elementos dele decidido → parcial; o último fecha.
+      const bound = (cand.examples as string[]);
+      if (bound.length > 1) {
+        expect(JSON.stringify(v2.data.pendingResolved ?? [])).not.toContain(cand.pendingId);
+        expect(v2.data.pendingPartial[0]).toMatchObject({ id: cand.pendingId, decided: ["#lupa"] });
+        for (const locator of bound.filter((l) => l !== "#lupa")) {
+          const last = await call("verify_finding", { live: true, finding: { ...onLupa, id: `agente-${locator}`, element: { ...onLupa.element, locator } } });
+          if (locator === bound[bound.length - 1]) expect(JSON.stringify(last.data.pendingResolved ?? [])).toContain(cand.pendingId);
+        }
+      } else expect(JSON.stringify(v2.data.pendingResolved ?? [])).toContain(cand.pendingId);
     } finally {
       await client.close();
     }

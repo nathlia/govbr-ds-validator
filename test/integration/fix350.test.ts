@@ -226,10 +226,15 @@ describe("3.5.0 item 1 / P8 — checksRun.pageLevel: o medido e o que nenhum che
       expect(r.data.checksRun.pageLevel.measured).toEqual(expect.arrayContaining(["header/footer", "skip-link", "placeholder-label"]));
       expect(r.data.checksRun.pageLevel.notMeasured.map((i: { code: string }) => i.code)).toContain("table-name");
       const small = await call("scan_page", { url: `${base}/tabelas`, maxChars: 1_500 });
-      // A5: o teto extremo recusa a reserva indivisível, com lote preservado para leitura exata.
-      expect(small.isError).toBe(true);
-      expect(small.data).toMatchObject({ kind: "error", errorCode: "item-too-large", scanId: expect.any(String) });
+      // A5/3.7.4 (D1): no teto extremo, fatos primeiro — com todos os fatos na página a reserva sai adiada (declarada);
+      // sem eles inteiros e sem o piso, a recusa da A5 com lote preservado para leitura exata.
       expect(small.text.length).toBeLessThanOrEqual(1_500);
+      if (small.isError) expect(small.data).toMatchObject({ kind: "error", errorCode: "item-too-large", scanId: expect.any(String) });
+      else {
+        expect(small.data.families.length).toBe(small.data.totalFamilies);
+        expect(small.data.clauseReserve).toMatchObject({ status: "deferred-by-facts" });
+        expect(small.data.checksRun.pageLevel.next ?? small.data.checksRun.pageLevel.full).toBeDefined();
+      }
       // revisão (MED): o cabeçalho do ledger leva só códigos + contagem; os itens inteiros paginam como observações.
       const details = await call("get_finding_details", { scanId: r.data.scanId });
       expect(details.text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);

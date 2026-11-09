@@ -4,11 +4,20 @@ import type { KnowledgeRule } from "../data/knowledge.js";
 import { byMeasurability, checklistRules, procedureOf, type Procedure } from "./componentChecklist.js";
 import { pageChecklistRules } from "./pageChecklist.js";
 import { oracleFullyMeasures } from "./oracleCoverage.js";
-import { procedureScope } from "./procedureScope.js";
+import { clauseWindow, procedureScope } from "./procedureScope.js";
+import { textSize } from "../responses/contract.js";
 
-export const CLAUSE_RESERVE_VERSION = "clause-reserve/1.0.0";
+/**
+ * 3.7.4 (D1): 1.1.0 — a quota de conteúdo vale também para o contexto (inteiro só quando cabe; senão janela literal com
+ * faixas declaradas, ou referência), o contexto já entregue nesta sessão volta só pela referência, e o bloco cabe no
+ * espaço que os fatos deixam (montador: fatos primeiro).
+ */
+export const CLAUSE_RESERVE_VERSION = "clause-reserve/1.1.0";
 type Scope = NonNullable<ReturnType<typeof procedureScope>>;
+type Range = { start: number; end: number };
 export type ReserveCandidate = { rule: KnowledgeRule; procedure: Procedure; context: Scope | null };
+/** Sessão: o scan em que o contexto (inteiro, ou as faixas pedidas) já saiu; undefined = não saiu. */
+export type ContextDelivered = (key: string, ranges?: Range[]) => string | undefined;
 
 export function reserveCandidates(components: string[]): ReserveCandidate[] {
   const candidates = (rules: KnowledgeRule[]) => byMeasurability(rules
@@ -33,34 +42,128 @@ export function reserveContentChars(texts: string[]) {
     .reduce((n, s) => n + JSON.stringify(s).length - 2, 0);
 }
 
-/** Conta contexto literal obrigatório; ids, when/provenance, fonte e metadados não preenchem quota. */
-export function selectReserve(candidates: ReserveCandidate[], maxChars: number) {
+/** Identidade do contexto: o objeto completo (texto, arquivo, versão, faixas). Estável entre scans da sessão. */
+export const contextKey = (context: Scope) => createHash("sha256").update(JSON.stringify(context)).digest("hex").slice(0, 16);
+
+const reread = (id: string) => ({ tool: "get_ds_rules", arguments: { id } });
+
+const NOTE = "Leitura contextual deduplicada: candidatas, não veredito nem pendingId; confira condições e aplicabilidade (o contexto tem modalidade própria). contexts: literal-scope inteiro; literal-window = trechos literais (source.ranges; [… ] = salto); deferred/delivered = referência (delivered: o texto saiu em deliveredIn). next = get_ds_rules{id}: parágrafo literal e cláusulas adjacentes da seção, sem as introduções ancestrais do escopo.";
+
+export type ReserveOptions = {
+  /** Teto do bloco serializado (o espaço que os fatos deixaram). */
+  maxBlockChars?: number;
+  delivered?: ContextDelivered;
+  /** Piso: uma cláusula inteira com o contexto só por referência (ou já entregue). */
+  minimal?: boolean;
+};
+
+/**
+ * Conta contexto literal obrigatório; ids, when/provenance, fonte e metadados não preenchem quota.
+ * 3.7.4 (D1): a cláusula vai sempre inteira (texto, força, condições, exceções, procedimento); o contexto entra inteiro só
+ * quando cabe na quota restante, senão como janela literal da própria seção (faixas declaradas), senão por referência. A
+ * 1ª cláusula pode passar da quota sozinha (nunca é cortada); as seguintes só entram se couberem nela. `maxBlockChars`
+ * limita o bloco serializado; sem nenhuma cláusula que caiba, `clauses` vem vazio (quem monta decide).
+ */
+export function selectReserve(candidates: ReserveCandidate[], maxChars: number, options: ReserveOptions = {}) {
   const targetChars = Math.ceil(maxChars * .2);
+  const maxBlock = options.maxBlockChars ?? Number.POSITIVE_INFINITY;
   const clauses: Array<Record<string, unknown>> = [];
-  const contexts: Record<string, Scope> = {};
+  const contexts: Record<string, Record<string, unknown>> = {};
   const content: string[] = [];
   const literals: string[] = [];
   const scoped: string[] = [];
-  let contentChars = 0;
   let unavailable: string | undefined;
+  let stop: "quota" | "block" | undefined;
+  const counts = () => {
+    const contentChars = reserveContentChars(content);
+    const literalChars = reserveContentChars(literals);
+    const scopedChars = reserveContentChars(scoped);
+    return { contentChars, literalChars, contextChars: scopedChars - literalChars, procedureChars: contentChars - scopedChars };
+  };
+  const blockWith = (status: string) => {
+    const c = counts();
+    return { version: CLAUSE_RESERVE_VERSION, targetChars, ...c, status,
+      ...(clauses.length < candidates.length && clauses.length ? { more: candidates.length - clauses.length } : {}),
+      note: NOTE, clauses, ...(clauses.length ? { contexts } : {}) };
+  };
   for (const { rule, procedure, context } of candidates) {
     if (!context) { unavailable = rule.id; break; }
     const { context: _context, ...measure } = procedure;
-    const key = createHash("sha256").update(JSON.stringify(context)).digest("hex").slice(0, 16);
-    contexts[key] = context;
-    clauses.push({ citeAs: rule.id, force: rule.force, text: rule.originalText,
-      conditions: rule.conditions, exceptions: rule.exceptions, procedure: measure, context: key, source: rule.source });
-    literals.push(rule.originalText);
-    scoped.push(rule.originalText, context.text);
-    content.push(rule.originalText, context.text, measure.select, measure.measure, measure.expect);
-    contentChars = reserveContentChars(content);
-    if (contentChars >= targetChars) break;
+    const clauseTexts = [rule.originalText, measure.select, measure.measure, measure.expect];
+    const withClause = reserveContentChars([...content, ...clauseTexts]);
+    // Nunca troca uma cláusula por outra mais barata: a seguinte que passaria da quota encerra o prefixo.
+    if (clauses.length && withClause > targetChars) { stop = "quota"; break; }
+    const key = contextKey(context);
+    const clause: Record<string, unknown> = { citeAs: rule.id, force: rule.force, text: rule.originalText, conditions: rule.conditions,
+      exceptions: rule.exceptions, procedure: measure, context: key,
+      source: { url: rule.source.url, sectionPath: rule.source.sectionPath, charRange: rule.source.charRange } };
+    const ref = (status: "deferred" | "delivered", scanId?: string, windowChars?: number) => ({ kind: windowChars !== undefined ? "literal-window" : context.kind, status,
+      ...(scanId ? { deliveredIn: scanId } : {}), chars: windowChars ?? context.text.length, next: reread(rule.id) });
+    // Formas do contexto, da mais rica à referência; a 1ª que respeita quota e bloco fica.
+    const options_: Array<{ ctx: Record<string, unknown>; texts: string[]; delivered?: boolean }> = [];
+    let known: Record<string, unknown> | undefined = contexts[key];
+    // Revisão (LOW): a janela recortada em torno de outra cláusula do mesmo escopo pode não conter esta — então esta
+    // cláusula leva a sua própria referência, sob chave derivada.
+    if (known?.kind === "literal-window" && typeof known.text === "string" && !known.text.includes(rule.originalText)) {
+      known = undefined;
+      clause.context = `${key}~${clauses.length + 1}`;
+    }
+    const ctxKey = clause.context as string;
+    if (known) options_.push({ ctx: known, texts: [] });
+    else {
+      const whole = options.delivered?.(key);
+      if (whole) options_.push({ ctx: ref("delivered", whole), texts: [] });
+      else if (ctxKey !== key) { /* janela de outra cláusula: só a referência abaixo */ }
+      else if (!options.minimal) {
+        if (reserveContentChars([...content, ...clauseTexts, context.text]) <= targetChars) options_.push({ ctx: context as unknown as Record<string, unknown>, texts: [context.text] });
+        let allowance = targetChars - withClause;
+        for (let i = 0; i < 4 && allowance > 0; i++, allowance = Math.floor(allowance * .6)) {
+          const w = clauseWindow(rule, context, allowance);
+          if (!w) continue;
+          const { parts, ...shown } = w;
+          const seenIn = options.delivered?.(key, w.source.ranges);
+          options_.push(seenIn
+            ? { ctx: ref("delivered", seenIn, w.text.length), texts: [] }
+            : { ctx: { ...shown, scopeChars: context.text.length, next: reread(rule.id) }, texts: parts });
+        }
+      }
+      options_.push({ ctx: ref("deferred"), texts: [] });
+    }
+    let placed = false;
+    for (const option of options_) {
+      contexts[ctxKey] = option.ctx;
+      clauses.push(clause);
+      if (textSize(blockWith("limited-by-facts")) <= maxBlock) {
+        placed = true;
+        literals.push(rule.originalText);
+        if (option.texts.length) scoped.push(rule.originalText, ...option.texts);
+        else scoped.push(rule.originalText);
+        content.push(...clauseTexts, ...option.texts);
+        break;
+      }
+      clauses.pop();
+      if (known) break;
+      delete contexts[ctxKey];
+    }
+    if (!placed) { if (known) contexts[ctxKey] = known; stop = "block"; break; }
+    if (options.minimal || reserveContentChars(content) >= targetChars) break;
   }
-  const literalChars = reserveContentChars(literals);
-  const scopedChars = reserveContentChars(scoped);
-  return { unavailable, block: { version: CLAUSE_RESERVE_VERSION, targetChars, contentChars, literalChars,
-    contextChars: scopedChars - literalChars, procedureChars: contentChars - scopedChars,
-    status: !candidates.length ? "no-candidates" : contentChars >= targetChars ? "fulfilled" : "exhausted",
-    note: "Quota de leitura contextual deduplicada, não de obrigações novas. Candidatas, não veredito nem pendingId. Confira condições e aplicabilidade; contexto conserva sua própria modalidade.",
-    clauses, ...(clauses.length ? { contexts } : {}) } };
+  const { contentChars } = counts();
+  const status = !candidates.length ? "no-candidates"
+    : contentChars >= targetChars ? "fulfilled"
+      : stop === "block" ? "limited-by-facts"
+        : stop === "quota" ? "quota-reached"
+          : clauses.length >= candidates.length ? "exhausted" : options.minimal ? "floor" : unavailable ? "context-unavailable" : "exhausted";
+  return { unavailable, block: blockWith(status) };
+}
+
+/**
+ * 3.7.4 (D1): os fatos ocuparam a 1ª página e não sobrou espaço para uma cláusula inteira: a reserva não foi entregue nesta
+ * resposta (declarado), com as primeiras candidatas por id e o caminho para lê-las.
+ */
+export function deferredReserve(candidates: ReserveCandidate[], maxChars: number, tiny = false) {
+  const ids = candidates.slice(0, 3).map((c) => c.rule.id);
+  return { version: CLAUSE_RESERVE_VERSION, targetChars: Math.ceil(maxChars * .2), contentChars: 0, status: "deferred-by-facts",
+    ...(tiny ? {} : { note: "A 1ª página (fatos e pendências) não deixou espaço para uma cláusula inteira. Leia as candidatas por id (next) ou peça maxChars maior.", candidates: ids, total: candidates.length }),
+    ...(ids.length ? { next: reread(ids[0]) } : {}) };
 }

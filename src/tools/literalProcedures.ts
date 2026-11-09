@@ -17,11 +17,15 @@ export function literalProcedure(rule: KnowledgeRule, root: string): Procedure |
   const raw = rule.originalText ?? "";
   const text = plain(raw);
   const when = [...(rule.conditions ?? []), text].filter(Boolean).join("; ");
+  // 3.7.4 (O1): cláusula aberta por finalidade ("Para indicar que um checkbox é "pai", deve-se…") só tem por sujeito o
+  // elemento nessa condição — o seletor diz isso, para o par select/expect não valer sobre todo elemento do componente.
+  const purpose = /^para indicar que (.{3,80}?),\s*(?:deve|é preciso|precisa)/i.exec(text);
+  const subjectSel = root === "o elemento citado" ? "sujeitos da cláusula" : `sujeitos da cláusula (${root})`;
   const out = (measure: string, expected: string): Procedure | null => {
     const context = getRuleById(rule.id) === rule ? procedureScope(rule) : null;
     if (getRuleById(rule.id) === rule && !context) return null;
     return {
-    select: root === "o elemento citado" ? "sujeitos da cláusula" : `sujeitos da cláusula (${root})`,
+    select: purpose ? `${subjectSel}, só onde ${purpose[1]} (os demais não são sujeitos)` : subjectSel,
     measure, expect: expected, when, ...(context ? { context } : {}),
   }; };
 
