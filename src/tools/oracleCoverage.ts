@@ -8,6 +8,7 @@ import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checker
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING } from "../checkers/formLabels.js";
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING } from "../checkers/decorativeIcons.js";
 import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING } from "../checkers/iconOnlyButton.js";
+import { ARIA_STATE_CONDITION, SWITCH_ARIA_GROUNDING } from "../checkers/ariaNativeState.js";
 import { FOCUS_ORDER_IMPLEMENTS, TITLE_IMPLEMENTS } from "../checkers/pageStructure.js";
 import { ANATOMY_PARTS, CONTEXT_CONDITIONS } from "../verify/contextual.js";
 import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
@@ -64,6 +65,15 @@ function build(): Map<string, OracleMeasure[]> {
       add(map, id, { tool: "scan_page", check: "structure" });
       add(map, id, { tool: "verify_finding", expectedCondition: condition });
     }
+  }
+  // 3.7.3 A8: a cláusula do Switch é medida só no estado alcançado — o outro estado exige a receita que o alterna.
+  for (const id of SWITCH_ARIA_GROUNDING.implements) {
+    const partial = {
+      coverage: "partial" as const,
+      limitation: "Só no estado alcançado e em switch com estado nativo (input checkbox/radio) e aria-checked presente; alterne com actions para medir o outro estado.",
+    };
+    add(map, id, { tool: "scan_page", check: "structure", ...partial });
+    add(map, id, { tool: "verify_finding", expectedCondition: ARIA_STATE_CONDITION, ...partial });
   }
   for (const id of FOCUS_ORDER_IMPLEMENTS) {
     if (!id.startsWith("govbr-")) continue;

@@ -25,6 +25,7 @@ import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING, exposedDecorativeIcons, isControl, linkTitleRepeatsText } from "../checkers/decorativeIcons.js";
 import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING, embeddedHostOf, iconOnlyNonCircleButton, iconOnlyNonCircleFact, isButtonHost } from "../checkers/iconOnlyButton.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
+import { ARIA_STATES, ARIA_STATE_CONDITION, SWITCH_ARIA_CHECKED, ariaNativePairs, exposedForAria, hasNativeTwin, isSwitch, pairText, type AriaState } from "../checkers/ariaNativeState.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
@@ -327,6 +328,98 @@ function citesAny(finding: Finding, grounding: { implements: string[] }, emag?: 
   return source === "govbr-ds-kb" && grounding.implements.includes(id);
 }
 
+/**
+ * 3.7.3 A8: estado ARIA × estado nativo (checkers/ariaNativeState.ts), recalculado no estado reproduzido. `clause`: a
+ * cláusula obrigatória do Switch — só em switch e só no par checked; verified quando todos divergem. `candidate`: WCAG
+ * 4.1.2 como referência candidata — o fato é medido (contradicted quando não diverge), mas a divergência não confirma a
+ * 4.1.2 (undetermined: o navegador pode expor o estado nativo; o oráculo não promove a medida a violação).
+ */
+function ariaStatePredicate(mode: "clause" | "candidate", wanted: AriaState | null, claimedAria: string | null, knowledgeFree = false): Predicate {
+  const pairOf = (el: ElementEvidence) => {
+    const pairs = ariaNativePairs(el);
+    return wanted ? pairs.find((p) => p.state === wanted) : (pairs.find((p) => p.relation === "mismatch") ?? pairs[0]);
+  };
+  const attr = wanted ? `aria-${wanted}` : "atributo de estado ARIA com par nativo";
+  return {
+    id: "aria-native-state",
+    properties: [],
+    verifyClaim: (elements) => {
+      if (claimedAria === null) return { status: "consistent", detail: `Condição '${ARIA_STATE_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.` };
+      return claimOnEveryElement(elements, `${wanted ? `aria-${wanted}` : "ARIA"}="${claimedAria}"`, (el) => {
+        const p = pairOf(el);
+        return p && p.aria !== claimedAria ? `${el.locator} tem ${p.ariaAttribute}="${p.aria}"` : null;
+      });
+    },
+    evaluate: (elements) => {
+      const hidden = elements.filter((el) => !exposedForAria(el));
+      if (hidden.length) return { status: "undetermined", recipeGap: true, detail: `${hidden.length} de ${elements.length} elemento(s) oculto(s) neste estado (fora da árvore de acessibilidade): meça no estado em que aparece.` };
+      const outside = knowledgeFree ? [] : elements.filter((el) => el.origin === "ds-web-component" || el.origin === "flatpickr");
+      if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de web component do DS ou de terceiro embutido: o ARIA é do componente, não da página — observação, não violação.` };
+      if (mode === "clause") {
+        const notSwitch = elements.filter((el) => !isSwitch(el));
+        if (notSwitch.length) return { status: "undetermined", code: "rule-not-applicable", detail: `${notSwitch.length} de ${elements.length} elemento(s) não é switch (role=switch ou dentro de .br-switch/<br-switch>): a cláusula do Switch não se aplica.` };
+      }
+      const rows = elements.map((el) => ({ el, p: pairOf(el) }));
+      const agree = rows.filter((r) => r.p?.relation === "agree");
+      // Sem par: nativo presente e ARIA ausente não diverge (contradicted); ARIA sem par nativo não se compara.
+      const nativeOnly = rows.filter((r) => !r.p && hasNativeTwin(r.el, wanted));
+      const ariaOnly = rows.filter((r) => !r.p && !hasNativeTwin(r.el, wanted));
+      const notCompared = rows.filter((r) => r.p?.relation === "not-compared");
+      if (agree.length || nativeOnly.length) {
+        return {
+          status: "contradicted",
+          detail: `${agree.length + nativeOnly.length} de ${elements.length} elemento(s) sem divergência neste estado: ${[
+            ...agree.map((r) => `${r.el.locator} (${pairText(r.p!, "=")})`),
+            ...nativeOnly.map((r) => `${r.el.locator} (sem ${attr}: nada diverge)`),
+          ].slice(0, 3).join("; ")}.`,
+        };
+      }
+      if (ariaOnly.length || notCompared.length) {
+        return {
+          status: "undetermined",
+          code: "rule-not-applicable",
+          detail: `${ariaOnly.length + notCompared.length} de ${elements.length} elemento(s) sem par comparável: ${[
+            ...ariaOnly.map((r) => `${r.el.locator} (sem estado nativo equivalente a ${attr})`),
+            ...notCompared.map((r) => `${r.el.locator} (${r.p!.why})`),
+          ].slice(0, 3).join("; ")}.`,
+        };
+      }
+      const facts = rows.slice(0, 3).map((r) => `${r.el.locator} (${pairText(r.p!)})`).join("; ");
+      if (mode === "clause") {
+        const mixed = rows.filter((r) => r.p!.native === "mixed");
+        if (mixed.length) return { status: "undetermined", code: "rule-not-applicable", detail: `${mixed.length} de ${elements.length} switch(es) indeterminado(s) (indeterminate): a cláusula do Switch trata só de ativado/desativado.` };
+        return { status: "verified", detail: `Violação recalculada em ${elements.length} de ${elements.length} switch(es): ${facts}.` };
+      }
+      return {
+        status: "undetermined",
+        detail: `Divergência medida em ${elements.length} de ${elements.length} elemento(s): ${facts}. O fato existe; a WCAG 4.1.2 é referência candidata e o oráculo não a afirma (o navegador pode expor o estado nativo). Cite a cláusula do componente quando a base tiver uma.`,
+      };
+    },
+  };
+}
+
+function ariaStateSelection(finding: Finding, data: Record<string, unknown>, knowledgeFree: boolean): PredicateSelection {
+  const { source, id } = finding.rule;
+  const wantedRaw = data.state;
+  if (wantedRaw !== undefined && !(typeof wantedRaw === "string" && (ARIA_STATES as readonly string[]).includes(wantedRaw))) {
+    return { predicate: null, claimStatus: "contradicted", reason: `evidence.data.state deve ser ${ARIA_STATES.join(", ")}.` };
+  }
+  const wanted = (wantedRaw as AriaState | undefined) ?? null;
+  const claimed = typeof data.observedAria === "string" ? data.observedAria.trim().replace(/^["']|["']$/g, "").toLowerCase() : null;
+  const isWcag412 = source === "wcag" && id.trim().replace(/^wcag[-:.\s]*/i, "") === "4.1.2";
+  if (!knowledgeFree && source === "govbr-ds-kb" && id === SWITCH_ARIA_CHECKED) {
+    if (wanted && wanted !== "checked") return { predicate: null, claimStatus: "contradicted", reason: `${SWITCH_ARIA_CHECKED} trata só de aria-checked: evidence.data.state deve ser 'checked'.` };
+    return { predicate: ariaStatePredicate("clause", "checked", claimed) };
+  }
+  if (isWcag412) return { predicate: ariaStatePredicate("candidate", wanted, claimed, knowledgeFree) };
+  return {
+    predicate: null,
+    reason: knowledgeFree
+      ? `A condição '${ARIA_STATE_CONDITION}' só é medida citando WCAG 4.1.2 (referência candidata; a medida não a afirma).`
+      : `A condição '${ARIA_STATE_CONDITION}' só é decidida para ${SWITCH_ARIA_CHECKED} (Switch, obrigatória) e medida para WCAG 4.1.2 (referência candidata, sem confirmação). Recomendação não é citada como violada.`,
+  };
+}
+
 export function selectPredicate(finding: Finding): PredicateSelection {
   const { source, id } = finding.rule;
   const data = (finding.evidence.data ?? {}) as Record<string, unknown>;
@@ -356,6 +449,11 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   if (data.expectedCondition === ICON_ONLY_BUTTON_CONDITION) {
     if (citesAny(finding, ICON_ONLY_BUTTON_GROUNDING)) return { predicate: iconOnlyButtonPredicate };
     return none(`A condição '${ICON_ONLY_BUTTON_CONDITION}' só é decidida para ${ICON_ONLY_BUTTON_GROUNDING.implements.join(", ")} (o rótulo do Button é obrigatório; a exceção é a variante circular). Nome acessível é outro defeito: WCAG 4.1.2.`);
+  }
+  // 3.7.3 A8: estado ARIA × nativo — só com a condição exata.
+  if (data.expectedCondition === ARIA_STATE_CONDITION) return ariaStateSelection(finding, data, false);
+  if (source === "govbr-ds-kb" && id === SWITCH_ARIA_CHECKED && data.expectedCondition === undefined) {
+    return none(`${SWITCH_ARIA_CHECKED} só é verificável com evidence.data.expectedCondition='${ARIA_STATE_CONDITION}' (e state 'checked'), no estado que a receita reproduz.`, "missing");
   }
   if (data.expectedCondition === LINK_TITLE_CONDITION) {
     // 3.5.0 (revisão, MED): title redundante não reprova a WCAG 2.4.4 — só a cláusula do e-MAG 3.5 que o proíbe.
@@ -654,6 +752,8 @@ export function selectPredicateKnowledgeFree(finding: Finding): PredicateSelecti
       "estruturada têm predicado. Localizar o elemento não confirma a alegação.",
   };
   if (source !== "wcag") return generic;
+  // 3.7.3 A8: a medida ARIA × nativo existe neste perfil (WCAG 4.1.2 candidata; nunca confirma).
+  if (data.expectedCondition === ARIA_STATE_CONDITION) return ariaStateSelection(finding, data, true);
   return selectContextPredicate(finding, data, KNOWLEDGE_FREE_CONDITIONS, { knowledgeFree: true }) ?? generic;
 }
 

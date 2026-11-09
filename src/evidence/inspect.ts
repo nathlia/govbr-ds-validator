@@ -438,6 +438,48 @@ export async function inspectPageComputedStyles(
           if (hosts.length) hostComponents = hosts.slice(0, 8);
         }
 
+        // 3.7.3 A8: atributo de estado ARIA × estado nativo vivo. Só os atributos presentes saem; o estado nativo só sai
+        // quando há algum desses atributos e o elemento tem o par nativo (propriedades vivas, não a marcação).
+        const ariaChecked = el.getAttribute("aria-checked");
+        const ariaSelected = el.getAttribute("aria-selected");
+        const ariaExpanded = el.getAttribute("aria-expanded");
+        let nativeState: Record<string, boolean> | undefined;
+        if ([ariaChecked, ariaSelected, ariaExpanded, el.getAttribute("aria-disabled"), el.getAttribute("aria-required")].some((v) => v !== null)) {
+          const tag = el.tagName.toLowerCase();
+          const type = (el.getAttribute("type") ?? "").trim().toLowerCase();
+          const ns: Record<string, boolean> = {};
+          if (tag === "input" && (type === "checkbox" || type === "radio")) {
+            ns.checked = (el as HTMLInputElement).checked;
+            if (type === "checkbox") ns.indeterminate = (el as HTMLInputElement).indeterminate;
+          }
+          if (tag === "option") {
+            ns.selected = (el as HTMLOptionElement).selected;
+            // A opção de um select fechado não tem caixa, mas é exposta com a lista: vale a caixa do select.
+            const list = el.closest("select");
+            if (list && list.getClientRects().length > 0 && getComputedStyle(list).visibility === "visible" && !(el as HTMLOptionElement).hidden && computed.display !== "none") ns.inRenderedSelect = true;
+          }
+          if (tag === "details") ns.open = (el as HTMLDetailsElement).open;
+          const parent = el.parentElement;
+          if (tag === "summary" && parent?.tagName.toLowerCase() === "details" && parent.querySelector(":scope > summary") === el) ns.open = (parent as HTMLDetailsElement).open;
+          if (["button", "input", "select", "textarea", "fieldset", "optgroup", "option"].includes(tag)) ns.disabled = el.matches(":disabled");
+          if ((tag === "input" && !["hidden", "range", "color", "submit", "reset", "button", "image"].includes(type)) || tag === "select" || tag === "textarea") {
+            ns.required = (el as HTMLInputElement).required;
+          }
+          if (Object.keys(ns).length) {
+            if (dsFacts) {
+              // Switch do DS: ancestral com a classe br-switch ou host <br-switch>, atravessando shadow roots.
+              for (let n: Element | null = el, depth = 0; n && depth < 60; depth += 1) {
+                if (n.classList.contains("br-switch") || n.tagName.toLowerCase() === "br-switch") { ns.dsSwitch = true; break; }
+                const up: Element | null = n.parentElement;
+                if (up) { n = up; continue; }
+                const r = n.getRootNode();
+                n = r instanceof ShadowRoot ? r.host : null;
+              }
+            }
+            nativeState = ns;
+          }
+        }
+
         return {
           nameProbeIndex,
           locator: locatorFor(el),
@@ -461,7 +503,11 @@ export async function inspectPageComputedStyles(
             href: el.getAttribute("href"),
             title: el.getAttribute("title"),
             ariaLabelledby: labelledby,
+            ...(ariaChecked !== null ? { ariaChecked } : {}),
+            ...(ariaSelected !== null ? { ariaSelected } : {}),
+            ...(ariaExpanded !== null ? { ariaExpanded } : {}),
           },
+          ...(nativeState ? { nativeState } : {}),
           content: {
             textContent: text.slice(0, 100),
             hasVisibleText: text.length > 0,

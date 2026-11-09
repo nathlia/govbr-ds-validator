@@ -56,6 +56,31 @@ export interface ElementEvidence {
     /** Ausentes em evidência colhida antes da 2.8.0. */
     title?: string | null;
     ariaLabelledby?: string | null;
+    /**
+     * 3.7.3 A8: atributos de estado ARIA com estado nativo equivalente, só quando o atributo existe (valor cru).
+     * aria-pressed não tem par nativo e não é colhido.
+     */
+    ariaChecked?: string;
+    ariaSelected?: string;
+    ariaExpanded?: string;
+  };
+  /**
+   * 3.7.3 A8: o estado nativo que corresponde a um atributo de estado ARIA, lido das propriedades vivas do elemento
+   * (não dos atributos de marcação). Só em elemento que tem algum atributo aria-checked/selected/expanded/disabled/
+   * required e que tem o par nativo: checked/indeterminate (input checkbox/radio), selected (option), open (details e o
+   * summary dele), disabled (:disabled em controle de formulário), required (campo onde required se aplica).
+   */
+  nativeState?: {
+    checked?: boolean;
+    indeterminate?: boolean;
+    selected?: boolean;
+    open?: boolean;
+    disabled?: boolean;
+    required?: boolean;
+    /** Em option: o select que a contém está renderizado (a opção de lista fechada não tem caixa própria). */
+    inRenderedSelect?: boolean;
+    /** Fora do perfil knowledge-free: o elemento está num Switch do DS (ancestral .br-switch ou host <br-switch>). */
+    dsSwitch?: true;
   };
   content: {
     textContent: string;

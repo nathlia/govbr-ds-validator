@@ -78,7 +78,8 @@ export function checksRunFor(
   const actionsApplied = coverage.actionsApplied?.length ?? 0;
   if (knowledgeFree) {
     return {
-      executed: [{ check: "axe", scope, ...(engine ? { engine } : {}) }],
+      // 3.7.3 A8: a medida ARIA × estado nativo também roda neste perfil (só pendências, sem norma da base).
+      executed: [{ check: "axe", scope, ...(engine ? { engine } : {}) }, { check: "aria-native-state", scope }],
       omitted: [],
       limits: limits(actionsApplied, viewport, true),
       coverageNote: MESSAGES["scan-coverage"],

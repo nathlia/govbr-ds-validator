@@ -104,6 +104,8 @@ export interface PendingEntry {
   low: boolean;
   /** 3.7.2 (revisão HIGH 1): só o verify_finding num dos elementos da pendência a fecha (NotJudgedItem.elementBound). */
   elementBound?: boolean;
+  /** 3.7.3 A8 (revisão MED 2): o verify_finding que fecha precisa ser vivo, com ações na receita e esta condição. */
+  requires?: { actions: true; expectedCondition: string };
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -319,6 +321,7 @@ export class ScanSession {
           locators: [],
           low: item.signal === "low",
           ...(item.elementBound ? { elementBound: true } : {}),
+          ...(item.resolveRequires ? { requires: item.resolveRequires } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -440,13 +443,18 @@ export class ScanSession {
    * dela, só fecha a rota cuja pendência é exatamente esse elemento (um localizador só, o mesmo). Devolve rótulos
    * (`P-NN` ou `P-NN@/rota`).
    */
-  resolveByVerify(finding: Finding, verificationId: string, verdict: string): string[] {
+  resolveByVerify(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number }): string[] {
     const route = routeKeyOf(finding.element.page);
     const cited = citedNorms(finding.rule);
     const resolved: string[] = [];
     const resolution: PendingResolution = { by: "verify_finding", ref: verificationId, status: verdict };
     for (const entry of this.open()) {
       if (!entry.norms.some((n) => cited.has(n))) continue;
+      // 3.7.3 A8 (revisão MED 2): "não verificado depois de alternar" não fecha por verify no estado não alternado.
+      if (entry.requires) {
+        const condition = (finding.evidence.data as Record<string, unknown> | undefined)?.expectedCondition;
+        if (!measured?.live || !measured.reached || measured.actions < 1 || condition !== entry.requires.expectedCondition) continue;
+      }
       const here = slotOf(entry, route);
       // 3.7.2 (revisão HIGH 1): pendência de elementos que compartilha a norma com achados de outros elementos — só o verify
       // num dos elementos dela a fecha (nesta rota; noutra, o slot que tem esse mesmo elemento).

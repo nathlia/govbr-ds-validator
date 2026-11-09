@@ -24,6 +24,11 @@ export const EXPECTED_CONDITIONS = {
   iconOnlyButtonCircle: "icon-only-br-button-is-circle",
   /** 3.5.0 (C03): o title do link não repete o texto do link (e-MAG 3.5). */
   linkTitleNotRepeated: "link-title-not-repeating-text",
+  /**
+   * 3.7.3 A8: o atributo de estado ARIA (aria-checked/selected/expanded/disabled/required) diz o mesmo que o estado
+   * nativo do elemento (checked/indeterminate, selected, open, :disabled, required) no estado reproduzido.
+   */
+  ariaStateMatchesNative: "aria-state-matches-native",
   // 2.13.0 (NAT-85) — verificação contextual delimitada. Cada condição nomeia o estado ESPERADO;
   // a alegação de violação diz que ele não se cumpre. Só as regras listadas em
   // verify/contextual.ts (CONTEXT_CONDITIONS) selecionam estes predicados.

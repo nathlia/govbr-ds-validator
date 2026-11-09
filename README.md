@@ -83,6 +83,19 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.3-pre.8 — estado ARIA × estado nativo (NAT-111, A8)
+
+O scan mede, no estado alcançado (inclusive depois de `actions`), se `aria-checked/selected/expanded/
+disabled/required` diz o mesmo que o estado nativo vivo (`checked`/`indeterminate`, `selected`, `open`,
+`:disabled`, `required`). Divergência num Switch (role=switch ou `.br-switch`/`<br-switch>`) é achado
+com a cláusula obrigatória `…switch-364149c5aea4`; nos demais elementos é pendência
+`aria-native-mismatch` sem `rule`, com WCAG 4.1.2 só como referência candidata. Concordância que
+poderia divergir depois de alternar é pendência `aria-state-unverified` (medida parcial). ARIA sem par
+nativo, nativo sem ARIA e `aria-disabled/required="true"` sem o nativo não são comparados.
+`verify_finding` decide com `expectedCondition: aria-state-matches-native` (predicado
+`aria-native-state`; WCAG 4.1.2 nunca confirma). knowledge-free: a mesma medida, só como pendências,
+sem nada da base. `tools/list` inalterado. Ver [registro](docs/nat111-a8-aria-2026-11-09.md).
+
 ## 3.7.3-pre.1 — checklist global/página (NAT-111, A2)
 
 `get_page_rules {view:"checklist"}` lista as 415 cláusulas globais obrigatórias/proibidas não-título,
@@ -1182,7 +1195,7 @@ fixam os sha novos do `tools/list`.
 - `inspect_computed_styles (url, selector?, selectors?, properties?)` — batches selectors and returns only requested computed/focus properties plus structural evidence
 
 **Deterministic checkers (no LLM)** — bounded pages, compact by default:
-- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, arrival?, compareToScanId?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, measured state arrival (2.10.0), state/finding diffs, exact cache and evidence ledger
+- `scan_page (url, selectors?, checks?, tokenChecks?, components?, actions?, arrival?, compareToScanId?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — one-load aggregate fast path (`tokens`, `structure`, `axe`, `page`) with bounded setup actions, measured state arrival (2.10.0), state/finding diffs, exact cache and evidence ledger. Since 3.7.3-pre.8 `structure` also compares ARIA state attributes with the live native state (`aria-native-state`: Switch finding, otherwise pending `aria-native-mismatch` / `aria-state-unverified`)
 - `check_token_compliance (url, selector?, selectors?, checks?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched colors/fonts/radii/spacing vs. token registry
 - `check_component_structure (url, component?, selectors?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched DOM vs. canonical spec
 - `run_axe_scan (url, selector?, selectors?, detail?, cursor?, limit?, maxChars?, view?, memberLimit?)` — batched axe-core with e-MAG cross-references
@@ -1976,7 +1989,7 @@ part of the run configuration and must not be pooled across measurements:
 | `evidence` | raw authored/computed-style inspection, without rules or scanner verdicts |
 | `evaluation` | compatibility profile combining the three pathways plus the verification gate |
 | `full` | authoring/development surface, including individual checkers and report persistence |
-| `knowledge-free` | 2.14.0: the measurement tools of `evaluation` without the DS + e-MAG package the oracle serves and applies — `scan_page` (axe-core only), `get_finding_details`, `verify_finding` (state replay, WCAG 2.2 registry, P1 predicates). WCAG and axe-core remain; see *Knowledge-free profile* below |
+| `knowledge-free` | 2.14.0: the measurement tools of `evaluation` without the DS + e-MAG package the oracle serves and applies — `scan_page` (axe-core only; since 3.7.3-pre.8 plus the ARIA × native state measurement as pending items with WCAG 4.1.2 as candidate), `get_finding_details`, `verify_finding` (state replay, WCAG 2.2 registry, P1 predicates; `aria-state-matches-native` measured, never confirmed). WCAG and axe-core remain; see *Knowledge-free profile* below |
 
 The deterministic profile exposes no normative resources, and the normative profile exposes no
 scanner. This makes norms-only, scanner-only and evidence-only arms mechanically distinct instead

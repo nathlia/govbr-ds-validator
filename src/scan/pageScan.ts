@@ -15,7 +15,8 @@ import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
-import { contrastPending, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
+import { contrastPending, kbRule, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
+import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
@@ -538,6 +539,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const placeholderChecked = checks.includes("structure") && normalized.components.length === 0;
     // 3.7.2 (D-166): os botões só com ícone que o C01 não acusa por serem parte de outro componente do DS (candidatos).
     let embeddedIconButtons: NonNullable<Parameters<typeof notJudgedFor>[0]["embeddedIconButtons"]> = [];
+    let ariaStates: NotJudgedItem[] = [];
     if (placeholderChecked) {
       const labels = checkPlaceholderLabels({ url: request.url }, fieldEvidence);
       rawFindings.push(...labels.findings);
@@ -554,6 +556,14 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       rawFindings.push(...iconOnly.findings);
       observations.push(...iconOnly.observations);
       embeddedIconButtons = iconOnly.candidates;
+      // 3.7.3 A8: atributo de estado ARIA × estado nativo vivo, no estado alcançado (checkers/ariaNativeState.ts).
+      const ariaEvidence = scoped
+        ? region.filter((el) => el.nativeState !== undefined)
+        : (await inspectPageComputedStyles(page, request.url, ARIA_STATE_SELECTOR, [])).elements;
+      const aria = checkAriaNativeStates({ url: request.url }, ariaEvidence, { switchRule: kbRule(SWITCH_ARIA_CHECKED) });
+      rawFindings.push(...aria.findings);
+      observations.push(...aria.observations);
+      ariaStates = aria.pending;
     }
     const tableEvidence = scoped ? region.filter((el) => el.tagName === "table") : (await inspectPageComputedStyles(page, request.url, "table", [])).elements;
     const unnamedTables = unnamedTablesOf(tableEvidence, facts, scoped);
@@ -606,6 +616,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       axeRan: checks.includes("axe"),
       ...(contrastIncomplete ? { contrastIncomplete } : {}),
       ...(embeddedIconButtons.length ? { embeddedIconButtons } : {}),
+      ...(ariaStates.length ? { ariaStates } : {}),
     });
     const value: CachedScan = {
       status: "scanned",
@@ -678,13 +689,19 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     const deduplicated = deduplicateFindings(result.findings);
     // 3.6.1 (item 5): contraste que o axe não decidiu, como pendência — só o critério WCAG, nada da base.
     const contrast = contrastPending(result.contrastIncomplete, true);
+    // 3.7.3 A8: a mesma medida ARIA × nativo, sem nada da base (sem Switch do DS, cláusula ou autoria do DS): pendências.
+    const ariaEvidence = selectors.length
+      ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements.filter((el) => el.nativeState !== undefined)
+      : (await inspectPageComputedStyles(page, request.url, ARIA_STATE_SELECTOR, [])).elements;
+    const aria = checkAriaNativeStates({ url: request.url }, ariaEvidence, { knowledgeFree: true });
+    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending];
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
       stateFingerprint,
       findings: pageLevelFirst(deduplicated.findings),
       observations: [],
-      ...(contrast ? { notJudged: [contrast] } : {}),
+      ...(notJudged.length ? { notJudged } : {}),
       coverage: {
         checks,
         selectors,

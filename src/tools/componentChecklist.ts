@@ -13,6 +13,7 @@ import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTitleRecord, listingOrder } from "../responses/retrieval.js";
 import { CONTRACT, MESSAGES, RESPONSE_BUDGET, budgetPage, step, textSize } from "../responses/contract.js";
 import { oracleFullyMeasures, oracleMeasuresFor, type OracleMeasure } from "./oracleCoverage.js";
+import { ARIA_STATE_CONDITION } from "../checkers/ariaNativeState.js";
 import { getComponentSpecs } from "../data/load.js";
 import { BUTTON_LABEL_ANATOMY, BUTTON_LABEL_LEGACY, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 import { literalProcedure } from "./literalProcedures.js";
@@ -245,6 +246,8 @@ export function procedureLine(p: Procedure, max = 160): string {
 
 /** Sem procedimento derivável: o que fazer, sem valor esperado (a cláusula pede juízo). */
 const JUDGEMENT_HOW = "julgamento: o texto não dá o que medir nem o valor; registre o que leu";
+/** 3.7.3 A8: cláusula medida em parte pelo oráculo (oracle[].limitation diz qual parte); o resto, com a receita que falta. */
+const PARTIAL_HOW = "parcial: o oráculo mede o estado alcançado (oracle); meça os demais estados com actions e registre o que mediu";
 
 function measureOf(rule: KnowledgeRule, component?: string): Record<string, unknown> {
   const oracle = oracleMeasuresFor(rule.id);
@@ -258,6 +261,8 @@ function measureOf(rule: KnowledgeRule, component?: string): Record<string, unkn
       })),
       // 3.7.0: a medida do próprio oráculo dita como procedimento, quando a letra servida não basta (exceção perdida).
       ...(own ? { procedure: own } : {}),
+      // 3.7.3 A8: medida parcial (só o estado alcançado): o restante tem o seu `how` — o procedimento da letra, quando há.
+      ...(oracle.some((m) => m.expectedCondition === ARIA_STATE_CONDITION) && !oracleFullyMeasures(rule.id) ? { how: (() => { const proc = procedureOf(rule, component); return proc ? procedureLine(proc) : PARTIAL_HOW; })() } : {}),
     };
   }
   // 3.7.0: com procedimento derivável, `how` é ele (o que selecionar → o que medir → o valor que a cláusula diz). Sem ele, a

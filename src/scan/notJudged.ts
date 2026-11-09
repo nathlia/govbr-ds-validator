@@ -25,7 +25,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified";
   subject: string;
   count?: number;
   observed?: string;
@@ -58,6 +58,16 @@ export interface NotJudgedItem {
    * sai numa resposta.
    */
   elementSet?: string;
+  /**
+   * 3.7.3 A8: os pares ARIA × nativo medidos (checkers/ariaNativeState.ts), um por elemento e estado. Ficam no ledger
+   * (get_finding_details view:observations); na resposta do scan só o `observed` curto.
+   */
+  ariaPairs?: Array<{ locator: string; state: string; native: string; aria: string }>;
+  /**
+   * 3.7.3 A8 (revisão MED 2): o que um verify_finding precisa para fechar a pendência — verificação viva com o estado
+   * alcançado por uma receita com ações e esta condição estruturada. Fica na sessão; nunca sai numa resposta.
+   */
+  resolveRequires?: { actions: true; expectedCondition: string };
 }
 
 export interface NotJudgedInput {
@@ -78,6 +88,8 @@ export interface NotJudgedInput {
    * cujo exemplo oficial traz o mesmo botão (checkers/iconOnlyButton.ts) — candidatos a investigar.
    */
   embeddedIconButtons?: Array<{ locator: string; host: string; examples: string[] }>;
+  /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
+  ariaStates?: NotJudgedItem[];
 }
 
 const EXAMPLES = 3;
@@ -147,7 +159,7 @@ export function contrastPending(contrast: { nodes: number; items: ContrastIncomp
 }
 
 /** 3.7.2: a cláusula da base por id, com força e texto curto (para a pendência). */
-function kbRule(id: string): NotJudgedItem["rule"] {
+export function kbRule(id: string): NotJudgedItem["rule"] {
   try {
     const r = getRuleById(id);
     if (!r) return undefined;
@@ -299,6 +311,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   if (contrast) items.push(contrast);
   const embedded = embeddedIconButtonPending(input.embeddedIconButtons ?? []);
   if (embedded) items.push(embedded);
+  items.push(...(input.ariaStates ?? []));
   return items;
 }
 
@@ -306,7 +319,7 @@ export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unkno
 
 /** Na resposta: até 2 exemplos (o item inteiro fica no ledger); 3.6.1: com o id da pendência da sessão. */
 function compactItem(item: PendingItem, withText: (code: string) => boolean = () => true) {
-  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -331,7 +344,7 @@ export function pageLevelMeasured(checks: string[], componentsRestricted = false
   const out: string[] = [];
   if (checks.includes("page")) out.push("header/footer", "skip-link", "focus-order");
   if (checks.includes("axe")) out.push("title-present", "lang-valid", "h1", "regions (axe)");
-  if (checks.includes("structure")) out.push(...(componentsRestricted ? ["component-structure"] : ["component-structure", "placeholder-label", "decorative-icon", "icon-only-button", "link-title", "focus-visible"]));
+  if (checks.includes("structure")) out.push(...(componentsRestricted ? ["component-structure"] : ["component-structure", "placeholder-label", "decorative-icon", "icon-only-button", "link-title", "focus-visible", "aria-native-state"]));
   return out;
 }
 
@@ -342,7 +355,7 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string): Obse
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
     whyNotAFinding: `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: (({ elementSet: _set, boundLocators: _locs, ...rest }) => rest)(item),
+    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, ...rest }) => rest)(item),
   }));
 }
 
@@ -363,9 +376,13 @@ export function pageLevelBlock(checks: string[], items: PendingItem[], component
  * (nenhum texto, id ou força da base de conhecimento).
  */
 export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
+  // 3.7.3 A8: com pendências ARIA × nativo, a nota não atribui a medida só ao axe.
+  const aria = items.some((i) => i.code.startsWith("aria-"));
   return {
     notMeasured: items.map((i) => compactItem(i)),
-    note: "notMeasured: pendências suas — o axe mediu e não decidiu; não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério em norms).",
+    note: aria
+      ? "notMeasured: pendências suas — o oráculo mediu e não decidiu (axe; estado ARIA × nativo); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério candidato em norms)."
+      : "notMeasured: pendências suas — o axe mediu e não decidiu; não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério em norms).",
   };
 }
 

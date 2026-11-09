@@ -2731,7 +2731,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
                 }
               : { needed: interaction.needed, steps: interaction.steps, text: interaction.text, stateSteps: [...recipeActions, ...interaction.steps], note: INTERACTION_NOTE };
       // 3.6.1 (D-155, item 1): verificar uma das normas de uma pendência, na rota dela, a resolve (qualquer veredito).
-      const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict);
+      const pendingResolved = session.resolveByVerify(candidate, stored.verificationId, verification.verdict, { live: verification.binding?.live === true, reached, actions: recipeActions.length });
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
       // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
