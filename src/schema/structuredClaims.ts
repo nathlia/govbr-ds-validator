@@ -29,6 +29,16 @@ export const EXPECTED_CONDITIONS = {
    * nativo do elemento (checked/indeterminate, selected, open, :disabled, required) no estado reproduzido.
    */
   ariaStateMatchesNative: "aria-state-matches-native",
+  /**
+   * 3.7.7 (teste à mão da 3.7.6, D1): o tamanho de fonte computado do elemento é um passo da escala tipográfica do DS (com a
+   * tolerância de arredondamento do scan). A alegação de violação diz que não é.
+   */
+  fontSizeOnScale: "font-size-on-ds-scale",
+  /**
+   * 3.7.7 (D1): o valor computado da parte (font-size/font-weight) é o do token que a unidade de especificação citada declara
+   * para ela. A alegação diz que difere.
+   */
+  partValueMatchesSpecToken: "part-value-matches-spec-token",
   // 2.13.0 (NAT-85) — verificação contextual delimitada. Cada condição nomeia o estado ESPERADO;
   // a alegação de violação diz que ele não se cumpre. Só as regras listadas em
   // verify/contextual.ts (CONTEXT_CONDITIONS) selecionam estes predicados.

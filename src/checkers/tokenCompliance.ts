@@ -82,7 +82,7 @@ const DS_FONT = /rawline|raleway/i;
  * verificação futura leiam a MESMA escala — duas cópias divergiriam, que é o defeito estrutural
  * que este repositório já encontrou nove vezes.
  */
-function fontScalePx(registry: TokenRegistry): number[] {
+export function fontScalePx(registry: TokenRegistry): number[] {
   return Object.entries(registry.all)
     .filter(([name]) => name.startsWith("--font-size-scale"))
     .map(([, v]) => parsePx(v))
@@ -95,7 +95,7 @@ function fontScalePx(registry: TokenRegistry): number[] {
  * A escala do DS é modular e não redonda (14 · 16,8 · 20,16 · 24,192 px). Quem transcreve 20,16
  * para o CSS escreve 20px, e essa é a folga que a tolerância cobre — não mais que isso.
  */
-function foraDaEscala(value: string, scale: number[]): boolean {
+export function foraDaEscala(value: string, scale: number[]): boolean {
   const px = parsePx(value);
   if (px === null) return false; // non-px (%, em) — not comparable here
   return !scale.some((s) => Math.abs(s - px) < 0.5);
@@ -396,12 +396,14 @@ export function collectTokenObservations(
       element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: page.url },
       note: `font-size: ${size} não coincide com a escala tipográfica do DS (${rotulo})${
         nearest !== null && px !== null ? `; passo mais próximo ${+nearest.toFixed(2)}px (a ${+Math.abs(px - nearest).toFixed(2)}px)` : ""
-      }. Norma: ${related.id} (${related.force}).`,
+      }. Norma: ${related.id} (${related.force}). Decida por elemento: verify_finding live com expectedCondition ${EXPECTED_CONDITIONS.fontSizeOnScale}.`,
       whyNotAFinding: CHECK_GROUNDING["token-font-size"].basis,
       data: {
         property: "font-size",
         observed: size,
         relatedRule: { id: related.id, force: related.force },
+        // 3.7.7 (D1): a condição que o verify_finding decide por elemento (citando relatedRule.id).
+        expectedCondition: EXPECTED_CONDITIONS.fontSizeOnScale,
         ...(nearest !== null && px !== null ? { nearestStepPx: +nearest.toFixed(3), distancePx: +Math.abs(px - nearest).toFixed(3) } : {}),
         allowedScale: scale.map((v) => `${v}px`),
         authoredDeclarations: declarations ?? null,

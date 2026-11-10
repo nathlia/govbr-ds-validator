@@ -7,7 +7,8 @@
 import type { Finding } from "../schema/finding.js";
 import type { GateVerification } from "../verify/gate.js";
 import { UNGROUNDED_NEXT } from "../verify/gate.js";
-import { checkerOf, groundingForCheckId } from "../verify/registries.js";
+import { checkerOf, groundingForCheckId, relatedRuleForCheckId } from "../verify/registries.js";
+import { conditionForRuleId } from "../verify/predicates.js";
 import { getRuleById } from "../data/knowledge.js";
 import { getEmag } from "../data/load.js";
 import { emagUnits } from "../data/normativeUnits.js";
@@ -168,8 +169,35 @@ function observationMessage(status: ObservationStatus, about: About): string {
   );
 }
 
+/**
+ * 3.7.7 (teste à mão da 3.7.6, D1): a norma citada (ou a que a base liga ao check citado) TEM predicado por condição — o
+ * próximo passo é reenviar com a condição exata, mantendo a norma; nunca "rule: null". Nada no perfil sem conhecimento.
+ */
+function conditionHint(finding: Finding, knowledgeFree: boolean): { id: string; condition: string } | null {
+  if (knowledgeFree) return null;
+  if (finding.rule.source === "govbr-ds-kb") {
+    const condition = conditionForRuleId(finding.rule.id);
+    if (condition) return { id: finding.rule.id, condition };
+  }
+  const checker = checkerOf(finding).ref;
+  const related = checker ? relatedRuleForCheckId(checker.family, checker.checker) : undefined;
+  const condition = related ? conditionForRuleId(related.id) : null;
+  return related && condition ? { id: related.id, condition } : null;
+}
+
+function conditionStep(hint: { id: string; condition: string }, scanId: string | undefined): NextStep {
+  return step(
+    "measure-condition",
+    `A norma ${hint.id} tem predicado: mantenha-a citada (source 'govbr-ds-kb', sem rule.checker) e reenvie live, um elemento por vez, com evidence.data {property, observed, expectedCondition:'${hint.condition}'}.`,
+    "verify_finding",
+    { live: true, ...(scanId ? { scanId } : {}) },
+    { keep: ["element", ...(scanId ? ["scanId"] : [])] },
+  );
+}
+
 function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefined, knowledgeFree: boolean, legacy?: { successors: string[] }): NextStep[] {
   const t = texts(knowledgeFree);
+  const hint = conditionHint(finding, knowledgeFree);
   const out: NextStep[] = [];
   const keep = ["element", "evidence", ...(scanId ? ["scanId"] : [])];
   const add = (s: NextStep) => {
@@ -197,7 +225,7 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
         );
         break;
       case "citation-ungrounded-check":
-        add(step("keep-uncertain", UNGROUNDED_NEXT));
+        add(hint ? conditionStep(hint, scanId) : step("keep-uncertain", UNGROUNDED_NEXT));
         break;
       case "evidence-registry-inconsistent":
         add(step("measure-condition", "O valor alegado é de um token do DS: meça de novo e corrija evidence.data antes de reenviar.", "verify_finding", undefined, { keep: ["element", ...(scanId ? ["scanId"] : [])] }));
@@ -238,7 +266,7 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
         add(step("measure-condition", "Repita com live:true no estado do achado (scanId), sem mudar o achado.", "verify_finding", { live: true, ...(scanId ? { scanId } : {}) }, { keep: ["finding"] }));
         break;
       case "no-predicate":
-        add(step("keep-uncertain", t.keep));
+        add(hint ? conditionStep(hint, scanId) : step("keep-uncertain", t.keep));
         break;
       case "undetermined":
         add(step("measure-condition", "Os dados medidos não decidem: o detail diz o que faltou; meça e reenvie com os dados estruturados."));

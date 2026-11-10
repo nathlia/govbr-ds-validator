@@ -78,7 +78,8 @@ export const CHECK_GROUNDING: Record<CheckKind, CheckGrounding> = {
     },
     basis:
       "HÁ NORMA na base: govbr-3.7.0-foundation-global-21fb08664799 (required) — 'nenhuma fonte deve " +
-      "estar fora da escala definida no DS: Minor Third'. O que o check NÃO faz é afirmá-la por máquina: " +
+      "estar fora da escala definida no DS: Minor Third'. O que o SCAN NÃO faz é afirmá-la sozinho (o verify_finding " +
+      "a decide por elemento, citando essa unidade, com evidence.data.expectedCondition 'font-size-on-ds-scale', 3.7.7): " +
       "a escala é modular e não redonda, e o veredito binário dependeria de onde se corta a tolerância, " +
       "não da norma (3.4.4, C7: até a 3.4.3 este texto dizia que não havia norma). A distância ao passo " +
       "mais próximo vai em data.nearestStepPx; com ela, cite a unidade e justifique o desvio. Histórico " +

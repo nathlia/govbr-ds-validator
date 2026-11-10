@@ -180,6 +180,13 @@ export function kbRule(id: string): NotJudgedItem["rule"] {
 /** 3.7.6 (item 3): forças que obrigam ou proíbem — a observação com uma delas vira pendência, não só contagem. */
 export const OBSERVED_PENDING_FORCES = new Set(["required", "prohibited"]);
 export const OBSERVED_TODO = "decida o desvio medido: verify_finding em cada elemento citando a norma, ou leia a norma por id (get_ds_rules{ids}); pendingResolved não fecha";
+/**
+ * 3.7.7 (teste à mão da 3.7.6, D1): com a condição que a observação carrega (`data.expectedCondition`), a tarefa nomeia o
+ * caminho exato — a condição vem nos primeiros caracteres (a forma curta corta em 72).
+ */
+export const observedTodo = (condition: string | null) => condition
+  ? `verify_finding por elemento (expectedCondition ${condition}) citando a norma, ou leia-a por id; pendingResolved não fecha`
+  : OBSERVED_TODO;
 
 /** O valor medido de uma observação, em texto curto (`font-size 16px`, mais o passo mais próximo quando há). */
 function observedValue(o: Observation): string {
@@ -208,6 +215,7 @@ export function observedRequiredItems(observations: Observation[]): NotJudgedIte
   return [...groups.values()].map(({ kind, ruleId, obs }) => {
     const rule = kbRule(ruleId);
     const first = obs[0];
+    const condition = obs.map((o) => (o.data as { expectedCondition?: unknown } | undefined)?.expectedCondition).find((c): c is string => typeof c === "string") ?? null;
     return {
       code: "observed-required" as const,
       subject: `${kind}|${ruleId}`,
@@ -217,10 +225,12 @@ export function observedRequiredItems(observations: Observation[]): NotJudgedIte
       elementBound: true as const,
       boundLocators: obs.map((o) => o.element.locator),
       observed: `${kind}: ${observedValue(first)}${obs.length > 1 ? ` (+${obs.length - 1})` : ""}`,
-      todo: OBSERVED_TODO,
+      todo: observedTodo(condition),
       norms: [ruleId],
       ...(rule ? { rule } : {}),
-      measure: "o valor medido (observação do scan) × a cláusula",
+      measure: condition
+        ? `verify_finding live, um elemento por vez: rule {source:"govbr-ds-kb", id:"${ruleId}"}, evidence.data {property, observed, expectedCondition:"${condition}"}`
+        : "o valor medido (observação do scan) × a cláusula",
       resolveByRead: [ruleId],
       idSpace: "O" as const,
     };

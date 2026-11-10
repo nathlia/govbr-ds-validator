@@ -43,6 +43,7 @@ import {
   type Membership,
 } from "./registries.js";
 import { asCheckerForm, checkerOf, relatedRuleForCheckId, type CheckerRef } from "./registries.js";
+import { conditionForRuleId } from "./predicates.js";
 import { selectPredicate, selectPredicateKnowledgeFree } from "./predicates.js";
 import type { ContextEvidence } from "./contextual.js";
 import { collectAccessibility, collectAnatomy, traceObserver, type TraceObservation, type TraceRequest } from "../evidence/context.js";
@@ -233,7 +234,7 @@ export async function verifyFinding({
     ...(ungrounded
       ? {
           next: related
-            ? `Há norma na base sobre isto: ${related.id} (${related.force}): "${related.text}" O oráculo não a decide por máquina (tolerância da escala). Leia a unidade, meça o valor e mantenha o fato citando essa unidade se o desvio for claro; senão, declare a incerteza.`
+            ? `Há norma na base sobre isto: ${related.id} (${related.force}): "${related.text}" Cite essa unidade (source 'govbr-ds-kb', sem rule.checker) com evidence.data.expectedCondition '${conditionForRuleId(related.id) ?? ""}' e repita live, um elemento por vez: o predicado decide.`
             : UNGROUNDED_NEXT,
         }
       : {}),

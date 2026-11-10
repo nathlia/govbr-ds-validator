@@ -275,7 +275,10 @@ export const SPEC_OFF_MAX = 3;
 export const SPEC_NOTE =
   "Especificação por parte (tabelas do DS; força especificacao: descreve, não obriga). Por componente: get_component_spec{component} → specification.measure; meça a parte e compare. off: desvios já medidos.";
 
-type SpecBlock = { note?: string; components?: string[] | string; more?: number; off?: string[]; offMore?: number; next: unknown };
+type SpecBlock = { note?: string; components?: string[] | string; more?: number; off?: string[]; offMore?: number; offVerify?: string; next: unknown };
+
+/** 3.7.7 (D1): como decidir cada desvio de `off` — a condição exata do verify_finding (fica até a forma mínima). */
+export const SPEC_OFF_VERIFY = "verify_finding live por elemento: rule.id = a unidade, evidence.data {property, observed, expectedCondition:\"part-value-matches-spec-token\"}";
 
 /** Uma linha por desvio (mesmas unidades, propriedade e valor): `ids propriedade observado≠token (valor) ×n @localizador`. */
 export function specOffLines(observations: Observation[]): Array<{ component: string; line: string; unit: string; n: number }> {
@@ -317,6 +320,7 @@ export function specificationFor(
     ...(ranked.length > SPEC_COMPONENTS_MAX ? { more: ranked.length - SPEC_COMPONENTS_MAX } : {}),
     ...(off.length ? { off: off.slice(0, SPEC_OFF_MAX).map((o) => o.line) } : {}),
     ...(off.length > SPEC_OFF_MAX ? { offMore: off.length - SPEC_OFF_MAX } : {}),
+    ...(off.length ? { offVerify: SPEC_OFF_VERIFY } : {}),
     next: { tool: "get_component_spec", arguments: { component: first } },
   };
 }
@@ -344,7 +348,7 @@ export function specificationMinimal(r: Record<string, unknown>): Record<string,
     ...r,
     specification: {
       components: `${names.slice(0, 3).join(",")}${total > 3 ? ` +${total - 3}` : ""}`,
-      ...(off.length ? { off } : {}),
+      ...(off.length ? { off, offVerify: "expectedCondition part-value-matches-spec-token" } : {}),
       next: `get_component_spec{component:"${comp}"} → specification.measure`,
     },
   };

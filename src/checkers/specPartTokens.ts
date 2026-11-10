@@ -20,6 +20,10 @@ import type { Observation } from "../schema/finding.js";
 import { getDsStylesheet, getTokenRegistry } from "../data/load.js";
 import { typographyRows, propertyOfToken, type SpecProperty, type TypographyRow } from "../data/specParts.js";
 import { ownershipOf } from "./ownership.js";
+import { EXPECTED_CONDITIONS } from "../schema/structuredClaims.js";
+
+/** 3.7.7 (D1): a condição que o verify_finding decide por elemento, citando a unidade de especificação. */
+export const SPEC_PART_CONDITION = EXPECTED_CONDITIONS.partValueMatchesSpecToken;
 
 export const SPEC_PART_KIND = "spec-part-token";
 
@@ -168,7 +172,7 @@ export function comparePartTokens(
       observations.push({
         kind: SPEC_PART_KIND,
         element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: url },
-        note: `${component} · parte "${names.join('" | "')}": ${css} ${observedRaw}; a especificação do DS dá ${token} (${expectedValue}). Unidade${parts.length > 1 ? "s" : ""}: ${parts.map((p) => p.id).join(", ")} (especificacao).`,
+        note: `${component} · parte "${names.join('" | "')}": ${css} ${observedRaw}; a especificação do DS dá ${token} (${expectedValue}). Unidade${parts.length > 1 ? "s" : ""}: ${parts.map((p) => p.id).join(", ")} (especificacao). Decida por elemento: verify_finding live com expectedCondition ${SPEC_PART_CONDITION}.`,
         whyNotAFinding:
           "Unidade de especificação (tabela de Especificações do componente): descreve o valor da parte, não obriga. Candidata a investigar; para afirmar violação, cite a norma que obriga.",
         data: {
@@ -181,6 +185,7 @@ export function comparePartTokens(
           unitIds: parts.map((p) => p.id),
           ...(parts.length > 1 ? { ambiguous: true } : {}),
           specUnit: { id: parts[0].id, force: "especificacao" },
+          expectedCondition: SPEC_PART_CONDITION,
           authoredDeclarations: authored,
           dsDeclarations: el.dsShipped?.[property] ?? [],
         },

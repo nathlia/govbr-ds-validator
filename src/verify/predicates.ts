@@ -18,7 +18,10 @@
 import type { Finding } from "../schema/finding.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import type { StyleProperty } from "../evidence/inspect.js";
-import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
+import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, fontScalePx, foraDaEscala, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
+import { CHECK_GROUNDING } from "../checkers/grounding.js";
+import { getRuleById } from "../data/knowledge.js";
+import { propertyOfToken, type SpecProperty } from "../data/specParts.js";
 import { checkComponentStructure, scriptDependentAnchor } from "../checkers/structure.js";
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf } from "../checkers/formLabels.js";
@@ -420,6 +423,175 @@ function ariaStateSelection(finding: Finding, data: Record<string, unknown>, kno
   };
 }
 
+// ── 3.7.7 (teste à mão da 3.7.6, D1): escala tipográfica e token por parte ───────────────────────────────────────────
+
+export const FONT_SCALE_CONDITION = EXPECTED_CONDITIONS.fontSizeOnScale;
+export const SPEC_PART_TOKEN_CONDITION = EXPECTED_CONDITIONS.partValueMatchesSpecToken;
+
+/** As normas que a condição da escala decide: a que a observação do scan carrega (CHECK_GROUNDING, dado, não tela). */
+function fontScaleRules(): string[] {
+  const related = CHECK_GROUNDING["token-font-size"].relatedRule;
+  return related && (related.force as string) !== "recommended" && related.force !== "permitted" && related.force !== "informative" ? [related.id] : [];
+}
+
+/** A linha de especificação citada e os tokens de fonte que ela declara, por propriedade; null se não é linha com fonte. */
+function specTypographyOf(id: string): { component: string; tokens: Partial<Record<SpecProperty, string>> } | null {
+  const rule = getRuleById(id);
+  if (!rule || rule.force !== "especificacao" || rule.specification?.kind !== "table-row" || !rule.component) return null;
+  const tokens: Partial<Record<SpecProperty, string>> = {};
+  for (const e of rule.specification.entries ?? []) {
+    for (const t of e.tokens) {
+      const p = propertyOfToken(t);
+      if (p && !tokens[p]) tokens[p] = t;
+    }
+  }
+  return Object.keys(tokens).length ? { component: rule.component, tokens } : null;
+}
+
+/**
+ * A condição que decide a norma citada, quando há uma (para os próximos passos do verify e das pendências): a escala para a
+ * norma da escala; o token por parte para a linha de especificação com token de fonte.
+ */
+export function conditionForRuleId(id: string): string | null {
+  if (fontScaleRules().includes(id)) return FONT_SCALE_CONDITION;
+  return specTypographyOf(id) ? SPEC_PART_TOKEN_CONDITION : null;
+}
+
+const pxOf = (raw: string | undefined) => {
+  const m = (raw ?? "").trim().match(/^(-?\d+(?:\.\d+)?)px$/);
+  return m ? Number(m[1]) : null;
+};
+const weightOf = (raw: string | undefined) => {
+  const v = (raw ?? "").trim();
+  return v === "normal" ? 400 : v === "bold" ? 700 : /^\d+$/.test(v) ? Number(v) : null;
+};
+const outsideOwnership = (el: ElementEvidence) => el.origin === "ds-web-component" || el.origin === "flatpickr";
+
+/**
+ * Escala tipográfica (token-font-size-off-scale): em CADA elemento, o font-size computado no estado reproduzido. Fora de
+ * todos os passos (tolerância de 0,5px, a do scan) e declarado pela página → violação recalculada; num passo → contradita.
+ * Oculto, dentro de web component do DS ou valor que a página não declarou (herdado/padrão) → não decide.
+ */
+function fontScalePredicate(observedPx: number | null): Predicate {
+  return {
+    id: "font-size-scale",
+    properties: ["fontSize"],
+    verifyClaim: (elements) =>
+      observedPx === null
+        ? { status: "consistent", detail: `Condição '${FONT_SCALE_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.` }
+        : claimOnEveryElement(elements, `font-size ${observedPx}px`, (el) => {
+            const px = pxOf(el.computed.fontSize);
+            return px !== null && Math.abs(px - observedPx) <= 0.5 ? null : `${el.locator} tem font-size ${el.computed.fontSize ?? "(ausente)"}`;
+          }),
+    evaluate: (elements) => {
+      const scale = fontScalePx(getTokenRegistry());
+      const hidden = elements.filter((el) => el.rendered === false);
+      if (hidden.length) return { status: "undetermined", recipeGap: true, detail: `${hidden.length} de ${elements.length} elemento(s) não renderizado(s) neste estado: meça no estado em que aparece.` };
+      const outside = elements.filter(outsideOwnership);
+      if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de web component do DS ou de terceiro embutido: o tamanho é do componente, não da página.` };
+      const onStep = elements.filter((el) => el.computed.fontSize && !foraDaEscala(el.computed.fontSize, scale));
+      if (onStep.length) {
+        return { status: "contradicted", detail: `${onStep.length} de ${elements.length} elemento(s) num passo da escala do DS: ${onStep.slice(0, 3).map((el) => `${el.locator} (${el.computed.fontSize})`).join("; ")}.` };
+      }
+      const notAuthored = elements.filter((el) => el.authored !== undefined && !(el.authored.fontSize ?? []).length);
+      if (notAuthored.length) {
+        return { status: "undetermined", detail: `${notAuthored.length} de ${elements.length} elemento(s) fora da escala sem declaração de font-size da página (herdado ou padrão): o valor não é escolha deste elemento — cite o elemento que o declara.` };
+      }
+      const facts = elements.slice(0, 3).map((el) => {
+        const px = pxOf(el.computed.fontSize) ?? 0;
+        const near = scale.reduce((b, v) => (Math.abs(v - px) < Math.abs(b - px) ? v : b), scale[0]);
+        return `${el.locator} (${el.computed.fontSize}; passo mais próximo ${+near.toFixed(3)}px)`;
+      });
+      return { status: "verified", detail: `Fora da escala tipográfica do DS em ${elements.length} de ${elements.length} elemento(s), declarado pela página: ${facts.join("; ")}.` };
+    },
+  };
+}
+
+/**
+ * Token por parte (spec-part-token): o elemento tem de ser a parte que a folha oficial do DS estiliza com o token da linha
+ * citada (a mesma localização do check: a declaração do DS que alcança o elemento é `var(<token>)`); o valor computado ×
+ * o valor do token. Difere → violação da especificação recalculada; igual → contradita. Outro valor que o próprio DS declara
+ * para o elemento (variante/estado) ou sem declaração da página → não decide.
+ */
+function specPartPredicate(property: SpecProperty, token: string, observed: string | null): Predicate {
+  const css = property === "fontSize" ? "font-size" : "font-weight";
+  const value = (raw: string | undefined) => (property === "fontSize" ? pxOf(raw) : weightOf(raw));
+  const close = (a: number, b: number) => Math.abs(a - b) <= (property === "fontSize" ? 0.5 : 0.01);
+  const tokenOf = (v: string) => v.replace(/\s*!important$/, "").trim().match(/^var\((--[\w-]+)\)$/)?.[1] ?? null;
+  return {
+    id: "spec-part-token",
+    properties: ["fontSize", "fontWeight"],
+    verifyClaim: (elements) => {
+      const want = observed === null ? null : value(observed);
+      if (want === null) return { status: "consistent", detail: `Condição '${SPEC_PART_TOKEN_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.` };
+      return claimOnEveryElement(elements, `${css} ${observed}`, (el) => {
+        const v = value(el.computed[property]);
+        return v !== null && close(v, want) ? null : `${el.locator} tem ${css} ${el.computed[property] ?? "(ausente)"}`;
+      });
+    },
+    evaluate: (elements) => {
+      const all = getTokenRegistry().all;
+      const expected = value(all[token]);
+      if (expected === null) return { status: "undetermined", detail: `O token ${token} não se resolve no registro do DS.` };
+      const hidden = elements.filter((el) => el.rendered === false);
+      if (hidden.length) return { status: "undetermined", recipeGap: true, detail: `${hidden.length} de ${elements.length} elemento(s) não renderizado(s) neste estado: meça no estado em que aparece.` };
+      const outside = elements.filter(outsideOwnership);
+      if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de web component do DS ou de terceiro embutido: o valor é do componente, não da página.` };
+      const notPart = elements.filter((el) => !(el.dsShipped?.[property] ?? []).some((v) => tokenOf(v) === token));
+      if (notPart.length) {
+        return {
+          status: "undetermined",
+          code: "rule-not-applicable",
+          detail: `${notPart.length} de ${elements.length} elemento(s) não é a parte que a folha do DS estiliza com ${token} (nenhuma declaração do DS de ${css}: var(${token}) o alcança): a linha citada não descreve este elemento.`,
+        };
+      }
+      const equal = elements.filter((el) => { const v = value(el.computed[property]); return v !== null && close(v, expected); });
+      if (equal.length) return { status: "contradicted", detail: `${equal.length} de ${elements.length} elemento(s) com ${css} igual a ${token} (${all[token]}): ${equal.slice(0, 3).map((el) => el.locator).join("; ")}.` };
+      const dsOther = elements.filter((el) => {
+        const v = value(el.computed[property]);
+        return v !== null && (el.dsShipped?.[property] ?? []).some((d) => { const t = tokenOf(d); const r = t ? value(all[t]) : value(d); return r !== null && close(v, r); });
+      });
+      if (dsOther.length) return { status: "undetermined", detail: `${dsOther.length} de ${elements.length} elemento(s) com ${css} de outra declaração do próprio DS (variante ou estado): não é desvio da página.` };
+      const notAuthored = elements.filter((el) => el.authored !== undefined && !(el.authored[property] ?? []).length);
+      if (notAuthored.length) return { status: "undetermined", detail: `${notAuthored.length} de ${elements.length} elemento(s) sem declaração de ${css} da página: o valor não é escolha deste elemento.` };
+      return {
+        status: "verified",
+        detail: `${css} da parte difere de ${token} (${all[token]}) em ${elements.length} de ${elements.length} elemento(s): ${elements.slice(0, 3).map((el) => `${el.locator} (${el.computed[property]})`).join("; ")}.`,
+      };
+    },
+  };
+}
+
+function fontScaleSelection(finding: Finding, data: Record<string, unknown>): PredicateSelection {
+  const { source, id } = finding.rule;
+  const rules = fontScaleRules();
+  if (source !== "govbr-ds-kb" || !rules.includes(id)) {
+    return { predicate: null, reason: `A condição '${FONT_SCALE_CONDITION}' só é decidida citando ${rules.join(", ") || "a norma da escala tipográfica"} (source 'govbr-ds-kb').` };
+  }
+  if (data.property !== undefined && data.property !== "font-size") {
+    return { predicate: null, claimStatus: "contradicted", reason: `A condição '${FONT_SCALE_CONDITION}' trata de font-size: evidence.data.property deve ser 'font-size'.` };
+  }
+  const observed = typeof data.observed === "string" ? pxOf(data.observed) : null;
+  return { predicate: fontScalePredicate(observed) };
+}
+
+function specPartSelection(finding: Finding, data: Record<string, unknown>): PredicateSelection {
+  const { source, id } = finding.rule;
+  const spec = source === "govbr-ds-kb" ? specTypographyOf(id) : null;
+  if (!spec) {
+    return { predicate: null, reason: `A condição '${SPEC_PART_TOKEN_CONDITION}' só é decidida citando uma linha de tabela de especificação (force 'especificacao') que declara token de font-size ou font-weight.` };
+  }
+  const property: SpecProperty | null = data.property === "font-size" ? "fontSize" : data.property === "font-weight" ? "fontWeight" : null;
+  if (!property) {
+    return { predicate: null, claimStatus: "missing", reason: `A condição '${SPEC_PART_TOKEN_CONDITION}' precisa de evidence.data.property ('font-size' ou 'font-weight').` };
+  }
+  const token = spec.tokens[property];
+  if (!token) {
+    return { predicate: null, claimStatus: "contradicted", reason: `A unidade ${id} não declara token de ${data.property}: cite a linha da tabela que declara.` };
+  }
+  return { predicate: specPartPredicate(property, token, typeof data.observed === "string" ? data.observed : null) };
+}
+
 export function selectPredicate(finding: Finding): PredicateSelection {
   const { source, id } = finding.rule;
   const data = (finding.evidence.data ?? {}) as Record<string, unknown>;
@@ -452,6 +624,9 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   }
   // 3.7.3 A8: estado ARIA × nativo — só com a condição exata.
   if (data.expectedCondition === ARIA_STATE_CONDITION) return ariaStateSelection(finding, data, false);
+  // 3.7.7 (D1): escala tipográfica e token por parte — só com a condição exata e a norma que a condição decide.
+  if (data.expectedCondition === FONT_SCALE_CONDITION) return fontScaleSelection(finding, data);
+  if (data.expectedCondition === SPEC_PART_TOKEN_CONDITION) return specPartSelection(finding, data);
   if (source === "govbr-ds-kb" && id === SWITCH_ARIA_CHECKED && data.expectedCondition === undefined) {
     return none(`${SWITCH_ARIA_CHECKED} só é verificável com evidence.data.expectedCondition='${ARIA_STATE_CONDITION}' (e state 'checked'), no estado que a receita reproduz.`, "missing");
   }

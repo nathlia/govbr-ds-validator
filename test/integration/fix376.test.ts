@@ -86,6 +86,7 @@ const PAGES: Record<string, string> = {
   "/conforme": `<style>${tokensCss}${dsCss}</style>${markupFor(PART.selector, "Rótulo", "p1")}`,
   "/rem": `<style>${tokensCss}${dsCss} #r1{font-size:${parseFloat(ALL[OTHER]) / 16}rem} #r2{font-size:${parseFloat(ALL[PART.token]) / 16}rem}</style>${markupFor(PART.selector, "Rótulo", "r1")}${markupFor(PART.selector, "Outro", "r2")}`,
   "/fonte": `<style>.t{font-size:13px}</style><h2 id="t1" class="t">Seção</h2><p>Texto</p>`,
+  "/escala": `<style>#off{font-size:13px} #on{font-size:16.8px}</style><h2 id="off">Fora</h2><h2 id="on">Num passo</h2>`,
 };
 let http: Server;
 let base: string;
@@ -236,7 +237,8 @@ describe("3.7.6 item 1 — a especificação por parte chega ao agente", () => {
     expect(short.components).toBe("c1,c0,c2,c4,c5,c6 +1");
     expect(short.off).toEqual(block.off);
     const min = specificationMinimal({ specification: short })!.specification as Record<string, unknown>;
-    expect(min).toEqual({ components: "c1,c0,c2 +4", off: ["govbr-u1 font-size 14px≠--t"], next: 'get_component_spec{component:"c1"} → specification.measure' });
+    // 3.7.7 (D1): a condição do verify fica até a forma mínima
+    expect(min).toEqual({ components: "c1,c0,c2 +4", off: ["govbr-u1 font-size 14px≠--t"], offVerify: "expectedCondition part-value-matches-spec-token", next: 'get_component_spec{component:"c1"} → specification.measure' });
     expect(specificationMinimal({ specification: min })).toBeNull();
     expect(specificationFor(["c3"], () => 0, [])).toBeUndefined();
   });
@@ -365,4 +367,78 @@ describe("3.7.6 item 3 — observação com norma obrigatória vira pendência O
       }
     } finally { await client.close(); }
   }, 60_000);
+});
+
+describe("3.7.7 (teste à mão da 3.7.6, D1) — o verify decide a escala e o token por parte", () => {
+  const SCALE = "font-size-on-ds-scale";
+  const PART_COND = "part-value-matches-spec-token";
+  const finding = (url: string, locator: string, rule: { source: string; id: string }, data: Record<string, unknown>) => ({
+    id: "F-agent", element: { locator, page: url }, severity: "minor", nature: "syntactic", mode: "display", pathway: "heuristic",
+    rule: { ...rule, description: "x" }, evidence: { observed: "medido", expected: "esperado", data },
+  });
+
+  it("escala: fora do passo → confirmed e fecha a O-NN; num passo → rejected; sem elemento → unverifiable", async () => {
+    const { client, call } = await connect();
+    try {
+      const rule = observedRuleId();
+      const scan = await call("scan_page", { url: `${base}/escala`, maxChars: 100000 });
+      const o = (scan.data.checksRun.pageLevel.notMeasured as Array<{ code: string; pendingId: string; todo: string; measure: string }>).find((i) => i.code === "observed-required")!;
+      // a condição exata está na tarefa (nos 72 primeiros caracteres) e no measure
+      expect(o.todo.slice(0, 72)).toContain(`expectedCondition ${SCALE}`);
+      expect(o.measure).toContain(SCALE);
+      const kb = { source: "govbr-ds-kb", id: rule };
+      const off = await call("verify_finding", { finding: finding(`${base}/escala`, "#off", kb, { property: "font-size", observed: "13px", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(off.data.verdict).toBe("confirmed");
+      expect(off.data.verification.predicate).toBe("font-size-scale");
+      expect(off.data.verification.pendingResolved ?? off.data.pendingResolved).toEqual([o.pendingId]);
+      const on = await call("verify_finding", { finding: finding(`${base}/escala`, "#on", kb, { property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(on.data.verdict).toBe("rejected");
+      const none = await call("verify_finding", { finding: finding(`${base}/escala`, "#nao-existe", kb, { property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(none.data.verdict).toBe("unverifiable");
+      // sem a condição: o próximo passo nomeia a condição e mantém a norma — nunca "rule: null"
+      const bare = await call("verify_finding", { finding: finding(`${base}/escala`, "#off", kb, { property: "font-size", observed: "13px" }), live: true, scanId: scan.data.scanId });
+      expect(bare.data.verdict).toBe("unverifiable");
+      const actions = JSON.stringify(bare.data.actions);
+      expect(actions).toContain(SCALE);
+      expect(actions).not.toContain("rule: null");
+      // outra norma com a condição não seleciona o predicado
+      const other = await call("verify_finding", { finding: finding(`${base}/escala`, "#off", { source: "wcag", id: "1.4.4" }, { property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(other.data.verification.predicate).toBeNull();
+    } finally { await client.close(); }
+  }, 90_000);
+
+  it("token por parte: difere → confirmed (com o aviso de força); igual → rejected; elemento que não é a parte → unverifiable", async () => {
+    const { client, call } = await connect();
+    try {
+      const unit = { source: "govbr-ds-kb", id: PART.row.id };
+      const scan = await call("scan_page", { url: `${base}/desvio`, maxChars: 100000 });
+      expect(scan.data.specification.offVerify).toContain(PART_COND);
+      const obs = await call("get_finding_details", { scanId: scan.data.scanId, view: "observations", cursor: 0, maxChars: 100000 });
+      const part = (obs.data.observations as Array<{ kind: string; data: Record<string, unknown> }>).find((x) => x.kind === SPEC_PART_KIND)!;
+      expect(part.data.expectedCondition).toBe(PART_COND);
+      const off = await call("verify_finding", { finding: finding(`${base}/desvio`, "#p1", unit, { property: "font-size", observed: ALL[OTHER], expectedCondition: PART_COND }), live: true, scanId: scan.data.scanId });
+      expect(off.data.verdict).toBe("confirmed");
+      expect(off.data.verification.predicate).toBe("spec-part-token");
+      expect(off.data.citationForce).toMatchObject({ force: "especificacao" });
+      const eq = await call("verify_finding", { finding: finding(`${base}/desvio`, "#p2", unit, { property: "font-size", expectedCondition: PART_COND }), live: true, scanId: scan.data.scanId });
+      expect(eq.data.verdict).toBe("rejected");
+      const notPart = await call("verify_finding", { finding: finding(`${base}/desvio`, "main > h1", unit, { property: "font-size", expectedCondition: PART_COND }), live: true, scanId: scan.data.scanId });
+      expect(notPart.data.verdict).toBe("unverifiable");
+      expect(notPart.data.verification.checks.applicability).toBe("not-applicable");
+      const bare = await call("verify_finding", { finding: finding(`${base}/desvio`, "#p1", unit, { property: "font-size", observed: ALL[OTHER] }), live: true, scanId: scan.data.scanId });
+      expect(JSON.stringify(bare.data.actions)).toContain(PART_COND);
+      expect(JSON.stringify(bare.data.actions)).not.toContain("rule: null");
+    } finally { await client.close(); }
+  }, 90_000);
+
+  it("knowledge-free: as condições novas não selecionam predicado nem vazam texto da base", async () => {
+    const { client, call } = await connect("knowledge-free");
+    try {
+      for (const [cond, id] of [[SCALE, observedRuleId()], [PART_COND, PART.row.id]] as const) {
+        const r = await call("verify_finding", { finding: finding(`${base}/escala`, "#off", { source: "govbr-ds-kb", id }, { property: "font-size", expectedCondition: cond }), live: true });
+        expect(r.data.verdict).not.toBe("confirmed");
+        expect(r.text).not.toMatch(/Minor Third|especificacao|font-size-scale-up|nenhuma fonte deve/);
+      }
+    } finally { await client.close(); }
+  }, 90_000);
 });
