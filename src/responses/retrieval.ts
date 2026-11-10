@@ -660,6 +660,20 @@ export function indexItem(rule: KnowledgeRule, n: number) {
   return asImplementationProperty(rule, item);
 }
 
+/** 3.7.5-pre.3: teto da frase da cláusula no índice por ids; acima dele, corte em palavra com "…" e textComplete:false. */
+export const IDS_INDEX_TEXT_MAX = 300;
+
+/**
+ * 3.7.5-pre.3 (decisão do coordenador): o índice de um lote de ids (`get_ds_rules{ids, detail:"index"}`) traz a FRASE da
+ * própria cláusula (normalizedRule; sem ela, o título), a força declarada e o componente — ler o índice é ler a regra. Na
+ * 3.7.4 trazia só o título cortado em 110 caracteres. A listagem de catálogo (indexItem) não muda.
+ */
+export function idsIndexItem(rule: KnowledgeRule, n: number) {
+  const { text, complete } = cut(plain(rule.normalizedRule?.trim() || rule.title).replace(/\s+/g, " "), IDS_INDEX_TEXT_MAX);
+  const item = { n, id: rule.id, force: rule.force as RuleForce | null, component: rule.component ?? null, text, ...(complete ? {} : { textComplete: false }), category: rule.category };
+  return asImplementationProperty(rule, item);
+}
+
 /**
  * 3.4.0 (A11): a MESMA projeção do cartão (3.3.0, A-12) em toda listagem e lote: linha de tabela de API/anatomia
  * sai como propriedade da implementação, sem a força da tabela (o registro por id a mantém).

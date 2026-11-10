@@ -126,6 +126,13 @@ get_finding_details{scanId:"S-page-001",view:"observations",cursor:15}` — uma 
 pelo cursor continua valendo). Custo medido de ler tudo: A 11 pendências, 47 ids, ~44 mil caracteres; B 8, 38 ids,
 ~35 mil.
 
+**3.7.5-pre.3 — índice por ids traz a frase da cláusula.** `get_ds_rules{ids, detail:"index"}` trazia só o título
+cortado em 110 caracteres; agora cada entrada traz `text` = a frase da própria cláusula (`normalizedRule`; sem ela,
+o título), cortada em palavra só acima de 300 caracteres (`…` e `textComplete:false`), a força declarada e o
+`component` — ler o índice é ler a regra. A listagem de catálogo e os cartões de `ids` sem `detail` não mudam. As
+leituras de `usage-unread` passam a `get_ds_rules{ids, detail:"index"}`. Custo medido de ler tudo: A 14,5 mil
+caracteres (11 pendências), B 11,3 mil (8), A2 24,7 mil (18), sessão do teste à mão inteira 25,2 mil (19).
+
 ## 3.7.4 — defeitos do teste à mão da 3.7.3 (NAT-111)
 
 - **Reserva de cláusulas, fatos primeiro (D1).** A 1ª página de fatos do `scan_page` é montada como sem

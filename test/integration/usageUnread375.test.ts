@@ -13,7 +13,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { resetKnowledgeLock } from "../../src/data/lock.js";
-import { filterRules } from "../../src/data/knowledge.js";
+import { filterRules, getRuleById } from "../../src/data/knowledge.js";
 import { usageClauseIds, usageListingCall, USAGE_FORCES, USAGE_SUBCATEGORY } from "../../src/tools/usageClauses.js";
 
 const PAGES: Record<string, string> = {
@@ -89,14 +89,14 @@ describe("3.7.5 item 6 — usage-unread", () => {
       expect(item.pendingId).toMatch(/^P-\d+(?:(?:\.\.|,)P-\d+)*$/);
       // a linha diz onde estão os ids: a observação de leitura do ledger
       const m = /get_finding_details\{scanId:"([^"]+)",view:"observations",cursor:(\d+)\}/.exec(item.todo!)!;
-      expect(item.todo).toMatch(/^get_ds_rules\{ids\} por componente/);
+      expect(item.todo).toMatch(/^get_ds_rules\{ids,detail:"index"\} por componente/);
       expect(m[1]).toBe(a.data.scanId);
       const obs = await call("get_finding_details", { scanId: m[1], view: "observations", cursor: Number(m[2]) });
       const reads = obs.data.observations[0].data.reads as Array<{ pendingId: string; component: string; calls: Array<{ tool: string; arguments: { ids: string[] } }> }>;
       expect(obs.data.observations[0].data.code).toBe("usage-unread");
       for (const c of expected) {
         const r = reads.find((x) => x.component === c)!;
-        expect(r.calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20)).toBe(true);
+        expect(r.calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20 && (x.arguments as { detail?: string }).detail === "index")).toBe(true);
         expect(r.calls.flatMap((x) => x.arguments.ids)).toEqual(usageClauseIds(c));
       }
       // é a última pendência da página (os ids das de sempre não mudam por causa dela)
@@ -164,5 +164,51 @@ describe("3.7.5 item 6 — usage-unread", () => {
       const r = await free.call("scan_page", { url: `${base}/a`, maxChars: 100000 });
       expect(r.text).not.toContain("usage-unread");
     } finally { await free.client.close(); resetKnowledgeLock(); }
+  }, 120_000);
+});
+
+describe("3.7.5-pre.3 — get_ds_rules{ids, detail:\"index\"}: a frase da cláusula, a força e o componente", () => {
+  const LONG = "govbr-3.7.0-accessibility-global-0e9cecc8b4d7";
+  it("forma, força, frase inteira (ou cortada com marca acima de 300); cartões sem detail iguais; fecha a pendência", async () => {
+    const { client, call } = await connect();
+    try {
+      const ids = usageClauseIds("radio");
+      const index = await call("get_ds_rules", { ids, detail: "index" });
+      expect(index.isError).toBe(false);
+      expect(index.data).toMatchObject({ kind: "lookup", status: "found", detail: "index", requested: ids.length, missing: [] });
+      expect(index.data.results.map((r: { id: string }) => r.id)).toEqual(ids);
+      for (const r of index.data.results as Array<Record<string, unknown>>) {
+        const rule = getRuleById(r.id as string)!;
+        expect(r).toMatchObject({ force: rule.force, component: "radio", text: rule.normalizedRule.trim() });
+        expect(r).not.toHaveProperty("textComplete");
+        expect(r).not.toHaveProperty("title");
+      }
+      expect(index.text.length).toBeLessThan(3000);
+      // frase longa: cortada em palavra, com "…" e textComplete:false
+      const long = (await call("get_ds_rules", { ids: [LONG], detail: "index" })).data.results[0];
+      expect(getRuleById(LONG)!.normalizedRule.length).toBeGreaterThan(300);
+      expect(long.text.length).toBeLessThanOrEqual(300);
+      expect(long.text.endsWith("…")).toBe(true);
+      expect(long.textComplete).toBe(false);
+      expect(getRuleById(LONG)!.normalizedRule.startsWith(long.text.slice(0, -1).trimEnd())).toBe(true);
+      // sem detail: os cartões de sempre
+      const cards = await call("get_ds_rules", { ids });
+      expect(cards.data.detail).toBe("brief");
+      expect(cards.data.results[0]).not.toHaveProperty("text");
+      expect(cards.text.length).toBeGreaterThan(index.text.length * 2);
+    } finally { await client.close(); }
+    // a leitura pelo índice fecha a pendência de leitura do componente
+    const s = await connect();
+    try {
+      const first = await s.call("scan_page", { url: `${base}/b`, maxChars: 100000 });
+      expect(usageOf(first.data)!.examples).toEqual(["button"]);
+      const m = /cursor:(\d+)/.exec(usageOf(first.data)!.todo!)!;
+      const obs = await s.call("get_finding_details", { scanId: first.data.scanId, view: "observations", cursor: Number(m[1]) });
+      for (const x of obs.data.observations[0].data.reads[0].calls) {
+        expect(x.arguments.detail).toBe("index");
+        expect((await s.call(x.tool, x.arguments)).isError).toBe(false);
+      }
+      expect(usageOf((await s.call("scan_page", { url: `${base}/b`, maxChars: 100000 })).data)).toBeUndefined();
+    } finally { await s.client.close(); }
   }, 120_000);
 });

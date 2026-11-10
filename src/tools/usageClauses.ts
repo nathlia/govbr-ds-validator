@@ -6,7 +6,7 @@
  *
  * 3.7.5-pre.2 (decisão do coordenador, custo): só as que obrigam, proíbem ou desaconselham (força `required`,
  * `prohibited`, `discouraged`); as frases "use X quando…" (`recommended`, `permitted`) ficam fora da pendência. A leitura
- * é por ids (`get_ds_rules{ids}`, até 20 por chamada); a listagem `get_ds_rules{component, category:"component"}` pelo
+ * é por ids (`get_ds_rules{ids, detail:"index"}`, até 20 por chamada); a listagem `get_ds_rules{component, category:"component"}` pelo
  * cursor também as devolve todas e também fecha. As orientações de padrão (`pattern/*`) não têm componente na base.
  */
 import { filterRules } from "../data/knowledge.js";
@@ -31,10 +31,13 @@ export function usageClauseIds(component: string): string[] {
   return ids;
 }
 
-/** As chamadas que entregam as cláusulas de uso do componente: get_ds_rules{ids}, até 20 ids cada. */
-export function usageReadCalls(ids: string[]): Array<{ tool: "get_ds_rules"; arguments: { ids: string[] } }> {
-  const out: Array<{ tool: "get_ds_rules"; arguments: { ids: string[] } }> = [];
-  for (let i = 0; i < ids.length; i += IDS_PER_CALL) out.push({ tool: "get_ds_rules", arguments: { ids: ids.slice(i, i + IDS_PER_CALL) } });
+/**
+ * As chamadas que entregam as cláusulas de uso do componente: get_ds_rules{ids, detail:"index"} (3.7.5-pre.3: a frase de
+ * cada cláusula, a força e o componente — o cartão inteiro custava ~940 caracteres por cláusula), até 20 ids cada.
+ */
+export function usageReadCalls(ids: string[]): Array<{ tool: "get_ds_rules"; arguments: { ids: string[]; detail: "index" } }> {
+  const out: Array<{ tool: "get_ds_rules"; arguments: { ids: string[]; detail: "index" } }> = [];
+  for (let i = 0; i < ids.length; i += IDS_PER_CALL) out.push({ tool: "get_ds_rules", arguments: { ids: ids.slice(i, i + IDS_PER_CALL), detail: "index" } });
   return out;
 }
 

@@ -209,14 +209,14 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
     const L = { scanId: "S-page-001", cursor: 12 };
     const item = usageUnreadItem([{ id: "P-09", component: "accordion" }, { id: "P-10", component: "avatar" }, { id: "P-11", component: "table" }], L)!;
     const line = pendingLine(item);
-    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{ids} por componente; ids: get_finding_details{scanId:"S-page-001",view:"observations",cursor:12}');
+    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"S-page-001",view:"observations",cursor:12}');
     expect(usageUnreadItem([{ id: "P-12", component: "b" }, { id: "P-09", component: "a" }], L)).toMatchObject({ pendingId: "P-09,P-12", examples: ["a", "b"] });
     // sessão longa: ids misturados viram faixas na ordem, e os componentes acompanham
     const mixed = usageUnreadItem([32, 7, 33, 8, 10, 11, 18, 19, 12, 13, 34, 35, 9].map((n) => ({ id: `P-${String(n).padStart(2, "0")}`, component: `c${n}` })), L)!;
     expect(mixed.pendingId).toBe("P-07..P-13,P-18,P-19,P-32..P-35");
     expect(mixed.examples).toEqual([7, 8, 9, 10, 11, 12, 13, 18, 19, 32, 33, 34, 35].map((n) => `c${n}`));
     expect(usageUnreadItem([], L)).toBeUndefined();
-    expect(pendingLineMinimal(line)).toMatch(/^P-09\.\.P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules\{ids\} por componente/);
+    expect(pendingLineMinimal(line)).toMatch(/^P-09\.\.P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules\{ids,detail:"index"\} por componente/);
     expect(pendingLineNorm(line)).toBe("P-09..P-11:usage-unread:3");
     // a lista de componentes é cortada num teto (muitos componentes)
     const many = usageUnreadItem(Array.from({ length: 30 }, (_, i) => ({ id: `P-${10 + i}`, component: `componente${i}` })), L)!;
@@ -238,13 +238,13 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
 });
 
 describe("item 6 (pre.2) — conjunto e chamadas de leitura", () => {
-  it("só cláusulas de uso que obrigam, proíbem ou desaconselham; chamadas get_ds_rules{ids} de até 20", () => {
+  it("só cláusulas de uso que obrigam, proíbem ou desaconselham; chamadas get_ds_rules{ids, detail:index} de até 20", () => {
     for (const c of ["radio", "checkbox", "table", "breadcrumb", "button", "menu"]) {
       const ids = usageClauseIds(c);
       for (const id of ids) expect(["required", "prohibited", "discouraged"]).toContain(getRuleById(id)!.force);
       const calls = usageReadCalls(ids);
       expect(calls.flatMap((x) => x.arguments.ids)).toEqual(ids);
-      expect(calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20)).toBe(true);
+      expect(calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20 && x.arguments.detail === "index")).toBe(true);
     }
     // componente sem nenhuma dessas: sem pendência
     expect(usageClauseIds("list")).toEqual([]);

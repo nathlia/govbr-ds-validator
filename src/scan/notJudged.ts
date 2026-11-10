@@ -341,7 +341,7 @@ function idsLabel(ids: string[]): string {
 /** 3.7.5-pre.2: onde estão os ids a ler (a observação de leitura do scan, no ledger). */
 export type UsageLedger = { scanId: string; cursor: number };
 const usageTodo = (ledger: UsageLedger) =>
-  `get_ds_rules{ids} por componente; ids: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}`;
+  `get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}`;
 
 /**
  * 3.7.5 (item 6): UMA linha agrega as pendências de leitura (`usage-unread`) dos componentes desta página ainda não lidos:
@@ -563,8 +563,10 @@ export function pendingLineMinimal(line: string): string {
     .split("; ")[0]
     .replace(/ fg (\S+) bg (\S+)/, " $1/$2")
     .replace(/ ratio (\S+)/, " $1:1");
-  const shortTask = task.split(/[:(;]/)[0].trim();
-  return `${head}${norm ? `⇒${norm}` : ""}${done ? "✓" : ""}${place ? ` @${clip(place, 56)}` : ""}${shortTask ? ` · ${clip(shortTask, 32)}` : ""}`;
+  // 3.7.5-pre.3: a tarefa da linha de leitura é uma chamada (`get_ds_rules{ids,detail:"index"} por componente`): corta no ";".
+  const usage = head.includes(":usage-unread:");
+  const shortTask = (usage ? task.split(";")[0] : task.split(/[:(;]/)[0]).trim();
+  return `${head}${norm ? `⇒${norm}` : ""}${done ? "✓" : ""}${place ? ` @${clip(place, 56)}` : ""}${shortTask ? ` · ${clip(shortTask, usage ? 48 : 32)}` : ""}`;
 }
 
 /** 3.6.3: a forma curta → a mínima (uma norma, um lugar, a tarefa em poucas palavras); null se já é mínima. */

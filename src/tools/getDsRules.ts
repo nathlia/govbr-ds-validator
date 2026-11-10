@@ -59,6 +59,7 @@ import {
   listingResponse,
   lookupCard,
   lookupResponse,
+  idsIndexItem,
   retrievalResponse,
   ruleKind,
   type Hit,
@@ -361,7 +362,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         field: "ids",
         next: [
           step("request-detail", `os primeiros ${max} ids; repita com o restante`, "get_ds_rules", { ids: requested.slice(0, max), ...(detail !== "brief" ? { detail } : {}) }),
-          ...(detail !== "index" ? [step("request-detail", "o lote inteiro em projeção index (só títulos)", "get_ds_rules", { ids: requested.slice(0, IDS_MAX_INDEX), detail: "index" })] : []),
+          ...(detail !== "index" ? [step("request-detail", "o lote inteiro em projeção index (frase da cláusula, força e componente)", "get_ds_rules", { ids: requested.slice(0, IDS_MAX_INDEX), detail: "index" })] : []),
         ],
       });
     }
@@ -372,7 +373,7 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
     const project =
       detail === "index"
-        ? (rule: KnowledgeRule, n: number) => ({ ...indexItem(rule, n), kind: ruleKind(rule) })
+        ? (rule: KnowledgeRule, n: number) => ({ ...idsIndexItem(rule, n), kind: ruleKind(rule) })
         : detail === "full"
           ? (rule: KnowledgeRule) => asImplementationProperty(rule, { kind: ruleKind(rule), ...(projections.full(rule) as Record<string, unknown>) })
           : (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => lookupCard(rule, n, used);
