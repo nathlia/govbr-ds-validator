@@ -69,7 +69,14 @@ export interface PendingRule {
   text: string;
 }
 
-export type PendingResolution = { by: "verify_finding" | "pendingResolved"; status?: string; ref?: string; reason?: string };
+export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "usage-read"; status?: string; ref?: string; reason?: string };
+
+/**
+ * 3.7.5 (item 6): pendência de LEITURA das cláusulas de uso/juízo de um componente do DS encontrado na página. Uma por
+ * componente na sessão (todas as rotas); fecha só quando o servidor viu, nesta sessão, respostas que devolveram todas
+ * essas cláusulas (ScanSession.noteRead); pendingResolved e verify_finding não a fecham. Não julga nada.
+ */
+export const USAGE_CODE = "usage-unread";
 
 /**
  * 3.6.3 (revisão HIGH 1): o estado da pendência em UMA rota. O id e o rótulo podem ser compartilhados entre rotas (o mesmo
@@ -119,6 +126,8 @@ export interface PendingEntry {
   elementBound?: boolean;
   /** 3.7.3 A8 (revisão MED 2): o verify_finding que fecha precisa ser vivo, com ações na receita e esta condição. */
   requires?: { actions: true; expectedCondition: string };
+  /** 3.7.5 (item 6): pendência de leitura — o componente e as cláusulas de uso/juízo que precisam ser devolvidas. */
+  usage?: { component: string; ids: string[] };
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -201,6 +210,10 @@ export class ScanSession {
   private readonly delivered = new Set<string>();
   /** 3.7.4 (D1): contextos da reserva de cláusulas entregues nesta sessão (chave do escopo → 1ª entrega e faixas). */
   private readonly contexts = new Map<string, { scanId: string; full: boolean; ranges: Array<{ start: number; end: number }> }>();
+  /** 3.7.5 (item 6): ids da base devolvidos por get_ds_rules/get_component_spec/get_page_rules nesta sessão. */
+  private readonly readIds = new Set<string>();
+  /** 3.7.5 (R2): cláusulas da reserva cujo texto inteiro já saiu nesta sessão (id → scan da 1ª entrega). */
+  private readonly reserveClauses = new Map<string, string>();
   /** 3.6.5 (item 4): assinatura de evidência → onde a família foi vista (scan, rota, estado). */
   private readonly sightings = new Map<string, FamilySighting[]>();
   /**
@@ -265,6 +278,15 @@ export class ScanSession {
     if (ranges === "full") seen.full = true;
     else seen.ranges.push(...ranges.map((r) => ({ start: r.start, end: r.end })));
     this.contexts.set(key, seen);
+  }
+
+  /** 3.7.5 (R2): o scan em que a cláusula da reserva saiu inteira nesta sessão; undefined = não saiu. */
+  clauseDelivered(id: string): string | undefined {
+    return this.reserveClauses.get(id);
+  }
+
+  markClauseDelivered(id: string, scanId: string): void {
+    if (!this.reserveClauses.has(id)) this.reserveClauses.set(id, scanId);
   }
 
   markDelivered(code: string): void {
@@ -427,6 +449,71 @@ export class ScanSession {
     return out;
   }
 
+  /**
+   * 3.7.5 (item 6): abre (ou reencontra) a pendência de leitura das cláusulas de uso/juízo do componente — uma por
+   * componente na sessão, com a rota nova acrescentada. A leitura vale para a sessão inteira: rota nova de uma pendência já
+   * lida entra resolvida; leitura feita antes do scan fecha na hora.
+   */
+  registerUsage(component: string, route: string, scanId: string, ids: string[]): PendingEntry {
+    const key = `usage|${component}`;
+    let entry = this.pending.get(key);
+    if (!entry) {
+      this.counter += 1;
+      entry = {
+        id: `P-${String(this.counter).padStart(2, "0")}`,
+        key,
+        code: USAGE_CODE,
+        subject: component,
+        route,
+        routes: [],
+        slots: [],
+        scans: [],
+        norms: [],
+        locators: [],
+        low: false,
+        usage: { component, ids: [...ids] },
+        status: "open",
+      };
+      this.pending.set(key, entry);
+      this.byId.set(entry.id, entry);
+    }
+    if (!entry.routes.includes(route)) entry.routes.push(route);
+    let slot = slotOf(entry, route);
+    if (!slot) {
+      slot = entry.status === "resolved" && entry.resolution
+        ? { route, status: "resolved", resolution: entry.resolution, locators: [], scans: [] }
+        : { route, status: "open", locators: [], scans: [] };
+      entry.slots.push(slot);
+    }
+    if (!slot.scans.includes(scanId)) slot.scans.push(scanId);
+    if (!entry.scans.includes(scanId)) entry.scans.push(scanId);
+    this.closeRead(entry);
+    return entry;
+  }
+
+  /** 3.7.5 (item 6): todas as cláusulas de uso do componente já foram devolvidas por uma ferramenta nesta sessão. */
+  usageRead(entry: PendingEntry): boolean {
+    return Boolean(entry.usage) && entry.usage!.ids.every((id) => this.readIds.has(id));
+  }
+
+  private closeRead(entry: PendingEntry): boolean {
+    if (!entry.usage || entry.status !== "open" || !this.usageRead(entry)) return false;
+    const resolution: PendingResolution = { by: "usage-read" };
+    for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
+    return true;
+  }
+
+  /**
+   * 3.7.5 (item 6): os ids da base que uma resposta de leitura (get_ds_rules, get_component_spec, get_page_rules) devolveu;
+   * fecha as pendências de leitura cujo conjunto inteiro já foi visto. Devolve os ids das pendências fechadas.
+   */
+  noteRead(ids: Iterable<string>): string[] {
+    for (const id of ids) this.readIds.add(id);
+    const closed: string[] = [];
+    for (const entry of this.byId.values()) if (this.closeRead(entry)) closed.push(entry.id);
+    return closed;
+  }
+
   /** 3.6.6: guarda as cláusulas servidas sem pendingId (as já registradas não contam). */
   noteUnregistered(component: string, clauseIds: string[]): void {
     const registered = this.clauseIds(component);
@@ -544,10 +631,16 @@ export class ScanSession {
     const needsReason: string[] = [];
     const recordAsFinding: Array<{ id: string; code: string; route: string; cite: string | null; norms: string[] }> = [];
     const partialVerify: Array<{ id: string; verified: string[]; verifiedCount: number; declared: string[]; declaredCount: number }> = [];
+    const usageUnread: string[] = [];
     for (const r of list) {
       const entry = this.byId.get(r.id);
       if (!entry) {
         unknown.push(r.id.slice(0, 20));
+        continue;
+      }
+      // 3.7.5 (item 6): a pendência de leitura fecha só pela leitura que passa pelo servidor, nunca por declaração.
+      if (entry.usage) {
+        if (entry.status === "open") usageUnread.push(`${entry.id}:${entry.usage.component}`);
         continue;
       }
       if (r.status !== "violada" && !r.reason?.trim()) {
@@ -583,6 +676,9 @@ export class ScanSession {
         : {}),
       ...(partialVerify.length
         ? { partialVerify, partialVerifyNote: "verify_finding decidiu só os elementos em verified; os de declared fecharam pela sua declaração (status/reason), não por medida." }
+        : {}),
+      ...(usageUnread.length
+        ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até a leitura passar pelo servidor (get_ds_rules{component, category:\"component\"}, pelo cursor até o fim)." }
         : {}),
     };
   }
@@ -632,7 +728,9 @@ export function sessionPendingBlock(
   unregistered: Record<string, number> = {},
 ) {
   // 3.6.3 (revisão HIGH 1): por rota — a pendência deste scan conta aqui só pelas OUTRAS rotas em que segue aberta.
-  const openSlots = (e: PendingEntry) => e.slots.filter((x) => x.status === "open" && !(currentIds.has(e.id) && (currentRoute === undefined || x.route === currentRoute)));
+  // 3.7.5 (item 6): a pendência de leitura é da sessão, não da rota — se está nesta página, não volta como de outra rota.
+  const openSlots = (e: PendingEntry) => e.usage && currentIds.has(e.id) ? []
+    : e.slots.filter((x) => x.status === "open" && !(currentIds.has(e.id) && (currentRoute === undefined || x.route === currentRoute)));
   const others = open.filter((e) => openSlots(e).length > 0);
   const unregisteredComponents = Object.keys(unregistered).filter((c) => unregistered[c] > 0);
   if (!others.length && !unregisteredComponents.length) return undefined;
@@ -688,7 +786,10 @@ export function sessionPendingBlock(
       ...(partial.length ? { openOn: Object.fromEntries(partial.map((e) => [e.id, openSlots(e).slice(0, 3).map((x) => shortRoute(x.route))])) } : {}),
       // 3.7.4 (D2): verificada em parte — os elementos que faltam decidir (até 3 por pendência).
       ...(halfDone.length ? { remaining: Object.fromEntries(halfDone.slice(0, 3)) } : {}),
-      ...(rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
+      ...(code === USAGE_CODE
+        // 3.7.5 (item 6): os componentes (na ordem dos ids) e a leitura que fecha cada um.
+        ? { components: entries.slice(0, 5).map((e) => e.subject), next: 'get_ds_rules{component:<c>,category:"component"}' }
+        : rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });
   return {

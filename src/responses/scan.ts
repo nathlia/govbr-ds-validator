@@ -7,7 +7,7 @@ import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
 import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
 import { CROSS_ROUTE, sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
-import { deferredReserve, selectReserve, type ContextDelivered, type ReserveCandidate } from "../tools/clauseReserve.js";
+import { clausesSummary, deferredReserve, referenceFloor, selectReserve, splitDelivered, type ClauseDelivered, type ContextDelivered, type ReserveCandidate } from "../tools/clauseReserve.js";
 
 export const SCAN_DEFAULT_MAX_CHARS = 8_000;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -476,7 +476,8 @@ function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> |
     return { ...r, checksRun: { ...cr, pageLevel: { count: pl.notMeasured.length + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
   }
   if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
-  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+$/.test(i));
+  // 3.7.5 (item 6): a linha de leitura agrega ids (`P-09..P-12` ou `P-09,P-12`) — fica como um rótulo só.
+  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+(?:(?:\.\.|,)P-\d+)*$/.test(i));
   if (!ids.length) return null;
   return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
 }
@@ -771,11 +772,11 @@ export function assembleScan(
   scanId: string,
   maxChars: number,
   page: (familyBudget: number) => Record<string, unknown>,
-  options: { firstScanPage?: boolean; clauseCandidates?: ReserveCandidate[]; contextDelivered?: ContextDelivered } = {},
+  options: { firstScanPage?: boolean; clauseCandidates?: ReserveCandidate[]; contextDelivered?: ContextDelivered; clauseDelivered?: ClauseDelivered } = {},
 ) {
   // 3.6.2: a 1ª página de um scan_page (1º scan ou posterior) monta por prioridade — famílias antes de tudo — e nunca
   // passa do teto pedido. Continuações seguem o caminho de sempre (≥ 1 item para o cursor andar).
-  if (options.firstScanPage && options.clauseCandidates) return assembleReservedScan(head, observations, scanId, maxChars, page, options.clauseCandidates, options.contextDelivered);
+  if (options.firstScanPage && options.clauseCandidates) return assembleReservedScan(head, observations, scanId, maxChars, page, options.clauseCandidates, options.contextDelivered, options.clauseDelivered);
   if (options.firstScanPage) return assembleFirstScanPage(head, observations, scanId, maxChars, page);
   const response = assembleScanPage(head, observations, scanId, maxChars, page, options);
   const ceiled = enforceCeiling(response, maxChars, scanId);
@@ -809,20 +810,61 @@ function pageLevelRank(r: Record<string, unknown>): number {
   return pl.notMeasured.every((i) => typeof i !== "string" || i.includes(" · ")) ? 1 : 3;
 }
 
+/**
+ * 3.7.5 (opção 1): o estado das cláusulas (`clauses`) vai logo depois do `complete` dos fatos, para não ser lido como parte
+ * dele; sem `complete` na página, antes da reserva.
+ */
+function withClausesSummary(facts: Record<string, unknown>, summary: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!summary) return { ...facts };
+  const out: Record<string, unknown> = {};
+  let placed = false;
+  for (const [k, v] of Object.entries(facts)) {
+    if (k === "clauses") continue;
+    out[k] = v;
+    if (k === "complete") { out.clauses = summary; placed = true; }
+  }
+  if (!placed) out.clauses = summary;
+  return out;
+}
+
 function assembleReservedScan(
   head: Record<string, unknown>, observations: Observation[] | null, scanId: string,
-  maxChars: number, page: (budget: number) => Record<string, unknown>, candidates: ReserveCandidate[],
-  delivered?: ContextDelivered,
+  maxChars: number, page: (budget: number) => Record<string, unknown>, allCandidates: ReserveCandidate[],
+  delivered?: ContextDelivered, clauseDelivered?: ClauseDelivered,
 ): Record<string, unknown> {
+  // 3.7.5 (R2): cláusula já entregue inteira nesta sessão não volta; o prefixo avança sobre as que faltam.
+  const { fresh: candidates, earlier } = splitDelivered(allCandidates, clauseDelivered);
+  const summaryOf = (block: Record<string, unknown>) => clausesSummary(block, candidates, earlier);
   const allItems = listedItems(page(1_000_000));
-  const attach = (facts: Record<string, unknown>, block: Record<string, unknown>, budget: number) => {
-    const out: Record<string, unknown> = { ...facts, clauseReserve: block };
-    if (typeof out.responseCharsEstimate === "number") {
-      for (let i = 0; i < 4; i++) out.responseCharsEstimate = textSize(out);
-    }
-    return textSize(out) <= budget ? out : null;
+  /**
+   * 3.7.5 (R1): com a página cheia de fatos (reserva adiada), o estado das cláusulas desce de forma — sem a nota, depois
+   * a contagem com o next apontando o investigate.next da mesma resposta (a lista de verificação do 1º componente), por
+   * fim sem a contagem — para que até a forma mínima da reserva leve o caminho sem tirar fato.
+   */
+  const summaryForms = (facts: Record<string, unknown>, block: Record<string, unknown>, tight: boolean) => {
+    const full = summaryOf(block);
+    if (!tight || !full || full.complete) return [full];
+    const { note: _n, ...plain } = full;
+    const inv = (facts.investigate as { next?: { tool?: string } } | undefined)?.next;
+    const pointer = inv && (inv.tool === "get_component_spec" || inv.tool === "get_page_rules")
+      ? [{ complete: false, deferred: full.deferred, next: "investigate.next" }, { complete: false, next: "investigate.next" }] : [];
+    return [full, plain, ...pointer];
   };
-  const blockSize = (block: Record<string, unknown>) => textSize({ clauseReserve: block }) - 1;
+  const attach = (facts: Record<string, unknown>, block: Record<string, unknown>, budget: number, tight = false) => {
+    for (const summary of summaryForms(facts, block, tight)) {
+      const out: Record<string, unknown> = { ...withClausesSummary(facts, summary), clauseReserve: block };
+      if (typeof out.responseCharsEstimate === "number") {
+        for (let i = 0; i < 4; i++) out.responseCharsEstimate = textSize(out);
+      }
+      if (textSize(out) <= budget) return out;
+    }
+    return null;
+  };
+  /** O bloco e o estado das cláusulas que o acompanha no topo (3.7.5): o espaço que a reserva toma da página. */
+  const blockSize = (block: Record<string, unknown>) => {
+    const summary = summaryOf(block);
+    return textSize({ clauseReserve: block, ...(summary ? { clauses: summary } : {}) }) - 1;
+  };
   const stripped = (b: number) => {
     let p = familyAlsoInOut(familyNotesOut(page(b)));
     for (const extra of EXTRAS_BY_FAMILY) p = familyExtraFrom(p, extra, 0);
@@ -854,17 +896,20 @@ function assembleReservedScan(
       if (!f) built.set(room, (f = assembleFirstScanPage(head, observations, scanId, room, page)));
       return f;
     };
-    const full = selectReserve(candidates, budget, { delivered });
+    const full = selectReserve(candidates, budget, { delivered, earlier });
     if (full.unavailable && !full.block.clauses.length) return { refuse: "literal-scope-unavailable" };
-    const floor = selectReserve(candidates, budget, { delivered, minimal: true }).block;
+    const floor = selectReserve(candidates, budget, { delivered, minimal: true, earlier }).block;
+    // 3.7.5 (R2): com cláusulas destas candidatas já entregues na sessão, o piso de fatos que não cabem vai por referência.
+    const refFloor = earlier ? referenceFloor(budget, earlier) : undefined;
+    const pathFloor: Record<string, unknown> | undefined = refFloor ?? (floor.clauses.length ? floor : undefined);
     // Nem a lista de fatos sozinha, sem cabeçalho, cabe inteira no teto: os fatos não cabem — a página leva o piso (uma
     // cláusula inteira) e os fatos que couberem com ele, numa montagem só (a escada de uma página que não cabe é cara).
     // Revisão MED 2: "não cabem" decidido pela lista de fatos já sem os acréscimos e sem as chaves constantes (o que a
     // escada retira no fim), no maior orçamento de famílias cuja lista sozinha cabe no teto — sem cabeçalho nenhum.
-    if (floor.clauses.length && !factsCouldFit(budget)) {
-      const room = budget - blockSize(floor) - 24;
+    if (pathFloor && !factsCouldFit(budget)) {
+      const room = budget - blockSize(pathFloor) - 24;
       const f = room >= 300 ? factsWithin(room) : null;
-      const out = f && f.kind !== "error" && (allItems === 0 || listedItems(f) >= 1) ? attach(f, floor, budget) : null;
+      const out = f && f.kind !== "error" && (allItems === 0 || listedItems(f) >= 1) ? attach(f, pathFloor, budget) : null;
       return out ? { ok: out } : { refuse: "indivisible-content-and-floor-exceed-budget" };
     }
     const facts = factsWithin(budget);
@@ -899,8 +944,10 @@ function assembleReservedScan(
     }
     const variants = [full.block, floor];
     // blockSize = textSize do bloco + 15 (a chave): o teto do selectReserve é o do bloco sozinho.
-    for (const cap of [Math.floor(blockSize(full.block) * .5), leftover - 16]) {
-      const v = selectReserve(candidates, budget, { delivered, maxBlockChars: cap }).block;
+    // 3.7.5: o estado das cláusulas no topo também ocupa o que sobrou (a forma com o maior estado, para a conta não faltar).
+    const summaryChars = textSize({ clauses: summaryOf({ clauses: [] }) ?? {} });
+    for (const cap of [Math.floor(blockSize(full.block) * .5), leftover - 16 - summaryChars]) {
+      const v = selectReserve(candidates, budget, { delivered, maxBlockChars: cap, earlier }).block;
       if (v.clauses.length) variants.push(v);
     }
     let floorResult: Record<string, unknown> | null | undefined;
@@ -925,26 +972,32 @@ function assembleReservedScan(
     // 3) todos os fatos na página e nenhuma cláusula inteira cabe sem tirá-los: reserva adiada, declarada.
     if (complete) {
       for (const tiny of [false, true]) {
-        const block = deferredReserve(candidates, budget, tiny);
-        const out = attach(facts, block, budget) ?? (tiny && !headerAtFloor ? withReserve(block, true) : null);
+        const block = deferredReserve(candidates, budget, tiny, earlier);
+        const out = attach(facts, block, budget, true) ?? (tiny && !headerAtFloor ? withReserve(block, true) : null);
         if (out) return { ok: out };
       }
       // O aviso mínimo pode encolher qualquer parte do cabeçalho, nunca tirar fato; sem nem isso, só os fatos.
-      for (const tiny of [deferredReserve(candidates, budget, true), { status: "deferred-by-facts" }]) {
-        const direct = attach(facts, tiny, budget);
+      // 3.7.5 (R1): até a forma mínima leva o caminho (o next de `clauses`, que o attach põe no topo).
+      for (const tiny of [deferredReserve(candidates, budget, true, earlier), { status: "deferred-by-facts" }]) {
+        const direct = attach(facts, tiny, budget, true);
         if (direct) return { ok: direct };
-        const f = factsWithin(budget - blockSize(tiny) - 24);
-        const out = f.kind !== "error" && listedItems(f) >= listed ? attach(f, tiny, budget) : null;
-        if (out) return { ok: out };
+        // 3.7.5 (R1): a forma mínima do estado das cláusulas (o attach desce até ela) conta no espaço que a página cede; a
+        // escada do cabeçalho não é monótona no teto, então a folga de montagem desce de 24 a -24 (o attach confere o teto).
+        const least = textSize({ clauseReserve: tiny, clauses: { complete: false, deferred: candidates.length, next: "investigate.next" } }) - 1;
+        for (const slack of [24, 12, 0, -12, -24]) {
+          const f = factsWithin(budget - least - slack);
+          const out = f.kind !== "error" && listedItems(f) >= listed ? attach(f, tiny, budget, true) : null;
+          if (out) return { ok: out };
+        }
       }
       return { ok: facts };
     }
     // 4) os fatos já não cabem inteiros: o piso pode custar família (fica ao menos uma).
-    if (floor.clauses.length) {
-      const out = withReserve(floor, false);
+    if (pathFloor) {
+      const out = withReserve(pathFloor, false);
       if (out) return { ok: out };
     }
-    return { refuse: full.unavailable && !floor.clauses.length ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget" };
+    return { refuse: full.unavailable && !pathFloor ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget" };
   };
   const result = attempt(maxChars);
   if ("ok" in result) return result.ok;
@@ -953,7 +1006,9 @@ function assembleReservedScan(
     : [2000, 4000, 8000, 12000, 20000, 40000, 60000, 80000, 100000].find((b) => {
       // Revisão MED 1: o retry sugerido entrega de fato ao menos uma cláusula inteira (não só os fatos com a reserva adiada).
       const r = attempt(b);
-      return "ok" in r && Array.isArray((r.ok.clauseReserve as { clauses?: unknown[] } | undefined)?.clauses) && ((r.ok.clauseReserve as { clauses: unknown[] }).clauses.length > 0 || !candidates.length);
+      const block = r && "ok" in r ? r.ok.clauseReserve as { clauses?: unknown[]; status?: string } | undefined : undefined;
+      // 3.7.5 (R2): o piso por referência (cláusulas já entregues na sessão) também é entrega.
+      return block !== undefined && (block.status === "floor-by-reference" || (Array.isArray(block.clauses) && (block.clauses.length > 0 || !candidates.length)));
     });
   return {
     contract: CONTRACT, kind: "error", errorCode: "item-too-large", field: "maxChars", scanId,

@@ -148,7 +148,8 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { ruleIdsIn, usageClauseIds } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
@@ -916,6 +917,21 @@ export function createServer(options: ServerOptions = {}): McpServer {
   });
   // 3.6.3: toda recusa de entrada também vira um evento de telemetria (eventos = chamadas, nos dois perfis).
   installContractInputValidation(server, (name, args, result, errorCode) => telemetry.rejected(name, args, result, errorCode));
+  // 3.7.5 (item 6): o servidor vê o que as ferramentas de leitura da base devolvem — os ids citados fecham as pendências
+  // de leitura (usage-unread) cujo conjunto inteiro já passou. Só o handler é envolvido: nome, descrição e esquema (o
+  // tools/list) ficam como estão.
+  if (hasNorms) {
+    const READ_TOOLS = new Set(["get_ds_rules", "get_component_spec", "get_page_rules"]);
+    const register = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
+    (server as { registerTool: unknown }).registerTool = (name: string, config: unknown, cb: (...a: unknown[]) => Promise<unknown>) =>
+      register(name, config, READ_TOOLS.has(name)
+        ? async (...a: unknown[]) => {
+            const result = await cb(...a) as { isError?: boolean; content?: Array<{ type?: string; text?: string }> };
+            if (!result?.isError) session.noteRead((result?.content ?? []).flatMap((c) => (typeof c.text === "string" ? ruleIdsIn(c.text) : [])));
+            return result;
+          }
+        : cb);
+  }
 
   // Phase 2.5 guard: the KB and the installed @govbr-ds/core must describe
   // the same DS release (logs to stderr — stdout is the MCP transport). Sem base no knowledge-free.
@@ -1859,6 +1875,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
       if (typeof ctx.text !== "string") continue;
       session.markContextDelivered(key, scanId, ctx.kind === "literal-window" ? (ctx.source?.ranges ?? []) : "full");
     }
+    // 3.7.5 (R2): a cláusula que saiu inteira não se repete nos próximos scans da sessão (vai por referência).
+    for (const clause of ((response.clauseReserve as { clauses?: Array<{ citeAs?: unknown; text?: unknown }> } | undefined)?.clauses ?? [])) {
+      if (typeof clause.citeAs === "string" && typeof clause.text === "string") session.markClauseDelivered(clause.citeAs, scanId);
+    }
   };
 
   /** 3.6.1 (item 6): a separação por rota/estado, só quando a sessão já viu outra rota ou outro estado. */
@@ -2083,10 +2103,26 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
-        const pageItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
+        // 3.7.5 (item 6): cada componente do DS encontrado com cláusulas de uso/juízo na base abre UMA pendência de leitura na
+        // sessão; as ainda não lidas desta página saem numa linha só, depois das demais pendências.
+        const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
+        const usageOpen = hasNorms
+          ? [...new Set(result.coverage.componentsFound ?? [])].flatMap((component) => {
+              const ids = usageClauseIds(component);
+              if (!ids.length) return [];
+              const entry = session.registerUsage(component, route, scanId, ids);
+              return entry.status === "open" ? [{ id: entry.id, component }] : [];
+            })
+          : [];
+        const usageItem = usageUnreadItem(usageOpen);
+        // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.
+        const pageItems = [...regularItems, ...(usageItem ? [usageItem] : [])];
+        // O item inteiro também no ledger (get_finding_details view:observations, a continuação de pageLevel).
+        // (os componentes vão em observed: nome de componente não é localizador.)
+        if (usageItem) observationStore.get(scanId)?.push(...notJudgedObservations([{ ...usageItem, examples: undefined, observed: (usageItem.examples ?? []).join(",") }], url));
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
-          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts())
+          ? sessionPendingBlock(session.open(), new Set([...pageItems.map((i) => i.pendingId as string), ...usageOpen.map((u) => u.id)]), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts())
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
         session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks, components: result.coverage.componentsFound ?? [] });
@@ -2130,7 +2166,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
           batchView(findings, result.stateFingerprint, { view, detail, cursor, limit, maxChars: budget, memberLimit }, scanId),
           { firstScanPage: first, ...(hasNorms && first ? { clauseCandidates: reserveCandidates([
             ...(investigate?.items ?? []).map(i => i.component), ...(investigate?.more?.components ?? []),
-          ]), contextDelivered: (key: string, ranges?: Array<{ start: number; end: number }>) => session.contextDelivered(key, ranges) } : {}) },
+          ]), contextDelivered: (key: string, ranges?: Array<{ start: number; end: number }>) => session.contextDelivered(key, ranges),
+          clauseDelivered: (id: string) => session.clauseDelivered(id) } : {}) },
         );
         markDeliveredTexts(response);
         markDeliveredContexts(response, scanId);

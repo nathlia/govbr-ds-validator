@@ -128,10 +128,18 @@ describe("A5 — reserva no MCP e recuperação do lote", () => {
       const shown = Object.entries(first.contexts as Record<string, { text?: string; kind: string }>).filter(([, c]) => typeof c.text === "string" && c.kind === "literal-scope");
       expect(shown.length).toBeGreaterThan(0);
       const data = await scan(client, "/component", 20000);
+      // 3.7.5 (R2): as cláusulas que saíram inteiras não se repetem (só a referência); um contexto já entregue que volte
+      // com uma cláusula nova vem só pela referência.
+      const firstIds = (first.clauses as Array<{ citeAs: string }>).map((c) => c.citeAs);
+      expect(data.clauseReserve.alreadyDelivered).toEqual({ count: firstIds.length, in: [expect.stringMatching(/^S-/)] });
+      expect((data.clauseReserve.clauses as Array<{ citeAs: string }>).some((c) => firstIds.includes(c.citeAs))).toBe(false);
       for (const [key] of shown) {
-        expect(data.clauseReserve.contexts[key]).toMatchObject({ status: "delivered", deliveredIn: expect.stringMatching(/^S-/), next: { tool: "get_ds_rules" } });
-        expect(data.clauseReserve.contexts[key]).not.toHaveProperty("text");
+        const ctx = data.clauseReserve.contexts?.[key];
+        if (!ctx) continue;
+        expect(ctx).toMatchObject({ status: "delivered", deliveredIn: expect.stringMatching(/^S-/), next: { tool: "get_ds_rules" } });
+        expect(ctx).not.toHaveProperty("text");
       }
+      expect(data.clauses).toMatchObject({ complete: expect.any(Boolean) });
       // outra sessão MCP recebe o texto de novo
       const other = await connect("evaluation");
       try {

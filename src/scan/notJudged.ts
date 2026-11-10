@@ -25,7 +25,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread";
   subject: string;
   count?: number;
   observed?: string;
@@ -321,8 +321,53 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
  */
 export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unknown; decided?: number; remaining?: string[] };
 
+/**
+ * 3.7.5 (item 6): os ids das pendências em ordem, com as sequências de 3 ou mais em faixa: `P-07..P-13,P-18,P-19,P-32..P-35`.
+ * Lido da esquerda para a direita, dá os ids na ordem dos componentes da linha.
+ */
+function idsLabel(ids: string[]): string {
+  const n = ids.map((id) => Number(id.slice(2)));
+  const out: string[] = [];
+  for (let i = 0; i < n.length;) {
+    let j = i;
+    while (j + 1 < n.length && n[j + 1] === n[j] + 1) j++;
+    if (j - i >= 2) out.push(`${ids[i]}..${ids[j]}`);
+    else out.push(...ids.slice(i, j + 1));
+    i = j + 1;
+  }
+  return out.join(",");
+}
+
+const USAGE_TODO = 'get_ds_rules{component:<c>,category:"component"} até o fim; fecha ao ler';
+
+/**
+ * 3.7.5 (item 6): UMA linha agrega as pendências de leitura (`usage-unread`) dos componentes desta página ainda não lidos:
+ * ids na ordem dos componentes, e a chamada que fecha cada um. Nada é julgado: só garante a leitura.
+ */
+export function usageUnreadItem(open: Array<{ id: string; component: string }>): PendingItem | undefined {
+  if (!open.length) return undefined;
+  // Em ordem de id (o rótulo em faixas acompanha a ordem dos componentes).
+  open = [...open].sort((x, y) => Number(x.id.slice(2)) - Number(y.id.slice(2)));
+  return {
+    code: "usage-unread",
+    subject: "cláusulas de uso e juízo (uso, melhores práticas, tom e voz) dos componentes",
+    count: open.length,
+    pendingId: idsLabel(open.map((o) => o.id)),
+    examples: open.map((o) => o.component),
+    todo: USAGE_TODO,
+    measure: "leitura, sem veredito: um id por componente, na ordem; fecha quando a leitura passa pelo servidor (pendingResolved não fecha)",
+  };
+}
+
+const USAGE_LIST_MAX = 160;
+
 /** Na resposta: até 2 exemplos (o item inteiro fica no ledger); 3.6.1: com o id da pendência da sessão. */
 function compactItem(item: PendingItem, withText: (code: string) => boolean = () => true) {
+  // 3.7.5 (item 6): a pendência de leitura leva todos os componentes (o id de cada um é a posição na faixa de ids).
+  if (item.code === "usage-unread") {
+    const { subject: _s, ...rest } = item;
+    return rest;
+  }
   const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
@@ -438,6 +483,10 @@ function measuredText(m: NonNullable<NotJudgedItem["measured"]>[number]): string
  * inteira resolveram). Formato: `P-NN:código[:n]⇒wcag-x,emag-y @onde-e-quanto · tarefa`.
  */
 export function pendingLine(i: PendingItem): string {
+  // 3.7.5 (item 6): `P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{…} até o fim; fecha ao ler`.
+  if (i.code === "usage-unread") {
+    return `${i.pendingId}:usage-unread:${i.count} @${clip((i.examples ?? []).join(","), USAGE_LIST_MAX)} · ${i.todo}`;
+  }
   const norms = shortNorms(i.norms, i.rule);
   const where = i.measured?.length
     ? i.measured.slice(0, 2).map(measuredText).join("; ")

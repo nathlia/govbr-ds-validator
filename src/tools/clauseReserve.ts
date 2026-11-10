@@ -12,10 +12,16 @@ import { textSize } from "../responses/contract.js";
  * faixas declaradas, ou referência), o contexto já entregue nesta sessão volta só pela referência, e o bloco cabe no
  * espaço que os fatos deixam (montador: fatos primeiro).
  */
-export const CLAUSE_RESERVE_VERSION = "clause-reserve/1.1.0";
+/**
+ * 3.7.5: 1.2.0 — o estado das cláusulas sai separado do `complete` dos fatos (`clauses` no topo da resposta, com UM next
+ * para as não entregues); o bloco mínimo adiado nunca sai sem esse caminho (R1); cláusula já entregue inteira na sessão
+ * não se repete: vai só pela referência (`alreadyDelivered`) e o prefixo avança para as seguintes (R2).
+ */
+export const CLAUSE_RESERVE_VERSION = "clause-reserve/1.2.0";
 type Scope = NonNullable<ReturnType<typeof procedureScope>>;
 type Range = { start: number; end: number };
-export type ReserveCandidate = { rule: KnowledgeRule; procedure: Procedure; context: Scope | null };
+/** component = a fila do investigate de onde a candidata veio (null = checklist global da página). */
+export type ReserveCandidate = { rule: KnowledgeRule; procedure: Procedure; context: Scope | null; component?: string | null };
 /** Sessão: o scan em que o contexto (inteiro, ou as faixas pedidas) já saiu; undefined = não saiu. */
 export type ContextDelivered = (key: string, ranges?: Range[]) => string | undefined;
 
@@ -24,11 +30,11 @@ export function reserveCandidates(components: string[]): ReserveCandidate[] {
     .filter(rule => !oracleFullyMeasures(rule.id))
     .map(rule => ({ rule, procedure: procedureOf(rule) }))
     .filter((x): x is { rule: KnowledgeRule; procedure: Procedure } => x.procedure !== null));
-  const queues = [...new Set(components)].map(component => candidates(checklistRules(component)));
+  const queues = [...new Set(components)].map(component => candidates(checklistRules(component)).map(x => ({ ...x, component })));
   // Rodízio preserva a ordem por componente/estado do investigate e a mensurabilidade dentro de cada fila.
-  const ordered: Array<{ rule: KnowledgeRule; procedure: Procedure }> = [];
+  const ordered: Array<{ rule: KnowledgeRule; procedure: Procedure; component: string | null }> = [];
   for (let i = 0; queues.some(q => i < q.length); i++) for (const q of queues) if (q[i]) ordered.push(q[i]);
-  if (!ordered.length) ordered.push(...candidates(pageChecklistRules()));
+  if (!ordered.length) ordered.push(...candidates(pageChecklistRules()).map(x => ({ ...x, component: null })));
   const seen = new Set<string>();
   return ordered.filter(x => !seen.has(x.rule.id) && Boolean(seen.add(x.rule.id)))
     .map(x => ({ ...x, context: x.procedure.context ?? procedureScope(x.rule, 100_000) }));
@@ -49,12 +55,71 @@ const reread = (id: string) => ({ tool: "get_ds_rules", arguments: { id } });
 
 const NOTE = "Leitura contextual deduplicada: candidatas, não veredito nem pendingId; confira condições e aplicabilidade (o contexto tem modalidade própria). contexts: literal-scope inteiro; literal-window = trechos literais (source.ranges; [… ] = salto); deferred/delivered = referência (delivered: o texto saiu em deliveredIn). next = get_ds_rules{id}: parágrafo literal e cláusulas adjacentes da seção, sem as introduções ancestrais do escopo.";
 
+/** 3.7.5 (R2): cláusulas da reserva já entregues inteiras nesta sessão — referência, não texto. */
+export type EarlierClauses = { count: number; in: string[] };
+/** Sessão: o scan em que a cláusula da reserva já saiu inteira; undefined = não saiu. */
+export type ClauseDelivered = (id: string) => string | undefined;
+
+/**
+ * 3.7.5 (R2): separa as candidatas cujo texto já saiu inteiro nesta sessão (não se repetem; vão por referência) das que
+ * ainda não saíram (o prefixo da reserva avança sobre estas, na mesma ordem).
+ */
+export function splitDelivered(candidates: ReserveCandidate[], delivered?: ClauseDelivered): { fresh: ReserveCandidate[]; earlier?: EarlierClauses } {
+  if (!delivered) return { fresh: candidates };
+  const fresh: ReserveCandidate[] = [];
+  const scans: string[] = [];
+  let count = 0;
+  for (const c of candidates) {
+    const scanId = delivered(c.rule.id);
+    if (scanId === undefined) { fresh.push(c); continue; }
+    count++;
+    if (!scans.includes(scanId)) scans.push(scanId);
+  }
+  return count ? { fresh, earlier: { count, in: scans.slice(0, 3) } } : { fresh };
+}
+
+/** Referência às cláusulas já entregues (sem a lista de ids: o texto está nas respostas indicadas). */
+const earlierBlock = (earlier?: EarlierClauses) => earlier ? { alreadyDelivered: { count: earlier.count, in: earlier.in } } : {};
+
+const CLAUSES_NOTE = "O complete dos fatos não cobre as cláusulas: as não entregues nesta resposta vêm pelo next.";
+
+/**
+ * 3.7.5 (opção 1 do mecanismo dev-374-b): estado das cláusulas candidatas desta resposta, separado do `complete` dos fatos.
+ * deferred = candidatas cujo texto não veio aqui (nem antes, na sessão); contextsByReference = contextos adiados (só
+ * referência). UM next: a lista de verificação do componente com mais cláusulas não entregues (texto, força e como
+ * medir), ou a global da página; só com contextos adiados, a releitura do 1º. Sem candidatas (nem entregues antes): nada.
+ */
+export function clausesSummary(block: Record<string, unknown>, fresh: ReserveCandidate[], earlier?: EarlierClauses): Record<string, unknown> | undefined {
+  if (!fresh.length && !earlier) return undefined;
+  const shown = Array.isArray(block.clauses) ? block.clauses.length : 0;
+  const deferred = Math.max(0, fresh.length - shown);
+  const refs = Object.values((block.contexts ?? {}) as Record<string, { status?: string; next?: unknown }>).filter((c) => c && c.status === "deferred");
+  if (!deferred && !refs.length) return { complete: true };
+  let next: unknown;
+  if (deferred) {
+    const counts = new Map<string | null, number>();
+    for (const c of fresh.slice(shown)) {
+      const k = c.component === undefined ? (c.rule.component ?? null) : c.component;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    let best: string | null = null;
+    let most = -1;
+    for (const [k, n] of counts) if (n > most) { best = k; most = n; }
+    next = best === null
+      ? { tool: "get_page_rules", arguments: { view: "checklist" } }
+      : { tool: "get_component_spec", arguments: { component: best, view: "checklist" } };
+  } else next = refs[0].next;
+  return { complete: false, deferred, ...(refs.length ? { contextsByReference: refs.length } : {}), next, note: CLAUSES_NOTE };
+}
+
 export type ReserveOptions = {
   /** Teto do bloco serializado (o espaço que os fatos deixaram). */
   maxBlockChars?: number;
   delivered?: ContextDelivered;
   /** Piso: uma cláusula inteira com o contexto só por referência (ou já entregue). */
   minimal?: boolean;
+  /** 3.7.5 (R2): as cláusulas já entregues inteiras (fora de `candidates`), declaradas por referência no bloco. */
+  earlier?: EarlierClauses;
 };
 
 /**
@@ -84,6 +149,7 @@ export function selectReserve(candidates: ReserveCandidate[], maxChars: number, 
     const c = counts();
     return { version: CLAUSE_RESERVE_VERSION, targetChars, ...c, status,
       ...(clauses.length < candidates.length && clauses.length ? { more: candidates.length - clauses.length } : {}),
+      ...earlierBlock(options.earlier),
       note: NOTE, clauses, ...(clauses.length ? { contexts } : {}) };
   };
   for (const { rule, procedure, context } of candidates) {
@@ -149,7 +215,7 @@ export function selectReserve(candidates: ReserveCandidate[], maxChars: number, 
     if (options.minimal || reserveContentChars(content) >= targetChars) break;
   }
   const { contentChars } = counts();
-  const status = !candidates.length ? "no-candidates"
+  const status = !candidates.length ? (options.earlier ? "delivered-earlier" : "no-candidates")
     : contentChars >= targetChars ? "fulfilled"
       : stop === "block" ? "limited-by-facts"
         : stop === "quota" ? "quota-reached"
@@ -161,9 +227,18 @@ export function selectReserve(candidates: ReserveCandidate[], maxChars: number, 
  * 3.7.4 (D1): os fatos ocuparam a 1ª página e não sobrou espaço para uma cláusula inteira: a reserva não foi entregue nesta
  * resposta (declarado), com as primeiras candidatas por id e o caminho para lê-las.
  */
-export function deferredReserve(candidates: ReserveCandidate[], maxChars: number, tiny = false) {
+export function deferredReserve(candidates: ReserveCandidate[], maxChars: number, tiny = false, earlier?: EarlierClauses) {
   const ids = candidates.slice(0, 3).map((c) => c.rule.id);
+  // 3.7.5 (R1): o caminho para lê-las é o next de `clauses` (topo da resposta), que acompanha toda forma deste bloco.
   return { version: CLAUSE_RESERVE_VERSION, targetChars: Math.ceil(maxChars * .2), contentChars: 0, status: "deferred-by-facts",
-    ...(tiny ? {} : { note: "A 1ª página (fatos e pendências) não deixou espaço para uma cláusula inteira. Leia as candidatas por id (next) ou peça maxChars maior.", candidates: ids, total: candidates.length }),
-    ...(ids.length ? { next: reread(ids[0]) } : {}) };
+    ...(tiny ? {} : { note: "A 1ª página (fatos e pendências) não deixou espaço para uma cláusula inteira. Leia as candidatas pelo next de clauses ou peça maxChars maior.", candidates: ids, total: candidates.length, ...earlierBlock(earlier) }) };
+}
+
+/**
+ * 3.7.5 (R2): o piso de uma resposta cujos fatos não cabem inteiros, quando a sessão já recebeu inteiras cláusulas destas
+ * candidatas: em vez de repetir uma cláusula (ou trocar fatos por uma nova), a reserva vai por referência — as já
+ * entregues pelos scans indicados, as demais pelo next de `clauses`.
+ */
+export function referenceFloor(maxChars: number, earlier: EarlierClauses) {
+  return { version: CLAUSE_RESERVE_VERSION, targetChars: Math.ceil(maxChars * .2), contentChars: 0, status: "floor-by-reference", ...earlierBlock(earlier) };
 }

@@ -83,6 +83,37 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.5-pre.1 — cláusulas adiadas com caminho; leitura das cláusulas de uso (NAT-111)
+
+Mecanismo da campanha dev-374-b-01: os agentes do braço com o oráculo só chamaram `scan_page`, registraram as
+cláusulas adiadas pela reserva como "anunciadas e não recebidas" (a resposta vinha com `complete: true`, que é dos
+fatos) e nunca leram as cláusulas de uso/juízo dos componentes. `package.json` segue 3.7.4 até o fechamento.
+
+- **Estado das cláusulas separado dos fatos (opção 1).** Com reserva, o `scan_page` traz `clauses` logo depois do
+  `complete` dos fatos: `{complete:false, deferred:N, contextsByReference?:M, next, note}` — `deferred` = candidatas
+  cujo texto não veio nesta resposta (nem antes, na sessão), e UM `next`: a lista de verificação
+  (`get_component_spec{component, view:"checklist"}`) do componente com mais cláusulas não entregues, ou
+  `get_page_rules{view:"checklist"}` para as globais; só com contexto adiado, a releitura dele. Tudo entregue:
+  `{complete:true}`. `complete` dos fatos e a 1ª página de fatos inalterados (`clause-reserve/1.2.0`).
+- **R1.** A forma adiada (`deferred-by-facts`, até a mínima `{status}`) nunca sai sem caminho: no teto apertado o
+  estado desce a `{complete:false, next:"investigate.next"}` (a lista de verificação do 1º componente, na mesma
+  resposta). O `next` solto do bloco adiado saiu (o caminho é o de `clauses`).
+- **R2.** Cláusula da reserva já entregue inteira nesta sessão MCP não se repete: vai em
+  `alreadyDelivered: {count, in:[scanIds]}` e o prefixo avança para as seguintes. Fatos que não cabem inteiros com
+  cláusulas destas candidatas já entregues: o piso vai por referência (`status: "floor-by-reference"`), sem custar
+  família; todas entregues: `status: "delivered-earlier"`, `clauses.complete: true`.
+- **Pendência de leitura `usage-unread` (item 6).** Cada componente do DS encontrado que tem cláusulas de uso/juízo
+  na base (subseções `uso`, `melhores-praticas`, `tom-e-voz`/`tom-de-voz-…` da página do componente) abre UMA
+  pendência na sessão (deduplicada entre scans e rotas). As desta página saem numa linha só, depois das demais:
+  `P-06..P-19:usage-unread:14 @skiplink,item,… · get_ds_rules{component:<c>,category:"component"} até o fim; fecha
+  ao ler` (ids na ordem dos componentes). Fecha só quando o servidor viu, na sessão, respostas de
+  `get_ds_rules`/`get_component_spec`/`get_page_rules` que devolveram todas as cláusulas de uso do componente (a
+  listagem indicada, pelo cursor); `pendingResolved` não fecha (volta em `usageUnread` com o motivo) e
+  `verify_finding` não a alcança. Não julga nada. Orientações de padrão (`pattern/*`) não têm componente na base e
+  ficam de fora. Perfil knowledge-free: sem a pendência.
+
+`tools/list` igual nos perfis medidos (evaluation `04ae1437…`, knowledge-free `5b9c59aa…`); instruções inalteradas.
+
 ## 3.7.4 — defeitos do teste à mão da 3.7.3 (NAT-111)
 
 - **Reserva de cláusulas, fatos primeiro (D1).** A 1ª página de fatos do `scan_page` é montada como sem
