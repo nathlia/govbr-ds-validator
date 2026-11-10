@@ -456,7 +456,8 @@ function compactItem(item: PendingItem, withText: (code: string) => boolean = ()
     ...rest,
     ...(low ? { signal } : { measure }),
     ...(rule ? { rule } : {}),
-    ...(others ? { norms: others } : {}),
+    // 3.7.6: a pendência de observação cita só a norma de `rule` — sem `norms: []` vazio.
+    ...(others && (others.length || item.code !== "observed-required") ? { norms: others } : {}),
     ...(examples && !measured ? { examples: examples.slice(0, 2) } : {}),
     ...(measured ? { measured } : {}),
   };
