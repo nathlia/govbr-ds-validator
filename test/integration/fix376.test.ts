@@ -29,6 +29,8 @@ import { buildFamilyPage } from "../../src/responses/families.js";
 import { textSize } from "../../src/responses/contract.js";
 import type { Observation } from "../../src/schema/finding.js";
 import { makeElement } from "../helpers/fixtures.js";
+import { CHECK_GROUNDING } from "../../src/checkers/grounding.js";
+import { resolvePage } from "../../src/checkers/specPartTokens.js";
 
 // A parte de tipografia de um componente qualquer da base, escolhida pelos dados (não por nome de parte ou unidade):
 // o 1º componente cujo seletor de parte aplica um token de tamanho que só UMA linha da tabela tem.
@@ -52,6 +54,12 @@ const offScaleValue = () => {
   return ["--font-size-scale-base", "--font-size-scale-up-01", "--font-size-scale-up-03"].find((t) => parseFloat(ALL[t]) !== target)!;
 };
 const OTHER = offScaleValue();
+/** A norma que o check de tamanho de fonte cita (lida do próprio dado do check, não escrita aqui). */
+function observedRuleId(): string {
+  const id = CHECK_GROUNDING["token-font-size"].relatedRule?.id;
+  if (!id) throw new Error("sem norma relacionada ao tamanho de fonte");
+  return id;
+}
 
 /** Marcação mínima que o seletor da parte casa: cada classe vira um elemento aninhado; a tag final, o elemento medido. */
 function markupFor(selector: string, inner: string, id: string): string {
@@ -76,6 +84,7 @@ const dsCss = `${PART.selector}{font-size:var(${PART.token})${PART.weight ? `;fo
 const PAGES: Record<string, string> = {
   "/desvio": `<style>${tokensCss}${dsCss} #p1{font-size:var(${OTHER})}</style>${markupFor(PART.selector, "Rótulo", "p1")}${markupFor(PART.selector, "Outro", "p2")}`,
   "/conforme": `<style>${tokensCss}${dsCss}</style>${markupFor(PART.selector, "Rótulo", "p1")}`,
+  "/rem": `<style>${tokensCss}${dsCss} #r1{font-size:${parseFloat(ALL[OTHER]) / 16}rem} #r2{font-size:${parseFloat(ALL[PART.token]) / 16}rem}</style>${markupFor(PART.selector, "Rótulo", "r1")}${markupFor(PART.selector, "Outro", "r2")}`,
   "/fonte": `<style>.t{font-size:13px}</style><h2 id="t1" class="t">Seção</h2><p>Texto</p>`,
 };
 let http: Server;
@@ -136,6 +145,30 @@ describe("3.7.6 item 2 — token por parte × tabela de especificação", () => 
     for (const c of cases) expect(comparePartTokens("http://x/", PART.component, [el(c)]).observations, JSON.stringify(c)).toEqual([]);
   });
 
+  it("pre.2: valor da página em rem/em/%/inherit resolve pela raiz/pai; variável da página segue sem resolver", () => {
+    const ctx = { rootPx: 16, parentPx: 20 };
+    expect(resolvePage("0.875rem", "fontSize", ALL, ctx)).toBeCloseTo(14);
+    expect(resolvePage("0.7em", "fontSize", ALL, ctx)).toBeCloseTo(14);
+    expect(resolvePage("70%", "fontSize", ALL, ctx)).toBeCloseTo(14);
+    expect(resolvePage("inherit", "fontSize", ALL, ctx)).toBe(20);
+    expect(resolvePage("var(--minha-fonte)", "fontSize", ALL, ctx)).toBeNull();
+    expect(resolvePage("1rem", "fontSize", ALL)).toBeNull();
+    const target = parseFloat(ALL[OTHER]);
+    const r = comparePartTokens("http://x/", PART.component, [el({
+      computed: { fontSize: `${target}px` },
+      dsShipped: { fontSize: [`var(${PART.token})`] },
+      authored: { fontSize: [`${target / 16}rem`] },
+    })], undefined, new Map([["#p", { rootPx: 16, parentPx: 16 }]]));
+    expect(r.observations).toHaveLength(1);
+    // o mesmo valor do token escrito em rem não é desvio (dentro de 0,5px)
+    const ok = comparePartTokens("http://x/", PART.component, [el({
+      computed: { fontSize: ALL[PART.token] },
+      dsShipped: { fontSize: [`var(${PART.token})`] },
+      authored: { fontSize: [`${parseFloat(ALL[PART.token]) / 16}rem`] },
+    })], undefined, new Map([["#p", { rootPx: 16, parentPx: 16 }]]));
+    expect(ok.observations).toEqual([]);
+  });
+
   it("na página viva: o elemento com desvio vira observação; o conforme e o escopo por seletores, não", async () => {
     const desvio = await scanPage({ url: `${base}/desvio` }, new PageScanCache(1));
     if (desvio.status !== "scanned") throw new Error("estado");
@@ -146,6 +179,10 @@ describe("3.7.6 item 2 — token por parte × tabela de especificação", () => 
     const conforme = await scanPage({ url: `${base}/conforme` }, new PageScanCache(1));
     if (conforme.status !== "scanned") throw new Error("estado");
     expect(conforme.observations.filter((o) => o.kind === SPEC_PART_KIND)).toEqual([]);
+    // pre.2: o desvio escrito em rem também conta; o valor do token escrito em rem, não
+    const rem = await scanPage({ url: `${base}/rem` }, new PageScanCache(1));
+    if (rem.status !== "scanned") throw new Error("estado");
+    expect(rem.observations.filter((o) => o.kind === SPEC_PART_KIND).map((o) => o.element.locator)).toEqual(["#r1"]);
     const escopo = await scanPage({ url: `${base}/desvio`, selectors: ["main"] }, new PageScanCache(1));
     if (escopo.status !== "scanned") throw new Error("estado");
     expect(escopo.observations.filter((o) => o.kind === SPEC_PART_KIND)).toEqual([]);
@@ -237,23 +274,63 @@ describe("3.7.6 item 3 — observação com norma obrigatória vira pendência O
     expect([p.id, ...o.map((e) => e.id), p2.id]).toEqual(["P-01", "O-01", "O-02", "P-02"]);
   });
 
-  it("fecha pelo verify em CADA elemento citando a norma; pendingResolved não fecha; a leitura da norma fecha", () => {
+  it("pre.2: fecha só pelo verify que DECIDE cada elemento; unverifiable e pendingResolved não fecham", () => {
     const s = new ScanSession();
     const [e] = s.registerPending("S-1", "http://h/p", observedRequiredItems([obs("#a", "required"), obs("#b", "required")]), (i) => i.boundLocators ?? []);
     const f = (locator: string) => ({ id: "F", rule: { id: "govbr-r1", source: "govbr-ds" }, element: { page: "http://h/p", locator }, evidence: {} }) as never;
-    expect(s.resolveByVerifyDetailed(f("#a"), "V-1", "unverifiable")).toMatchObject({ resolved: [], partial: [{ id: e.id, remaining: ["#b"] }] });
+    // unverifiable não decide o elemento
+    expect(s.resolveByVerifyDetailed(f("#a"), "V-0", "unverifiable")).toEqual({ resolved: [], partial: [] });
+    expect(s.resolveByVerifyDetailed(f("#a"), "V-1", "rejected")).toMatchObject({ resolved: [], partial: [{ id: e.id, remaining: ["#b"] }] });
     const declared = s.resolveExplicit([{ id: e.id, status: "violada" }], "http://h/p");
     expect(declared.resolved).toEqual([]);
     expect(declared.readOrVerify).toEqual([e.id]);
     expect(e.status).toBe("open");
     expect(s.resolveByVerify(f("#b"), "V-2", "confirmed")).toEqual([e.id]);
     expect(e.status).toBe("resolved");
-    const s2 = new ScanSession();
-    const [e2] = s2.registerPending("S-1", "http://h/p", observedRequiredItems([obs("#a", "required")]), (i) => i.boundLocators ?? []);
-    expect(s2.noteRead(["govbr-outra"])).toEqual([]);
-    expect(s2.noteRead(["govbr-r1"])).toEqual([e2.id]);
-    expect(e2.resolution).toMatchObject({ by: "rule-read" });
   });
+
+  it("pre.2: a leitura por id fecha só DEPOIS da entrega; leitura anterior e leitura geral (busca) não fecham", () => {
+    const s = new ScanSession();
+    // leitura por id ANTES de a pendência existir/ser entregue
+    expect(s.noteReadById(["govbr-r1"])).toEqual([]);
+    s.noteRead(["govbr-r1"]); // leitura de busca/listagem (o caminho do L-NN): não toca a O-NN
+    const [e] = s.registerPending("S-1", "http://h/p", observedRequiredItems([obs("#a", "required")]), (i) => i.boundLocators ?? []);
+    expect(e.status).toBe("open");
+    // registrada mas ainda não entregue: a leitura por id não fecha
+    expect(s.noteReadById(["govbr-r1"])).toEqual([]);
+    s.markObservedDelivered([e.id]);
+    expect(s.noteReadById(["govbr-outra"])).toEqual([]);
+    s.noteRead(["govbr-r1"]);
+    expect(e.status).toBe("open");
+    expect(s.noteReadById(["govbr-r1"])).toEqual([e.id]);
+    expect(e.resolution).toMatchObject({ by: "rule-read" });
+    // outra O-NN (outro elemento) nasce aberta mesmo com a norma já lida por id
+    const [e2] = s.registerPending("S-2", "http://h/q", observedRequiredItems([obs("#z", "required")]), (i) => i.boundLocators ?? []);
+    expect(e2.id).not.toBe(e.id);
+    expect(e2.status).toBe("open");
+  });
+
+  it("pre.2 MCP (repro da revisão): busca que devolve a norma antes do scan não fecha; ler por id depois da entrega fecha", async () => {
+    const { client, call } = await connect();
+    try {
+      const rule = observedRuleId();
+      // busca e leitura por id ANTES do scan
+      const search = await call("get_ds_rules", { query: "font-size 16px fora da escala" });
+      expect(search.text).toContain(rule); // a busca devolve a norma (o caso da revisão)
+      await call("get_ds_rules", { ids: [rule] });
+      const s1 = await call("scan_page", { url: `${base}/fonte`, maxChars: 100000 });
+      const o = (s1.data.checksRun.pageLevel.notMeasured as Array<{ code: string; pendingId: string; resolved?: unknown }>).find((i) => i.code === "observed-required")!;
+      expect(o.pendingId).toBe("O-01");
+      expect(o.resolved).toBeUndefined();
+      // busca DEPOIS da entrega também não fecha
+      await call("get_ds_rules", { query: "font-size 16px fora da escala" });
+      const s2 = await call("scan_page", { url: `${base}/fonte`, maxChars: 100000 });
+      expect((s2.data.checksRun.pageLevel.notMeasured as Array<{ code: string; resolved?: unknown }>).find((i) => i.code === "observed-required")!.resolved).toBeUndefined();
+      await call("get_ds_rules", { ids: [rule] });
+      const s3 = await call("scan_page", { url: `${base}/fonte`, maxChars: 100000 });
+      expect((s3.data.checksRun.pageLevel.notMeasured as Array<{ code: string; resolved?: unknown }>).find((i) => i.code === "observed-required")).toMatchObject({ resolved: "rule-read" });
+    } finally { await client.close(); }
+  }, 60_000);
 
   it("MCP: o 1º scan traz O-NN com o elemento, o valor e a cláusula; ler a norma fecha; o P-NN não muda", async () => {
     const { client, call } = await connect();

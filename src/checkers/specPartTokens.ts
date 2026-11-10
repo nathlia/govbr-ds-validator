@@ -79,6 +79,26 @@ function numeric(raw: string, property: SpecProperty): number | null {
   return /^\d+$/.test(raw) ? Number(raw) : null;
 }
 
+/**
+ * 3.7.6-pre.2 (revisão LOW): o valor que a PÁGINA declarou, também em unidade relativa — `rem` pela fonte computada da raiz,
+ * `em`/`%`/`inherit` pela fonte computada do pai (o contexto vem da página viva). Variável definida pela própria página
+ * (fora do registro) segue sem resolver.
+ */
+export interface FontContext { rootPx: number | null; parentPx: number | null }
+
+export function resolvePage(value: string, property: SpecProperty, all: Record<string, string>, ctx?: FontContext): number | null {
+  const direct = resolveDs(value, property, all);
+  if (direct !== null || property !== "fontSize" || !ctx) return direct;
+  const raw = value.replace(/\s*!important$/, "").trim();
+  const m = raw.match(/^(-?\d*\.?\d+)(rem|em|%)$/);
+  if (m) {
+    const n = Number(m[1]);
+    const base = m[2] === "rem" ? ctx.rootPx : ctx.parentPx;
+    return base === null ? null : m[2] === "%" ? (n / 100) * base : n * base;
+  }
+  return raw === "inherit" ? ctx.parentPx : null;
+}
+
 const close = (a: number, b: number, property: SpecProperty) => Math.abs(a - b) <= (property === "fontSize" ? 0.5 : 0.01);
 
 export interface SpecPartResult {
@@ -98,6 +118,8 @@ export function comparePartTokens(
   component: string,
   elements: ElementEvidence[],
   rows: TypographyRow[] = typographyRows(component),
+  /** 3.7.6-pre.2: fonte computada da raiz e do pai, por localizador (para `rem`/`em`/`%` da página). */
+  context: Map<string, FontContext> = new Map(),
 ): SpecPartResult {
   const all = getTokenRegistry().all;
   const skipped: Record<string, number> = {};
@@ -131,7 +153,7 @@ export function comparePartTokens(
       if (expected.some((v) => close(observed, v, property))) continue;
       // E o desvio é da página só quando o valor computado é o que a página declarou (o `100%` de um reset do DS, que não
       // se resolve sem o pai, não decide nada: quem decide é a declaração da página que venceu).
-      const fromPage = authored.map((v) => resolveDs(v, property, all)).filter((v): v is number => v !== null);
+      const fromPage = authored.map((v) => resolvePage(v, property, all, context.get(el.locator))).filter((v): v is number => v !== null);
       if (!fromPage.some((v) => close(observed, v, property))) { skip("valor-autoral-nao-atribuido"); continue; }
       // a parte: as linhas com o par desta propriedade, as que casam mais pares do elemento
       const candidates = rows.filter((r) => r.pairs.some((p) => p.property === property && tokens.includes(p.token)));
@@ -183,7 +205,7 @@ export async function scanPartTokens(page: Page, url: string, components: string
       out.skipped["seletor-nao-consultavel"] = (out.skipped["seletor-nao-consultavel"] ?? 0) + 1;
       continue;
     }
-    const r = comparePartTokens(url, component, elements, rows);
+    const r = comparePartTokens(url, component, elements, rows, await fontContexts(page, elements.filter((el) => ownershipOf(el) === "page").map((el) => el.locator)));
     out.measured += r.measured;
     for (const [k, v] of Object.entries(r.skipped)) out.skipped[k] = (out.skipped[k] ?? 0) + v;
     for (const o of r.observations) {
@@ -194,6 +216,26 @@ export async function scanPartTokens(page: Page, url: string, components: string
     }
   }
   return out;
+}
+
+/** 3.7.6-pre.2: a fonte computada da raiz e do pai de cada elemento (localizadores do DOM claro; os demais ficam sem contexto). */
+async function fontContexts(page: Page, locators: string[]): Promise<Map<string, FontContext>> {
+  if (!locators.length) return new Map();
+  try {
+    const rows = await page.evaluate((list: string[]) => {
+      const px = (el: Element | null) => (el ? parseFloat(getComputedStyle(el).fontSize) : NaN);
+      const root = px(document.documentElement);
+      return list.map((loc) => {
+        let el: Element | null = null;
+        try { el = loc.includes(">>>") ? null : document.querySelector(loc); } catch { el = null; }
+        const parent = el?.parentElement ?? null;
+        return { loc, rootPx: Number.isFinite(root) ? root : null, parentPx: el && parent && Number.isFinite(px(parent)) ? px(parent) : null };
+      });
+    }, locators);
+    return new Map(rows.map((r) => [r.loc, { rootPx: r.rootPx, parentPx: r.parentPx }]));
+  } catch {
+    return new Map();
+  }
 }
 
 export function resetPartSelectorCache(): void {

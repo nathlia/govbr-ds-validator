@@ -70,9 +70,9 @@ export interface NotJudgedItem {
   resolveRequires?: { actions: true; expectedCondition: string };
   /**
    * 3.7.6 (item 3): pendência que nasce de uma observação que já traz norma obrigatória/proibitiva (`observed-required`).
-   * Espaço de ids próprio (`O-NN`: não desloca os `P-NN`); fecha pelo verify_finding em cada elemento citando a norma, ou
-   * quando o servidor vê a norma (estes ids) devolvida por uma ferramenta de leitura — nunca por pendingResolved. Fica na
-   * sessão; nunca sai numa resposta.
+   * Espaço de ids próprio (`O-NN`: não desloca os `P-NN`); fecha pelo verify_finding que decide cada elemento citando a
+   * norma, ou pela leitura da norma POR ID depois da entrega (pre.2) — nunca por pendingResolved nem busca. Fica na sessão;
+   * nunca sai numa resposta.
    */
   resolveByRead?: string[];
   idSpace?: "O";
@@ -179,7 +179,7 @@ export function kbRule(id: string): NotJudgedItem["rule"] {
 
 /** 3.7.6 (item 3): forças que obrigam ou proíbem — a observação com uma delas vira pendência, não só contagem. */
 export const OBSERVED_PENDING_FORCES = new Set(["required", "prohibited"]);
-export const OBSERVED_TODO = "decida o desvio medido: verify_finding em cada elemento citando a norma, ou leia a norma (get_ds_rules{ids}); pendingResolved não fecha";
+export const OBSERVED_TODO = "decida o desvio medido: verify_finding em cada elemento citando a norma, ou leia a norma por id (get_ds_rules{ids}); pendingResolved não fecha";
 
 /** O valor medido de uma observação, em texto curto (`font-size 16px`, mais o passo mais próximo quando há). */
 function observedValue(o: Observation): string {

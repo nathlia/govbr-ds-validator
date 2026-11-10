@@ -129,10 +129,14 @@ export interface PendingEntry {
   /** 3.7.5 (item 6): pendência de leitura — o componente e as cláusulas de uso/juízo que precisam ser devolvidas. */
   usage?: { component: string; ids: string[] };
   /**
-   * 3.7.6 (item 3): pendência de observação com norma obrigatória (`O-NN`) — fecha também quando o servidor vê estas
-   * cláusulas devolvidas por uma ferramenta de leitura (como a de leitura); pendingResolved não a fecha.
+   * 3.7.6 (item 3; pre.2, revisão MED): pendência de observação com norma obrigatória (`O-NN`). Fecha SÓ por verify_finding
+   * com decisão (confirmed/rejected) em cada elemento, ou pela leitura destas normas POR ID (get_ds_rules ids/id) depois
+   * que a pendência foi entregue nesta sessão (`deliveredTick`). Leitura anterior, resultado de busca e pendingResolved não
+   * a fecham.
    */
   readIds?: string[];
+  /** 3.7.6-pre.2: o instante (relógio lógico da sessão) da 1ª resposta de scan que entregou a pendência `O-NN`. */
+  deliveredTick?: number;
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -215,6 +219,9 @@ export class ScanSession {
   private usageCounter = 0;
   /** 3.7.6 (item 3): as pendências de observação com norma obrigatória têm espaço próprio (`O-NN`). */
   private observedCounter = 0;
+  /** 3.7.6-pre.2: relógio lógico da sessão (entrega de `O-NN` × leitura por id) e o último instante de cada leitura por id. */
+  private tick = 0;
+  private readonly readByIdAt = new Map<string, number>();
   /** 3.6.1 (revisão H1): códigos cuja cláusula (texto) já saiu numa resposta desta sessão; repetições só com o id. */
   private readonly delivered = new Set<string>();
   /** 3.7.4 (D1): contextos da reserva de cláusulas entregues nesta sessão (chave do escopo → 1ª entrega e faixas). */
@@ -411,8 +418,6 @@ export class ScanSession {
         if (!slot.locators.includes(l)) slot.locators.push(l);
         if (!entry.locators.includes(l)) entry.locators.push(l);
       }
-      // 3.7.6 (item 3): a norma já lida nesta sessão fecha a pendência de observação na hora (como a de leitura).
-      this.closeRead(entry);
       return entry;
     });
   }
@@ -512,15 +517,7 @@ export class ScanSession {
   }
 
   private closeRead(entry: PendingEntry): boolean {
-    if (entry.status !== "open") return false;
-    // 3.7.6 (item 3): a pendência de observação fecha pela leitura da norma que ela cita.
-    if (entry.readIds?.length) {
-      if (!entry.readIds.every((id) => this.readIds.has(id))) return false;
-      const resolution: PendingResolution = { by: "rule-read" };
-      for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
-      return true;
-    }
-    if (!entry.usage || !this.usageRead(entry)) return false;
+    if (!entry.usage || entry.status !== "open" || !this.usageRead(entry)) return false;
     const resolution: PendingResolution = { by: "usage-read" };
     for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
     return true;
@@ -534,6 +531,41 @@ export class ScanSession {
     for (const id of ids) this.readIds.add(id);
     const closed: string[] = [];
     for (const entry of this.byId.values()) if (this.closeRead(entry)) closed.push(entry.id);
+    return closed;
+  }
+
+  /**
+   * 3.7.6-pre.2 (revisão MED): as pendências `O-NN` que uma resposta de scan entregou (o id aparece nela) ganham o instante
+   * da entrega — só uma leitura POR ID posterior a ele as fecha.
+   */
+  markObservedDelivered(ids: Iterable<string>): void {
+    const shown = new Set(ids);
+    for (const entry of this.byId.values()) {
+      if (!entry.readIds?.length || entry.deliveredTick !== undefined || !shown.has(entry.id)) continue;
+      entry.deliveredTick = ++this.tick;
+    }
+  }
+
+  /** 3.7.6-pre.2: as pendências `O-NN` abertas desta sessão (ids), para conferir quais uma resposta entregou. */
+  observedIds(): string[] {
+    return [...this.byId.values()].filter((e) => e.readIds?.length).map((e) => e.id);
+  }
+
+  /**
+   * 3.7.6-pre.2 (revisão MED): normas devolvidas por uma leitura POR ID (get_ds_rules ids/id). Fecha as pendências `O-NN`
+   * entregues ANTES desta leitura cujas normas foram todas lidas por id depois da entrega. Busca (query) não entra aqui.
+   */
+  noteReadById(ids: Iterable<string>): string[] {
+    const at = ++this.tick;
+    for (const id of ids) this.readByIdAt.set(id, at);
+    const closed: string[] = [];
+    const resolution: PendingResolution = { by: "rule-read" };
+    for (const entry of this.byId.values()) {
+      if (!entry.readIds?.length || entry.status !== "open" || entry.deliveredTick === undefined) continue;
+      if (!entry.readIds.every((id) => (this.readByIdAt.get(id) ?? -1) > entry.deliveredTick!)) continue;
+      for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
+      closed.push(entry.id);
+    }
     return closed;
   }
 
@@ -605,6 +637,8 @@ export class ScanSession {
     const resolution: PendingResolution = { by: "verify_finding", ref: verificationId, status: verdict };
     for (const entry of this.open()) {
       if (!entry.norms.some((n) => cited.has(n))) continue;
+      // 3.7.6-pre.2 (revisão MED): a pendência de observação só fecha por verify que DECIDE o elemento (confirmed/rejected).
+      if (entry.readIds?.length && verdict !== "confirmed" && verdict !== "rejected") continue;
       // 3.7.3 A8 (revisão MED 2): "não verificado depois de alternar" não fecha por verify no estado não alternado.
       if (entry.requires) {
         const condition = (finding.evidence.data as Record<string, unknown> | undefined)?.expectedCondition;
@@ -707,7 +741,7 @@ export class ScanSession {
         ? { partialVerify, partialVerifyNote: "verify_finding decidiu só os elementos em verified; os de declared fecharam pela sua declaração (status/reason), não por medida." }
         : {}),
       ...(readOrVerify.length
-        ? { readOrVerify, readOrVerifyNote: "Pendência de observação com norma obrigatória: não fecha por declaração. Fecha com verify_finding em cada elemento citando a norma, ou lendo a norma (get_ds_rules{ids})." }
+        ? { readOrVerify, readOrVerifyNote: "Pendência de observação com norma obrigatória: não fecha por declaração. Fecha com verify_finding que decide cada elemento citando a norma, ou lendo a norma por id (get_ds_rules{ids}) depois de recebê-la." }
         : {}),
       ...(usageUnread.length
         ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até o servidor ver devolvidas todas as cláusulas do componente (get_ds_rules{ids} da observação de leitura do scan)." }

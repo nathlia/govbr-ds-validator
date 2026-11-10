@@ -929,7 +929,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
       register(name, config, READ_TOOLS.has(name)
         ? async (...a: unknown[]) => {
             const result = await cb(...a) as { isError?: boolean; content?: Array<{ type?: string; text?: string }> };
-            if (!result?.isError) session.noteRead((result?.content ?? []).flatMap((c) => (typeof c.text === "string" ? deliveredRuleIds(name, c.text) : [])));
+            if (!result?.isError) {
+              const delivered = (result?.content ?? []).flatMap((c) => (typeof c.text === "string" ? deliveredRuleIds(name, c.text) : []));
+              session.noteRead(delivered);
+              // 3.7.6-pre.2 (revisão MED): só a leitura POR ID (ids/id), nunca o resultado de uma busca, fecha a `O-NN`.
+              const args = (a[0] ?? {}) as { ids?: unknown; id?: unknown };
+              const asked = new Set([...(Array.isArray(args.ids) ? args.ids : []), ...(typeof args.id === "string" ? [args.id] : [])].filter((x): x is string => typeof x === "string"));
+              if (name === "get_ds_rules" && asked.size) session.noteReadById(delivered.filter((id) => asked.has(id)));
+            }
             return result;
           }
         : cb);
@@ -2192,6 +2199,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         );
         markDeliveredTexts(response);
         markDeliveredContexts(response, scanId);
+        // 3.7.6-pre.2 (revisão MED): as `O-NN` que esta resposta mostra ficam entregues (a leitura por id depois as fecha).
+        if (response.kind !== "error") {
+          const text = JSON.stringify(response);
+          session.markObservedDelivered(session.observedIds().filter((id) => new RegExp(`${id}(?!\\d)`).test(text)));
+        }
         if (response.kind === "error") return fail(response as ContractError);
         return ok(response);
       }
