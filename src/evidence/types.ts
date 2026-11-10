@@ -172,6 +172,10 @@ export interface ElementEvidence {
   originHostNamed?: boolean;
   /** 3.5.0 (D-155): o elemento ou um ancestral (atravessando shadow roots) tem aria-hidden="true" ou inert. */
   axHidden?: boolean;
+  /** 3.7.7: o elemento casa algum seletor oficial da parte citada (preenchido só pelo portão, predicado spec-part-token). */
+  matchesPart?: boolean;
+  /** 3.7.7: fonte computada da raiz e do pai (para resolver rem/em/% da página), preenchida com `matchesPart`. */
+  fontContext?: { rootPx: number | null; parentPx: number | null };
   /** 3.4.0 (B9): medição de foco visível, preenchida só pelo portão para o predicado focus-indicator. */
   focusIndicator?: { focused: boolean; changed: string[]; complete?: boolean; discounted?: string[] };
 }

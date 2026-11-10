@@ -22,6 +22,7 @@ import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, fontScalePx, paintedBorde
 import { CHECK_GROUNDING } from "../checkers/grounding.js";
 import { getRuleById } from "../data/knowledge.js";
 import { propertyOfToken, type SpecProperty } from "../data/specParts.js";
+import { partSelectors, resolvePage } from "../checkers/specPartTokens.js";
 import { checkComponentStructure, scriptDependentAnchor } from "../checkers/structure.js";
 import { FOCUS_INDICATOR_CONDITION, FOCUS_INDICATOR_GROUNDING } from "../checkers/focusIndicator.js";
 import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf } from "../checkers/formLabels.js";
@@ -54,7 +55,7 @@ export interface PredicateOutcome {
    * 3.4.0 (B2): motivo tipado de um `undetermined` com próximo passo próprio (contextual.ts).
    * 3.7.7 (D-32): `measured-not-decided` = o fato foi medido em cada elemento e a decisão é do agente.
    */
-  code?: "rule-not-applicable" | "subject-not-a-dialog" | "measured-not-decided";
+  code?: "rule-not-applicable" | "subject-not-a-dialog" | "measured-not-decided" | "locator-ambiguous";
   /** 3.7.7 (D-32): a medida por elemento que acompanha `measured-not-decided`. */
   measured?: Array<Record<string, unknown>>;
   /** 3.6.6: o `undetermined` é falta da receita (contextual.ts, ContextOutcome.recipeGap). */
@@ -81,6 +82,8 @@ export interface Predicate {
    * sujeitos observados durante a receita, mesmo que o sujeito tenha saído do documento no fim.
    */
   context?: ContextCondition["needs"];
+  /** 3.7.7 (revisão MED-2): seletores oficiais da parte; o portão marca em cada elemento se ele os casa (`matchesPart`). */
+  partSelectors?: string[];
   /** Liga os dados estruturados alegados ao valor/tag de CADA elemento vivo (ou aos fatos de página). */
   verifyClaim(elements: ElementEvidence[], facts?: PageFacts): ClaimOutcome;
   evaluate(elements: ElementEvidence[], url: string, facts?: PageFacts, context?: ContextEvidence): PredicateOutcome;
@@ -459,7 +462,14 @@ function specTypographyOf(id: string): { component: string; tokens: Partial<Reco
  */
 export function conditionForRuleId(id: string): string | null {
   if (fontScaleRules().includes(id)) return FONT_SCALE_CONDITION;
-  return specTypographyOf(id) ? SPEC_PART_TOKEN_CONDITION : null;
+  const spec = specTypographyOf(id);
+  // só a linha cuja parte a folha do DS localiza (senão o passo mandaria reenviar para nada)
+  return spec && (Object.entries(spec.tokens) as Array<[SpecProperty, string]>).some(([p, t]) => specPartSelectorsFor(spec.component, p, t).length) ? SPEC_PART_TOKEN_CONDITION : null;
+}
+
+/** 3.7.7 (revisão MED-2): os seletores oficiais da parte — dentro de .br-<componente>, aplicando var(<token>) à propriedade. */
+function specPartSelectorsFor(component: string, property: SpecProperty, token: string): string[] {
+  return partSelectors(component).filter((s) => s.pairs.some((p) => p.property === property && p.token === token)).map((s) => s.selector);
 }
 
 const pxOf = (raw: string | undefined) => {
@@ -526,14 +536,17 @@ function fontScalePredicate(observedPx: number | null): Predicate {
  * o valor do token. Difere → violação da especificação recalculada; igual → contradita. Outro valor que o próprio DS declara
  * para o elemento (variante/estado) ou sem declaração da página → não decide.
  */
-function specPartPredicate(property: SpecProperty, token: string, observed: string | null): Predicate {
+function specPartPredicate(property: SpecProperty, token: string, observed: string | null, component: string, selectors: string[]): Predicate {
   const css = property === "fontSize" ? "font-size" : "font-weight";
   const value = (raw: string | undefined) => (property === "fontSize" ? pxOf(raw) : weightOf(raw));
   const close = (a: number, b: number) => Math.abs(a - b) <= (property === "fontSize" ? 0.5 : 0.01);
   const tokenOf = (v: string) => v.replace(/\s*!important$/, "").trim().match(/^var\((--[\w-]+)\)$/)?.[1] ?? null;
+  /** Uma declaração resolvida pelo registro (var(--token) do DS) ou literal (px/peso); null = não se resolve (var local, em, calc). */
+  const resolved = (d: string, all: Record<string, string>) => { const t = tokenOf(d); return t ? value(all[t]) : value(d.replace(/\s*!important$/, "").trim()); };
   return {
     id: "spec-part-token",
     properties: ["fontSize", "fontWeight"],
+    partSelectors: selectors,
     verifyClaim: (elements) => {
       const want = observed === null ? null : value(observed);
       if (want === null) return { status: "consistent", detail: `Condição '${SPEC_PART_TOKEN_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.` };
@@ -550,27 +563,42 @@ function specPartPredicate(property: SpecProperty, token: string, observed: stri
       if (hidden.length) return { status: "undetermined", recipeGap: true, detail: `${hidden.length} de ${elements.length} elemento(s) não renderizado(s) neste estado: meça no estado em que aparece.` };
       const outside = elements.filter(outsideOwnership);
       if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de web component do DS ou de terceiro embutido: o valor é do componente, não da página.` };
-      const notPart = elements.filter((el) => !(el.dsShipped?.[property] ?? []).some((v) => tokenOf(v) === token));
+      // 3.7.7 (revisão MED-2): o elemento tem de estar no componente da unidade E ser a parte que a folha do DS estiliza com
+      // o token dela (um seletor oficial dentro de .br-<componente> que aplica var(<token>) casa o elemento).
+      const notPart = elements.filter((el) => el.matchesPart !== true || !(el.dsShipped?.[property] ?? []).some((v) => tokenOf(v) === token));
       if (notPart.length) {
         return {
           status: "undetermined",
           code: "rule-not-applicable",
-          detail: `${notPart.length} de ${elements.length} elemento(s) não é a parte que a folha do DS estiliza com ${token} (nenhuma declaração do DS de ${css}: var(${token}) o alcança): a linha citada não descreve este elemento.`,
+          detail: `${notPart.length} de ${elements.length} elemento(s) não é a parte citada: nenhum seletor da folha do DS dentro de .br-${component} que aplica ${css}: var(${token}) o alcança (${notPart.slice(0, 3).map((el) => el.locator).join("; ")}). A linha citada não descreve este elemento.`,
         };
       }
-      const equal = elements.filter((el) => { const v = value(el.computed[property]); return v !== null && close(v, expected); });
-      if (equal.length) return { status: "contradicted", detail: `${equal.length} de ${elements.length} elemento(s) com ${css} igual a ${token} (${all[token]}): ${equal.slice(0, 3).map((el) => el.locator).join("; ")}.` };
-      const dsOther = elements.filter((el) => {
+      // 3.7.7 (revisão MED-1, LOW): decisão por elemento. Confirma só quando a declaração da PÁGINA vence (o valor computado é
+      // o valor resolvido dela) e difere do token; o valor de qualquer declaração do DS que alcança o elemento, ou uma
+      // declaração vencedora que não se atribui à página (var local do componente, em, calc), não decide.
+      const rows = elements.map((el) => {
         const v = value(el.computed[property]);
-        return v !== null && (el.dsShipped?.[property] ?? []).some((d) => { const t = tokenOf(d); const r = t ? value(all[t]) : value(d); return r !== null && close(v, r); });
+        if (v === null) return { el, kind: "unmeasured" as const };
+        if (close(v, expected)) return { el, kind: "equal" as const };
+        if ((el.dsShipped?.[property] ?? []).some((d) => { const r = resolved(d, all); return r !== null && close(v, r); })) return { el, kind: "ds" as const };
+        // a declaração da página, também em rem/em/%/inherit (o contexto de fonte vem do portão), como o check
+        if ((el.authored?.[property] ?? []).some((d) => { const r = resolvePage(d, property, all, el.fontContext); return r !== null && close(v, r); })) return { el, kind: "page" as const };
+        return { el, kind: "unattributed" as const };
       });
-      if (dsOther.length) return { status: "undetermined", detail: `${dsOther.length} de ${elements.length} elemento(s) com ${css} de outra declaração do próprio DS (variante ou estado): não é desvio da página.` };
-      const notAuthored = elements.filter((el) => el.authored !== undefined && !(el.authored[property] ?? []).length);
-      if (notAuthored.length) return { status: "undetermined", detail: `${notAuthored.length} de ${elements.length} elemento(s) sem declaração de ${css} da página: o valor não é escolha deste elemento.` };
-      return {
-        status: "verified",
-        detail: `${css} da parte difere de ${token} (${all[token]}) em ${elements.length} de ${elements.length} elemento(s): ${elements.slice(0, 3).map((el) => `${el.locator} (${el.computed[property]})`).join("; ")}.`,
-      };
+      const of = (k: string) => rows.filter((r) => r.kind === k);
+      const list = (k: string) => of(k).slice(0, 3).map((r) => `${r.el.locator} (${r.el.computed[property] ?? "?"})`).join("; ");
+      if (of("equal").length === rows.length) return { status: "contradicted", detail: `${rows.length} de ${rows.length} elemento(s) com ${css} igual a ${token} (${all[token]}): ${list("equal")}.` };
+      if (of("page").length === rows.length) {
+        return { status: "verified", detail: `${css} da parte difere de ${token} (${all[token]}) em ${rows.length} de ${rows.length} elemento(s), pela declaração da página que vence: ${list("page")}.` };
+      }
+      if (of("equal").length && of("page").length && of("equal").length + of("page").length === rows.length) {
+        return { status: "undetermined", code: "locator-ambiguous", detail: `O localizador resolveu elementos com valores diferentes: ${of("equal").length} igual(is) a ${token} (${list("equal")}) e ${of("page").length} diferente(s) (${list("page")}). Restrinja o localizador ao elemento do desvio.` };
+      }
+      const parts: string[] = [];
+      if (of("ds").length) parts.push(`${of("ds").length} com ${css} de outra declaração do próprio DS (variante, estado ou reset): ${list("ds")}`);
+      if (of("unattributed").length) parts.push(`${of("unattributed").length} cujo valor vencedor não se atribui à página (variável local do componente, em, calc ou herança): ${list("unattributed")}`);
+      if (of("unmeasured").length) parts.push(`${of("unmeasured").length} sem ${css} numérico`);
+      return { status: "undetermined", detail: `Não decide: ${parts.join("; ")}. Não é desvio afirmado da página.` };
     },
   };
 }
@@ -602,7 +630,11 @@ function specPartSelection(finding: Finding, data: Record<string, unknown>): Pre
   if (!token) {
     return { predicate: null, claimStatus: "contradicted", reason: `A unidade ${id} não declara token de ${data.property}: cite a linha da tabela que declara.` };
   }
-  return { predicate: specPartPredicate(property, token, typeof data.observed === "string" ? data.observed : null) };
+  const selectors = specPartSelectorsFor(spec.component, property, token);
+  if (!selectors.length) {
+    return { predicate: null, reason: `A folha do DS não aplica ${data.property}: var(${token}) dentro de .br-${spec.component}: a parte da unidade ${id} não é localizável, e o oráculo não a decide.` };
+  }
+  return { predicate: specPartPredicate(property, token, typeof data.observed === "string" ? data.observed : null, spec.component, selectors) };
 }
 
 export function selectPredicate(finding: Finding): PredicateSelection {

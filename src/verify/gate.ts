@@ -477,6 +477,26 @@ export async function verifyFinding({
         });
       }
 
+      // 3.7.7 (revisão MED-2): a parte citada — o elemento casa algum seletor oficial dela (DOM claro; shadow não casa).
+      if (selection.predicate?.partSelectors?.length) {
+        const sels = selection.predicate.partSelectors;
+        const flags = await page.evaluate(({ locators, sels }) => {
+          const px = (el: Element | null) => { const v = el ? parseFloat(getComputedStyle(el).fontSize) : NaN; return Number.isFinite(v) ? v : null; };
+          const rootPx = px(document.documentElement);
+          return locators.map((loc) => {
+            if (loc.includes(">>>")) return { match: false, rootPx, parentPx: null };
+            try {
+              const el = document.querySelector(loc);
+              return { match: Boolean(el && sels.some((s) => { try { return el.matches(s); } catch { return false; } })), rootPx, parentPx: px(el?.parentElement ?? null) };
+            } catch { return { match: false, rootPx, parentPx: null }; }
+          });
+        }, { locators: evidence.elements.map((e) => e.locator), sels });
+        evidence.elements.forEach((element, i) => {
+          element.matchesPart = flags[i]?.match === true;
+          element.fontContext = { rootPx: flags[i]?.rootPx ?? null, parentPx: flags[i]?.parentPx ?? null };
+        });
+      }
+
       // 2.7.0: predicado de página decide sobre o documento, não sobre o elemento localizado.
       const facts: PageFacts | undefined = selection.predicate?.needsPageFacts ? await inspectPageStructure(page, finding.element.page) : undefined;
       if (selection.predicate) {

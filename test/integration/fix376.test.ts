@@ -31,6 +31,7 @@ import type { Observation } from "../../src/schema/finding.js";
 import { makeElement } from "../helpers/fixtures.js";
 import { CHECK_GROUNDING } from "../../src/checkers/grounding.js";
 import { resolvePage } from "../../src/checkers/specPartTokens.js";
+import { conditionForRuleId, selectPredicate } from "../../src/verify/predicates.js";
 
 // A parte de tipografia de um componente qualquer da base, escolhida pelos dados (não por nome de parte ou unidade):
 // o 1º componente cujo seletor de parte aplica um token de tamanho que só UMA linha da tabela tem.
@@ -447,6 +448,83 @@ describe("3.7.7 (teste à mão da 3.7.6, D1) — o verify decide a escala e o to
         expect(r.data.verdict).not.toBe("confirmed");
         expect(r.text).not.toMatch(/Minor Third|especificacao|font-size-scale-up|nenhuma fonte deve/);
       }
+    } finally { await client.close(); }
+  }, 90_000);
+});
+
+describe("3.7.7 revisão (rev377) — token por parte só confirma o desvio da página na parte citada; a medida fecha a O-NN", () => {
+  const PART_COND = "part-value-matches-spec-token";
+  const SCALE = "font-size-on-ds-scale";
+  const claim = (id: string, data: Record<string, unknown>, locator = "#p") => ({
+    id: "F", element: { locator, page: "http://x/" }, severity: "minor", nature: "syntactic", mode: "display", pathway: "heuristic",
+    rule: { source: "govbr-ds-kb", id, description: "x" }, evidence: { observed: "a", expected: "b", data },
+  }) as never;
+  const part = (over: Record<string, unknown>) => makeElement({ locator: "#p", classes: [], matchesPart: true, ...over } as never);
+  const predicateFor = (id: string, data: Record<string, unknown>) => {
+    const sel = selectPredicate(claim(id, data));
+    if (!sel.predicate) throw new Error(sel.reason);
+    return sel.predicate;
+  };
+
+  it("MED-1: declaração da página que PERDE (o DS vence com var local) não confirma; a que vence, sim", () => {
+    const p = predicateFor(PART.row.id, { property: "font-size", expectedCondition: PART_COND });
+    const target = ALL[OTHER];
+    // o valor vencedor vem de uma variável local do componente (não se resolve) e a página declarou outro valor
+    const losing = p.evaluate([part({ computed: { fontSize: "13px" }, dsShipped: { fontSize: [`var(${PART.token})`, "var(--minha-var-local)"] }, authored: { fontSize: [`var(${OTHER})`] } })], "http://x/");
+    expect(losing.status).toBe("undetermined");
+    // valor de outra declaração do DS que alcança o elemento
+    const dsOther = p.evaluate([part({ computed: { fontSize: target }, dsShipped: { fontSize: [`var(${PART.token})`, `var(${OTHER})`] }, authored: { fontSize: [`var(${OTHER})`] } })], "http://x/");
+    expect(dsOther.status).toBe("undetermined");
+    const wins = p.evaluate([part({ computed: { fontSize: target }, dsShipped: { fontSize: [`var(${PART.token})`] }, authored: { fontSize: [`var(${OTHER})`] } })], "http://x/");
+    expect(wins.status).toBe("verified");
+    // em rem, com o contexto de fonte que o portão mede
+    const rem = p.evaluate([part({ computed: { fontSize: target }, dsShipped: { fontSize: [`var(${PART.token})`] }, authored: { fontSize: [`${parseFloat(target) / 16}rem`] }, fontContext: { rootPx: 16, parentPx: 16 } })], "http://x/");
+    expect(rem.status).toBe("verified");
+  });
+
+  it("MED-2: elemento fora da parte/componente citado não confirma; linha cuja parte o DS não localiza não tem predicado", () => {
+    const p = predicateFor(PART.row.id, { property: "font-size", expectedCondition: PART_COND });
+    const outside = p.evaluate([part({ matchesPart: false, computed: { fontSize: ALL[OTHER] }, dsShipped: { fontSize: [`var(${PART.token})`] }, authored: { fontSize: [`var(${OTHER})`] } })], "http://x/");
+    expect(outside).toMatchObject({ status: "undetermined", code: "rule-not-applicable" });
+    expect(outside.detail).toContain("não é a parte citada");
+    // uma linha de tipografia cujo token a folha do DS não aplica dentro do componente (procurada nos dados)
+    let orphan: string | null = null;
+    for (const c of ["tab", "header", "button", "tag", "card", "list", "tooltip", "breadcrumb", "avatar", "footer"]) {
+      const selectors = partSelectors(c);
+      const row = typographyRows(c).find((r) => r.pairs.every((pp) => !selectors.some((s) => s.pairs.some((q) => q.property === pp.property && q.token === pp.token))));
+      if (row) { orphan = row.id; break; }
+    }
+    expect(orphan).not.toBeNull();
+    const none = selectPredicate(claim(orphan!, { property: "font-size", expectedCondition: PART_COND }));
+    expect(none.predicate).toBeNull();
+    expect(conditionForRuleId(orphan!)).toBeNull();
+  });
+
+  it("LOW: localizador com um elemento igual ao token e outro diferente → não rejeita (ambíguo)", () => {
+    const p = predicateFor(PART.row.id, { property: "font-size", expectedCondition: PART_COND });
+    const r = p.evaluate([
+      part({ locator: "#a", computed: { fontSize: ALL[PART.token] }, dsShipped: { fontSize: [`var(${PART.token})`] }, authored: {} }),
+      part({ locator: "#b", computed: { fontSize: ALL[OTHER] }, dsShipped: { fontSize: [`var(${PART.token})`] }, authored: { fontSize: [`var(${OTHER})`] } }),
+    ], "http://x/");
+    expect(r).toMatchObject({ status: "undetermined", code: "locator-ambiguous" });
+  });
+
+  it("MED-3: rejected por evidência incoerente (observed errado) não fecha a O-NN; a medida fecha", async () => {
+    const { client, call } = await connect();
+    try {
+      const rule = observedRuleId();
+      const scan = await call("scan_page", { url: `${base}/escala`, maxChars: 100000 });
+      const o = (scan.data.checksRun.pageLevel.notMeasured as Array<{ code: string; pendingId: string }>).find((i) => i.code === "observed-required")!;
+      const f = (data: Record<string, unknown>) => ({ id: "F-agent", element: { locator: "#off", page: `${base}/escala` }, severity: "minor", nature: "syntactic", mode: "display", pathway: "heuristic", rule: { source: "govbr-ds-kb", id: rule, description: "x" }, evidence: { observed: "a", expected: "b", data } });
+      const wrong = await call("verify_finding", { finding: f({ property: "font-size", observed: "99px", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(wrong.data.verdict).toBe("rejected");
+      expect(wrong.data.verification.pendingResolved ?? wrong.data.pendingResolved ?? []).not.toContain(o.pendingId);
+      const s2 = await call("scan_page", { url: `${base}/escala`, maxChars: 100000 });
+      expect((s2.data.checksRun.pageLevel.notMeasured as Array<{ code: string; resolved?: unknown }>).find((i) => i.code === "observed-required")!.resolved).toBeUndefined();
+      const measured = await call("verify_finding", { finding: f({ property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
+      expect(measured.data.verification.pendingResolved ?? measured.data.pendingResolved).toEqual([o.pendingId]);
+      const s3 = await call("scan_page", { url: `${base}/escala`, maxChars: 100000 });
+      expect((s3.data.checksRun.pageLevel.notMeasured as Array<{ code: string; resolved?: unknown }>).find((i) => i.code === "observed-required")).toMatchObject({ resolved: "measured" });
     } finally { await client.close(); }
   }, 90_000);
 });

@@ -629,7 +629,7 @@ export class ScanSession {
    * `partial` (mesmo pendingId, com os elementos que faltam). As demais pendências seguem como antes (qualquer verify
    * na rota com a norma fecha).
    */
-  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number }): { resolved: string[]; partial: PendingPartial[] } {
+  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number; decision?: string | null }): { resolved: string[]; partial: PendingPartial[] } {
     const partial: PendingPartial[] = [];
     const route = routeKeyOf(finding.element.page);
     const cited = citedNorms(finding.rule);
@@ -639,7 +639,9 @@ export class ScanSession {
       if (!entry.norms.some((n) => cited.has(n))) continue;
       // 3.7.6-pre.2 (revisão MED): a pendência de observação só fecha por verify que DECIDE o elemento (confirmed/rejected);
       // 3.7.7 (D-32): ou que o MEDE (`measured`, a escala: o oráculo mede e o agente julga).
-      if (entry.readIds?.length && verdict !== "confirmed" && verdict !== "rejected" && verdict !== "measured") continue;
+      // 3.7.7 (revisão MED-3): a decisão vem de quem chama (o predicado decidiu ou mediu); sem ela, vale o veredito.
+      const decision = measured && "decision" in measured ? measured.decision : verdict;
+      if (entry.readIds?.length && decision !== "confirmed" && decision !== "rejected" && decision !== "measured") continue;
       // 3.7.3 A8 (revisão MED 2): "não verificado depois de alternar" não fecha por verify no estado não alternado.
       if (entry.requires) {
         const condition = (finding.evidence.data as Record<string, unknown> | undefined)?.expectedCondition;
@@ -662,7 +664,8 @@ export class ScanSession {
             continue;
           }
         }
-        resolveSlot(entry, slot, resolution);
+        // 3.7.7: na O-NN, o estado da resolução é a decisão (confirmed/rejected/measured), não o veredito do envelope.
+        resolveSlot(entry, slot, entry.readIds?.length && decision ? { ...resolution, status: decision } : resolution);
         resolved.push(slotLabel(entry, slot.route));
       }
     }
