@@ -399,7 +399,10 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
       expect(block.count).toBe(pending.length);
       const message = block.components.find((c) => c.component === "message");
       expect(message).toMatchObject({ count: pending.length });
-      expect(JSON.stringify(next.data.sessionPending)).not.toMatch(/"rule"/);
+      // 3.7.6 (item 3): a pendência O-NN de observação com norma obrigatória (fonte fora da escala nesta página) traz a
+      // própria norma em sessionPending; a regra deste teste é do sub-bloco checklist e dos itens dele.
+      expect(JSON.stringify(next.data.sessionPending.checklist)).not.toMatch(/"rule"/);
+      expect(JSON.stringify((next.data.sessionPending.items ?? []).filter((i: { code: string }) => i.code !== "observed-required"))).not.toMatch(/"rule"/);
       expect(next.text.length).toBeLessThanOrEqual(100000);
       // pendingResolved fecha uma; verify_finding citando a cláusula fecha outra
       const [a, b] = pending;

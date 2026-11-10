@@ -261,6 +261,95 @@ function investigatePageTiny(r: Record<string, unknown>): Record<string, unknown
   return { ...r, investigate: { ...inv, page: { next: "get_page_rules(view:checklist)" } } };
 }
 
+// ── Especificação por parte (3.7.6, leitura dev-374-a2 §5 itens 1–2) ─────────────────────────────────────────────
+
+/**
+ * 3.7.6 (item 1): as unidades de especificação (emenda-2, D-167) chegavam só com `force:"especificacao"` em get_ds_rules;
+ * nenhum agente as pediu (a tipografia da aba, o centro do ícone). O bloco `specification` do 1º scan diz QUAIS
+ * componentes desta página têm linhas mensuráveis por parte (token/valor), os desvios que o oráculo já mediu (`off`,
+ * observação spec-part-token, com a unidade) e a chamada que traz as linhas (get_component_spec → specification.measure).
+ * Fora das obrigações: descreve, não obriga. Cede em degraus no teto e nunca some (fica a chamada).
+ */
+export const SPEC_COMPONENTS_MAX = 12;
+export const SPEC_OFF_MAX = 3;
+export const SPEC_NOTE =
+  "Especificação por parte (tabelas do DS; força especificacao: descreve, não obriga). Por componente: get_component_spec{component} → specification.measure; meça a parte e compare. off: desvios já medidos.";
+
+type SpecBlock = { note?: string; components?: string[] | string; more?: number; off?: string[]; offMore?: number; next: unknown };
+
+/** Uma linha por desvio (mesmas unidades, propriedade e valor): `ids propriedade observado≠token (valor) ×n @localizador`. */
+export function specOffLines(observations: Observation[]): Array<{ component: string; line: string; unit: string; n: number }> {
+  const groups = new Map<string, { component: string; unit: string; text: string; locators: string[] }>();
+  for (const o of observations) {
+    if (o.kind !== "spec-part-token") continue;
+    const d = (o.data ?? {}) as { component?: string; property?: string; observed?: string; token?: string; expected?: string; unitIds?: string[] };
+    const unit = (d.unitIds ?? [])[0];
+    if (!unit || !d.component) continue;
+    const text = `${(d.unitIds ?? []).join("|")} ${d.property} ${d.observed}≠${d.token} (${d.expected})`;
+    const g = groups.get(text) ?? { component: d.component, unit, text, locators: [] };
+    if (!g.locators.includes(o.element.locator)) g.locators.push(o.element.locator);
+    groups.set(text, g);
+  }
+  return [...groups.values()].map((g) => ({
+    component: g.component,
+    unit: g.unit,
+    n: g.locators.length,
+    line: `${g.text}${g.locators.length > 1 ? ` ×${g.locators.length}` : ""} @${clip(g.locators[0], 60)}`,
+  }));
+}
+
+export function specificationFor(
+  /** Componentes desta página na ordem do investigate (depois os demais encontrados). */
+  components: string[],
+  measurable: (component: string) => number,
+  observations: Observation[],
+): SpecBlock | undefined {
+  const off = specOffLines(observations);
+  const withRows = components.filter((c) => measurable(c) > 0);
+  if (!withRows.length && !off.length) return undefined;
+  // os componentes com desvio medido primeiro
+  const offComponents = [...new Set(off.map((o) => o.component))];
+  const ranked = [...new Set([...offComponents.filter((c) => withRows.includes(c)), ...withRows])];
+  const first = ranked[0] ?? offComponents[0];
+  return {
+    note: SPEC_NOTE,
+    components: ranked.slice(0, SPEC_COMPONENTS_MAX),
+    ...(ranked.length > SPEC_COMPONENTS_MAX ? { more: ranked.length - SPEC_COMPONENTS_MAX } : {}),
+    ...(off.length ? { off: off.slice(0, SPEC_OFF_MAX).map((o) => o.line) } : {}),
+    ...(off.length > SPEC_OFF_MAX ? { offMore: off.length - SPEC_OFF_MAX } : {}),
+    next: { tool: "get_component_spec", arguments: { component: first } },
+  };
+}
+
+/** No teto: sem a nota, componentes numa linha curta (até 6 nomes + contagem). */
+export function specificationShort(r: Record<string, unknown>): Record<string, unknown> | null {
+  const sp = r.specification as SpecBlock | undefined;
+  if (!sp || !Array.isArray(sp.components)) return null;
+  const names = sp.components;
+  const more = names.length - Math.min(6, names.length) + (sp.more ?? 0);
+  const { note: _n, more: _m, ...rest } = sp;
+  return { ...r, specification: { ...rest, components: `${names.slice(0, 6).join(",")}${more > 0 ? ` +${more}` : ""}` } };
+}
+
+/** O piso: os desvios só com as unidades e o valor, 3 nomes e a chamada em texto (nunca some). */
+export function specificationMinimal(r: Record<string, unknown>): Record<string, unknown> | null {
+  const sp = r.specification as SpecBlock | undefined;
+  if (!sp || typeof sp.next === "string") return null;
+  const [head, tail] = typeof sp.components === "string" ? sp.components.split(" +") : [undefined, undefined];
+  const names = head !== undefined ? head.split(",") : (sp.components as string[] | undefined) ?? [];
+  const total = names.length + (head !== undefined ? Number(tail ?? 0) : (sp.more ?? 0));
+  const off = (sp.off ?? []).map((l) => l.split(" (")[0]);
+  const comp = (sp.next as { arguments?: { component?: string } } | undefined)?.arguments?.component ?? names[0];
+  return {
+    ...r,
+    specification: {
+      components: `${names.slice(0, 3).join(",")}${total > 3 ? ` +${total - 3}` : ""}`,
+      ...(off.length ? { off } : {}),
+      next: `get_component_spec{component:"${comp}"} → specification.measure`,
+    },
+  };
+}
+
 // ── Observações (S-03) ──────────────────────────────────────────────────────────────────────
 
 function compactObservation(o: Observation, n: number) {
@@ -477,7 +566,7 @@ function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> |
   }
   if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
   // 3.7.5 (item 6): a linha de leitura agrega ids (`L-01..L-04` ou `L-01,L-04`; revisão M4: espaço próprio) — um rótulo só.
-  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$/.test(i));
+  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^[PO]-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$/.test(i));
   if (!ids.length) return null;
   return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
 }
@@ -495,12 +584,14 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
   const steps: Array<[string, (r: Record<string, unknown>) => Record<string, unknown> | null]> = [
     // 3.5.0: os blocos novos cedem primeiro. 3.7.0: as cláusulas empurradas descem em degraus antes dos nomes.
     ["investigate.clauses → id + how", investigateClausesShort],
+    ["specification → curta", specificationShort],
     ["investigate.page → primeira cláusula", investigatePageOne],
     ["investigate.page → checklist", investigatePagePointer],
     ["investigate → nomes + 2 cláusulas", investigateCompact(2)],
     ["investigate → nomes + 1 cláusula", investigateCompact(1)],
     ["investigate → nomes + aviso", investigateNudge],
     ["investigate → nomes + next", investigateNames],
+    ["specification → mínima", specificationMinimal],
     ["investigate → next sem dica", investigateHintOut],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
@@ -1141,6 +1232,7 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // que tem continuação no ledger (observações, cobertura, estado, ids do diff, deduplicação) e ANTES das pendências desta
     // página; em degraus (letra → só id + procedimento → a 1ª por componente → nomes + next), nunca some e nunca tira família.
     ["investigate.clauses → id + how", onHead(investigateClausesShort)],
+    ["specification → curta", onHead(specificationShort)],
     ["investigate.page → primeira cláusula", onHead(investigatePageOne)],
     ["investigate.page → checklist", onHead(investigatePagePointer)],
     ["investigate → nomes + 2 cláusulas", onHead(investigateCompact(2))],
@@ -1201,6 +1293,7 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     // 3.7.0 (decisão de 02/11): o aviso do investigate (componentes cujas cláusulas não couberam + a chamada) fica até as
     // pendências estarem no piso de ids (nenhuma pendência some) — só então nomes + next, o último degrau antes dos acréscimos.
     ["investigate → nomes", onHead(investigateNames)],
+    ["specification → mínima", onHead(specificationMinimal)],
     ["investigate → chamada global curta", onHead(investigatePageTiny)],
     // 3.6.3 (revisão MEDIUM 2): sem a etapa "pageLevel → contagem" — os ids das pendências (códigos) são o piso da 1ª
     // página enquanto uma família puder sair no lugar; só o teto rígido (sem nenhuma família) desce à contagem.
@@ -1349,6 +1442,7 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
   const spIds = (sp: { ids?: string[]; items?: Array<{ code: string; ids: string[] }> }) => sp.ids ?? (sp.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
   return [
     (x) => (x.compacted ? { ...x, compacted: (x.compacted as unknown[]).length } : x),
+    (x) => specificationMinimal(specificationShort(x) ?? x) ?? x,
     (x) => {
       const inv = x.investigate as { next?: unknown; page?: { total?: number; next: unknown } } | undefined;
       return inv ? { ...x, investigate: {
@@ -1393,6 +1487,7 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
         ...(x.sessionPending ? { sessionPending: x.sessionPending } : {}),
         ...(x.revisited ? { revisited: { count: (x.revisited as { count?: unknown }).count } } : {}),
         ...(x.investigate ? { investigate: x.investigate } : {}),
+        ...(x.specification ? { specification: x.specification } : {}),
         ...(x.units ? { units: x.units } : {}),
         ...(x.summary ? { summary: x.summary } : {}),
         totalFindings: x.totalFindings, totalFamilies: x.totalFamilies, families: x.families, count: x.count, cursor: x.cursor,
@@ -1513,6 +1608,15 @@ function assembleFirstScanPage(
   const hintOut = investigateHintOut(state.head);
   if (hintOut) {
     done = consider({ ...state, head: hintOut, labels: [...bareLabels.filter((l) => l !== "investigate"), "investigate"] });
+    if (done) return done;
+  }
+  // 3.7.6 (item 1): o bloco de especificação nunca tira família da 1ª página — sai inteiro por último, e só quando a página
+  // ganha família com isso (consider só troca a melhor página quando ganha). Fica dito em `compacted`; as linhas estão na
+  // spec de cada componente e os desvios medidos, nas observações (spec-part-token).
+  if (state.head.specification) {
+    const base = hintOut ? { ...state, head: hintOut, labels: [...bareLabels.filter((l) => l !== "investigate"), "investigate"] } : { ...state, labels: bareLabels };
+    const { specification: _spec, ...without } = base.head;
+    done = consider({ ...base, head: without, labels: [...base.labels.filter((l) => l !== "specification"), "specification:fora"] });
     if (done) return done;
   }
   if (best) return best;

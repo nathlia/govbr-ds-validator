@@ -69,7 +69,7 @@ export interface PendingRule {
   text: string;
 }
 
-export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "usage-read"; status?: string; ref?: string; reason?: string };
+export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "usage-read" | "rule-read"; status?: string; ref?: string; reason?: string };
 
 /**
  * 3.7.5 (item 6): pendência de LEITURA das cláusulas de uso/juízo de um componente do DS encontrado na página. Uma por
@@ -128,6 +128,11 @@ export interface PendingEntry {
   requires?: { actions: true; expectedCondition: string };
   /** 3.7.5 (item 6): pendência de leitura — o componente e as cláusulas de uso/juízo que precisam ser devolvidas. */
   usage?: { component: string; ids: string[] };
+  /**
+   * 3.7.6 (item 3): pendência de observação com norma obrigatória (`O-NN`) — fecha também quando o servidor vê estas
+   * cláusulas devolvidas por uma ferramenta de leitura (como a de leitura); pendingResolved não a fecha.
+   */
+  readIds?: string[];
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -208,6 +213,8 @@ export class ScanSession {
   private counter = 0;
   /** Revisão M4: as pendências de leitura têm espaço de ids próprio (`L-NN`): não deslocam a numeração `P-NN`. */
   private usageCounter = 0;
+  /** 3.7.6 (item 3): as pendências de observação com norma obrigatória têm espaço próprio (`O-NN`). */
+  private observedCounter = 0;
   /** 3.6.1 (revisão H1): códigos cuja cláusula (texto) já saiu numa resposta desta sessão; repetições só com o id. */
   private readonly delivered = new Set<string>();
   /** 3.7.4 (D1): contextos da reserva de cláusulas entregues nesta sessão (chave do escopo → 1ª entrega e faixas). */
@@ -364,9 +371,12 @@ export class ScanSession {
         if (!this.pending.has(routeKey)) this.pending.set(routeKey, entry);
       }
       if (!entry) {
-        this.counter += 1;
+        // 3.7.6 (item 3): `O-NN` em espaço próprio — os `P-NN` de sempre não mudam.
+        const id = item.idSpace === "O"
+          ? `O-${String(++this.observedCounter).padStart(2, "0")}`
+          : `P-${String(++this.counter).padStart(2, "0")}`;
         entry = {
-          id: `P-${String(this.counter).padStart(2, "0")}`,
+          id,
           key,
           code: item.code,
           subject: item.subject,
@@ -380,6 +390,7 @@ export class ScanSession {
           low: item.signal === "low",
           ...(item.elementBound ? { elementBound: true } : {}),
           ...(item.resolveRequires ? { requires: item.resolveRequires } : {}),
+          ...(item.resolveByRead?.length ? { readIds: [...item.resolveByRead] } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -400,6 +411,8 @@ export class ScanSession {
         if (!slot.locators.includes(l)) slot.locators.push(l);
         if (!entry.locators.includes(l)) entry.locators.push(l);
       }
+      // 3.7.6 (item 3): a norma já lida nesta sessão fecha a pendência de observação na hora (como a de leitura).
+      this.closeRead(entry);
       return entry;
     });
   }
@@ -499,7 +512,15 @@ export class ScanSession {
   }
 
   private closeRead(entry: PendingEntry): boolean {
-    if (!entry.usage || entry.status !== "open" || !this.usageRead(entry)) return false;
+    if (entry.status !== "open") return false;
+    // 3.7.6 (item 3): a pendência de observação fecha pela leitura da norma que ela cita.
+    if (entry.readIds?.length) {
+      if (!entry.readIds.every((id) => this.readIds.has(id))) return false;
+      const resolution: PendingResolution = { by: "rule-read" };
+      for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
+      return true;
+    }
+    if (!entry.usage || !this.usageRead(entry)) return false;
     const resolution: PendingResolution = { by: "usage-read" };
     for (const slot of entry.slots) if (slot.status === "open") resolveSlot(entry, slot, resolution);
     return true;
@@ -634,6 +655,7 @@ export class ScanSession {
     const recordAsFinding: Array<{ id: string; code: string; route: string; cite: string | null; norms: string[] }> = [];
     const partialVerify: Array<{ id: string; verified: string[]; verifiedCount: number; declared: string[]; declaredCount: number }> = [];
     const usageUnread: string[] = [];
+    const readOrVerify: string[] = [];
     for (const r of list) {
       const entry = this.byId.get(r.id);
       if (!entry) {
@@ -643,6 +665,11 @@ export class ScanSession {
       // 3.7.5 (item 6): a pendência de leitura fecha só pela leitura que passa pelo servidor, nunca por declaração.
       if (entry.usage) {
         if (entry.status === "open") usageUnread.push(`${entry.id}:${entry.usage.component}`);
+        continue;
+      }
+      // 3.7.6 (item 3): a pendência de observação com norma obrigatória fecha medindo (verify) ou lendo a norma.
+      if (entry.readIds?.length) {
+        if (entry.status === "open") readOrVerify.push(entry.id);
         continue;
       }
       if (r.status !== "violada" && !r.reason?.trim()) {
@@ -678,6 +705,9 @@ export class ScanSession {
         : {}),
       ...(partialVerify.length
         ? { partialVerify, partialVerifyNote: "verify_finding decidiu só os elementos em verified; os de declared fecharam pela sua declaração (status/reason), não por medida." }
+        : {}),
+      ...(readOrVerify.length
+        ? { readOrVerify, readOrVerifyNote: "Pendência de observação com norma obrigatória: não fecha por declaração. Fecha com verify_finding em cada elemento citando a norma, ou lendo a norma (get_ds_rules{ids})." }
         : {}),
       ...(usageUnread.length
         ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até o servidor ver devolvidas todas as cláusulas do componente (get_ds_rules{ids} da observação de leitura do scan)." }

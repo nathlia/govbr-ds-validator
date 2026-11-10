@@ -14,6 +14,24 @@ import { lostExceptionOf } from "../data/lostExceptions.js";
 import { isTableRow } from "../data/retrieval.js";
 import { isTitleRecord, listingOrder } from "../responses/retrieval.js";
 import { RESPONSE_BUDGET, textSize } from "../responses/contract.js";
+import { measurableSpecRows, specRowLine } from "../data/specParts.js";
+
+/** 3.7.6 (item 1): teto das linhas mensuráveis servidas na spec (o resto pela listagem, com o cursor). */
+export const SPEC_MEASURE_MAX_CHARS = 1_800;
+
+/** As linhas de tabela mensuráveis (tipografia, cor, depois as demais), `id · parte · propriedade token=valor`, no teto. */
+export function specMeasureLines(component: string, maxChars = SPEC_MEASURE_MAX_CHARS): { lines: string[]; total: number } {
+  const rows = measurableSpecRows(component);
+  const lines: string[] = [];
+  let used = 0;
+  for (const row of rows) {
+    const line = specRowLine(row);
+    if (lines.length && used + line.length + 3 > maxChars) break;
+    lines.push(line);
+    used += line.length + 3;
+  }
+  return { lines, total: rows.length };
+}
 
 export const SPEC_CLAUSES_MAX = 5;
 export const SPEC_CLAUSE_TEXT_MAX = 240;
@@ -80,6 +98,9 @@ export function specSpecification(component: string) {
     facets.set(facet, entry);
   }
   const tableRows = units.filter((u) => u.specification?.kind === "table-row").length;
+  // 3.7.6 (leitura dev-374-a2 §5 item 1): as linhas mensuráveis por parte (token e valor resolvido) vêm aqui, para medir e
+  // comparar sem paginar a listagem (onde as linhas de tabela ficam depois das frases).
+  const measure = specMeasureLines(component);
   return {
     specification: {
       modality: "especificação (candidata a investigar)",
@@ -88,6 +109,13 @@ export function specSpecification(component: string) {
       tableRows,
       sentences: units.length - tableRows,
       facets: [...facets.values()].map((f) => ({ facet: f.facet, tables: f.tables.size, rows: f.rows })),
+      ...(measure.lines.length
+        ? {
+            measure: measure.lines,
+            measureNote: "measure: linhas mensuráveis `id · parte · propriedade token=valor` (tipografia e cor primeiro): meça a parte no navegador e compare; cite a unidade por id. Descreve, não obriga.",
+            ...(measure.total > measure.lines.length ? { measureMore: measure.total - measure.lines.length } : {}),
+          }
+        : {}),
       next: { tool: "get_ds_rules", arguments: { component, force: SPECIFICATION_FORCE } },
     },
   };
@@ -119,10 +147,20 @@ export function fitComponentSpec(
   // chamada que lista os ids, depois sai: nunca custa à spec o que ela trazia sem a emenda-2.
   const rulesBlock = response.rules as { specification?: Record<string, unknown> } | undefined;
   if (rulesBlock?.specification) {
-    const { facets: _facets, note: _note, tableRows: _rows, sentences: _sentences, ...minimal } = rulesBlock.specification;
+    const { facets: _facets, note: _note, tableRows: _rows, sentences: _sentences, measureNote: _mn, ...minimal } = rulesBlock.specification;
     rulesBlock.specification = { ...rulesBlock.specification };
     delete rulesBlock.specification.facets;
     if (fits()) return response;
+    // 3.7.6: as linhas mensuráveis encolhem em degraus (5, depois 2) antes de a spec perder o resumo.
+    for (const keep of [5, 2]) {
+      const lines = rulesBlock.specification.measure as string[] | undefined;
+      if (!lines || lines.length <= keep) continue;
+      const more: number = Number(rulesBlock.specification.measureMore ?? 0) + lines.length - keep;
+      rulesBlock.specification = { ...rulesBlock.specification, measure: lines.slice(0, keep), measureMore: more };
+      minimal.measure = lines.slice(0, keep);
+      minimal.measureMore = more;
+      if (fits()) return response;
+    }
     rulesBlock.specification = minimal;
     if (fits()) return response;
     delete rulesBlock.specification;

@@ -25,7 +25,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required";
   subject: string;
   count?: number;
   observed?: string;
@@ -68,6 +68,14 @@ export interface NotJudgedItem {
    * alcançado por uma receita com ações e esta condição estruturada. Fica na sessão; nunca sai numa resposta.
    */
   resolveRequires?: { actions: true; expectedCondition: string };
+  /**
+   * 3.7.6 (item 3): pendência que nasce de uma observação que já traz norma obrigatória/proibitiva (`observed-required`).
+   * Espaço de ids próprio (`O-NN`: não desloca os `P-NN`); fecha pelo verify_finding em cada elemento citando a norma, ou
+   * quando o servidor vê a norma (estes ids) devolvida por uma ferramenta de leitura — nunca por pendingResolved. Fica na
+   * sessão; nunca sai numa resposta.
+   */
+  resolveByRead?: string[];
+  idSpace?: "O";
 }
 
 export interface NotJudgedInput {
@@ -167,6 +175,56 @@ export function kbRule(id: string): NotJudgedItem["rule"] {
   } catch {
     return undefined;
   }
+}
+
+/** 3.7.6 (item 3): forças que obrigam ou proíbem — a observação com uma delas vira pendência, não só contagem. */
+export const OBSERVED_PENDING_FORCES = new Set(["required", "prohibited"]);
+export const OBSERVED_TODO = "decida o desvio medido: verify_finding em cada elemento citando a norma, ou leia a norma (get_ds_rules{ids}); pendingResolved não fecha";
+
+/** O valor medido de uma observação, em texto curto (`font-size 16px`, mais o passo mais próximo quando há). */
+function observedValue(o: Observation): string {
+  const d = (o.data ?? {}) as { property?: unknown; observed?: unknown; nearestStepPx?: unknown };
+  const value = [d.property, d.observed].filter((x) => typeof x === "string" && x).join(" ");
+  const near = typeof d.nearestStepPx === "number" ? ` (passo mais próximo ${d.nearestStepPx}px)` : "";
+  return value ? `${value}${near}` : clip(o.note, 60);
+}
+
+/**
+ * 3.7.6 (leitura dev-374-a2 §3/§5 item 3): a observação que já traz uma norma de força obrigatória ou proibitiva
+ * (`data.relatedRule`, a norma que o check cita sem poder afirmar a violação: D-27/D-32) chegava ao agente só como contagem
+ * em `observations.byKind` — quem não abria as observações perdia o desvio e a norma. Vira pendência: uma por (tipo de
+ * observação, norma) neste estado, com todos os elementos, o valor medido e a cláusula. Genérico: só lê `relatedRule`.
+ */
+export function observedRequiredItems(observations: Observation[]): NotJudgedItem[] {
+  const groups = new Map<string, { kind: string; ruleId: string; obs: Observation[] }>();
+  for (const o of observations) {
+    const rel = (o.data as { relatedRule?: { id?: unknown; force?: unknown } } | undefined)?.relatedRule;
+    if (!rel || typeof rel.id !== "string" || typeof rel.force !== "string" || !OBSERVED_PENDING_FORCES.has(rel.force)) continue;
+    const key = `${o.kind}|${rel.id}`;
+    const g = groups.get(key) ?? { kind: o.kind, ruleId: rel.id, obs: [] };
+    if (!g.obs.some((x) => x.element.locator === o.element.locator)) g.obs.push(o);
+    groups.set(key, g);
+  }
+  return [...groups.values()].map(({ kind, ruleId, obs }) => {
+    const rule = kbRule(ruleId);
+    const first = obs[0];
+    return {
+      code: "observed-required" as const,
+      subject: `${kind}|${ruleId}`,
+      count: obs.length,
+      examples: obs.slice(0, EXAMPLES).map((o) => clip(o.element.locator, 120)),
+      elementSet: setHash(obs.map((o) => `${o.element.locator}=${observedValue(o)}`)),
+      elementBound: true as const,
+      boundLocators: obs.map((o) => o.element.locator),
+      observed: `${kind}: ${observedValue(first)}${obs.length > 1 ? ` (+${obs.length - 1})` : ""}`,
+      todo: OBSERVED_TODO,
+      norms: [ruleId],
+      ...(rule ? { rule } : {}),
+      measure: "o valor medido (observação do scan) × a cláusula",
+      resolveByRead: [ruleId],
+      idSpace: "O" as const,
+    };
+  });
 }
 
 /**
@@ -387,7 +445,7 @@ function compactItem(item: PendingItem, withText: (code: string) => boolean = ()
     const { subject: _s, ...rest } = item;
     return rest;
   }
-  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -423,7 +481,7 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string): Obse
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
     whyNotAFinding: `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, ...rest }) => rest)(item),
+    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest }) => rest)(item),
   }));
 }
 

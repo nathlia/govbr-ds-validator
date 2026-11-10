@@ -148,14 +148,15 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { notJudgedObservations, observedRequiredItems, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
 import { pageChecklist, pageInvestigateClauses } from "./tools/pageChecklist.js";
 import { EXAMPLE_WARNING_NOTE, auditComponentExamples, elementObligationsCompact } from "./tools/exampleAudit.js";
-import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS } from "./responses/scan.js";
+import { assembleScan, boundStrings, checksRunFor, diffPage, diffSummary, investigateFor, observationPage, refineDiff, SCAN_DEFAULT_MAX_CHARS, specificationFor } from "./responses/scan.js";
+import { measurableSpecRows } from "./data/specParts.js";
 import { verificationEnvelope } from "./responses/verify.js";
 import type { Observation } from "./schema/finding.js";
 import { ANATOMY_PARTS } from "./verify/contextual.js";
@@ -2109,6 +2110,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // linha só, depois das demais pendências. Os ids a ler (get_ds_rules{ids} por componente) ficam numa observação do
         // ledger, com todas as pendências de leitura abertas na sessão.
         const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
+        // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
+        // das de sempre), não só contagem em observations.byKind.
+        const observedItems = hasNorms ? withPendingIds(scanId, route, observedRequiredItems(result.observations)) : [];
         const usageComponents = investigate ? [...new Set([...investigate.items.map((i) => i.component), ...(investigate.more?.components ?? [])])] : [];
         const usageOpen = usageComponents.flatMap((component) => {
           const ids = usageClauseIds(component);
@@ -2125,13 +2129,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
         }
         const usageItem = usageLedger ? usageUnreadItem(usageOpen, usageLedger) : undefined;
         // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.
-        const pageItems = [...regularItems, ...(usageItem ? [usageItem] : [])];
+        const pageItems = [...regularItems, ...observedItems, ...(usageItem ? [usageItem] : [])];
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
           ? sessionPendingBlock(session.open(), new Set([...pageItems.map((i) => i.pendingId as string), ...usageOpen.map((u) => u.id)]), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts(),
               usageLedger ? { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: usageLedger.cursor } } : undefined)
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
+        // 3.7.6 (item 1): os componentes desta página com linhas de especificação mensuráveis por parte, os desvios já
+        // medidos (item 2) e a chamada que traz as linhas — na ordem do investigate.
+        const specification = hasNorms && first
+          ? specificationFor(
+              [...new Set([...usageComponents, ...(result.coverage.componentsFound ?? [])])],
+              (c) => measurableSpecRows(c).length,
+              result.observations,
+            )
+          : undefined;
         session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks, components: result.coverage.componentsFound ?? [] });
         const revisited = first ? revisitedBlock(result.revisited) : undefined;
         const head = {
@@ -2166,6 +2179,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(stateDiff ? { stateDiff } : {}),
           ...(units ? { units } : {}),
           ...(investigate ? { investigate } : {}),
+          ...(specification ? { specification } : {}),
           // S-09: zero achados (ou poucos) nunca é conformidade.
           absenceNote: ABSENCE_NOTE,
         };

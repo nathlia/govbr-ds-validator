@@ -4,6 +4,7 @@ import { httpStatusOf, nativeDialogsOf, withPage } from "../evidence/browser.js"
 import { DEFAULT_SELECTOR, inspectPageComputedStyles, type StyleProperty } from "../evidence/inspect.js";
 import { checkTokenCompliance, collectTokenObservations, ALL_TOKEN_CHECKS, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { checkComponentStructure, collectStructureObservations } from "../checkers/structure.js";
+import { scanPartTokens, type SpecPartResult } from "../checkers/specPartTokens.js";
 import { demoteToObservations, ownershipOf, partitionByOwnership, splitOutside } from "../checkers/ownership.js";
 import { runAxeScanOnPage } from "../checkers/axe.js";
 import { checkPageStructure } from "../checkers/pageStructure.js";
@@ -139,6 +140,8 @@ export interface PageScanResult {
    * Ausente no perfil knowledge-free.
    */
   notJudged?: NotJudgedItem[];
+  /** 3.7.6 (item 2): o check de token por parte — elementos comparados e o que ficou de fora, por motivo. */
+  specParts?: { measured: number; skipped: Record<string, number> };
   /** 3.6.1 (item 2): título do documento e 1º h1 exibido, lidos no estado do scan (ausente no knowledge-free). */
   document?: { title: string; h1: string | null; mainHeading: string | null };
   /** 3.6.1 (item 3): elementos antes ocultos, revisitados neste estado. */
@@ -409,6 +412,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const observations: Observation[] = [];
     let elementsInspected = 0;
     let componentsFound: string[] = [];
+    let specParts: SpecPartResult | undefined;
     /** 3.6.1: localizadores que o check de tokens mediu neste scan (para não revisitar o que já foi medido). */
     const tokenMeasured = new Map<string, Set<TokenCheck>>();
     const markTokensMeasured = (locator: string, measured: TokenCheck[]) => {
@@ -462,6 +466,12 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
             observations.push(...demoteToObservations(checkTokenCompliance({ url: request.url }, outsideText, getTokenRegistry(), ["color"]), outsideText));
           }
         }
+      }
+      // 3.7.6 (item 2): token por parte de componente × tabela de especificação (observação, nunca achado). Só na página
+      // inteira (com seletores, o escopo é a região pedida) e com o check de fonte.
+      if (checks.includes("tokens") && activeTokenChecks.includes("font") && normalized.selectors.length === 0) {
+        specParts = await scanPartTokens(page, request.url, componentsFound.filter((c) => componentTargets.includes(c)));
+        observations.push(...specParts.observations);
       }
       if (checks.includes("structure")) {
         const structureScope = partitionByOwnership(evidence.elements, false);
@@ -625,6 +635,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       findings: pageLevelFirst(deduplicated.findings),
       observations,
       ...(notJudged.length ? { notJudged } : {}),
+      ...(specParts ? { specParts: { measured: specParts.measured, skipped: specParts.skipped } } : {}),
       document: { title: facts.title ?? "", h1: facts.h1 ?? null, mainHeading: facts.mainHeading ?? null },
       ...(revisited ? { revisited } : {}),
       coverage: {
