@@ -11,8 +11,9 @@ import { pageChecklistRules } from "../../src/tools/pageChecklist.js";
 import { assembleScan } from "../../src/responses/scan.js";
 import { textSize } from "../../src/responses/contract.js";
 import { ScanSession, sessionPendingBlock } from "../../src/scan/session.js";
-import { pendingLine, pendingLineMinimal, pendingLineNorm, usageUnreadItem } from "../../src/scan/notJudged.js";
-import { usageClauseIds } from "../../src/tools/usageClauses.js";
+import { pendingLine, pendingLineMinimal, pendingLineNorm, usageLedgerObservation, usageUnreadItem } from "../../src/scan/notJudged.js";
+import { usageClauseIds, usageReadCalls } from "../../src/tools/usageClauses.js";
+import { getRuleById } from "../../src/data/knowledge.js";
 
 const real = () => reserveCandidates(["radio", "checkbox", "select", "table"]);
 const head = { contract: "oraculo-resposta/1.0.0", kind: "scan", scanId: "S-test", absenceNote: "Zero achados não é conformidade." };
@@ -204,21 +205,22 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
     expect(s.resolveExplicit([{ id: e.id, status: "conforme", reason: "x" }]).usageUnread).toBeUndefined();
   });
 
-  it("linha agregada: ids em faixa (ou lista), componentes na ordem, a chamada que fecha; formas menores guardam o rótulo", () => {
-    const item = usageUnreadItem([{ id: "P-09", component: "accordion" }, { id: "P-10", component: "avatar" }, { id: "P-11", component: "table" }])!;
+  it("linha agregada: ids em faixa (ou lista), componentes na ordem, onde ler os ids; formas menores guardam o rótulo", () => {
+    const L = { scanId: "S-page-001", cursor: 12 };
+    const item = usageUnreadItem([{ id: "P-09", component: "accordion" }, { id: "P-10", component: "avatar" }, { id: "P-11", component: "table" }], L)!;
     const line = pendingLine(item);
-    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{component:<c>,category:"component"} até o fim; fecha ao ler');
-    expect(usageUnreadItem([{ id: "P-12", component: "b" }, { id: "P-09", component: "a" }])).toMatchObject({ pendingId: "P-09,P-12", examples: ["a", "b"] });
+    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{ids} por componente; ids: get_finding_details{scanId:"S-page-001",view:"observations",cursor:12}');
+    expect(usageUnreadItem([{ id: "P-12", component: "b" }, { id: "P-09", component: "a" }], L)).toMatchObject({ pendingId: "P-09,P-12", examples: ["a", "b"] });
     // sessão longa: ids misturados viram faixas na ordem, e os componentes acompanham
-    const mixed = usageUnreadItem([32, 7, 33, 8, 10, 11, 18, 19, 12, 13, 34, 35, 9].map((n) => ({ id: `P-${String(n).padStart(2, "0")}`, component: `c${n}` })))!;
+    const mixed = usageUnreadItem([32, 7, 33, 8, 10, 11, 18, 19, 12, 13, 34, 35, 9].map((n) => ({ id: `P-${String(n).padStart(2, "0")}`, component: `c${n}` })), L)!;
     expect(mixed.pendingId).toBe("P-07..P-13,P-18,P-19,P-32..P-35");
     expect(mixed.examples).toEqual([7, 8, 9, 10, 11, 12, 13, 18, 19, 32, 33, 34, 35].map((n) => `c${n}`));
-    expect(usageUnreadItem([])).toBeUndefined();
-    expect(pendingLineMinimal(line)).toMatch(/^P-09\.\.P-11:usage-unread:3 @accordion,avatar,table/);
+    expect(usageUnreadItem([], L)).toBeUndefined();
+    expect(pendingLineMinimal(line)).toMatch(/^P-09\.\.P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules\{ids\} por componente/);
     expect(pendingLineNorm(line)).toBe("P-09..P-11:usage-unread:3");
     // a lista de componentes é cortada num teto (muitos componentes)
-    const many = usageUnreadItem(Array.from({ length: 30 }, (_, i) => ({ id: `P-${10 + i}`, component: `componente${i}` })))!;
-    expect(pendingLine(many).length).toBeLessThan(300);
+    const many = usageUnreadItem(Array.from({ length: 30 }, (_, i) => ({ id: `P-${10 + i}`, component: `componente${i}` })), L)!;
+    expect(pendingLine(many).length).toBeLessThanOrEqual(320);
   });
 
   it("sessionPending: a de outra rota aparece com os componentes e a leitura; a desta página não se repete", () => {
@@ -226,10 +228,31 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
     const t = s.registerUsage("tag", "http://h/a", "S-page-001", ids("tag"));
     const b = s.registerUsage("button", "http://h/a", "S-page-001", ids("button"));
     s.registerUsage("button", "http://h/b", "S-page-002", ids("button"));
-    const block = sessionPendingBlock(s.open(), new Set([b.id]), () => false, true, "http://h/b")!;
-    const item = block.items.find((i) => i.code === "usage-unread") as unknown as { ids: string[]; components: string[]; next: string };
+    const next = { tool: "get_finding_details", arguments: { scanId: "S-page-002", view: "observations", cursor: 7 } };
+    const block = sessionPendingBlock(s.open(), new Set([b.id]), () => false, true, "http://h/b", {}, next)!;
+    const item = block.items.find((i) => i.code === "usage-unread") as unknown as { ids: string[]; components: string[]; next: unknown };
     expect(item.ids).toEqual([t.id]);
     expect(item.components).toEqual(["tag"]);
-    expect(item.next).toContain("get_ds_rules");
+    expect(item.next).toEqual(next);
+  });
+});
+
+describe("item 6 (pre.2) — conjunto e chamadas de leitura", () => {
+  it("só cláusulas de uso que obrigam, proíbem ou desaconselham; chamadas get_ds_rules{ids} de até 20", () => {
+    for (const c of ["radio", "checkbox", "table", "breadcrumb", "button", "menu"]) {
+      const ids = usageClauseIds(c);
+      for (const id of ids) expect(["required", "prohibited", "discouraged"]).toContain(getRuleById(id)!.force);
+      const calls = usageReadCalls(ids);
+      expect(calls.flatMap((x) => x.arguments.ids)).toEqual(ids);
+      expect(calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20)).toBe(true);
+    }
+    // componente sem nenhuma dessas: sem pendência
+    expect(usageClauseIds("list")).toEqual([]);
+    expect(usageReadCalls(Array.from({ length: 45 }, (_, i) => `x${i}`)).map((x) => x.arguments.ids.length)).toEqual([20, 20, 5]);
+  });
+
+  it("observação de leitura no ledger: pendingId, componente e chamadas de cada pendência aberta", () => {
+    const o = usageLedgerObservation([{ id: "P-06", component: "radio", calls: usageReadCalls(usageClauseIds("radio")) }], "http://h/a");
+    expect(o).toMatchObject({ kind: "not-judged", element: { locator: "html" }, data: { code: "usage-unread", reads: [{ pendingId: "P-06", component: "radio" }] } });
   });
 });

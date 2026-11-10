@@ -338,25 +338,43 @@ function idsLabel(ids: string[]): string {
   return out.join(",");
 }
 
-const USAGE_TODO = 'get_ds_rules{component:<c>,category:"component"} até o fim; fecha ao ler';
+/** 3.7.5-pre.2: onde estão os ids a ler (a observação de leitura do scan, no ledger). */
+export type UsageLedger = { scanId: string; cursor: number };
+const usageTodo = (ledger: UsageLedger) =>
+  `get_ds_rules{ids} por componente; ids: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}`;
 
 /**
  * 3.7.5 (item 6): UMA linha agrega as pendências de leitura (`usage-unread`) dos componentes desta página ainda não lidos:
- * ids na ordem dos componentes, e a chamada que fecha cada um. Nada é julgado: só garante a leitura.
+ * ids na ordem dos componentes e onde estão os ids das cláusulas a ler (a observação do ledger, com a chamada
+ * get_ds_rules{ids} de cada componente). Nada é julgado: só garante a leitura.
  */
-export function usageUnreadItem(open: Array<{ id: string; component: string }>): PendingItem | undefined {
+export function usageUnreadItem(open: Array<{ id: string; component: string }>, ledger: UsageLedger): PendingItem | undefined {
   if (!open.length) return undefined;
   // Em ordem de id (o rótulo em faixas acompanha a ordem dos componentes).
   open = [...open].sort((x, y) => Number(x.id.slice(2)) - Number(y.id.slice(2)));
   return {
     code: "usage-unread",
-    subject: "cláusulas de uso e juízo (uso, melhores práticas, tom e voz) dos componentes",
+    subject: "cláusulas de uso e juízo (uso, melhores práticas, tom e voz) que obrigam, proíbem ou desaconselham",
     count: open.length,
     pendingId: idsLabel(open.map((o) => o.id)),
     examples: open.map((o) => o.component),
-    todo: USAGE_TODO,
-    measure: "leitura, sem veredito: um id por componente, na ordem; fecha quando a leitura passa pelo servidor (pendingResolved não fecha)",
+    todo: usageTodo(ledger),
+    measure: "leitura, sem veredito: um id por componente, na ordem; fecha quando o servidor vê devolvidas todas as cláusulas do componente (pendingResolved não fecha)",
   };
+}
+
+/**
+ * 3.7.5-pre.2: a observação de leitura no ledger — para cada pendência de leitura aberta na sessão, o componente, os ids
+ * e as chamadas get_ds_rules{ids} (até 20 ids cada) que os devolvem.
+ */
+export function usageLedgerObservation(open: Array<{ id: string; component: string; calls: unknown[] }>, url: string): Observation {
+  return {
+    kind: "not-judged",
+    element: { locator: "html", page: url },
+    note: `usage-unread: ${open.length} componente(s) com cláusulas de uso a ler`,
+    whyNotAFinding: "Pendência de leitura: nada foi julgado. Cada pendingId fecha quando estas chamadas (ou a listagem do componente pelo cursor) devolvem todas as cláusulas dele.",
+    data: { code: "usage-unread", reads: open.map((o) => ({ pendingId: o.id, component: o.component, calls: o.calls })) },
+  } as Observation;
 }
 
 const USAGE_LIST_MAX = 160;

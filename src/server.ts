@@ -148,8 +148,8 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
-import { ruleIdsIn, usageClauseIds } from "./tools/usageClauses.js";
+import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservation, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { ruleIdsIn, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
@@ -2103,26 +2103,31 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
-        // 3.7.5 (item 6): cada componente do DS encontrado com cláusulas de uso/juízo na base abre UMA pendência de leitura na
-        // sessão; as ainda não lidas desta página saem numa linha só, depois das demais pendências.
+        // 3.7.5 (item 6; pre.2): cada componente que o scan põe no investigate e que tem, na base, cláusulas de uso/juízo que
+        // obrigam, proíbem ou desaconselham abre UMA pendência de leitura na sessão; as ainda não lidas desta página saem numa
+        // linha só, depois das demais pendências. Os ids a ler (get_ds_rules{ids} por componente) ficam numa observação do
+        // ledger, com todas as pendências de leitura abertas na sessão.
         const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
-        const usageOpen = hasNorms
-          ? [...new Set(result.coverage.componentsFound ?? [])].flatMap((component) => {
-              const ids = usageClauseIds(component);
-              if (!ids.length) return [];
-              const entry = session.registerUsage(component, route, scanId, ids);
-              return entry.status === "open" ? [{ id: entry.id, component }] : [];
-            })
-          : [];
-        const usageItem = usageUnreadItem(usageOpen);
+        const usageComponents = investigate ? [...new Set([...investigate.items.map((i) => i.component), ...(investigate.more?.components ?? [])])] : [];
+        const usageOpen = usageComponents.flatMap((component) => {
+          const ids = usageClauseIds(component);
+          if (!ids.length) return [];
+          const entry = session.registerUsage(component, route, scanId, ids);
+          return entry.status === "open" ? [{ id: entry.id, component }] : [];
+        });
+        const ledger = observationStore.get(scanId);
+        const usageSession = session.open().filter((e) => e.usage);
+        const usageLedger = ledger && usageSession.length ? { scanId, cursor: ledger.length } : undefined;
+        if (ledger && usageLedger) {
+          ledger.push(usageLedgerObservation(usageSession.map((e) => ({ id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids) })), url));
+        }
+        const usageItem = usageLedger ? usageUnreadItem(usageOpen, usageLedger) : undefined;
         // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.
         const pageItems = [...regularItems, ...(usageItem ? [usageItem] : [])];
-        // O item inteiro também no ledger (get_finding_details view:observations, a continuação de pageLevel).
-        // (os componentes vão em observed: nome de componente não é localizador.)
-        if (usageItem) observationStore.get(scanId)?.push(...notJudgedObservations([{ ...usageItem, examples: undefined, observed: (usageItem.examples ?? []).join(",") }], url));
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
-          ? sessionPendingBlock(session.open(), new Set([...pageItems.map((i) => i.pendingId as string), ...usageOpen.map((u) => u.id)]), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts())
+          ? sessionPendingBlock(session.open(), new Set([...pageItems.map((i) => i.pendingId as string), ...usageOpen.map((u) => u.id)]), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts(),
+              usageLedger ? { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: usageLedger.cursor } } : undefined)
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
         session.recordScan({ scanId, route, fingerprint: result.stateFingerprint, title, heading, checks: executedChecks, components: result.coverage.componentsFound ?? [] });

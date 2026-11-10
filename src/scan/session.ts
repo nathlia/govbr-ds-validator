@@ -678,7 +678,7 @@ export class ScanSession {
         ? { partialVerify, partialVerifyNote: "verify_finding decidiu só os elementos em verified; os de declared fecharam pela sua declaração (status/reason), não por medida." }
         : {}),
       ...(usageUnread.length
-        ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até a leitura passar pelo servidor (get_ds_rules{component, category:\"component\"}, pelo cursor até o fim)." }
+        ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até o servidor ver devolvidas todas as cláusulas do componente (get_ds_rules{ids} da observação de leitura do scan)." }
         : {}),
     };
   }
@@ -726,6 +726,8 @@ export function sessionPendingBlock(
   currentRoute?: string,
   /** 3.6.6 (BAIXA 2): cláusulas servidas no checklist sem pendingId, por componente (ScanSession.unregisteredCounts). */
   unregistered: Record<string, number> = {},
+  /** 3.7.5-pre.2: onde estão os ids das pendências de leitura (a observação de leitura deste scan, no ledger). */
+  usageNext?: unknown,
 ) {
   // 3.6.3 (revisão HIGH 1): por rota — a pendência deste scan conta aqui só pelas OUTRAS rotas em que segue aberta.
   // 3.7.5 (item 6): a pendência de leitura é da sessão, não da rota — se está nesta página, não volta como de outra rota.
@@ -788,7 +790,7 @@ export function sessionPendingBlock(
       ...(halfDone.length ? { remaining: Object.fromEntries(halfDone.slice(0, 3)) } : {}),
       ...(code === USAGE_CODE
         // 3.7.5 (item 6): os componentes (na ordem dos ids) e a leitura que fecha cada um.
-        ? { components: entries.slice(0, 5).map((e) => e.subject), next: 'get_ds_rules{component:<c>,category:"component"}' }
+        ? { components: entries.slice(0, 5).map((e) => e.subject), ...(usageNext ? { next: usageNext } : {}) }
         : rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });

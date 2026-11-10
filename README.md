@@ -114,6 +114,18 @@ fatos) e nunca leram as cláusulas de uso/juízo dos componentes. `package.json`
 
 `tools/list` igual nos perfis medidos (evaluation `04ae1437…`, knowledge-free `5b9c59aa…`); instruções inalteradas.
 
+**3.7.5-pre.2 — leitura de uso mais estreita (custo).** A listagem inteira custava ~176 mil caracteres na A ∪ B.
+Agora: (a) só os componentes que o scan põe no `investigate` (hoje são todos os encontrados: o investigate os lista
+todos desde a 3.5.0); (b) só as cláusulas de uso que obrigam, proíbem ou desaconselham (`required`, `prohibited`,
+`discouraged`; as "use X quando…" ficam fora) — componente sem nenhuma, sem pendência; (c) leitura por
+`get_ds_rules{ids}` (até 20 ids por chamada). A linha continua agregada e diz onde estão os ids:
+`P-06..P-16:usage-unread:11 @radio,checkbox,… · get_ds_rules{ids} por componente; ids:
+get_finding_details{scanId:"S-page-001",view:"observations",cursor:15}` — uma observação de leitura no ledger com
+`reads: [{pendingId, component, calls:[get_ds_rules{ids}]}]` de todas as pendências de leitura abertas na sessão
+(o `sessionPending` aponta a mesma). Fecha quando o servidor viu devolvidos todos os ids do componente (a listagem
+pelo cursor continua valendo). Custo medido de ler tudo: A 11 pendências, 47 ids, ~44 mil caracteres; B 8, 38 ids,
+~35 mil.
+
 ## 3.7.4 — defeitos do teste à mão da 3.7.3 (NAT-111)
 
 - **Reserva de cláusulas, fatos primeiro (D1).** A 1ª página de fatos do `scan_page` é montada como sem
