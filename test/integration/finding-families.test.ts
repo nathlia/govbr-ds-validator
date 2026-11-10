@@ -79,7 +79,8 @@ describe("finding families on calendar and table fixtures", () => {
     // os campos que o CLI de linha de base imprime — nenhum novo, nenhum a menos. 3.5.0: `notJudged` (pendências
     // do scan, D-155) fica no resultado para o ledger do MCP, mas o CLI de linha de base não o imprime.
     // 3.6.1: `document` e `revisited` (memória da sessão MCP) também ficam fora da saída do CLI.
-    const { notJudged: _pending, document: _document, revisited: _revisited, ...printed } = result;
+    // 3.7.8: `componentLayout` (ordem do investigate do MCP) idem.
+    const { notJudged: _pending, document: _document, revisited: _revisited, componentLayout: _layout, ...printed } = result;
     expect(Object.keys(printed).sort()).toEqual(
       ["cacheHit", "cacheMissReason", "coverage", "deduplication", "findings", "observations", "stateFingerprint", "state", "status", "url"].sort()
     );

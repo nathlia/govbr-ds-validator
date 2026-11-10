@@ -271,12 +271,26 @@ describe("scan_page investigate on a neutral-domain fixture (3.0.0; normativeCon
     // Todos os encontrados, nenhum a mais nem a menos: itens + more.
     const listed = [...inv.items.map((i: { component: string }) => i.component), ...(inv.more?.components ?? [])];
     expect([...listed].sort()).toEqual([...found].sort());
-    // Ordem: obrigações sem medida decrescentes; empate na ordem do DOM.
+    // Ordem: obrigações sem medida decrescentes; empate na ordem do DOM. 3.7.8 (item 4): os visíveis no estado antes dos
+    // ocultos, e a parte de um hospedeiro (partOf) fora dessa conta — vem depois do hospedeiro.
     const { unmeasuredStrongCount } = await import("../../src/tools/componentChecklist.js");
-    const counts = listed.map((c) => unmeasuredStrongCount(c).unmeasured);
-    for (let i = 1; i < counts.length; i++) {
-      expect(counts[i - 1]).toBeGreaterThanOrEqual(counts[i]);
-      if (counts[i - 1] === counts[i]) expect(found.indexOf(listed[i - 1])).toBeLessThan(found.indexOf(listed[i]));
+    const { scanPage, PageScanCache } = await import("../../src/scan/pageScan.js");
+    const direct = await scanPage({ url: baseUrl, checks: ["structure"] }, new PageScanCache(1));
+    if (direct.status !== "scanned") throw new Error("estado não alcançado");
+    const layout = direct.componentLayout ?? {};
+    const partOf = (inv.partOf ?? {}) as Record<string, string>;
+    for (const [part, host] of Object.entries(partOf)) {
+      expect(layout[part]?.partOf).toBe(host);
+      expect(listed.indexOf(part)).toBeGreaterThan(listed.indexOf(host));
+    }
+    const standalone = listed.filter((c) => !partOf[c]);
+    const key = (c: string) => [layout[c]?.visible === false ? 0 : 1, unmeasuredStrongCount(c).unmeasured] as const;
+    for (let i = 1; i < standalone.length; i++) {
+      const [va, ca] = key(standalone[i - 1]);
+      const [vb, cb] = key(standalone[i]);
+      expect(va).toBeGreaterThanOrEqual(vb);
+      if (va === vb) expect(ca).toBeGreaterThanOrEqual(cb);
+      if (va === vb && ca === cb) expect(found.indexOf(standalone[i - 1])).toBeLessThan(found.indexOf(standalone[i]));
     }
     for (const item of inv.items) {
       expect(item.stateRef).toBe(scan.scanId);

@@ -2108,7 +2108,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           return undefined;
         })();
         const newComponents = new Set(previousScan ? (result.coverage.componentsFound ?? []).filter((c) => !(previousScan.components ?? []).includes(c)) : []);
-        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c), newComponents, pageInvestigateClauses()) : undefined;
+        const investigate = hasNorms && first ? investigateFor(result.coverage.componentsFound ?? [], scanId, unmeasuredFor, unmeasuredStrongCount, (c) => investigateClauses(c), newComponents, pageInvestigateClauses(), result.componentLayout) : undefined;
         // 3.6.1 (item 1): cada pendência ganha um id de sessão e volta em todo scan até ser resolvida.
         const titleNote = sameTitle.length ? `; o mesmo <title> de ${sameTitle.slice(0, 2).map((s) => routeLabel(s.route)).join(", ")} (achado ds-page-title)` : "";
         const notJudged = (result.notJudged ?? []).map((i) => (i.code === "document-title-adequacy" && titleNote ? { ...i, observed: `${i.observed ?? ""}${titleNote}` } : i));
@@ -2120,6 +2120,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
         // das de sempre), não só contagem em observations.byKind.
         const observedItems = hasNorms ? withPendingIds(scanId, route, observedRequiredItems(result.observations)) : [];
+        // 3.7.8 (teste à mão da 3.7.7, H1): no ledger, cada pendência leva o seu pendingId — as P-NN e as O-NN (que antes
+        // nem estavam na página para onde a forma compacta aponta) — e a observação de onde a O-NN nasceu também o leva.
+        // O prefixo (as observações do scan) não muda de tamanho: os cursores de sempre continuam valendo.
+        if (hasNorms) {
+          const observedPid = new Map(observedItems.map((i) => [i.subject, i.pendingId as string]));
+          const tagged = result.observations.map((o) => {
+            const rel = (o.data as { relatedRule?: { id?: unknown } } | undefined)?.relatedRule;
+            const pid = typeof rel?.id === "string" ? observedPid.get(`${o.kind}|${rel.id}`) : undefined;
+            return pid ? { ...o, data: { ...(o.data ?? {}), pendingId: pid } } : o;
+          });
+          observationStore.set(scanId, [...tagged, ...notJudgedObservations(regularItems, url), ...notJudgedObservations(observedItems, url)]);
+        }
         const usageComponents = investigate ? [...new Set([...investigate.items.map((i) => i.component), ...(investigate.more?.components ?? [])])] : [];
         const usageOpen = usageComponents.flatMap((component) => {
           const ids = usageClauseIds(component);
@@ -2131,8 +2143,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const usageSession = session.open().filter((e) => e.usage);
         const usageLedger = ledger && usageSession.length ? { scanId, cursor: ledger.length } : undefined;
         if (ledger && usageLedger) {
-          const ordered = [...usageSession].sort((x, y) => Number(x.id.slice(2)) - Number(y.id.slice(2)));
-          ledger.push(...usageLedgerObservations(ordered.map((e) => ({ id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids) })), url));
+          // 3.7.8 (teste à mão da 3.7.7, H2): as desta rota primeiro (a linha usage-unread aponta para o início); as abertas só
+          // em outras rotas vêm depois, marcadas com a rota e o scan de origem (não são desta página).
+          const here = (e: (typeof usageSession)[number]) => (e.routes.includes(route) ? 0 : 1);
+          const ordered = [...usageSession].sort((x, y) => here(x) - here(y) || Number(x.id.slice(2)) - Number(y.id.slice(2)));
+          ledger.push(...usageLedgerObservations(ordered.map((e) => ({
+            id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids),
+            ...(here(e) ? { route: e.route, scanId: e.scans[0] } : {}),
+          })), url));
         }
         const usageItem = usageLedger ? usageUnreadItem(usageOpen, usageLedger) : undefined;
         // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.

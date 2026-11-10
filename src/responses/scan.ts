@@ -172,6 +172,14 @@ export function investigateFor(
    */
   newComponents: ReadonlySet<string> = new Set(),
   globalClauses?: { total: number; clauses: Array<{ citeAs: string; text: string; how: string; when?: string }> },
+  /**
+   * 3.7.8 (leitura dev-374-a2 §5 item 4; pendente desde a 3.7.1): a ordem por obrigações sem medida punha em todo scan os
+   * componentes de base maior na frente (`radio:44, checkbox:44, tooltip:33…`), mesmo ocultos ou só como parte de outro
+   * (o radio da lista fechada do select) — e os presentes no estado (aba, botão, upload, switch) ficavam em `more`. Agora:
+   * os visíveis neste estado antes dos ocultos; o componente que só aparece como parte de um hospedeiro (como no exemplo
+   * oficial dele) sai dos itens e vai para `more`, logo depois do hospedeiro. Sem `layout`, a ordem antiga.
+   */
+  layout?: Record<string, { visible: boolean; partOf?: string }>,
 ) {
   const page = globalClauses ? {
     stateRef: scanId,
@@ -184,9 +192,22 @@ export function investigateFor(
     page, items: [], more: null, next: page.next, doNotRepeat: MESSAGES["scan-no-repeat"],
   } : undefined;
   const isNew = (c: string) => (newComponents.has(c) ? 1 : 0);
-  const ranked = componentsInDomOrder
+  const visible = (c: string) => (layout?.[c]?.visible === false ? 0 : 1);
+  const hostOf = (c: string) => (isNew(c) ? undefined : layout?.[c]?.partOf);
+  const byRank = componentsInDomOrder
     .map((component, i) => ({ component, i, s: strong(component) }))
-    .sort((a, b) => isNew(b.component) - isNew(a.component) || b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+    .sort((a, b) => isNew(b.component) - isNew(a.component) || visible(b.component) - visible(a.component) || b.s.unmeasured - a.s.unmeasured || a.i - b.i);
+  // 3.7.8 (item 4): as partes vêm logo depois do hospedeiro; as de um hospedeiro que está nos itens, no fim de `more`.
+  const standalone = byRank.filter((r) => !hostOf(r.component));
+  const partsOf = (host: string) => byRank.filter((r) => hostOf(r.component) === host);
+  const head = standalone.slice(0, 5);
+  const tail = standalone.slice(5);
+  const ranked = [
+    ...head,
+    ...tail.flatMap((r) => [r, ...partsOf(r.component)]),
+    ...head.flatMap((r) => partsOf(r.component)),
+  ];
+  const partOf = Object.fromEntries(ranked.filter((r) => hostOf(r.component)).map((r) => [r.component, hostOf(r.component)!]));
   const fresh = ranked.filter((r) => isNew(r.component)).map((r) => r.component);
   const clauseOf = new Map(ranked.map(({ component }) => [component, clauses?.(component)]));
   const items = ranked.slice(0, 5).map(({ component, s }) => ({
@@ -223,7 +244,10 @@ export function investigateFor(
   return {
     ...(page ? { page } : {}),
     ...(Object.keys(compact.byComponent).length ? { [COMPACT_CLAUSES]: compact } : {}),
-    note: "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
+    note: layout
+      ? "Todos os componentes do DS deste estado: visíveis primeiro, por obrigações sem medida automática (requiredUnmeasured); candidatas a medir antes de encerrar; não são defeitos."
+      : "Todos os componentes do DS deste estado, por obrigações sem medida automática (requiredUnmeasured): candidatas a medir antes de encerrar; não são defeitos.",
+    ...(Object.keys(partOf).length ? { partOf, partOfNote: "partOf: achado só dentro do hospedeiro, como no exemplo oficial dele; vem depois do hospedeiro." } : {}),
     ...(fresh.length ? { newInState: fresh, newNote: "newInState: componentes que não estavam no estado anterior da sessão — vêm primeiro." } : {}),
     ...(items.some((i) => "clauses" in i)
       ? { clausesNote: "clauses: obrigações mensuráveis que nenhum check julgou, DOM/CSS primeiro; meça pelo how e dê a cada uma um estado (medida, violada ou não se aplica). As demais: next." }

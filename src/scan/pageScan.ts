@@ -18,7 +18,7 @@ import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/d
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
 import { contrastPending, kbRule, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
-import { getComponentSpecs, getTokenRegistry } from "../data/load.js";
+import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
 import type { Finding, Observation } from "../schema/finding.js";
 import { applyActions, type Arrival, type PageAction, type ReplayObserver, type ReplayResult, type SyntheticFile } from "./actions.js";
@@ -146,6 +146,59 @@ export interface PageScanResult {
   document?: { title: string; h1: string | null; mainHeading: string | null };
   /** 3.6.1 (item 3): elementos antes ocultos, revisitados neste estado. */
   revisited?: RevisitItem[];
+  /**
+   * 3.7.8 (leitura dev-374-a2 §5 item 4): por componente encontrado, se alguma instância tem caixa neste estado e, quando
+   * TODAS as instâncias estão dentro de um hospedeiro cujo exemplo oficial as traz, esse hospedeiro (o mais externo).
+   * Só ordena o investigate; nunca sai na resposta. Ausente no perfil knowledge-free.
+   */
+  componentLayout?: ComponentLayout;
+}
+
+export type ComponentLayout = Record<string, { visible: boolean; partOf?: string }>;
+
+/**
+ * 3.7.8 (item 4): visibilidade e hospedeiro de cada componente encontrado, lidos no DOM (claro e shadow roots abertos) do
+ * estado alcançado. Componente que o DOM não devolve (só a evidência o viu) fica visível e sem hospedeiro: a ordem antiga.
+ */
+export async function componentLayoutOf(page: Page, found: string[]): Promise<ComponentLayout> {
+  if (!found.length) return {};
+  const parts = componentPartsOf();
+  const raw = await page.evaluate(({ found, parts }: { found: string[]; parts: Record<string, string[]> }) => {
+    const wanted = new Set(found);
+    const out: Record<string, { n: number; visible: number; hosts: Array<string | null> }> = {};
+    const rootClasses = (el: Element) => Array.from(el.classList).filter((c) => /^br-[a-z]+$/.test(c)).map((c) => c.slice(3));
+    const parentOf = (el: Element): Element | null => el.parentElement ?? ((el.parentNode as ShadowRoot | null)?.host ?? null);
+    const visit = (root: Document | ShadowRoot) => {
+      for (const el of Array.from(root.querySelectorAll("*"))) {
+        if (el.shadowRoot) visit(el.shadowRoot);
+        for (const c of rootClasses(el)) {
+          if (!wanted.has(c)) continue;
+          const o = (out[c] ??= { n: 0, visible: 0, hosts: [] });
+          o.n += 1;
+          const style = getComputedStyle(el);
+          if (el.getClientRects().length > 0 && style.visibility !== "hidden" && style.visibility !== "collapse") o.visible += 1;
+          // o hospedeiro mais externo cujo exemplo oficial traz este componente
+          let host: string | null = null;
+          for (let a = parentOf(el); a; a = parentOf(a)) for (const h of rootClasses(a)) if (h !== c && (parts[h] ?? []).includes(c)) host = h;
+          o.hosts.push(host);
+        }
+      }
+    };
+    visit(document);
+    return out;
+  }, { found, parts });
+  const layout: ComponentLayout = {};
+  for (const c of found) {
+    const r = raw[c];
+    if (!r) {
+      layout[c] = { visible: true };
+      continue;
+    }
+    const hosts = [...new Set(r.hosts)];
+    const partOf = hosts.length === 1 && hosts[0] && found.includes(hosts[0]) ? hosts[0] : undefined;
+    layout[c] = { visible: r.visible > 0, ...(partOf ? { partOf } : {}) };
+  }
+  return layout;
 }
 
 /**
@@ -412,6 +465,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const observations: Observation[] = [];
     let elementsInspected = 0;
     let componentsFound: string[] = [];
+    let componentLayout: ComponentLayout | undefined;
     let specParts: SpecPartResult | undefined;
     /** 3.6.1: localizadores que o check de tokens mediu neste scan (para não revisitar o que já foi medido). */
     const tokenMeasured = new Map<string, Set<TokenCheck>>();
@@ -433,6 +487,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           )
         ),
       ];
+      componentLayout = await componentLayoutOf(page, componentsFound);
       if (checks.includes("tokens")) {
         // 3.4.4 (C3/C4/C5): internos de web component do DS, terceiros embutidos pelo DS e elementos não
         // renderizados não geram achado de estilo — viram observação com o motivo (ownership.ts).
@@ -627,6 +682,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(contrastIncomplete ? { contrastIncomplete } : {}),
       ...(embeddedIconButtons.length ? { embeddedIconButtons } : {}),
       ...(ariaStates.length ? { ariaStates } : {}),
+      // 3.7.8 (item 5): campos de arquivo do escopo — o caminho de erro e o arrasto ficam como pendência.
+      fileInputs: fieldEvidence
+        .filter((el) => el.tagName === "input" && (el.attributes.type ?? "").toLowerCase() === "file")
+        .map((el) => ({ locator: el.locator, accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null })),
     });
     const value: CachedScan = {
       status: "scanned",
@@ -636,6 +695,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       observations,
       ...(notJudged.length ? { notJudged } : {}),
       ...(specParts ? { specParts: { measured: specParts.measured, skipped: specParts.skipped } } : {}),
+      ...(componentLayout ? { componentLayout } : {}),
       document: { title: facts.title ?? "", h1: facts.h1 ?? null, mainHeading: facts.mainHeading ?? null },
       ...(revisited ? { revisited } : {}),
       coverage: {

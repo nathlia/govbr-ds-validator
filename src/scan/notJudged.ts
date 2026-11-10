@@ -25,7 +25,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required" | "upload-paths";
   subject: string;
   count?: number;
   observed?: string;
@@ -98,6 +98,8 @@ export interface NotJudgedInput {
   embeddedIconButtons?: Array<{ locator: string; host: string; examples: string[] }>;
   /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
   ariaStates?: NotJudgedItem[];
+  /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
+  fileInputs?: Array<{ locator: string; accept: string | null }>;
 }
 
 const EXAMPLES = 3;
@@ -258,12 +260,44 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
     elementSet: setHash(candidates.map((c) => c.locator)),
     elementBound: true,
     boundLocators: candidates.map((c) => c.locator),
-    observed: `dentro de ${hosts.join(", ")}: a marcação coincide com o exemplo oficial do DS${examples.length ? ` (${examples.join(", ")})` : ""}`,
-    todo: "a investigar: o C01 não acusa (o exemplo oficial traz o mesmo botão sem circle); decida se viola o rótulo obrigatório",
+    // 3.7.8 (análise "especificações não achadas", B-09/B-10; D-166): o texto da 3.7.2 punha o exemplo oficial como
+    // motivo ("o C01 não acusa (o exemplo oficial traz o mesmo botão sem circle)") e três execuções o usaram para
+    // descartar o fato. Agora fato e norma separados, no modelo de força da base: o exemplo é `example` (não é norma); a
+    // norma é a cláusula citada. O oráculo não afirma a violação.
+    observed: `dentro de ${hosts.join(", ")}; marcação igual a exemplo oficial${examples.length ? ` (${examples.join(", ")})` : ""} — exemplo tem força example, não é norma`,
+    todo: "meça texto visível e nome acessível; decida pela cláusula citada",
     // só a cláusula do rótulo: a forma curta da pendência cita a 1ª norma que não está em `rule` (a anatomia tomaria o lugar)
     norms: [BUTTON_LABEL_REQUIRED],
     ...(rule ? { rule } : {}),
-    measure: "texto visível no botão × classe/atributo circle",
+    measure: "o check automático do botão só com ícone não cobre botão dentro de outro componente; a norma é a cláusula citada (required), não o exemplo: texto visível no botão × circle × nome acessível",
+  };
+}
+
+/**
+ * 3.7.8 (leitura dev-374-a2 §3/§5 item 5): o campo de arquivo só foi exercido pelo caminho válido — a ação `upload` com um
+ * arquivo aceito, e a `drop` nunca. O que a página faz com arquivo que deve recusar (a mensagem, o formato declarado) e no
+ * arrasto só aparece exercendo esses caminhos; nenhum check os exerce. Pendência de ELEMENTOS (os campos de arquivo), por
+ * rota, com o `accept` lido da marcação. Procedimento genérico: nada de tela, nenhum veredito.
+ */
+export const UPLOAD_PATHS_TODO = "exerça upload a recusar e drop no campo, cada um com arrival";
+export const UPLOAD_PATHS_MEASURE =
+  "scan_page actions upload com um arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo de soltar + arrival; o drop termina no evento drop: o estado DURANTE o arrasto (dragenter/dragover sem soltar) meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
+
+export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null }>): NotJudgedItem | null {
+  if (!inputs.length) return null;
+  const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
+  return {
+    code: "upload-paths",
+    subject: "campos de arquivo (input type=file)",
+    count: inputs.length,
+    examples: inputs.slice(0, EXAMPLES).map((i) => clip(i.locator, 120)),
+    elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
+    elementBound: true,
+    boundLocators: inputs.map((i) => i.locator),
+    observed: accepts.join("; "),
+    todo: UPLOAD_PATHS_TODO,
+    ...grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]),
+    measure: UPLOAD_PATHS_MEASURE,
   };
 }
 
@@ -380,6 +414,8 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   const embedded = embeddedIconButtonPending(input.embeddedIconButtons ?? []);
   if (embedded) items.push(embedded);
   items.push(...(input.ariaStates ?? []));
+  const upload = uploadPathsPending(input.fileInputs ?? []);
+  if (upload) items.push(upload);
   return items;
 }
 
@@ -436,14 +472,25 @@ export function usageUnreadItem(open: Array<{ id: string; component: string }>, 
  * id), com o componente, os ids e as chamadas get_ds_rules{ids, detail:"index"} (até 20 ids cada) que os devolvem. Uma
  * observação só, com todas, passava de 8.000 caracteres com 26 componentes.
  */
-export function usageLedgerObservations(open: Array<{ id: string; component: string; calls: unknown[] }>, url: string): Observation[] {
+export function usageLedgerObservations(open: Array<{ id: string; component: string; calls: unknown[]; route?: string; scanId?: string }>, url: string): Observation[] {
+  // 3.7.8 (H2): a pendência aberta só noutra rota leva a rota e o scan de origem (element.page = a rota dela), não esta página.
   return open.map((o) => ({
     kind: "not-judged",
-    element: { locator: "html", page: url },
-    note: `usage-unread ${o.id}: ${o.component}`,
+    element: { locator: "html", page: o.route ?? url },
+    note: `usage-unread ${o.id}: ${o.component}${o.route ? ` (outra rota: ${routePath(o.route)}${o.scanId ? `, ${o.scanId}` : ""})` : ""}`,
     whyNotAFinding: "Pendência de leitura: nada foi julgado. Fecha quando estas chamadas (ou a listagem do componente pelo cursor) devolvem todas as cláusulas dele.",
-    data: { code: "usage-unread", pendingId: o.id, component: o.component, calls: o.calls },
+    data: { code: "usage-unread", pendingId: o.id, component: o.component, ...(o.route ? { otherRoute: routePath(o.route), ...(o.scanId ? { fromScan: o.scanId } : {}) } : {}), calls: o.calls },
   }) as Observation);
+}
+
+/** O caminho de uma chave de rota (origem + caminho), para leitura. */
+function routePath(route: string): string {
+  try {
+    const u = new URL(route.replace(/#.*$/, ""));
+    return `${u.pathname}${route.includes("#") ? route.slice(route.indexOf("#")) : ""}`;
+  } catch {
+    return route;
+  }
 }
 
 const USAGE_LIST_MAX = 160;
@@ -583,7 +630,14 @@ export function pendingLine(i: PendingItem): string {
         ...(i.remaining?.length ? [`falta ${i.remaining.slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX)).join(", ")}`] : (i.examples ?? []).slice(0, 2).map((l) => clip(l, SHORT_LOCATOR_MAX))),
         ...(i.observed ? [clip(i.observed, SHORT_TASK_MAX)] : []),
       ].join("; ");
-  return `${i.pendingId ? `${i.pendingId}:` : ""}${i.code}${i.count !== undefined ? `:${i.count}` : ""}${norms.length ? `⇒${norms.join(",")}` : ""}${i.resolved !== undefined ? "✓" : ""}${where ? ` @${where}` : ""} · ${clip(i.todo, SHORT_TASK_MAX)}`;
+  return `${i.pendingId ? `${i.pendingId}:` : ""}${i.code}${i.count !== undefined ? `:${i.count}` : ""}${norms.length ? `⇒${norms.join(",")}` : ""}${i.resolved !== undefined ? "✓" : ""}${where ? ` @${where}` : ""} · ${shortTodo(i.todo)}`;
+}
+
+/** 3.7.8 (H3): a tarefa curta nunca corta a condição exata do verify no meio. */
+function shortTodo(todo: string): string {
+  const short = clip(todo, SHORT_TASK_MAX);
+  const condition = conditionOf(todo);
+  return condition && !short.includes(condition) ? `verify_finding expectedCondition ${condition}` : short;
 }
 
 /**
@@ -635,8 +689,16 @@ export function pendingLineMinimal(line: string): string {
     .replace(/ ratio (\S+)/, " $1:1");
   // 3.7.5-pre.3: a tarefa da linha de leitura é uma chamada (`get_ds_rules{ids,detail:"index"} por componente`): corta no ";".
   const usage = head.includes(":usage-unread:");
-  const shortTask = (usage ? task.split(";")[0] : task.split(/[:(;]/)[0]).trim();
-  return `${head}${norm ? `⇒${norm}` : ""}${done ? "✓" : ""}${place ? ` @${clip(place, 56)}` : ""}${shortTask ? ` · ${clip(shortTask, usage ? 48 : 32)}` : ""}`;
+  // 3.7.8 (teste à mão da 3.7.7, H3): a condição exata do verify é a única coisa que não pode sumir na compactação (sem
+  // ela o verify responde no-predicate) — a tarefa mínima vira `verify_finding expectedCondition <condição>`.
+  const condition = conditionOf(task);
+  const shortTask = condition ? `verify_finding expectedCondition ${condition}` : (usage ? task.split(";")[0] : task.split(/[:(;]/)[0]).trim();
+  return `${head}${norm ? `⇒${norm}` : ""}${done ? "✓" : ""}${place ? ` @${clip(place, 56)}` : ""}${shortTask ? ` · ${condition ? shortTask : clip(shortTask, usage ? 48 : 32)}` : ""}`;
+}
+
+/** 3.7.8 (H3): a condição estruturada do verify citada numa tarefa (`expectedCondition x-y-z`), ou null. */
+export function conditionOf(task: string): string | null {
+  return /expectedCondition[\s:"]+([a-z][a-z0-9-]*)/.exec(task)?.[1] ?? null;
 }
 
 /** 3.6.3: a forma curta → a mínima (uma norma, um lugar, a tarefa em poucas palavras); null se já é mínima. */
@@ -652,7 +714,9 @@ export function pageLevelMinimal<T extends { notMeasured?: Array<unknown> }>(blo
  * curta da 3.6.2), para que num teto apertado a norma não suma antes do código.
  */
 export function pendingLineNorm(line: string): string {
-  return line.split(" @")[0].split(" · ")[0];
+  // 3.7.8 (H3): a condição exata do verify sobrevive também neste degrau.
+  const condition = conditionOf(splitOnce(line, " · ")[1]);
+  return `${line.split(" @")[0].split(" · ")[0]}${condition ? ` · expectedCondition ${condition}` : ""}`;
 }
 
 /** 3.6.3: a forma mínima → `código⇒norma`; null se já está nela. */

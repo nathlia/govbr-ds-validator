@@ -140,6 +140,28 @@ export function getComponentSpecs(): ComponentSpecsData {
   return (componentSpecs ??= load<ComponentSpecsData>("component-specs.json"));
 }
 
+let componentParts: Record<string, string[]> | undefined;
+
+/**
+ * 3.7.8 (leitura dev-374-a2 §5 item 4): os componentes do DS que os exemplos OFICIAIS de cada componente trazem dentro
+ * dele (classes raiz `br-*` no HTML dos exemplos, menos a própria) — o radio e o checkbox na lista do select, o botão
+ * do input. Um componente achado só como parte do hospedeiro (dentro dele, como no exemplo) é anatomia do hospedeiro.
+ */
+export function componentPartsOf(): Record<string, string[]> {
+  if (componentParts) return componentParts;
+  const out: Record<string, string[]> = {};
+  for (const [name, spec] of Object.entries(getComponentSpecs().components)) {
+    const parts = new Set<string>();
+    for (const example of spec.examples ?? []) {
+      for (const m of example.html.matchAll(/class="([^"]*)"/g)) {
+        for (const c of m[1].split(/\s+/)) if (/^br-[a-z]+$/.test(c) && c !== `br-${name}`) parts.add(c.slice(3));
+      }
+    }
+    if (parts.size) out[name] = [...parts].sort();
+  }
+  return (componentParts = out);
+}
+
 /** Find an e-MAG rule by id (e.g. "3.5") across all sections. */
 export function findEmagRule(id: string): (EmagRule & { section: string }) | undefined {
   guardKnowledge("findEmagRule");
