@@ -476,8 +476,8 @@ function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> |
     return { ...r, checksRun: { ...cr, pageLevel: { count: pl.notMeasured.length + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
   }
   if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
-  // 3.7.5 (item 6): a linha de leitura agrega ids (`P-09..P-12` ou `P-09,P-12`) — fica como um rótulo só.
-  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+(?:(?:\.\.|,)P-\d+)*$/.test(i));
+  // 3.7.5 (item 6): a linha de leitura agrega ids (`L-01..L-04` ou `L-01,L-04`; revisão M4: espaço próprio) — um rótulo só.
+  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^P-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$/.test(i));
   if (!ids.length) return null;
   return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
 }
@@ -844,11 +844,9 @@ function assembleReservedScan(
   const summaryForms = (facts: Record<string, unknown>, block: Record<string, unknown>, tight: boolean) => {
     const full = summaryOf(block);
     if (!tight || !full || full.complete) return [full];
+    // Revisão M2: o next é sempre a chamada (objeto), como em toda resposta; a contagem fica enquanto couber.
     const { note: _n, ...plain } = full;
-    const inv = (facts.investigate as { next?: { tool?: string } } | undefined)?.next;
-    const pointer = inv && (inv.tool === "get_component_spec" || inv.tool === "get_page_rules")
-      ? [{ complete: false, deferred: full.deferred, next: "investigate.next" }, { complete: false, next: "investigate.next" }] : [];
-    return [full, plain, ...pointer];
+    return [full, plain, { complete: false, deferred: full.deferred, next: full.next }, { complete: false, next: full.next }];
   };
   const attach = (facts: Record<string, unknown>, block: Record<string, unknown>, budget: number, tight = false) => {
     for (const summary of summaryForms(facts, block, tight)) {
@@ -859,6 +857,12 @@ function assembleReservedScan(
       if (textSize(out) <= budget) return out;
     }
     return null;
+  };
+  /** O bloco com o estado das cláusulas na forma compacta ({complete, deferred, next}): o piso do espaço que ele toma. */
+  const tightSize = (block: Record<string, unknown>) => {
+    const summary = summaryOf(block);
+    if (!summary || summary.complete) return blockSize(block);
+    return textSize({ clauseReserve: block, clauses: { complete: false, next: summary.next } }) - 1;
   };
   /** O bloco e o estado das cláusulas que o acompanha no topo (3.7.5): o espaço que a reserva toma da página. */
   const blockSize = (block: Record<string, unknown>) => {
@@ -907,9 +911,11 @@ function assembleReservedScan(
     // Revisão MED 2: "não cabem" decidido pela lista de fatos já sem os acréscimos e sem as chaves constantes (o que a
     // escada retira no fim), no maior orçamento de famílias cuja lista sozinha cabe no teto — sem cabeçalho nenhum.
     if (pathFloor && !factsCouldFit(budget)) {
-      const room = budget - blockSize(pathFloor) - 24;
+      // Revisão (medida B1): com fatos que não cabem, o estado das cláusulas entra na forma compacta — a página de fatos é
+      // montada como na 3.7.4 com o piso, e só o que sobrar leva nota e byComponent.
+      const room = budget - tightSize(pathFloor) - 24;
       const f = room >= 300 ? factsWithin(room) : null;
-      const out = f && f.kind !== "error" && (allItems === 0 || listedItems(f) >= 1) ? attach(f, pathFloor, budget) : null;
+      const out = f && f.kind !== "error" && (allItems === 0 || listedItems(f) >= 1) ? attach(f, pathFloor, budget, true) : null;
       return out ? { ok: out } : { refuse: "indivisible-content-and-floor-exceed-budget" };
     }
     const facts = factsWithin(budget);
@@ -923,12 +929,12 @@ function assembleReservedScan(
       const p = PROTECTED_PARTS(r.compacted);
       return p !== null ? [...p].every((l) => guarded.has(l)) : r.compacted === undefined;
     };
-    const withReserve = (block: Record<string, unknown>, mustKeep: boolean) => {
-      const room = budget - blockSize(block) - 24;
+    const withReserve = (block: Record<string, unknown>, mustKeep: boolean, tight = false) => {
+      const room = budget - (tight ? tightSize(block) : blockSize(block)) - 24;
       if (room < 300) return null;
       const f = factsWithin(room);
       if (mustKeep ? !keepsFacts(f) : f.kind === "error" || (allItems > 0 && listedItems(f) < 1)) return null;
-      return attach(f, block, budget);
+      return attach(f, block, budget, tight);
     };
     // A reserva até a quota; se não cabe no que sobrou, encolhe o cabeçalho com continuação (investigate, cobertura,
     // estado, observações; pendências até a linha com tarefa) — nunca tira fato nem os acréscimos das famílias. Formas
@@ -983,18 +989,48 @@ function assembleReservedScan(
         if (direct) return { ok: direct };
         // 3.7.5 (R1): a forma mínima do estado das cláusulas (o attach desce até ela) conta no espaço que a página cede; a
         // escada do cabeçalho não é monótona no teto, então a folga de montagem desce de 24 a -24 (o attach confere o teto).
-        const least = textSize({ clauseReserve: tiny, clauses: { complete: false, deferred: candidates.length, next: "investigate.next" } }) - 1;
+        const least = textSize({ clauseReserve: tiny, clauses: { complete: false, next: summaryOf(tiny)?.next } }) - 1;
         for (const slack of [24, 12, 0, -12, -24]) {
           const f = factsWithin(budget - least - slack);
           const out = f.kind !== "error" && listedItems(f) >= listed ? attach(f, tiny, budget, true) : null;
           if (out) return { ok: out };
         }
       }
+      // Revisão M2: nem o aviso mínimo da reserva coube — o estado das cláusulas não some: fica `clauses` sozinho (a reserva
+      // adiada é dita por ele), encolhendo o cabeçalho se preciso. Só sem nem isso, os fatos sozinhos.
+      const minimal = summaryOf({ clauses: [] });
+      if (minimal && !minimal.complete) {
+        // No piso, a chamada pode ser a do investigate.next (a lista de verificação do 1º componente do investigate), quando
+        // ele também tem cláusulas não entregues — a mesma forma de chamada, às vezes mais curta.
+        const inv = (facts.investigate as { next?: { tool?: string; arguments?: { component?: string; view?: string } } } | undefined)?.next;
+        const byComponent = (minimal.byComponent ?? {}) as Record<string, number>;
+        const invCall = inv?.tool === "get_component_spec" && inv.arguments?.component && (byComponent[inv.arguments.component] || (minimal.next as { arguments?: { component?: string } })?.arguments?.component === inv.arguments.component)
+          ? { tool: "get_component_spec", arguments: { component: inv.arguments.component, view: "checklist" } } : undefined;
+        const nexts = [minimal.next, ...(invCall && JSON.stringify(invCall).length < JSON.stringify(minimal.next).length ? [invCall] : [])];
+        for (const summary of nexts.flatMap((next) => [{ complete: false, deferred: minimal.deferred, next }, { complete: false, next }])) {
+          const fit = (f: Record<string, unknown>) => {
+            const out: Record<string, unknown> = withClausesSummary(f, summary);
+            if (typeof out.responseCharsEstimate === "number") for (let i = 0; i < 4; i++) out.responseCharsEstimate = textSize(out);
+            if (textSize(out) <= budget) return out;
+            // Como no montador de sempre (assembleScan): sem espaço para o campo de tamanho, ele sai — nunca o estado.
+            const { responseCharsEstimate: _r, itemsChars: _i, ...rest } = out;
+            return textSize(rest) <= budget ? rest : null;
+          };
+          const direct = fit(facts);
+          if (direct) return { ok: direct };
+          const least = textSize({ clauses: summary }) - 1;
+          for (const slack of [24, 12, 0, -12, -24]) {
+            const f = factsWithin(budget - least - slack);
+            const out = f.kind !== "error" && listedItems(f) >= listed ? fit(f) : null;
+            if (out) return { ok: out };
+          }
+        }
+      }
       return { ok: facts };
     }
     // 4) os fatos já não cabem inteiros: o piso pode custar família (fica ao menos uma).
     if (pathFloor) {
-      const out = withReserve(pathFloor, false);
+      const out = withReserve(pathFloor, false, true);
       if (out) return { ok: out };
     }
     return { refuse: full.unavailable && !pathFloor ? "literal-scope-unavailable" : "indivisible-content-and-floor-exceed-budget" };

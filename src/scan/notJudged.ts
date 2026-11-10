@@ -325,7 +325,7 @@ export type PendingItem = NotJudgedItem & { pendingId?: string; resolved?: unkno
  * 3.7.5 (item 6): os ids das pendências em ordem, com as sequências de 3 ou mais em faixa: `P-07..P-13,P-18,P-19,P-32..P-35`.
  * Lido da esquerda para a direita, dá os ids na ordem dos componentes da linha.
  */
-function idsLabel(ids: string[]): string {
+export function pendingIdsLabel(ids: string[]): string {
   const n = ids.map((id) => Number(id.slice(2)));
   const out: string[] = [];
   for (let i = 0; i < n.length;) {
@@ -341,7 +341,7 @@ function idsLabel(ids: string[]): string {
 /** 3.7.5-pre.2: onde estão os ids a ler (a observação de leitura do scan, no ledger). */
 export type UsageLedger = { scanId: string; cursor: number };
 const usageTodo = (ledger: UsageLedger) =>
-  `get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}`;
+  `get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}, uma por componente`;
 
 /**
  * 3.7.5 (item 6): UMA linha agrega as pendências de leitura (`usage-unread`) dos componentes desta página ainda não lidos:
@@ -356,7 +356,7 @@ export function usageUnreadItem(open: Array<{ id: string; component: string }>, 
     code: "usage-unread",
     subject: "cláusulas de uso e juízo (uso, melhores práticas, tom e voz) que obrigam, proíbem ou desaconselham",
     count: open.length,
-    pendingId: idsLabel(open.map((o) => o.id)),
+    pendingId: pendingIdsLabel(open.map((o) => o.id)),
     examples: open.map((o) => o.component),
     todo: usageTodo(ledger),
     measure: "leitura, sem veredito: um id por componente, na ordem; fecha quando o servidor vê devolvidas todas as cláusulas do componente (pendingResolved não fecha)",
@@ -364,17 +364,18 @@ export function usageUnreadItem(open: Array<{ id: string; component: string }>, 
 }
 
 /**
- * 3.7.5-pre.2: a observação de leitura no ledger — para cada pendência de leitura aberta na sessão, o componente, os ids
- * e as chamadas get_ds_rules{ids} (até 20 ids cada) que os devolvem.
+ * 3.7.5-pre.2; revisão H2: as observações de leitura no ledger — UMA por pendência de leitura aberta na sessão (em ordem de
+ * id), com o componente, os ids e as chamadas get_ds_rules{ids, detail:"index"} (até 20 ids cada) que os devolvem. Uma
+ * observação só, com todas, passava de 8.000 caracteres com 26 componentes.
  */
-export function usageLedgerObservation(open: Array<{ id: string; component: string; calls: unknown[] }>, url: string): Observation {
-  return {
+export function usageLedgerObservations(open: Array<{ id: string; component: string; calls: unknown[] }>, url: string): Observation[] {
+  return open.map((o) => ({
     kind: "not-judged",
     element: { locator: "html", page: url },
-    note: `usage-unread: ${open.length} componente(s) com cláusulas de uso a ler`,
-    whyNotAFinding: "Pendência de leitura: nada foi julgado. Cada pendingId fecha quando estas chamadas (ou a listagem do componente pelo cursor) devolvem todas as cláusulas dele.",
-    data: { code: "usage-unread", reads: open.map((o) => ({ pendingId: o.id, component: o.component, calls: o.calls })) },
-  } as Observation;
+    note: `usage-unread ${o.id}: ${o.component}`,
+    whyNotAFinding: "Pendência de leitura: nada foi julgado. Fecha quando estas chamadas (ou a listagem do componente pelo cursor) devolvem todas as cláusulas dele.",
+    data: { code: "usage-unread", pendingId: o.id, component: o.component, calls: o.calls },
+  }) as Observation);
 }
 
 const USAGE_LIST_MAX = 160;

@@ -131,7 +131,7 @@ describe("A5 — reserva no MCP e recuperação do lote", () => {
       // 3.7.5 (R2): as cláusulas que saíram inteiras não se repetem (só a referência); um contexto já entregue que volte
       // com uma cláusula nova vem só pela referência.
       const firstIds = (first.clauses as Array<{ citeAs: string }>).map((c) => c.citeAs);
-      expect(data.clauseReserve.alreadyDelivered).toEqual({ count: firstIds.length, in: [expect.stringMatching(/^S-/)] });
+      expect(data.clauseReserve.alreadyDelivered).toEqual({ count: firstIds.length, in: [expect.stringMatching(/^S-/)], ids: firstIds });
       expect((data.clauseReserve.clauses as Array<{ citeAs: string }>).some((c) => firstIds.includes(c.citeAs))).toBe(false);
       for (const [key] of shown) {
         const ctx = data.clauseReserve.contexts?.[key];

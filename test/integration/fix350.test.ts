@@ -232,7 +232,9 @@ describe("3.5.0 item 1 / P8 — checksRun.pageLevel: o medido e o que nenhum che
       if (small.isError) expect(small.data).toMatchObject({ kind: "error", errorCode: "item-too-large", scanId: expect.any(String) });
       else {
         expect(small.data.families.length).toBe(small.data.totalFamilies);
-        expect(small.data.clauseReserve).toMatchObject({ status: "deferred-by-facts" });
+        // 3.7.5 (R2/L3): com as cláusulas já entregues no scan anterior desta sessão, o status é delivered-earlier.
+        expect(["deferred-by-facts", "delivered-earlier"]).toContain(small.data.clauseReserve?.status ?? (small.data.clauses?.complete === false ? "deferred-by-facts" : undefined));
+        if (small.data.clauseReserve?.status === "delivered-earlier") expect(small.data.clauses).toEqual({ complete: true });
         expect(small.data.checksRun.pageLevel.next ?? small.data.checksRun.pageLevel.full).toBeDefined();
       }
       // revisão (MED): o cabeçalho do ledger leva só códigos + contagem; os itens inteiros paginam como observações.

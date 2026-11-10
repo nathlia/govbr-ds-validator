@@ -55,8 +55,8 @@ const reread = (id: string) => ({ tool: "get_ds_rules", arguments: { id } });
 
 const NOTE = "Leitura contextual deduplicada: candidatas, não veredito nem pendingId; confira condições e aplicabilidade (o contexto tem modalidade própria). contexts: literal-scope inteiro; literal-window = trechos literais (source.ranges; [… ] = salto); deferred/delivered = referência (delivered: o texto saiu em deliveredIn). next = get_ds_rules{id}: parágrafo literal e cláusulas adjacentes da seção, sem as introduções ancestrais do escopo.";
 
-/** 3.7.5 (R2): cláusulas da reserva já entregues inteiras nesta sessão — referência, não texto. */
-export type EarlierClauses = { count: number; in: string[] };
+/** 3.7.5 (R2): cláusulas da reserva já entregues inteiras nesta sessão — referência, não texto (L1: com os ids). */
+export type EarlierClauses = { count: number; in: string[]; ids: string[] };
 /** Sessão: o scan em que a cláusula da reserva já saiu inteira; undefined = não saiu. */
 export type ClauseDelivered = (id: string) => string | undefined;
 
@@ -68,20 +68,24 @@ export function splitDelivered(candidates: ReserveCandidate[], delivered?: Claus
   if (!delivered) return { fresh: candidates };
   const fresh: ReserveCandidate[] = [];
   const scans: string[] = [];
-  let count = 0;
+  const ids: string[] = [];
   for (const c of candidates) {
     const scanId = delivered(c.rule.id);
     if (scanId === undefined) { fresh.push(c); continue; }
-    count++;
+    ids.push(c.rule.id);
     if (!scans.includes(scanId)) scans.push(scanId);
   }
-  return count ? { fresh, earlier: { count, in: scans.slice(0, 3) } } : { fresh };
+  return ids.length ? { fresh, earlier: { count: ids.length, in: scans.slice(0, 3), ids } } : { fresh };
 }
 
-/** Referência às cláusulas já entregues (sem a lista de ids: o texto está nas respostas indicadas). */
-const earlierBlock = (earlier?: EarlierClauses) => earlier ? { alreadyDelivered: { count: earlier.count, in: earlier.in } } : {};
+/**
+ * Referência às cláusulas já entregues: os scans em que saíram e (revisão L1) os ids, para reler por
+ * get_ds_rules{ids} sem procurar nas respostas antigas.
+ */
+const earlierBlock = (earlier?: EarlierClauses) => earlier ? { alreadyDelivered: { count: earlier.count, in: earlier.in, ids: earlier.ids } } : {};
 
-const CLAUSES_NOTE = "O complete dos fatos não cobre as cláusulas: as não entregues nesta resposta vêm pelo next.";
+/** Revisão M1: o next é a lista de UM componente; byComponent diz quantas faltam em cada um (a mesma chamada, outro componente). */
+const CLAUSES_NOTE = "O complete dos fatos não cobre as cláusulas. deferred = candidatas não entregues aqui, por componente em byComponent; next = a lista de verificação do 1º (para os demais, a mesma chamada com o componente; page = get_page_rules{view:\"checklist\"}).";
 
 /**
  * 3.7.5 (opção 1 do mecanismo dev-374-b): estado das cláusulas candidatas desta resposta, separado do `complete` dos fatos.
@@ -91,14 +95,16 @@ const CLAUSES_NOTE = "O complete dos fatos não cobre as cláusulas: as não ent
  */
 export function clausesSummary(block: Record<string, unknown>, fresh: ReserveCandidate[], earlier?: EarlierClauses): Record<string, unknown> | undefined {
   if (!fresh.length && !earlier) return undefined;
-  const shown = Array.isArray(block.clauses) ? block.clauses.length : 0;
-  const deferred = Math.max(0, fresh.length - shown);
+  // Revisão L7: pelo conjunto de ids mostrados, não pela contagem.
+  const shownIds = new Set((Array.isArray(block.clauses) ? block.clauses : []).map((c) => (c as { citeAs?: string }).citeAs));
+  const pending = fresh.filter((c) => !shownIds.has(c.rule.id));
+  const deferred = pending.length;
   const refs = Object.values((block.contexts ?? {}) as Record<string, { status?: string; next?: unknown }>).filter((c) => c && c.status === "deferred");
   if (!deferred && !refs.length) return { complete: true };
   let next: unknown;
   if (deferred) {
     const counts = new Map<string | null, number>();
-    for (const c of fresh.slice(shown)) {
+    for (const c of pending) {
       const k = c.component === undefined ? (c.rule.component ?? null) : c.component;
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
@@ -109,7 +115,17 @@ export function clausesSummary(block: Record<string, unknown>, fresh: ReserveCan
       ? { tool: "get_page_rules", arguments: { view: "checklist" } }
       : { tool: "get_component_spec", arguments: { component: best, view: "checklist" } };
   } else next = refs[0].next;
-  return { complete: false, deferred, ...(refs.length ? { contextsByReference: refs.length } : {}), next, note: CLAUSES_NOTE };
+  // Revisão M1: quantas faltam por componente (o next cobre um só: o 1º daqui, o de mais pendentes); `page` = as globais.
+  const byComponent: Record<string, number> = {};
+  if (deferred) {
+    const counts = new Map<string, number>();
+    for (const c of pending) {
+      const k = (c.component === undefined ? c.rule.component : c.component) ?? "page";
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    for (const [k, n] of [...counts].sort((x, y) => y[1] - x[1])) byComponent[k] = n;
+  }
+  return { complete: false, deferred, ...(Object.keys(byComponent).length > 1 ? { byComponent } : {}), ...(refs.length ? { contextsByReference: refs.length } : {}), next, note: CLAUSES_NOTE };
 }
 
 export type ReserveOptions = {
@@ -230,6 +246,10 @@ export function selectReserve(candidates: ReserveCandidate[], maxChars: number, 
 export function deferredReserve(candidates: ReserveCandidate[], maxChars: number, tiny = false, earlier?: EarlierClauses) {
   const ids = candidates.slice(0, 3).map((c) => c.rule.id);
   // 3.7.5 (R1): o caminho para lê-las é o next de `clauses` (topo da resposta), que acompanha toda forma deste bloco.
+  // Revisão L3: sem candidata que falte (todas já entregues na sessão), o status é o mesmo do bloco cheio.
+  if (!candidates.length && earlier) {
+    return { version: CLAUSE_RESERVE_VERSION, targetChars: Math.ceil(maxChars * .2), contentChars: 0, status: "delivered-earlier", ...(tiny ? {} : earlierBlock(earlier)) };
+  }
   return { version: CLAUSE_RESERVE_VERSION, targetChars: Math.ceil(maxChars * .2), contentChars: 0, status: "deferred-by-facts",
     ...(tiny ? {} : { note: "A 1ª página (fatos e pendências) não deixou espaço para uma cláusula inteira. Leia as candidatas pelo next de clauses ou peça maxChars maior.", candidates: ids, total: candidates.length, ...earlierBlock(earlier) }) };
 }

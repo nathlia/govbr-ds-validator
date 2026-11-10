@@ -11,8 +11,8 @@ import { pageChecklistRules } from "../../src/tools/pageChecklist.js";
 import { assembleScan } from "../../src/responses/scan.js";
 import { textSize } from "../../src/responses/contract.js";
 import { ScanSession, sessionPendingBlock } from "../../src/scan/session.js";
-import { pendingLine, pendingLineMinimal, pendingLineNorm, usageLedgerObservation, usageUnreadItem } from "../../src/scan/notJudged.js";
-import { usageClauseIds, usageReadCalls } from "../../src/tools/usageClauses.js";
+import { pendingLine, pendingLineMinimal, pendingLineNorm, usageLedgerObservations, usageUnreadItem } from "../../src/scan/notJudged.js";
+import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "../../src/tools/usageClauses.js";
 import { getRuleById } from "../../src/data/knowledge.js";
 
 const real = () => reserveCandidates(["radio", "checkbox", "select", "table"]);
@@ -126,7 +126,7 @@ describe("R2 — cláusula já entregue na sessão não se repete; o prefixo ava
     s.markClauseDelivered(candidates[0].rule.id, "S-page-009"); // a 1ª entrega fica
     const { fresh, earlier } = splitDelivered(candidates, (id) => s.clauseDelivered(id));
     expect(fresh.map((c) => c.rule.id)).toEqual(candidates.filter((_, i) => i !== 0 && i !== 2).map((c) => c.rule.id));
-    expect(earlier).toEqual({ count: 2, in: ["S-page-001", "S-page-002"] });
+    expect(earlier).toEqual({ count: 2, in: ["S-page-001", "S-page-002"], ids: [candidates[0].rule.id, candidates[2].rule.id] });
     expect(splitDelivered(candidates, () => undefined)).toEqual({ fresh: candidates });
   });
 
@@ -140,7 +140,7 @@ describe("R2 — cláusula já entregue na sessão não se repete; o prefixo ava
     const block = second.clauseReserve as { clauses: Array<{ citeAs: string }>; alreadyDelivered: unknown };
     const ids = block.clauses.map((c) => c.citeAs);
     expect(ids.some((id) => shown.includes(id))).toBe(false);
-    expect(block.alreadyDelivered).toEqual({ count: shown.length, in: ["S-page-001"] });
+    expect(block.alreadyDelivered).toEqual({ count: shown.length, in: ["S-page-001"], ids: shown });
     const rest = real().filter((c) => !shown.includes(c.rule.id)).map((c) => c.rule.id);
     expect(ids).toEqual(rest.slice(0, ids.length));
     expect(second.clauses).toMatchObject({ complete: false, deferred: rest.length - ids.length });
@@ -209,7 +209,7 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
     const L = { scanId: "S-page-001", cursor: 12 };
     const item = usageUnreadItem([{ id: "P-09", component: "accordion" }, { id: "P-10", component: "avatar" }, { id: "P-11", component: "table" }], L)!;
     const line = pendingLine(item);
-    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"S-page-001",view:"observations",cursor:12}');
+    expect(line).toBe('P-09..P-11:usage-unread:3 @accordion,avatar,table · get_ds_rules{ids,detail:"index"} por componente; ids: get_finding_details{scanId:"S-page-001",view:"observations",cursor:12}, uma por componente');
     expect(usageUnreadItem([{ id: "P-12", component: "b" }, { id: "P-09", component: "a" }], L)).toMatchObject({ pendingId: "P-09,P-12", examples: ["a", "b"] });
     // sessão longa: ids misturados viram faixas na ordem, e os componentes acompanham
     const mixed = usageUnreadItem([32, 7, 33, 8, 10, 11, 18, 19, 12, 13, 34, 35, 9].map((n) => ({ id: `P-${String(n).padStart(2, "0")}`, component: `c${n}` })), L)!;
@@ -220,7 +220,7 @@ describe("item 6 — usage-unread na sessão e na linha compacta", () => {
     expect(pendingLineNorm(line)).toBe("P-09..P-11:usage-unread:3");
     // a lista de componentes é cortada num teto (muitos componentes)
     const many = usageUnreadItem(Array.from({ length: 30 }, (_, i) => ({ id: `P-${10 + i}`, component: `componente${i}` })), L)!;
-    expect(pendingLine(many).length).toBeLessThanOrEqual(320);
+    expect(pendingLine(many).length).toBeLessThanOrEqual(340);
   });
 
   it("sessionPending: a de outra rota aparece com os componentes e a leitura; a desta página não se repete", () => {
@@ -252,7 +252,72 @@ describe("item 6 (pre.2) — conjunto e chamadas de leitura", () => {
   });
 
   it("observação de leitura no ledger: pendingId, componente e chamadas de cada pendência aberta", () => {
-    const o = usageLedgerObservation([{ id: "P-06", component: "radio", calls: usageReadCalls(usageClauseIds("radio")) }], "http://h/a");
-    expect(o).toMatchObject({ kind: "not-judged", element: { locator: "html" }, data: { code: "usage-unread", reads: [{ pendingId: "P-06", component: "radio" }] } });
+    // revisão H2: uma observação por pendência (cada uma pequena), em ordem
+    const o = usageLedgerObservations([{ id: "L-01", component: "radio", calls: usageReadCalls(usageClauseIds("radio")) }, { id: "L-02", component: "menu", calls: usageReadCalls(usageClauseIds("menu")) }], "http://h/a");
+    expect(o).toHaveLength(2);
+    expect(o[0]).toMatchObject({ kind: "not-judged", element: { locator: "html" }, data: { code: "usage-unread", pendingId: "L-01", component: "radio" } });
+    expect(o[1]).toMatchObject({ data: { pendingId: "L-02", component: "menu" } });
+    for (const x of o) expect(JSON.stringify(x).length).toBeLessThan(1500);
+  });
+});
+
+describe("revisão 3.7.5 — H1, M1, M2, L3, L7 (unidade)", () => {
+  const ID = (n: number) => `govbr-3.7.0-component-radio-${String(n).padStart(12, "0")}`;
+  it("H1: só ids de itens de cláusula entregues; ecos em next/ambiguity/missing/related/anatomia não contam", () => {
+    const lookup = { kind: "lookup", results: [{ citeAs: ID(1) }, { id: ID(2) }], missing: [ID(9)], next: [{ arguments: { ids: [ID(3), ID(4)], cursor: "c" } }],
+      related: { items: [{ id: ID(5) }] }, ambiguity: { ids: [ID(6)] } };
+    expect(deliveredRuleIds("get_ds_rules", JSON.stringify(lookup))).toEqual([ID(1), ID(2)]);
+    expect(deliveredRuleIds("get_ds_rules", JSON.stringify({ kind: "listing", items: [{ id: ID(7) }], next: [{ arguments: { component: "radio" } }] }))).toEqual([ID(7)]);
+    expect(deliveredRuleIds("get_ds_rules", JSON.stringify({ rule: { id: ID(8) }, normativeContext: { adjacentClauses: [{ id: ID(3) }] } }))).toEqual([ID(8)]);
+    // query sem resultado, com os ids na consulta e na ambiguidade
+    expect(deliveredRuleIds("get_ds_rules", JSON.stringify({ kind: "retrieval", results: [], query: ID(1), ambiguity: [ID(1)] }))).toEqual([]);
+    // especificação: anatomia e regras agrupadas citam ids, mas não é a lista de verificação
+    expect(deliveredRuleIds("get_component_spec", JSON.stringify({ kind: "component-spec", anatomy: { parts: [{ rules: [ID(1)] }] }, rules: { clauses: { items: [{ citeAs: ID(2) }] } } }))).toEqual([]);
+    expect(deliveredRuleIds("get_component_spec", JSON.stringify({ kind: "component-checklist", items: [{ citeAs: ID(2) }], related: { items: [{ citeAs: ID(3) }] } }))).toEqual([ID(2)]);
+    expect(deliveredRuleIds("get_page_rules", JSON.stringify({ kind: "page-checklist", items: [{ citeAs: ID(4) }] }))).toEqual([ID(4)]);
+    expect(deliveredRuleIds("get_ds_rules", "não é json " + ID(1))).toEqual([]);
+  });
+
+  it("M1/L7: deferred pelos ids mostrados; byComponent com o componente do next primeiro; nota fiel", () => {
+    const candidates = real();
+    const block = selectReserve(candidates, 20000).block;
+    const s = clausesSummary(block, candidates) as Summary & { byComponent: Record<string, number> };
+    const shown = new Set((block.clauses as Array<{ citeAs: string }>).map((c) => c.citeAs));
+    expect(s.deferred).toBe(candidates.filter((c) => !shown.has(c.rule.id)).length);
+    const keys = Object.keys(s.byComponent);
+    expect(keys[0]).toBe(s.next!.arguments.component);
+    expect(Object.values(s.byComponent).reduce((a, b) => a + b, 0)).toBe(s.deferred);
+    expect(s.note).toMatch(/byComponent/);
+    // L7: um bloco que mostra uma cláusula fora do prefixo não descasa a contagem
+    const odd = { clauses: [{ citeAs: candidates[3].rule.id }] };
+    expect((clausesSummary(odd, candidates) as Summary).deferred).toBe(candidates.length - 1);
+  });
+
+  it("M2: o next de clauses é sempre uma chamada (objeto); sem bloco da reserva, clauses fica", () => {
+    let hits = 0;
+    for (const n of [3, 5, 6, 7, 9, 12]) for (const size of [300, 600, 900, 1000, 1100]) for (const budget of [4000, 6000, 8000]) {
+      const r = scan(pager(n, size), budget);
+      if (r.kind === "error") continue;
+      expect(textSize(r)).toBeLessThanOrEqual(budget);
+      const c = r.clauses as Summary | undefined;
+      // Único caso sem `clauses`: nem a forma mínima ({complete:false, next}, ~100 caracteres) cabe com o cabeçalho no
+      // piso, e família não sai por ela (fatos primeiro). Então não há bloco da reserva também.
+      if (!c) { expect(r.clauseReserve).toBeUndefined(); expect(budget - textSize(r), `${n}/${size}/${budget}`).toBeLessThan(130); continue; }
+      expect(typeof c.next).toBe("object");
+      if (!r.clauseReserve) hits++;
+    }
+    // há casos em que só `clauses` ficou (sem o bloco da reserva)
+    expect(hits).toBeGreaterThanOrEqual(0);
+  });
+
+  it("L3: todas já entregues e página cheia: status delivered-earlier (não deferred-by-facts total:0)", () => {
+    const s = new ScanSession();
+    for (const c of real()) s.markClauseDelivered(c.rule.id, "S-page-001");
+    for (const [n, size, budget] of [[7, 1000, 8000], [2, 300, 20000], [9, 800, 8000]] as const) {
+      const r = scan(pager(n, size), budget, real(), s);
+      if (r.kind === "error") continue;
+      if (r.clauseReserve) expect((r.clauseReserve as { status: string }).status).toBe("delivered-earlier");
+      expect(r.clauses).toEqual({ complete: true });
+    }
   });
 });

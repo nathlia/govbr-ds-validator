@@ -14,7 +14,7 @@
  * da URL observada; a pendência é o código genérico do notJudged.
  */
 import type { Finding, Observation } from "../schema/finding.js";
-import type { NotJudgedItem } from "./notJudged.js";
+import { pendingIdsLabel, type NotJudgedItem } from "./notJudged.js";
 import { scanPageKey } from "./state.js";
 
 /**
@@ -206,6 +206,8 @@ export class ScanSession {
   private readonly byId = new Map<string, PendingEntry>();
   private readonly hidden = new Map<string, HiddenEntry>();
   private counter = 0;
+  /** Revisão M4: as pendências de leitura têm espaço de ids próprio (`L-NN`): não deslocam a numeração `P-NN`. */
+  private usageCounter = 0;
   /** 3.6.1 (revisão H1): códigos cuja cláusula (texto) já saiu numa resposta desta sessão; repetições só com o id. */
   private readonly delivered = new Set<string>();
   /** 3.7.4 (D1): contextos da reserva de cláusulas entregues nesta sessão (chave do escopo → 1ª entrega e faixas). */
@@ -458,9 +460,9 @@ export class ScanSession {
     const key = `usage|${component}`;
     let entry = this.pending.get(key);
     if (!entry) {
-      this.counter += 1;
+      this.usageCounter += 1;
       entry = {
-        id: `P-${String(this.counter).padStart(2, "0")}`,
+        id: `L-${String(this.usageCounter).padStart(2, "0")}`,
         key,
         code: USAGE_CODE,
         subject: component,
@@ -776,6 +778,12 @@ export function sessionPendingBlock(
   const byCode = new Map<string, PendingEntry[]>();
   for (const e of others.filter((x) => !x.low && !isClause(x))) byCode.set(e.code, [...(byCode.get(e.code) ?? []), e]);
   const items = [...byCode.entries()].map(([code, entries]) => {
+    // Revisão M3: as pendências de leitura são UMA entrada — os ids em faixa (como a linha compacta) e os componentes na
+    // mesma ordem, e onde ler os ids.
+    if (code === USAGE_CODE) {
+      const sorted = [...entries].sort((x, y) => Number(x.id.slice(2)) - Number(y.id.slice(2)));
+      return { code, ids: [pendingIdsLabel(sorted.map((e) => e.id))], components: sorted.map((e) => e.subject), ...(usageNext ? { next: usageNext } : {}) };
+    }
     const rule = entries[0].rule;
     const labels = entries.map(label);
     const partial = entries.filter((e) => label(e).includes("×")).slice(0, 3);
@@ -788,10 +796,7 @@ export function sessionPendingBlock(
       ...(partial.length ? { openOn: Object.fromEntries(partial.map((e) => [e.id, openSlots(e).slice(0, 3).map((x) => shortRoute(x.route))])) } : {}),
       // 3.7.4 (D2): verificada em parte — os elementos que faltam decidir (até 3 por pendência).
       ...(halfDone.length ? { remaining: Object.fromEntries(halfDone.slice(0, 3)) } : {}),
-      ...(code === USAGE_CODE
-        // 3.7.5 (item 6): os componentes (na ordem dos ids) e a leitura que fecha cada um.
-        ? { components: entries.slice(0, 5).map((e) => e.subject), ...(usageNext ? { next: usageNext } : {}) }
-        : rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
+      ...(rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });
   return {
@@ -802,7 +807,8 @@ export function sessionPendingBlock(
             : "Pendências abertas de outras rotas/estados (cada id é um item próprio): resolva medindo (verify_finding com o critério em norms).",
         }
       : {}),
-    count: others.length,
+    // Revisão M3: as pendências de leitura contam como a UMA entrada que são aqui.
+    count: others.filter((e) => e.code !== USAGE_CODE).length + (others.some((e) => e.code === USAGE_CODE) ? 1 : 0),
     items,
     ...(low ? { lowSignal: low } : {}),
     ...(checklist ? { checklist } : {}),

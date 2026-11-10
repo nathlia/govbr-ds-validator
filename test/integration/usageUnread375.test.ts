@@ -86,14 +86,17 @@ describe("3.7.5 item 6 — usage-unread", () => {
       const item = usageOf(a.data)!;
       expect(item).toMatchObject({ code: "usage-unread", count: expected.length });
       expect([...item.examples!].sort()).toEqual([...expected].sort());
-      expect(item.pendingId).toMatch(/^P-\d+(?:(?:\.\.|,)P-\d+)*$/);
+      // revisão M4: espaço de ids próprio (L-NN)
+      expect(item.pendingId).toMatch(/^L-\d+(?:(?:\.\.|,)L-\d+)*$/);
       // a linha diz onde estão os ids: a observação de leitura do ledger
       const m = /get_finding_details\{scanId:"([^"]+)",view:"observations",cursor:(\d+)\}/.exec(item.todo!)!;
       expect(item.todo).toMatch(/^get_ds_rules\{ids,detail:"index"\} por componente/);
       expect(m[1]).toBe(a.data.scanId);
       const obs = await call("get_finding_details", { scanId: m[1], view: "observations", cursor: Number(m[2]) });
-      const reads = obs.data.observations[0].data.reads as Array<{ pendingId: string; component: string; calls: Array<{ tool: string; arguments: { ids: string[] } }> }>;
-      expect(obs.data.observations[0].data.code).toBe("usage-unread");
+      // revisão H2: uma observação por pendência de leitura, a partir do cursor
+      const reads = (obs.data.observations as Array<{ data: { code: string; pendingId: string; component: string; calls: Array<{ tool: string; arguments: { ids: string[] } }> } }>)
+        .filter((o) => o.data?.code === "usage-unread").map((o) => o.data);
+      expect(reads.length).toBe(expected.length);
       for (const c of expected) {
         const r = reads.find((x) => x.component === c)!;
         expect(r.calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20 && (x.arguments as { detail?: string }).detail === "index")).toBe(true);
@@ -204,7 +207,7 @@ describe("3.7.5-pre.3 — get_ds_rules{ids, detail:\"index\"}: a frase da cláus
       expect(usageOf(first.data)!.examples).toEqual(["button"]);
       const m = /cursor:(\d+)/.exec(usageOf(first.data)!.todo!)!;
       const obs = await s.call("get_finding_details", { scanId: first.data.scanId, view: "observations", cursor: Number(m[1]) });
-      for (const x of obs.data.observations[0].data.reads[0].calls) {
+      for (const x of obs.data.observations[0].data.calls) {
         expect(x.arguments.detail).toBe("index");
         expect((await s.call(x.tool, x.arguments)).isError).toBe(false);
       }

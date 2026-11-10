@@ -148,8 +148,8 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservation, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
-import { ruleIdsIn, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
+import { notJudgedObservations, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
@@ -917,9 +917,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
   });
   // 3.6.3: toda recusa de entrada também vira um evento de telemetria (eventos = chamadas, nos dois perfis).
   installContractInputValidation(server, (name, args, result, errorCode) => telemetry.rejected(name, args, result, errorCode));
-  // 3.7.5 (item 6): o servidor vê o que as ferramentas de leitura da base devolvem — os ids citados fecham as pendências
-  // de leitura (usage-unread) cujo conjunto inteiro já passou. Só o handler é envolvido: nome, descrição e esquema (o
-  // tools/list) ficam como estão.
+  // 3.7.5 (item 6): o servidor vê o que as ferramentas de leitura da base devolvem — os ids das cláusulas ENTREGUES (revisão
+  // H1: só os itens de cláusula da resposta, nunca ids ecoados em next/ambiguity/query) fecham as pendências de leitura
+  // (usage-unread) cujo conjunto inteiro já passou. Só o handler é envolvido: nome, descrição e esquema (o tools/list)
+  // ficam como estão.
   if (hasNorms) {
     const READ_TOOLS = new Set(["get_ds_rules", "get_component_spec", "get_page_rules"]);
     const register = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
@@ -927,7 +928,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       register(name, config, READ_TOOLS.has(name)
         ? async (...a: unknown[]) => {
             const result = await cb(...a) as { isError?: boolean; content?: Array<{ type?: string; text?: string }> };
-            if (!result?.isError) session.noteRead((result?.content ?? []).flatMap((c) => (typeof c.text === "string" ? ruleIdsIn(c.text) : [])));
+            if (!result?.isError) session.noteRead((result?.content ?? []).flatMap((c) => (typeof c.text === "string" ? deliveredRuleIds(name, c.text) : [])));
             return result;
           }
         : cb);
@@ -2119,7 +2120,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const usageSession = session.open().filter((e) => e.usage);
         const usageLedger = ledger && usageSession.length ? { scanId, cursor: ledger.length } : undefined;
         if (ledger && usageLedger) {
-          ledger.push(usageLedgerObservation(usageSession.map((e) => ({ id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids) })), url));
+          const ordered = [...usageSession].sort((x, y) => Number(x.id.slice(2)) - Number(y.id.slice(2)));
+          ledger.push(...usageLedgerObservations(ordered.map((e) => ({ id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids) })), url));
         }
         const usageItem = usageLedger ? usageUnreadItem(usageOpen, usageLedger) : undefined;
         // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.

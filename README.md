@@ -83,6 +83,28 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.5 — revisão independente de dev-3.7.5 (NAT-111)
+
+`package.json` e o `serverInfo` passam a 3.7.5. Defeitos da revisão (sondas `.tmp-eval/rev375/p1…p14`):
+
+- **H1.** A pendência `usage-unread` fechava com ids que só APARECIAM no texto da resposta (o `next` de um lote paginado
+  ecoava ids não devolvidos; uma `query` com ids os ecoava em `ambiguity`; a especificação os lista na anatomia). Agora
+  só contam ids de itens de cláusula entregues: `get_ds_rules` `results[].citeAs|id`, `items[].id` (listagem), `rule.id`
+  (por id); `get_component_spec` `items[].citeAs` da lista de verificação; `get_page_rules` `items[].citeAs`.
+- **H2.** Uma observação de leitura por pendência (≈ 0,3–0,9 mil caracteres cada), em ordem de id, a partir do
+  `cursor` da linha — a observação única passava de 8.000 com 26 componentes.
+- **M1.** `clauses.byComponent` (quantas faltam por componente; o do `next` primeiro) e nota fiel: o `next` é a lista
+  de UM componente; os demais, a mesma chamada com o componente. Nas formas compactas (teto) `byComponent` e a nota saem
+  antes de fato.
+- **M2.** `clauses.next` é sempre uma chamada (objeto). Se nem o bloco mínimo da reserva cabe, `clauses` fica sozinho
+  (`{complete:false, deferred?, next}`), encolhendo o cabeçalho e, como no montador de sempre, tirando o campo de tamanho;
+  só sem nem isso (o cabeçalho no piso e ~100 caracteres que só uma família liberaria) a resposta leva os fatos sozinhos.
+- **M3.** As pendências de leitura de outras rotas são UMA entrada no `sessionPending` (ids em faixa, componentes, onde
+  ler) e contam como uma.
+- **M4.** Espaço de ids próprio: `L-NN` (leitura). Os `P-NN` voltam à numeração da 3.7.4.
+- **L1** `alreadyDelivered.ids`; **L3** todas já entregues com página cheia → `delivered-earlier`; **L7** `deferred`
+  pelos ids mostrados. L5/L6 sem mudança.
+
 ## 3.7.5-pre.1 — cláusulas adiadas com caminho; leitura das cláusulas de uso (NAT-111)
 
 Mecanismo da campanha dev-374-b-01: os agentes do braço com o oráculo só chamaram `scan_page`, registraram as

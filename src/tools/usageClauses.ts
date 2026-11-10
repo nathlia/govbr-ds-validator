@@ -44,8 +44,40 @@ export function usageReadCalls(ids: string[]): Array<{ tool: "get_ds_rules"; arg
 /** A listagem do componente (pelo cursor até o fim): também devolve todas, e também fecha. */
 export const usageListingCall = (component: string) => ({ tool: "get_ds_rules", arguments: { component, category: "component" } });
 
-/** Ids da base citados numa resposta (o servidor vê o que a chamada devolveu). */
-const RULE_ID = /govbr-\d+\.\d+\.\d+-[a-z0-9-]+-[0-9a-f]{12}/g;
-export function ruleIdsIn(text: string): string[] {
-  return text.match(RULE_ID) ?? [];
+const RULE_ID = /^govbr-\d+\.\d+\.\d+-[a-z0-9-]+-[0-9a-f]{12}$/;
+
+/**
+ * Revisão H1: os ids de cláusula que uma resposta de leitura ENTREGOU — só os itens de cláusula, nunca ids ecoados em
+ * next, ambiguity, query, missing, related, anatomia ou listas de referência. get_ds_rules: `results[].citeAs|id` (ids,
+ * query, context), `items[].id` (listagem), `rule.id` (por id), `rules[].id` (caminho literal da 2.x);
+ * get_component_spec: `items[].citeAs` da lista de verificação; get_page_rules: `items[].citeAs` da lista global.
+ */
+export function deliveredRuleIds(tool: string, text: string): string[] {
+  let data: unknown;
+  try { data = JSON.parse(text); } catch { return []; }
+  if (!data || typeof data !== "object") return [];
+  const d = data as Record<string, unknown>;
+  const out: string[] = [];
+  const take = (list: unknown, ...keys: string[]) => {
+    if (!Array.isArray(list)) return;
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue;
+      for (const k of keys) {
+        const v = (item as Record<string, unknown>)[k];
+        if (typeof v === "string" && RULE_ID.test(v)) { out.push(v); break; }
+      }
+    }
+  };
+  if (tool === "get_ds_rules") {
+    take(d.results, "citeAs", "id");
+    take(d.items, "id");
+    take(d.rules, "id");
+    const rule = d.rule as { id?: unknown } | undefined;
+    if (rule && typeof rule.id === "string" && RULE_ID.test(rule.id)) out.push(rule.id);
+  } else if (tool === "get_component_spec") {
+    if (d.kind === "component-checklist") take(d.items, "citeAs");
+  } else if (tool === "get_page_rules") {
+    take(d.items, "citeAs");
+  }
+  return out;
 }
