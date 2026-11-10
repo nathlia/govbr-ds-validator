@@ -116,6 +116,15 @@ describe("3.7.8 item 4 — ordem do investigate", () => {
     expect(inv.next).toEqual({ tool: "get_component_spec", arguments: { component: "table", view: "checklist" } });
   });
 
+  it("parte de uma parte e parte de hospedeiro ausente: todos listados, nenhum some", () => {
+    const layout = { select: { visible: true }, list: { visible: false, partOf: "select" }, item: { visible: false, partOf: "list" }, radio: { visible: false, partOf: "ausente" } };
+    const comps = ["select", "list", "item", "radio", "tab", "button", "card", "table", "upload"];
+    const inv = investigateFor(comps, "S-1", () => ({}), strong(counts), undefined, new Set(), undefined, layout)!;
+    const all = [...inv.items.map((i) => i.component), ...(inv.more?.components ?? [])];
+    expect([...all].sort()).toEqual([...comps].sort());
+    expect(all.indexOf("item")).toBeGreaterThan(all.indexOf("list"));
+  });
+
   it("componente novo no estado continua primeiro, mesmo sendo parte ou oculto", () => {
     const layout = { select: { visible: true }, radio: { visible: false, partOf: "select" }, tab: { visible: true } };
     const inv = investigateFor(["tab", "select", "radio"], "S-1", () => ({}), strong(counts), undefined, new Set(["radio"]), undefined, layout)!;

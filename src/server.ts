@@ -2130,7 +2130,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             const pid = subject ? observedPid.get(subject) : undefined;
             return pid ? { ...o, data: { ...(o.data ?? {}), pendingId: pid } } : o;
           });
-          observationStore.set(scanId, [...tagged, ...notJudgedObservations(regularItems, url), ...notJudgedObservations(observedItems, url)]);
+          observationStore.set(scanId, [...tagged, ...notJudgedObservations(regularItems, url, true), ...notJudgedObservations(observedItems, url, true)]);
         }
         const usageComponents = investigate ? [...new Set([...investigate.items.map((i) => i.component), ...(investigate.more?.components ?? [])])] : [];
         const usageOpen = usageComponents.flatMap((component) => {

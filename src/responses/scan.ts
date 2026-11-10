@@ -202,11 +202,15 @@ export function investigateFor(
   const partsOf = (host: string) => byRank.filter((r) => hostOf(r.component) === host);
   const head = standalone.slice(0, 5);
   const tail = standalone.slice(5);
-  const ranked = [
+  // parte de uma parte vem depois dela (recursivo); o que sobrar (hospedeiro fora da lista) vai para o fim — ninguém some.
+  const withParts = (r: (typeof byRank)[number], seen = new Set<string>()): Array<(typeof byRank)[number]> =>
+    seen.has(r.component) ? [] : (seen.add(r.component), [r, ...partsOf(r.component).flatMap((p) => withParts(p, seen))]);
+  const placed = [
     ...head,
-    ...tail.flatMap((r) => [r, ...partsOf(r.component)]),
-    ...head.flatMap((r) => partsOf(r.component)),
+    ...tail.flatMap((r) => withParts(r)),
+    ...head.flatMap((r) => partsOf(r.component).flatMap((p) => withParts(p))),
   ];
+  const ranked = [...new Map([...placed, ...byRank].map((r) => [r.component, r])).values()];
   const partOf = Object.fromEntries(ranked.filter((r) => hostOf(r.component)).map((r) => [r.component, hostOf(r.component)!]));
   const fresh = ranked.filter((r) => isNew(r.component)).map((r) => r.component);
   const clauseOf = new Map(ranked.map(({ component }) => [component, clauses?.(component)]));

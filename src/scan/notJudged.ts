@@ -627,14 +627,16 @@ export function pageLevelMeasured(checks: string[], componentsRestricted = false
 }
 
 /** 3.5.0 (revisão, MED): os itens inteiros paginam como observações `not-judged` (nunca achado). */
-export function notJudgedObservations(items: NotJudgedItem[], url: string): Observation[] {
+export function notJudgedObservations(items: NotJudgedItem[], url: string, short = false): Observation[] {
   return items.map((item) => ({
     kind: "not-judged",
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
-    // 3.7.8 (H1): a tarefa e a medida ficam só em data (todo, measure) — repetidas aqui, a página do `next` da forma
-    // compacta não cabia todas as pendências que a forma lista.
-    whyNotAFinding: "Pendência: nenhum check deste scan julgou — a tarefa em data.todo, como medir em data.measure.",
+    // 3.7.8 (H1): no perfil com a base (short), a tarefa e a medida ficam só em data (todo, measure) — repetidas aqui, a
+    // página do `next` da forma compacta não cabia todas as pendências que a forma lista. O knowledge-free fica como era.
+    whyNotAFinding: short
+      ? "Pendência: nenhum check deste scan julgou — a tarefa em data.todo, como medir em data.measure."
+      : `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
     data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest }) => rest)(item),
   }));
 }

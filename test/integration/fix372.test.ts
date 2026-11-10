@@ -148,8 +148,9 @@ describe("3.7.2 A1 — C01 aponta o botão embutido em Input/Select como candida
       expect(cand).toBeDefined();
       expect(cand.count).toBe(2);
       expect(cand.examples).toEqual(["#lupa", "#gatilho"]);
-      expect(cand.observed).toMatch(/a marcação coincide com o exemplo oficial do DS \(.*(input-|select-)/);
-      expect(cand.todo).toMatch(/^a investigar/);
+      // 3.7.8 (N2): o fato (marcação igual a exemplo oficial, força example) separado da norma (a cláusula citada).
+      expect(cand.observed).toMatch(/marcação igual a exemplo oficial \(.*(input-|select-).*exemplo tem força example, não é norma/);
+      expect(cand.todo).toMatch(/decida pela cláusula citada/);
       expect(cand.rule).toMatchObject({ id: BUTTON_LABEL_REQUIRED, force: "required" });
       expect(cand.pendingId).toMatch(/^P-\d+$/);
       // nada disso é achado: nenhum finding nos dois botões
