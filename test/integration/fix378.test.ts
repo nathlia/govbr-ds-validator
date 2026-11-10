@@ -35,6 +35,7 @@ import {
   uploadInformClauses,
   uploadPathsPending,
   UPLOAD_PATHS_TODO,
+  STATE_PENDING_MAX,
   type PendingItem,
 } from "../../src/scan/notJudged.js";
 import type { Observation } from "../../src/schema/finding.js";
@@ -52,11 +53,27 @@ const PAGES: Record<string, string> = {
     <span class="br-tag">Etiqueta</span>`,
 };
 
+// N5: um cabeçalho fora do main (casca) com menu; cinco menus de linha do mesmo padrão; aba; details; diálogo; popup sem
+// alvo. O script mostra/esconde o alvo do controle clicado (aria-controls / data-target) e atualiza o ARIA.
+const TOGGLE = `<script>document.addEventListener("click",function(e){var b=e.target.closest("[aria-controls],[data-target]");if(!b)return;
+var id=(b.getAttribute("aria-controls")||b.getAttribute("data-target")||"").replace("#","");var t=document.getElementById(id);if(!t)return;
+t.hidden=!t.hidden;if(b.hasAttribute("aria-expanded"))b.setAttribute("aria-expanded",String(!t.hidden));
+if(b.getAttribute("role")==="tab")b.setAttribute("aria-selected","true");});</script>`;
+const ROWS = Array.from({ length: 5 }, (_, i) => `<tr><td>Linha ${i}</td><td><button type="button" class="acoes" aria-expanded="false" aria-controls="menu-linha-${i}">Ações</button><ul id="menu-linha-${i}" hidden><li>Editar</li></ul></td></tr>`).join("");
+const STATES_BODY = `<header><button type="button" id="conta" aria-expanded="false" aria-controls="menu-conta">Conta</button><div id="menu-conta" hidden><a href="/sair">Sair</a></div></header>
+  <main><h1>Estados</h1><table><tbody>${ROWS}</tbody></table>
+  <div role="tablist"><button type="button" role="tab" id="aba-a" aria-selected="true" aria-controls="painel-a">A</button><button type="button" role="tab" id="aba-b" aria-selected="false" aria-controls="painel-b">B</button></div>
+  <div id="painel-a">Painel A</div><div id="painel-b" hidden>Painel B</div>
+  <details><summary>Mais detalhes</summary><p>Detalhe</p></details>
+  <button type="button" id="abre-dialogo" data-target="#dlg">Abrir diálogo</button><div id="dlg" role="dialog" aria-label="Diálogo" hidden><p>Conteúdo</p></div>
+  <button type="button" id="popup" aria-haspopup="menu">Opções</button></main>${TOGGLE}`;
+
 let http: Server;
 let base: string;
 beforeAll(async () => {
-  http = httpServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(
-    `<!doctype html><html lang="pt-BR"><head><title>Página ${req.url}</title></head><body><main><h1>Página ${req.url}</h1>${PAGES[req.url ?? ""] ?? ""}</main></body></html>`,
+  http = httpServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(req.url === "/estados"
+    ? `<!doctype html><html lang="pt-BR"><head><title>Estados</title></head><body>${STATES_BODY}</body></html>`
+    : `<!doctype html><html lang="pt-BR"><head><title>Página ${req.url}</title></head><body><main><h1>Página ${req.url}</h1>${PAGES[req.url ?? ""] ?? ""}</main></body></html>`,
   ));
   await new Promise<void>((done) => http.listen(0, "127.0.0.1", done));
   base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
@@ -195,7 +212,11 @@ describe("3.7.8 N1 — desvio em conteúdo oculto vira O-NN com o gatilho", () =
     const hidden = r.observations.filter((o) => (o.data as { hiddenInState?: unknown }).hiddenInState === true);
     expect(hidden.length).toBeGreaterThanOrEqual(2);
     const reveal = Object.fromEntries(hidden.map((o) => [o.element.locator, (o.data as { reveal?: unknown }).reveal]));
-    expect(Object.values(reveal)).toEqual(expect.arrayContaining([{ container: "#menu1", trigger: "#abre" }, { container: "#sem-gatilho", trigger: null }]));
+    // N5: o gatilho reconhecido como estado recolhido dá a mesma receita (com a chegada dele)
+    expect(Object.values(reveal)).toEqual(expect.arrayContaining([
+      { container: "#menu1", trigger: "#abre", arrival: { visible: "#menu1" } },
+      { container: "#sem-gatilho", trigger: null },
+    ]));
     const items = observedRequiredItems(r.observations).filter((i) => i.subject.startsWith("oculto|"));
     expect(items.map((i) => i.subject).sort()).toEqual(["oculto|#menu1", "oculto|#sem-gatilho"]);
     const withTrigger = items.find((i) => i.subject === "oculto|#menu1")!;
@@ -263,6 +284,68 @@ describe("3.7.8 H1/H2 — pendingId no ledger; leitura de outra rota marcada", (
         expect(pid).toMatch(/^O-\d+$/);
         expect(firstLedger.some((o) => o.kind !== "not-judged" && o.data?.pendingId === pid)).toBe(true);
       }
+    } finally { await client.close(); }
+  });
+});
+
+describe("3.7.8 N5 — estados recolhidos não escaneados viram pendência com receita pronta", () => {
+  it("casca primeiro, padrões agrupados, teto com o resto no ledger; cada receita roda e fecha a pendência", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/estados`;
+      const scan = await call("scan_page", { url, maxChars: 60000 });
+      const items = (scan.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).filter((i) => typeof i !== "string" && i.code === "state-unscanned") as Array<PendingItem & { recipe: { tool: string; arguments: Record<string, unknown> }; moreTriggers?: Array<{ selector: string; arrival?: unknown }> }>;
+      expect(items).toHaveLength(STATE_PENDING_MAX);
+      // casca (o cabeçalho, fora do main) primeiro
+      expect(items[0].recipe.arguments).toEqual({ url, actions: [{ action: "click", selector: "#conta" }], arrival: { visible: "#menu-conta" } });
+      expect(items[0].observed).toContain("(casca)");
+      // os cinco menus de linha: um item, contagem 5, um exemplo de receita
+      const rows = items.find((i) => i.count === 5)!;
+      expect(rows).toBeDefined();
+      expect(rows.boundLocators ?? rows.examples).toBeDefined();
+      // o resto vem contado e listado na última
+      const last = items[items.length - 1];
+      expect(last.observed).toMatch(/\+\d+ gatilho\(s\) no ledger/);
+      expect(last.moreTriggers!.length).toBeGreaterThan(0);
+      for (const i of items) expect(i.todo.length).toBeLessThanOrEqual(72);
+      // a forma curta guarda o id, o seletor e a chegada
+      const short = pageLevelShort({ notMeasured: items });
+      expect(short.notMeasured[0]).toMatch(/^P-\d+:state-unscanned:1 @#conta; aria-expanded=false; arrival visible #menu-conta/);
+      // todas as receitas (as 4 e as do ledger) rodam: estado alcançado e a pendência do padrão fecha
+      const recipes = [
+        ...items.map((i) => ({ id: i.pendingId, args: i.recipe.arguments })),
+        ...(last.moreTriggers ?? []).map((m) => ({ id: null, args: { url, actions: [{ action: "click", selector: m.selector }], ...(m.arrival ? { arrival: m.arrival } : {}) } })),
+      ];
+      for (const r of recipes) {
+        const run = await call("scan_page", { ...r.args });
+        expect(run.data.status, JSON.stringify(run.data.limitation ?? null)).toBe("scanned");
+        expect(run.text.length).toBeLessThanOrEqual(8000);
+        if (r.id) expect(run.data.statesScanned).toContain(r.id);
+      }
+      const after = await call("scan_page", { url, maxChars: 60000 });
+      const again = (after.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).filter((i) => typeof i !== "string" && i.code === "state-unscanned") as PendingItem[];
+      for (const i of again.filter((x) => items.some((y) => y.pendingId === x.pendingId))) expect(i.resolved).toBe("state-scanned");
+    } finally { await client.close(); }
+  });
+
+  it("pendingResolved 'não se aplica' com reason fecha; sem reason não", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/estados`;
+      const scan = await call("scan_page", { url, maxChars: 60000 });
+      const item = (scan.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).find((i) => typeof i !== "string" && i.code === "state-unscanned") as PendingItem;
+      const noReason = await call("scan_page", { url, pendingResolved: [{ id: item.pendingId, status: "não se aplica" }] });
+      expect(noReason.data.pendingResolution.needsReason).toContain(item.pendingId);
+      const withReason = await call("scan_page", { url, pendingResolved: [{ id: item.pendingId, status: "não se aplica", reason: "menu só com links de navegação já medidos" }] });
+      expect(withReason.data.pendingResolution.resolved).toContain(item.pendingId);
+    } finally { await client.close(); }
+  });
+
+  it("knowledge-free: sem a pendência (o perfil não muda nesta versão)", async () => {
+    const { client, call } = await connect("knowledge-free");
+    try {
+      const scan = await call("scan_page", { url: `${base}/estados` });
+      expect(scan.text).not.toContain("state-unscanned");
     } finally { await client.close(); }
   });
 });

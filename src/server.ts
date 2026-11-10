@@ -2116,6 +2116,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // obrigam, proíbem ou desaconselham abre UMA pendência de leitura na sessão; as ainda não lidas desta página saem numa
         // linha só, depois das demais pendências. Os ids a ler (get_ds_rules{ids} por componente) ficam numa observação do
         // ledger, com todas as pendências de leitura abertas na sessão.
+        // 3.7.8 (N5): este scan mediu um estado aberto (controle aberto no estado, ou a receita clicou nele): fecha a
+        // pendência state-unscanned desse gatilho nesta rota, antes de registrar as deste estado.
+        const statesSeen = hasNorms
+          ? session.resolveStatesSeen(route, [
+              ...(result.disclosuresOpened ?? []),
+              ...(actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])),
+            ], scanId)
+          : [];
         const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
         // das de sempre), não só contagem em observations.byKind.
@@ -2184,6 +2192,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
           coverage: boundStrings(result.coverage),
           ...(pendingResolution ? { pendingResolution } : {}),
+          ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
           checksRun: {
             ...checksRunFor(
               { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },

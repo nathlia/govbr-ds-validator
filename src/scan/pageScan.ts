@@ -13,6 +13,7 @@ import { FOCUSABLE_SELECTOR, measureFocusIndicators } from "../evidence/focusInd
 import { ANATOMY_ROOT_SELECTOR, checkAnatomy } from "../checkers/anatomy.js";
 import { collectAnatomy } from "../evidence/context.js";
 import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
+import { inspectDisclosures, type DisclosureFacts } from "../evidence/disclosures.js";
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
@@ -152,6 +153,8 @@ export interface PageScanResult {
    * Só ordena o investigate; nunca sai na resposta. Ausente no perfil knowledge-free.
    */
   componentLayout?: ComponentLayout;
+  /** 3.7.8 (N5): seletores dos controles de estado recolhível que ESTÃO abertos neste estado (fecham a pendência). */
+  disclosuresOpened?: string[];
 }
 
 export type ComponentLayout = Record<string, { visible: boolean; partOf?: string }>;
@@ -556,6 +559,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       tokenMeasured.set(locator, kinds);
     };
 
+    // 3.7.8 (N5): estados recolhidos deste estado (antes de qualquer check que dê foco ou clique); só na página inteira.
+    const disclosures: DisclosureFacts | undefined = normalized.selectors.length ? undefined : await inspectDisclosures(page);
     if (checks.includes("tokens") || checks.includes("structure")) {
       const properties = checks.includes("tokens") ? tokenProperties(activeTokenChecks) : [];
       // 3.4.0 (B8): com seletores explícitos o escopo é a região — a raiz e os seus descendentes.
@@ -627,9 +632,13 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       const hidden = observations.filter((o) => (o.data as { hiddenInState?: unknown } | undefined)?.hiddenInState === true);
       if (hidden.length) {
         const reveal = await revealRecipes(page, [...new Set(hidden.map((o) => o.element.locator))]);
+        // N5: o gatilho de um estado recolhido que controla este contêiner dá a mesma receita (seletor e chegada).
+        const byTarget = new Map((disclosures?.collapsed ?? []).filter((g) => g.target).map((g) => [g.target as string, g]));
         for (const o of hidden) {
           const r = reveal[o.element.locator];
-          if (r) o.data = { ...(o.data ?? {}), reveal: r };
+          if (!r) continue;
+          const g = byTarget.get(r.container);
+          o.data = { ...(o.data ?? {}), reveal: g ? { container: r.container, trigger: g.selectors[0], arrival: g.arrival } : r };
         }
       }
     }
@@ -783,6 +792,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(ariaStates.length ? { ariaStates } : {}),
       // 3.7.8 (item 5; N3): campos de arquivo do escopo — o caminho de erro, o arrasto e o texto de apoio ficam como pendência.
       fileInputs,
+      // 3.7.8 (N5): estados recolhidos que este scan não mediu, com a receita pronta.
+      ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed, url: request.url } : {}),
     });
     const value: CachedScan = {
       status: "scanned",
@@ -793,6 +804,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(notJudged.length ? { notJudged } : {}),
       ...(specParts ? { specParts: { measured: specParts.measured, skipped: specParts.skipped } } : {}),
       ...(componentLayout ? { componentLayout } : {}),
+      ...(disclosures ? { disclosuresOpened: disclosures.opened } : {}),
       document: { title: facts.title ?? "", h1: facts.h1 ?? null, mainHeading: facts.mainHeading ?? null },
       ...(revisited ? { revisited } : {}),
       coverage: {

@@ -69,7 +69,10 @@ export interface PendingRule {
   text: string;
 }
 
-export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "usage-read" | "rule-read"; status?: string; ref?: string; reason?: string };
+export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "usage-read" | "rule-read" | "state-scanned"; status?: string; ref?: string; reason?: string };
+
+/** 3.7.8 (N5): código da pendência de estado recolhido não escaneado. */
+export const STATE_CODE = "state-unscanned";
 
 /**
  * 3.7.5 (item 6): pendência de LEITURA das cláusulas de uso/juízo de um componente do DS encontrado na página. Uma por
@@ -670,6 +673,25 @@ export class ScanSession {
       }
     }
     return { resolved, partial };
+  }
+
+  /**
+   * 3.7.8 (N5): a pendência `state-unscanned` desta rota fecha quando um scan da sessão mediu o estado aberto — o controle
+   * aparece aberto no estado escaneado (aria-expanded=true, aba selecionada, details aberto, conteúdo controlado visível)
+   * ou a receita alcançada clicou nele. Uma instância basta para o padrão. Devolve os ids fechados.
+   */
+  resolveStatesSeen(route: string, selectors: string[], scanId: string): string[] {
+    const seen = new Set(selectors);
+    if (!seen.size) return [];
+    const closed: string[] = [];
+    for (const entry of this.open()) {
+      if (entry.code !== STATE_CODE) continue;
+      const slot = slotOf(entry, route);
+      if (!slot || slot.status !== "open" || !slot.locators.some((l) => seen.has(l))) continue;
+      resolveSlot(entry, slot, { by: "state-scanned", ref: scanId });
+      closed.push(slotLabel(entry, route));
+    }
+    return closed;
   }
 
   /** 3.6.3: as rotas ainda abertas das pendências citadas (rótulos `P-NN@/rota`). */

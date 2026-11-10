@@ -18,6 +18,7 @@ import type { ContrastIncompleteNode } from "../checkers/axe.js";
 import { createHash } from "node:crypto";
 import { filterRules, getRuleById } from "../data/knowledge.js";
 import { USAGE_SUBCATEGORY } from "../tools/usageClauses.js";
+import type { DisclosureGroup } from "../evidence/disclosures.js";
 import { BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
 /** 3.6.3: o hash de um conjunto de elementos (ordem não importa). */
@@ -26,7 +27,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required" | "upload-paths";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required" | "upload-paths" | "state-unscanned";
   subject: string;
   count?: number;
   observed?: string;
@@ -79,6 +80,10 @@ export interface NotJudgedItem {
   idSpace?: "O";
   /** 3.7.8 (N3): na pendência upload-paths, as cláusulas do Upload que mandam informar o usuário (`id · texto`). */
   inform?: string[];
+  /** 3.7.8 (N5): na pendência state-unscanned, a chamada pronta que escaneia o estado aberto. */
+  recipe?: { tool: string; arguments: Record<string, unknown> };
+  /** 3.7.8 (N5): os padrões de gatilho além do teto (seletor, sinal, chegada), na última pendência state-unscanned. */
+  moreTriggers?: Array<{ selector: string; signal: string; arrival?: unknown }>;
 }
 
 export interface NotJudgedInput {
@@ -103,6 +108,9 @@ export interface NotJudgedInput {
   ariaStates?: NotJudgedItem[];
   /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
   fileInputs?: Array<{ locator: string; accept: string | null; support?: string | null }>;
+  /** 3.7.8 (N5): estados recolhidos deste estado (evidence/disclosures.ts), casca primeiro, e a url da receita. */
+  disclosures?: DisclosureGroup[];
+  url?: string;
 }
 
 const EXAMPLES = 3;
@@ -238,8 +246,10 @@ function hiddenItem(subject: string, obs: Observation[]): NotJudgedItem {
   const checkers = new Map<string, number>();
   for (const d of data) checkers.set(d.rule!.checker ?? d.rule!.id, (checkers.get(d.rule!.checker ?? d.rule!.id) ?? 0) + 1);
   const conditions = [...new Set(data.map((d) => d.expectedCondition).filter((c): c is string => typeof c === "string"))];
+  // N5: o mesmo gatilho da pendência state-unscanned dá a mesma chegada (expanded/visible/dialogOpen).
+  const arrival = (data.find((d) => d.reveal && (d.reveal as { arrival?: unknown }).arrival)?.reveal as { arrival?: unknown } | undefined)?.arrival;
   const recipe = trigger
-    ? `scan_page {actions:[{action:"click",selector:"${trigger}"}], arrival:{visible:"${clip(obs[0].element.locator, 120)}"}}`
+    ? `scan_page {actions:[{action:"click",selector:"${trigger}"}], arrival:${arrival ? JSON.stringify(arrival) : `{visible:"${clip(obs[0].element.locator, 120)}"}`}}`
     : "o oráculo não achou o controle que mostra este conteúdo (aria-controls, data-target, href ou aria-expanded): ache-o e escaneie o estado aberto (scan_page com a ação + arrival visible)";
   return {
     code: "observed-required",
@@ -395,6 +405,50 @@ export function uploadPathsPending(inputs: Array<{ locator: string; accept: stri
   };
 }
 
+/**
+ * 3.7.8 (N5; leitura dev-375-b §3(d)): o scan mede UM estado; o conteúdo atrás de um controle recolhido (menu do cabeçalho,
+ * aba, acordeão, diálogo) só é medido num scan com ele aberto — e nenhuma resposta dizia isso (só o código `single-state`
+ * dos limites). Cada padrão de gatilho recolhido vira pendência de ELEMENTOS com a receita pronta (scan_page com o clique
+ * no seletor único e a chegada que prova o estado aberto). Fecha quando a sessão escaneia esse estado (o controle aberto
+ * no estado medido, ou a receita clicou nele) ou por pendingResolved com reason. Casca primeiro; no máximo
+ * STATE_PENDING_MAX padrões, o resto contado na última. Nada de base, nada de tela: só a marcação.
+ */
+export const STATE_PENDING_MAX = 4;
+/** A chegada da receita em texto curto: `arrival visible #x`, `arrival expanded (o próprio)`, `arrival dialogOpen`. */
+function arrivalText(arrival: DisclosureGroup["arrival"]): string {
+  if (!arrival) return "sem arrival: confira o estado no scan";
+  if ("visible" in arrival) return `arrival visible ${clip(arrival.visible, 40)}`;
+  if ("expanded" in arrival) return "arrival expanded (o próprio @)";
+  return "arrival dialogOpen";
+}
+export const STATE_TODO = "escaneie o estado aberto: recipe (click no @ + arrival); feche assim";
+export function statePendings(groups: DisclosureGroup[], url: string): NotJudgedItem[] {
+  const shown = groups.slice(0, STATE_PENDING_MAX);
+  const rest = groups.slice(STATE_PENDING_MAX);
+  return shown.map((g, i) => {
+    const recipe = {
+      tool: "scan_page",
+      arguments: { url, actions: [{ action: "click", selector: g.selectors[0] }], ...(g.arrival ? { arrival: g.arrival } : {}) },
+    };
+    const last = i === shown.length - 1 && rest.length > 0;
+    return {
+      code: "state-unscanned" as const,
+      subject: `state-unscanned|${g.pattern}`,
+      count: g.selectors.length,
+      examples: g.selectors.slice(0, EXAMPLES).map((s) => clip(s, 120)),
+      elementSet: setHash(g.selectors),
+      elementBound: true as const,
+      boundLocators: [...g.selectors],
+      // a chegada vem antes do rótulo: na forma curta (72 caracteres) o rótulo é o que se corta.
+      observed: `${g.signal}; ${arrivalText(g.arrival)}${g.region === "shell" ? " (casca)" : ""}${last ? `; +${rest.length} gatilho(s) no ledger` : ""}${g.label ? ` "${clip(g.label, 30)}"` : ""}`,
+      todo: STATE_TODO,
+      measure: `${JSON.stringify(recipe)}${g.selectors.length > 1 ? ` (${g.selectors.length} instâncias do mesmo padrão: uma basta)` : ""}; sem chegada, confira o estado aberto no scan. Não se aplica: pendingResolved {id, status:"não se aplica", reason}`,
+      recipe,
+      ...(last ? { moreTriggers: rest.slice(0, 8).map((x) => ({ selector: x.selectors[0], signal: x.signal, ...(x.arrival ? { arrival: x.arrival } : {}) })) } : {}),
+    };
+  });
+}
+
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
 export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
@@ -510,6 +564,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   items.push(...(input.ariaStates ?? []));
   const upload = uploadPathsPending(input.fileInputs ?? []);
   if (upload) items.push(upload);
+  items.push(...statePendings(input.disclosures ?? [], input.url ?? ""));
   return items;
 }
 

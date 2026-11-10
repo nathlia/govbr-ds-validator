@@ -80,7 +80,7 @@ describe("finding families on calendar and table fixtures", () => {
     // do scan, D-155) fica no resultado para o ledger do MCP, mas o CLI de linha de base não o imprime.
     // 3.6.1: `document` e `revisited` (memória da sessão MCP) também ficam fora da saída do CLI.
     // 3.7.8: `componentLayout` (ordem do investigate do MCP) idem.
-    const { notJudged: _pending, document: _document, revisited: _revisited, componentLayout: _layout, ...printed } = result;
+    const { notJudged: _pending, document: _document, revisited: _revisited, componentLayout: _layout, disclosuresOpened: _opened, ...printed } = result;
     expect(Object.keys(printed).sort()).toEqual(
       ["cacheHit", "cacheMissReason", "coverage", "deduplication", "findings", "observations", "stateFingerprint", "state", "status", "url"].sort()
     );
