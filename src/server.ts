@@ -148,7 +148,7 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, observedRequiredItems, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
@@ -2126,8 +2126,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         if (hasNorms) {
           const observedPid = new Map(observedItems.map((i) => [i.subject, i.pendingId as string]));
           const tagged = result.observations.map((o) => {
-            const rel = (o.data as { relatedRule?: { id?: unknown } } | undefined)?.relatedRule;
-            const pid = typeof rel?.id === "string" ? observedPid.get(`${o.kind}|${rel.id}`) : undefined;
+            const subject = observedSubjectOf(o);
+            const pid = subject ? observedPid.get(subject) : undefined;
             return pid ? { ...o, data: { ...(o.data ?? {}), pendingId: pid } } : o;
           });
           observationStore.set(scanId, [...tagged, ...notJudgedObservations(regularItems, url), ...notJudgedObservations(observedItems, url)]);

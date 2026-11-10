@@ -16,7 +16,8 @@ import type { LabelSource } from "../checkers/formLabels.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import type { ContrastIncompleteNode } from "../checkers/axe.js";
 import { createHash } from "node:crypto";
-import { getRuleById } from "../data/knowledge.js";
+import { filterRules, getRuleById } from "../data/knowledge.js";
+import { USAGE_SUBCATEGORY } from "../tools/usageClauses.js";
 import { BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
 /** 3.6.3: o hash de um conjunto de elementos (ordem não importa). */
@@ -76,6 +77,8 @@ export interface NotJudgedItem {
    */
   resolveByRead?: string[];
   idSpace?: "O";
+  /** 3.7.8 (N3): na pendência upload-paths, as cláusulas do Upload que mandam informar o usuário (`id · texto`). */
+  inform?: string[];
 }
 
 export interface NotJudgedInput {
@@ -99,7 +102,7 @@ export interface NotJudgedInput {
   /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
   ariaStates?: NotJudgedItem[];
   /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
-  fileInputs?: Array<{ locator: string; accept: string | null }>;
+  fileInputs?: Array<{ locator: string; accept: string | null; support?: string | null }>;
 }
 
 const EXAMPLES = 3;
@@ -204,17 +207,76 @@ function observedValue(o: Observation): string {
  * em `observations.byKind` — quem não abria as observações perdia o desvio e a norma. Vira pendência: uma por (tipo de
  * observação, norma) neste estado, com todos os elementos, o valor medido e a cláusula. Genérico: só lê `relatedRule`.
  */
+/**
+ * 3.7.8 (N1): a chave da pendência O-NN de uma observação, ou null. Observação com `relatedRule` obrigatória/proibitiva:
+ * `tipo|norma` (3.7.6). Desvio de estilo autoral em conteúdo OCULTO (`hiddenInState`, a norma em `data.rule`, força da base
+ * obrigatória/proibitiva): `oculto|<contêiner>` — uma pendência por contêiner oculto, com todas as normas dele.
+ */
+export function observedSubjectOf(o: Observation): string | null {
+  const d = (o.data ?? {}) as { relatedRule?: { id?: unknown; force?: unknown }; hiddenInState?: unknown; rule?: { id?: unknown }; reveal?: { container?: unknown } };
+  const rel = d.relatedRule;
+  if (rel && typeof rel.id === "string" && typeof rel.force === "string" && OBSERVED_PENDING_FORCES.has(rel.force)) return `${o.kind}|${rel.id}`;
+  if (d.hiddenInState === true && typeof d.rule?.id === "string" && d.rule.id.startsWith("govbr-")) {
+    const force = kbRule(d.rule.id)?.force;
+    if (force && OBSERVED_PENDING_FORCES.has(force)) return `oculto|${typeof d.reveal?.container === "string" ? d.reveal.container : o.element.locator}`;
+  }
+  return null;
+}
+
+/** 3.7.8 (N1): a tarefa curta da O-NN de conteúdo oculto — a receita que o mostra, quando o oráculo achou o gatilho. */
+export const hiddenTodo = (trigger: string | null) => trigger
+  ? `abra: actions click ${clip(trigger, 32)}; escaneie aberto e decida`
+  : "gatilho desconhecido: ache e abra o conteúdo, escaneie esse estado";
+
+function hiddenItem(subject: string, obs: Observation[]): NotJudgedItem {
+  const data = obs.map((o) => (o.data ?? {}) as { rule?: { id: string; checker?: string }; reveal?: { container: string; trigger: string | null }; expectedCondition?: unknown });
+  const ruleIds = [...new Set(data.map((d) => d.rule!.id))];
+  const rule = kbRule(ruleIds[0]);
+  const reveal = data.find((d) => d.reveal)?.reveal;
+  const trigger = data.map((d) => d.reveal?.trigger).find((t): t is string => typeof t === "string") ?? null;
+  const container = reveal?.container ?? obs[0].element.locator;
+  const checkers = new Map<string, number>();
+  for (const d of data) checkers.set(d.rule!.checker ?? d.rule!.id, (checkers.get(d.rule!.checker ?? d.rule!.id) ?? 0) + 1);
+  const conditions = [...new Set(data.map((d) => d.expectedCondition).filter((c): c is string => typeof c === "string"))];
+  const recipe = trigger
+    ? `scan_page {actions:[{action:"click",selector:"${trigger}"}], arrival:{visible:"${clip(obs[0].element.locator, 120)}"}}`
+    : "o oráculo não achou o controle que mostra este conteúdo (aria-controls, data-target, href ou aria-expanded): ache-o e escaneie o estado aberto (scan_page com a ação + arrival visible)";
+  return {
+    code: "observed-required",
+    subject,
+    count: obs.length,
+    examples: obs.slice(0, EXAMPLES).map((o) => clip(o.element.locator, 120)),
+    elementSet: setHash(obs.map((o) => `${o.element.locator}=${String((o.data as { observed?: unknown }).observed ?? "")}`)),
+    elementBound: true,
+    boundLocators: obs.map((o) => o.element.locator),
+    observed: `oculto em ${clip(container, 40)}: ${[...checkers].map(([k, n]) => `${k}${n > 1 ? ` ×${n}` : ""}`).join(", ")}`,
+    todo: hiddenTodo(trigger),
+    norms: ruleIds,
+    ...(rule ? { rule } : {}),
+    measure: `${recipe}; no estado aberto, verify_finding live por elemento (a mesma receita) citando a norma${conditions.length ? ` (evidence.data.expectedCondition ${conditions.join(" | ")})` : ""}, ou leia a norma por id`,
+    resolveByRead: ruleIds,
+    idSpace: "O",
+  };
+}
+
 export function observedRequiredItems(observations: Observation[]): NotJudgedItem[] {
   const groups = new Map<string, { kind: string; ruleId: string; obs: Observation[] }>();
+  const hidden = new Map<string, Observation[]>();
   for (const o of observations) {
-    const rel = (o.data as { relatedRule?: { id?: unknown; force?: unknown } } | undefined)?.relatedRule;
-    if (!rel || typeof rel.id !== "string" || typeof rel.force !== "string" || !OBSERVED_PENDING_FORCES.has(rel.force)) continue;
-    const key = `${o.kind}|${rel.id}`;
-    const g = groups.get(key) ?? { kind: o.kind, ruleId: rel.id, obs: [] };
+    const subject = observedSubjectOf(o);
+    if (!subject) continue;
+    if (subject.startsWith("oculto|")) {
+      const list = hidden.get(subject) ?? [];
+      if (!list.some((x) => x.element.locator === o.element.locator && JSON.stringify(x.data) === JSON.stringify(o.data))) list.push(o);
+      hidden.set(subject, list);
+      continue;
+    }
+    const rel = (o.data as { relatedRule: { id: string } }).relatedRule;
+    const g = groups.get(subject) ?? { kind: o.kind, ruleId: rel.id, obs: [] };
     if (!g.obs.some((x) => x.element.locator === o.element.locator)) g.obs.push(o);
-    groups.set(key, g);
+    groups.set(subject, g);
   }
-  return [...groups.values()].map(({ kind, ruleId, obs }) => {
+  return [...[...groups.values()].map(({ kind, ruleId, obs }) => {
     const rule = kbRule(ruleId);
     const first = obs[0];
     const condition = obs.map((o) => (o.data as { expectedCondition?: unknown } | undefined)?.expectedCondition).find((c): c is string => typeof c === "string") ?? null;
@@ -236,7 +298,7 @@ export function observedRequiredItems(observations: Observation[]): NotJudgedIte
       resolveByRead: [ruleId],
       idSpace: "O" as const,
     };
-  });
+  }), ...[...hidden].map(([subject, obs]) => hiddenItem(subject, obs))];
 }
 
 /**
@@ -281,11 +343,39 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
  */
 export const UPLOAD_PATHS_TODO = "exerça upload a recusar e drop no campo, cada um com arrival";
 export const UPLOAD_PATHS_MEASURE =
-  "scan_page actions upload com um arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo de soltar + arrival; o drop termina no evento drop: o estado DURANTE o arrasto (dragenter/dragover sem soltar) meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
+  "scan_page actions upload com arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
 
-export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null }>): NotJudgedItem | null {
+/**
+ * 3.7.8 (análise "especificações não achadas", N3): as cláusulas do componente Upload que mandam INFORMAR o usuário (a
+ * funcionalidade de arrastar na mensagem do campo, o feedback de erro, o alerta de envio único…), lidas da base — força
+ * obrigatória/proibitiva, fora das seções de uso/juízo (que a L-NN cobre) e da anatomia, com texto que fala em informar,
+ * mensagem ou feedback. Viram itens "a medir contra o texto de apoio visível". Nenhum id fixo: o que a base tiver.
+ */
+const UPLOAD_INFORM_TEXT = /\binform|mensage|feedback/i;
+let uploadInform: Array<{ id: string; text: string }> | undefined;
+export function uploadInformClauses(): Array<{ id: string; text: string }> {
+  if (uploadInform) return uploadInform;
+  try {
+    uploadInform = filterRules({ component: "upload", category: "component" })
+      .filter((r) => !r.legacy && OBSERVED_PENDING_FORCES.has(r.force) && !USAGE_SUBCATEGORY.test(r.subcategory ?? "") &&
+        !/^anatomia/.test(r.subcategory ?? "") && UPLOAD_INFORM_TEXT.test(r.originalText ?? ""))
+      .map((r) => ({ id: r.id, text: clip(String(r.originalText).replace(/[*_]/g, "").replace(/\s+/g, " ").trim(), 90) }));
+  } catch {
+    uploadInform = [];
+  }
+  return uploadInform;
+}
+
+/** 3.7.8 (N3): o texto de apoio existe mas não aparece no estado (pageScan.fileInputSupport). */
+export const SUPPORT_HIDDEN = "#oculto-neste-estado";
+export const UPLOAD_INFORM_NOTE = "inform: cláusulas do Upload que mandam informar o usuário (o que o apoio deve dizer); dê estado a cada uma";
+
+export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null; support?: string | null }>): NotJudgedItem | null {
   if (!inputs.length) return null;
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
+  // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
+  const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
+  const inform = uploadInformClauses();
   return {
     code: "upload-paths",
     subject: "campos de arquivo (input type=file)",
@@ -294,10 +384,14 @@ export function uploadPathsPending(inputs: Array<{ locator: string; accept: stri
     elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
     elementBound: true,
     boundLocators: inputs.map((i) => i.locator),
-    observed: accepts.join("; "),
+    observed: `${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
     todo: UPLOAD_PATHS_TODO,
-    ...grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]),
-    measure: UPLOAD_PATHS_MEASURE,
+    ...(() => {
+      const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
+      return { ...g, norms: [...(g.norms ?? []), ...inform.map((c) => c.id)] };
+    })(),
+    measure: inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE,
+    ...(inform.length ? { inform: inform.map((c) => `${c.id} · ${c.text}`) } : {}),
   };
 }
 
@@ -538,7 +632,9 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string): Obse
     kind: "not-judged",
     element: { locator: item.examples?.[0] ?? "html", page: url },
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
-    whyNotAFinding: `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
+    // 3.7.8 (H1): a tarefa e a medida ficam só em data (todo, measure) — repetidas aqui, a página do `next` da forma
+    // compacta não cabia todas as pendências que a forma lista.
+    whyNotAFinding: "Pendência: nenhum check deste scan julgou — a tarefa em data.todo, como medir em data.measure.",
     data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest }) => rest)(item),
   }));
 }

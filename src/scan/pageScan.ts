@@ -16,7 +16,7 @@ import { inspectPageStructure, type PageFacts } from "../evidence/pageFacts.js";
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
-import { contrastPending, kbRule, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
+import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
@@ -155,6 +155,87 @@ export interface PageScanResult {
 }
 
 export type ComponentLayout = Record<string, { visible: boolean; partOf?: string }>;
+
+/**
+ * 3.7.8 (N3): o texto de apoio visível de cada campo de arquivo — o que `aria-describedby` aponta e, no componente do DS,
+ * o texto logo depois do `.br-upload` (onde os exemplos oficiais o põem). Só texto com caixa; nada → ausente.
+ */
+// SUPPORT_HIDDEN vem de notJudged (o mesmo marcador nos dois lados).
+
+/**
+ * 3.7.8 (N1): para cada elemento oculto, o contêiner que o esconde (o ancestral mais alto ainda sem caixa) e o controle
+ * que o mostra, quando a marcação o declara: um único elemento com `aria-controls` contendo o id do contêiner, `data-target`
+ * / `data-bs-target` / `href` apontando para `#id`, ou o irmão anterior do contêiner com `aria-expanded`. Seletor do
+ * controle: `#id` dele, ou o próprio seletor de atributo (único). Sem isso, `trigger: null` (o agente acha o gatilho).
+ */
+export async function revealRecipes(page: Page, locators: string[]): Promise<Record<string, { container: string; trigger: string | null }>> {
+  return page.evaluate((locators: string[]) => {
+    const out: Record<string, { container: string; trigger: string | null }> = {};
+    const notShown = (n: Element) => n.getClientRects().length === 0 || getComputedStyle(n).visibility === "hidden";
+    const esc = (s: string) => (typeof CSS !== "undefined" && CSS.escape ? CSS.escape(s) : s.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`));
+    const unique = (selector: string): Element | null => {
+      try {
+        const found = document.querySelectorAll(selector);
+        return found.length === 1 ? found[0] : null;
+      } catch {
+        return null;
+      }
+    };
+    for (const locator of locators) {
+      if (locator.includes(">>>")) continue;
+      let el: Element | null = null;
+      try { el = document.querySelector(locator); } catch { continue; }
+      if (!el || !notShown(el)) continue;
+      let c: Element = el;
+      while (c.parentElement && c.parentElement !== document.body && notShown(c.parentElement)) c = c.parentElement;
+      const id = c.id;
+      let trigger: string | null = null;
+      if (id) {
+        const attrs = [`[aria-controls~="${id}"]`, `[data-target="#${id}"]`, `[data-target="${id}"]`, `[data-bs-target="#${id}"]`, `[href="#${id}"]`];
+        for (const a of attrs) {
+          const t = unique(a);
+          if (t && t !== c && !c.contains(t)) {
+            trigger = t.id ? `#${esc(t.id)}` : a;
+            break;
+          }
+        }
+      }
+      if (!trigger) {
+        const prev = c.previousElementSibling;
+        if (prev && prev.hasAttribute("aria-expanded") && prev.id && unique(`#${esc(prev.id)}`)) trigger = `#${esc(prev.id)}`;
+      }
+      out[locator] = { container: id ? `#${esc(id)}` : locator, trigger };
+    }
+    return out;
+  }, locators);
+}
+export async function fileInputSupport(page: Page, locators: string[]): Promise<Record<string, string>> {
+  return page.evaluate(({ locators, HIDDEN }: { locators: string[]; HIDDEN: string }) => {
+    const shown = (el: Element | null) => Boolean(el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");
+    const text = (el: Element | null) => (el && shown(el) ? ((el as HTMLElement).innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim() : "");
+    const out: Record<string, string> = {};
+    for (const locator of locators) {
+      if (locator.includes(">>>")) continue;
+      let input: Element | null = null;
+      try { input = document.querySelector(locator); } catch { continue; }
+      if (!input) continue;
+      const parts: string[] = [];
+      const host = input.closest(".br-upload") ?? input.parentElement;
+      const candidates = [
+        ...(input.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)),
+        host?.nextElementSibling ?? null,
+      ].filter((el): el is Element => el !== null && (el.textContent ?? "").trim().length > 0);
+      for (const el of candidates) {
+        const t = text(el);
+        if (t && !parts.includes(t)) parts.push(t);
+      }
+      // o texto existe mas não aparece neste estado (aba inativa, região recolhida): diz isso, não "nenhum apoio".
+      if (parts.length) out[locator] = parts.join(" | ").slice(0, 200);
+      else if (candidates.length) out[locator] = HIDDEN;
+    }
+    return out;
+  }, { locators, HIDDEN: SUPPORT_HIDDEN });
+}
 
 /**
  * 3.7.8 (item 4): visibilidade e hospedeiro de cada componente encontrado, lidos no DOM (claro e shadow roots abertos) do
@@ -540,6 +621,17 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           observations.push(...collectStructureObservations({ url: request.url }, evidence.elements, spec));
         }
       }
+      // 3.7.8 (N1): desvio de estilo autoral medido em conteúdo OCULTO (menu fechado, diálogo fechado) — o contêiner que o
+      // esconde e, quando o DOM o diz (aria-controls / data-target / href para o id, ou o irmão anterior com
+      // aria-expanded), o controle que o mostra. Vai na observação; a pendência O-NN leva a receita.
+      const hidden = observations.filter((o) => (o.data as { hiddenInState?: unknown } | undefined)?.hiddenInState === true);
+      if (hidden.length) {
+        const reveal = await revealRecipes(page, [...new Set(hidden.map((o) => o.element.locator))]);
+        for (const o of hidden) {
+          const r = reveal[o.element.locator];
+          if (r) o.data = { ...(o.data ?? {}), reveal: r };
+        }
+      }
     }
 
     // 3.6.1 (D-155, item 3): elementos ocultos num scan anterior. Os renderizados agora têm medido o check de
@@ -672,6 +764,13 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
 
     rawFindings.push(...revisitFindings);
     const deduplicated = deduplicateFindings(rawFindings);
+    const fileFields = fieldEvidence.filter((el) => el.tagName === "input" && (el.attributes.type ?? "").toLowerCase() === "file");
+    const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator)) : {};
+    const fileInputs = fileFields.map((el) => ({
+      locator: el.locator,
+      accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
+      support: supportOf[el.locator] ?? null,
+    }));
     const notJudged = notJudgedFor({
       facts,
       pageWide: !scoped,
@@ -682,10 +781,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(contrastIncomplete ? { contrastIncomplete } : {}),
       ...(embeddedIconButtons.length ? { embeddedIconButtons } : {}),
       ...(ariaStates.length ? { ariaStates } : {}),
-      // 3.7.8 (item 5): campos de arquivo do escopo — o caminho de erro e o arrasto ficam como pendência.
-      fileInputs: fieldEvidence
-        .filter((el) => el.tagName === "input" && (el.attributes.type ?? "").toLowerCase() === "file")
-        .map((el) => ({ locator: el.locator, accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null })),
+      // 3.7.8 (item 5; N3): campos de arquivo do escopo — o caminho de erro, o arrasto e o texto de apoio ficam como pendência.
+      fileInputs,
     });
     const value: CachedScan = {
       status: "scanned",

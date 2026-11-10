@@ -90,6 +90,8 @@ export function demoteToObservations(findings: Finding[], elements: ElementEvide
         ...(reason === "not-rendered"
           ? {
               hiddenInState: true,
+              // 3.7.8 (N1): a condição do verify do desvio, para decidi-lo no estado em que aparece.
+              ...(typeof f.evidence.data?.expectedCondition === "string" ? { expectedCondition: f.evidence.data.expectedCondition } : {}),
               next: { tool: "scan_page", hint: "meça no estado em que aparece (scan_page com a ação que o abre)" },
             }
           : {}),
