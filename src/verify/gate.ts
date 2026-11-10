@@ -114,7 +114,7 @@ export class ScanStateMisuseError extends Error {
  * 2.15.0: resultado do portão. `next` é o próximo passo quando a conferência não decide aqui
  * (verificação do oráculo sem norma nomeada); não faz parte do esquema Finding.
  */
-export type GateVerification = Verification & { next?: string; issue?: GateIssue };
+export type GateVerification = Verification & { next?: string; issue?: GateIssue; measured?: Array<Record<string, unknown>> };
 
 /**
  * 3.6.6 (revisão da 3.6.5, ALTA 1): a nota que decidiu ou impediu a decisão (o detalhe do predicado, a limitação do estado
@@ -147,7 +147,9 @@ export type GateIssue =
   // 3.4.0 (B2): o predicado rodou e a condição da regra não vale neste estado (inaplicável), ou o
   // sujeito não é o que a condição mede (o invocador no lugar do diálogo). Nunca contradição medida.
   | "rule-not-applicable"
-  | "subject-not-a-dialog";
+  | "subject-not-a-dialog"
+  // 3.7.7 (D-32): o predicado mediu o fato em cada elemento e não decide a violação (o agente julga).
+  | "measured-not-decided";
 
 /** Próximo passo fixo para verificação do oráculo sem norma nomeada (D-27, 2.15.0). */
 export const UNGROUNDED_NEXT =
@@ -234,17 +236,20 @@ export async function verifyFinding({
     ...(ungrounded
       ? {
           next: related
-            ? `Há norma na base sobre isto: ${related.id} (${related.force}): "${related.text}" Cite essa unidade (source 'govbr-ds-kb', sem rule.checker) com evidence.data.expectedCondition '${conditionForRuleId(related.id) ?? ""}' e repita live, um elemento por vez: o predicado decide.`
+            ? `Há norma na base sobre isto: ${related.id} (${related.force}): "${related.text}" Cite essa unidade (source 'govbr-ds-kb', sem rule.checker) com evidence.data.expectedCondition '${conditionForRuleId(related.id) ?? ""}' e repita live, um elemento por vez: o predicado mede (a decisão da escala é sua, D-32).`
             : UNGROUNDED_NEXT,
         }
       : {}),
   });
 
   let issue: GateIssue | undefined;
+  /** 3.7.7 (D-32): a medida por elemento de um predicado que mede sem decidir. */
+  let measured: Array<Record<string, unknown>> | undefined;
   const result = (): GateVerification => {
     const out: GateVerification = {
       ...baseResult(),
       ...(issue ? { issue } : {}),
+      ...(measured ? { measured } : {}),
     };
     // 3.6.6: a última nota é a que decidiu (ou impediu) — o predicado, a limitação do estado, o motivo de não haver predicado.
     if (notes.length) DECISIVE_NOTE.set(out, { note: notes[notes.length - 1], recipeGap });
@@ -502,6 +507,7 @@ export async function verifyFinding({
         notes.push(outcome.detail);
         if (outcome.status === "undetermined" && outcome.recipeGap) recipeGap = true;
         if (outcome.status === "undetermined" && outcome.code) issue = outcome.code;
+        if (outcome.measured) measured = outcome.measured;
         // 3.4.4 (C8): a regra julgada inaplicável neste estado não pode sair com applicability "pass" —
         // quem lê só `checks` entendia "aplicável e indeterminado".
         if (outcome.status === "undetermined" && outcome.code === "rule-not-applicable") checks.applicability = "not-applicable";

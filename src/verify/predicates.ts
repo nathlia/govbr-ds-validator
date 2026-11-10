@@ -18,7 +18,7 @@
 import type { Finding } from "../schema/finding.js";
 import type { ElementEvidence } from "../evidence/types.js";
 import type { StyleProperty } from "../evidence/inspect.js";
-import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, fontScalePx, foraDaEscala, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
+import { BORDER_SIDE_PROPERTIES, checkTokenCompliance, fontScalePx, paintedBorderSides, type TokenCheck } from "../checkers/tokenCompliance.js";
 import { CHECK_GROUNDING } from "../checkers/grounding.js";
 import { getRuleById } from "../data/knowledge.js";
 import { propertyOfToken, type SpecProperty } from "../data/specParts.js";
@@ -50,8 +50,13 @@ export interface PredicateOutcome {
   /** 2.13.0: `undetermined` — o predicado rodou no estado reproduzido e os dados não decidem. */
   status: "verified" | "contradicted" | "undetermined";
   detail: string;
-  /** 3.4.0 (B2): motivo tipado de um `undetermined` com próximo passo próprio (contextual.ts). */
-  code?: "rule-not-applicable" | "subject-not-a-dialog";
+  /**
+   * 3.4.0 (B2): motivo tipado de um `undetermined` com próximo passo próprio (contextual.ts).
+   * 3.7.7 (D-32): `measured-not-decided` = o fato foi medido em cada elemento e a decisão é do agente.
+   */
+  code?: "rule-not-applicable" | "subject-not-a-dialog" | "measured-not-decided";
+  /** 3.7.7 (D-32): a medida por elemento que acompanha `measured-not-decided`. */
+  measured?: Array<Record<string, unknown>>;
   /** 3.6.6: o `undetermined` é falta da receita (contextual.ts, ContextOutcome.recipeGap). */
   recipeGap?: true;
 }
@@ -468,9 +473,11 @@ const weightOf = (raw: string | undefined) => {
 const outsideOwnership = (el: ElementEvidence) => el.origin === "ds-web-component" || el.origin === "flatpickr";
 
 /**
- * Escala tipográfica (token-font-size-off-scale): em CADA elemento, o font-size computado no estado reproduzido. Fora de
- * todos os passos (tolerância de 0,5px, a do scan) e declarado pela página → violação recalculada; num passo → contradita.
- * Oculto, dentro de web component do DS ou valor que a página não declarou (herdado/padrão) → não decide.
+ * Escala tipográfica (token-font-size-off-scale), D-32: o oráculo NÃO afirma nem nega a violação da escala pela tolerância
+ * — esse julgamento é da camada semântica. O predicado MEDE, em cada elemento e no estado reproduzido, o font-size
+ * computado, se a página o declarou, o passo da escala mais próximo e a distância em px; o veredito fica `unverifiable`
+ * (`measured-not-decided`) com a medida, e quem decide se quebra a escala é o agente, citando a norma que julga violada.
+ * Oculto ou dentro de web component do DS → sem medida (meça no estado em que aparece).
  */
 function fontScalePredicate(observedPx: number | null): Predicate {
   return {
@@ -489,20 +496,26 @@ function fontScalePredicate(observedPx: number | null): Predicate {
       if (hidden.length) return { status: "undetermined", recipeGap: true, detail: `${hidden.length} de ${elements.length} elemento(s) não renderizado(s) neste estado: meça no estado em que aparece.` };
       const outside = elements.filter(outsideOwnership);
       if (outside.length) return { status: "undetermined", detail: `${outside.length} de ${elements.length} elemento(s) dentro de web component do DS ou de terceiro embutido: o tamanho é do componente, não da página.` };
-      const onStep = elements.filter((el) => el.computed.fontSize && !foraDaEscala(el.computed.fontSize, scale));
-      if (onStep.length) {
-        return { status: "contradicted", detail: `${onStep.length} de ${elements.length} elemento(s) num passo da escala do DS: ${onStep.slice(0, 3).map((el) => `${el.locator} (${el.computed.fontSize})`).join("; ")}.` };
-      }
-      const notAuthored = elements.filter((el) => el.authored !== undefined && !(el.authored.fontSize ?? []).length);
-      if (notAuthored.length) {
-        return { status: "undetermined", detail: `${notAuthored.length} de ${elements.length} elemento(s) fora da escala sem declaração de font-size da página (herdado ou padrão): o valor não é escolha deste elemento — cite o elemento que o declara.` };
-      }
-      const facts = elements.slice(0, 3).map((el) => {
-        const px = pxOf(el.computed.fontSize) ?? 0;
+      const unmeasurable = elements.filter((el) => pxOf(el.computed.fontSize) === null);
+      if (unmeasurable.length) return { status: "undetermined", detail: `${unmeasurable.length} de ${elements.length} elemento(s) sem font-size computado em px.` };
+      const measured = elements.map((el) => {
+        const px = pxOf(el.computed.fontSize)!;
         const near = scale.reduce((b, v) => (Math.abs(v - px) < Math.abs(b - px) ? v : b), scale[0]);
-        return `${el.locator} (${el.computed.fontSize}; passo mais próximo ${+near.toFixed(3)}px)`;
+        return {
+          locator: el.locator,
+          fontSize: el.computed.fontSize,
+          pageDeclared: el.authored === undefined ? null : (el.authored.fontSize ?? []).length > 0,
+          ...(el.authored?.fontSize?.length ? { declarations: el.authored.fontSize.slice(0, 3) } : {}),
+          nearestStepPx: +near.toFixed(3),
+          distancePx: +Math.abs(px - near).toFixed(3),
+        };
       });
-      return { status: "verified", detail: `Fora da escala tipográfica do DS em ${elements.length} de ${elements.length} elemento(s), declarado pela página: ${facts.join("; ")}.` };
+      return {
+        status: "undetermined",
+        code: "measured-not-decided",
+        measured,
+        detail: `Medido em ${elements.length} de ${elements.length} elemento(s): ${measured.slice(0, 3).map((m) => `${m.locator} ${m.fontSize} (passo mais próximo ${m.nearestStepPx}px, a ${m.distancePx}px; ${m.pageDeclared === false ? "herdado/padrão" : "declarado pela página"})`).join("; ")}. Se isso quebra a escala é julgamento seu (D-32): o oráculo não o afirma nem o nega pela tolerância.`,
+      };
     },
   };
 }

@@ -115,6 +115,10 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
     case "subject-not-a-dialog":
       reasons.push({ object: "evidence", code: "subject-not-a-dialog", detail, status: "not-evaluated" });
       break;
+    // 3.7.7 (D-32): o fato foi medido em cada elemento; a violação não é afirmada nem negada pelo oráculo.
+    case "measured-not-decided":
+      reasons.push({ object: "fact", code: "fact-measured", detail, status: "not-contradicted" });
+      break;
     default:
       break;
   }
@@ -188,7 +192,7 @@ function conditionHint(finding: Finding, knowledgeFree: boolean): { id: string; 
 function conditionStep(hint: { id: string; condition: string }, scanId: string | undefined): NextStep {
   return step(
     "measure-condition",
-    `A norma ${hint.id} tem predicado: mantenha-a citada (source 'govbr-ds-kb', sem rule.checker) e reenvie live, um elemento por vez, com evidence.data {property, observed, expectedCondition:'${hint.condition}'}.`,
+    `A norma ${hint.id} tem verificação por condição: mantenha-a citada (source 'govbr-ds-kb', sem rule.checker) e reenvie live, um elemento por vez, com evidence.data {property, observed, expectedCondition:'${hint.condition}'}.`,
     "verify_finding",
     { live: true, ...(scanId ? { scanId } : {}) },
     { keep: ["element", ...(scanId ? ["scanId"] : [])] },
@@ -249,6 +253,12 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
         break;
       case "rule-not-applicable":
         add(step("keep-uncertain", "A condição desta regra não vale no estado medido (o detail diz por quê): isto não desmente o fato. Cite a regra que se aplica a este caso, ou mantenha o fato medido com rule: null."));
+        break;
+      case "fact-measured":
+        add(step(
+          "judge-fact",
+          `O fato está medido em verification.measured (font-size, declarado pela página ou não, passo mais próximo, distância). Se ele quebra a escala é julgamento seu (D-32), com a página na frente: se julgar violada, mantenha a norma citada${finding.rule.source === "govbr-ds-kb" ? ` (${finding.rule.id})` : ""} e registre o achado com a medida; senão, registre que está dentro da escala.`,
+        ));
         break;
       case "subject-not-a-dialog":
         add(step("fix-locator", "Use em element.locator o próprio diálogo (role=dialog/alertdialog, .br-modal, <dialog>), não o botão que o abre, e repita com as mesmas actions.", "verify_finding", undefined, { keep: ["evidence", ...(scanId ? ["scanId"] : [])] }));

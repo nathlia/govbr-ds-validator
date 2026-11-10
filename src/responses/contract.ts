@@ -101,6 +101,8 @@ export const ACTION_LABELS = {
   "fix-locator": "corrigir localizador",
   "fix-input": "corrigir entrada",
   retry: "repetir",
+  // 3.7.7 (D-32): o oráculo mediu; a decisão sobre a norma é do agente.
+  "judge-fact": "julgar o fato medido",
 } as const;
 export type ActionCode = keyof typeof ACTION_LABELS;
 

@@ -637,8 +637,9 @@ export class ScanSession {
     const resolution: PendingResolution = { by: "verify_finding", ref: verificationId, status: verdict };
     for (const entry of this.open()) {
       if (!entry.norms.some((n) => cited.has(n))) continue;
-      // 3.7.6-pre.2 (revisão MED): a pendência de observação só fecha por verify que DECIDE o elemento (confirmed/rejected).
-      if (entry.readIds?.length && verdict !== "confirmed" && verdict !== "rejected") continue;
+      // 3.7.6-pre.2 (revisão MED): a pendência de observação só fecha por verify que DECIDE o elemento (confirmed/rejected);
+      // 3.7.7 (D-32): ou que o MEDE (`measured`, a escala: o oráculo mede e o agente julga).
+      if (entry.readIds?.length && verdict !== "confirmed" && verdict !== "rejected" && verdict !== "measured") continue;
       // 3.7.3 A8 (revisão MED 2): "não verificado depois de alternar" não fecha por verify no estado não alternado.
       if (entry.requires) {
         const condition = (finding.evidence.data as Record<string, unknown> | undefined)?.expectedCondition;

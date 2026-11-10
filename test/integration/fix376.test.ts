@@ -377,7 +377,7 @@ describe("3.7.7 (teste à mão da 3.7.6, D1) — o verify decide a escala e o to
     rule: { ...rule, description: "x" }, evidence: { observed: "medido", expected: "esperado", data },
   });
 
-  it("escala: fora do passo → confirmed e fecha a O-NN; num passo → rejected; sem elemento → unverifiable", async () => {
+  it("escala (D-32): o verify MEDE cada elemento e não afirma nem nega a violação; a medida fecha a O-NN", async () => {
     const { client, call } = await connect();
     try {
       const rule = observedRuleId();
@@ -388,11 +388,19 @@ describe("3.7.7 (teste à mão da 3.7.6, D1) — o verify decide a escala e o to
       expect(o.measure).toContain(SCALE);
       const kb = { source: "govbr-ds-kb", id: rule };
       const off = await call("verify_finding", { finding: finding(`${base}/escala`, "#off", kb, { property: "font-size", observed: "13px", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
-      expect(off.data.verdict).toBe("confirmed");
+      expect(off.data.verdict).toBe("unverifiable");
       expect(off.data.verification.predicate).toBe("font-size-scale");
+      expect(off.data.verification.issue).toBe("measured-not-decided");
+      expect(off.data.observation.status).toBe("not-contradicted");
+      expect(off.data.verification.measured).toEqual([expect.objectContaining({ locator: "#off", fontSize: "13px", pageDeclared: true, nearestStepPx: expect.any(Number), distancePx: expect.any(Number) })]);
+      expect(off.data.actions[0]).toMatchObject({ action: "judge-fact" });
+      expect(JSON.stringify(off.data.actions)).not.toContain("rule: null");
+      expect(JSON.stringify(off.data.actions)).toContain(rule);
+      // a medida em cada elemento fecha a O-NN
       expect(off.data.verification.pendingResolved ?? off.data.pendingResolved).toEqual([o.pendingId]);
       const on = await call("verify_finding", { finding: finding(`${base}/escala`, "#on", kb, { property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
-      expect(on.data.verdict).toBe("rejected");
+      expect(on.data.verdict).toBe("unverifiable");
+      expect(on.data.verification.measured[0]).toMatchObject({ locator: "#on", distancePx: 0 });
       const none = await call("verify_finding", { finding: finding(`${base}/escala`, "#nao-existe", kb, { property: "font-size", expectedCondition: SCALE }), live: true, scanId: scan.data.scanId });
       expect(none.data.verdict).toBe("unverifiable");
       // sem a condição: o próximo passo nomeia a condição e mantém a norma — nunca "rule: null"
