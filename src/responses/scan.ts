@@ -41,6 +41,9 @@ export interface ScanRecipe {
   arrival?: unknown;
 }
 
+/** 3.7.10 (D5): o check não rodou neste scan, mas o mesmo estado já foi medido com ele (escopo inteiro) nesta sessão. */
+const ALREADY_WHY = (scanId: string) => `não rodou neste scan; já medido neste estado nesta sessão, com escopo inteiro, em ${scanId} (os achados estão lá).`;
+
 function limits(actionsApplied: number, viewport: { width: number; height: number } | undefined, knowledgeFree: boolean, statesPending = false) {
   const where = viewport ? ` nesta janela (${viewport.width}×${viewport.height})` : " nesta janela";
   const state = actionsApplied ? `o estado depois de ${actionsApplied} ação(ões) reproduzida(s)` : "o estado inicial, sem interação";
@@ -77,9 +80,15 @@ export function checksRunFor(
   revisited?: Array<{ locator: string; checker: string; now: string; findings?: string[] }>,
   /** 3.7.9 (D1): há pendência state-unscanned aberta neste scan. */
   statesPending = false,
-  /** 3.7.10 (D5): checks já rodados NESTE estado (rota + fingerprint) na sessão — completeOmitted não os sugere de novo. */
-  sessionRun: string[] = [],
+  /**
+   * 3.7.10 (D5): checks já rodados com escopo inteiro NESTE estado (rota + fingerprint) na sessão, com o scan que os rodou —
+   * completeOmitted não os sugere de novo, e o omitted[] deles aponta para esse scan.
+   */
+  sessionRun: Record<string, string> = {},
+  /** O scan desta resposta (o que ele mesmo rodou não é "de antes"). */
+  thisScanId?: string,
 ) {
+  const before = (check: string) => (sessionRun[check] && sessionRun[check] !== thisScanId ? sessionRun[check] : undefined);
   const scope = recipe.selectors?.length ? recipe.selectors.join(", ") : "document";
   const engine = coverage.axe ? `${coverage.axe.engine.name} ${coverage.axe.engine.version}` : undefined;
   const actionsApplied = coverage.actionsApplied?.length ?? 0;
@@ -109,25 +118,38 @@ export function checksRunFor(
   if (revisitHits.length) {
     executed.push({ check: "tokens (revisita)", tokenChecks: revisitChecks, findings: revisitFindings.slice(0, 10) });
   }
-  const omitted: Array<{ check: string; why: string }> = [];
+  const omitted: Array<{ check: string; why: string; alreadyMeasuredIn?: string }> = [];
   for (const check of ALL_CHECKS) {
     if (active.includes(check)) continue;
     const why = check === "tokens" && revisitHits.length
       ? "medidos só nos elementos antes ocultos (executed: tokens (revisita)); no resto deste estado, não."
       : CHECK_OMISSION_WHY[check];
-    omitted.push({ check, why });
+    // 3.7.10 (D5): já medido neste estado nesta sessão (escopo inteiro) — aponta o scan, em vez de dizer que falta.
+    const earlier = before(check);
+    omitted.push(earlier ? { check, why: ALREADY_WHY(earlier), alreadyMeasuredIn: earlier } : { check, why });
   }
+  const tokensBefore = before("tokens");
   const omittedTokens = active.includes("tokens") && recipe.tokenChecks ? ALL_TOKEN_CHECKS.filter((t) => !recipe.tokenChecks!.includes(t)) : [];
-  for (const sub of omittedTokens) omitted.push({ check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
-  if (active.includes("structure") && recipe.components?.length) {
+  for (const sub of omittedTokens) {
+    omitted.push(tokensBefore
+      ? { check: `tokens.${sub}`, why: ALREADY_WHY(tokensBefore), alreadyMeasuredIn: tokensBefore }
+      : { check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
+  }
+  const structureBefore = before("structure");
+  if (active.includes("structure") && recipe.components?.length && structureBefore) {
+    omitted.push({ check: "structure.components", why: ALREADY_WHY(structureBefore), alreadyMeasuredIn: structureBefore });
+  } else if (active.includes("structure") && recipe.components?.length) {
     omitted.push({
       check: "structure.components",
       why: `a estrutura só foi conferida para ${[...recipe.components].sort().join(", ")}; os demais componentes br-*, o indicador de foco visível e o rótulo dos campos não foram conferidos neste estado.`,
     });
   }
   // A chamada exata com SÓ o que faltou, na mesma receita (url, seletores, ações, chegada).
-  const missingChecks = ALL_CHECKS.filter((c) => !active.includes(c) && !sessionRun.includes(c));
-  const completeChecks = [...missingChecks, ...(omittedTokens.length && !missingChecks.includes("tokens") ? (["tokens"] as Check[]) : [])];
+  // o que já foi medido neste estado (escopo inteiro) na sessão não volta na sugestão (sem isso, page ↔ resto em laço).
+  const missingChecks = ALL_CHECKS.filter((c) => !active.includes(c) && !before(c));
+  const tokensToComplete = tokensBefore ? [] : omittedTokens;
+  const completeChecks = [...missingChecks, ...(tokensToComplete.length && !missingChecks.includes("tokens") ? (["tokens"] as Check[]) : [])];
+  const structureToComplete = active.includes("structure") && Boolean(recipe.components?.length) && !structureBefore;
   const base = {
     url: recipe.url,
     ...(recipe.selectors?.length ? { selectors: recipe.selectors } : {}),
@@ -136,14 +158,14 @@ export function checksRunFor(
   };
   // 3.7.10 (D5): o que a sessão já mediu neste estado não volta na sugestão (sem isso, page ↔ resto em laço).
   const completeOmitted =
-    omitted.length === 0 || (!missingChecks.length && !omittedTokens.length && !(active.includes("structure") && recipe.components?.length))
+    omitted.length === 0 || (!completeChecks.length && !structureToComplete)
       ? null
       : {
           tool: "scan_page",
           arguments: {
             ...base,
             ...(completeChecks.length ? { checks: completeChecks } : { checks: ["structure"] }),
-            ...(omittedTokens.length ? { tokenChecks: omittedTokens } : {}),
+            ...(tokensToComplete.length ? { tokenChecks: tokensToComplete } : {}),
           },
         };
   return {

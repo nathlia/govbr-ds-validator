@@ -557,20 +557,68 @@ describe("silence is not conformance (2.15.0)", () => {
 });
 
 describe("scan_page.checksRun (3.0.0; checksOmitted da 2.15.0)", () => {
+  // 3.7.10 (D5; revisão de 3c21aa1): o que já foi medido neste estado na sessão (escopo inteiro) não volta em completeOmitted
+  // e o omitted[] aponta o scan (alreadyMeasuredIn). Cada caso numa sessão nova: a sessão compartilhada do arquivo já
+  // escaneou esta página com todos os checks.
+  async function fresh() {
+    const server = createServer({ reportsDir: mkdtempSync(join(tmpdir(), "govbr-gate-reports-")) });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const c = new Client({ name: "gate-test-fresh", version: "1.0.0" });
+    await server.connect(st);
+    await c.connect(ct);
+    const scan = async (args: Record<string, unknown>) => JSON.parse(textOf(await c.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, ...args } })));
+    return { c, scan };
+  }
+
   it("lists, in this state, the checks that did not run and what was left unmeasured — always, with fixed limits and the exact completing call", async () => {
-    const narrowed = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["axe", "structure"] } })));
-    expect(narrowed.checksRun.executed.map((i: { check: string }) => i.check)).toEqual(["axe", "structure"]);
-    expect(narrowed.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
-    expect(narrowed.checksRun.omitted[0].why).toContain("tokens");
-    expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
-    expect(narrowed.checksRun.coverageNote).toBe(MESSAGES["scan-coverage"]);
-    expect(narrowed.checksRun.limits.map((l: { code: string }) => l.code)).toEqual(expect.arrayContaining(["no-state-semantics", "single-state"]));
-    const sub = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page, checks: ["tokens"], tokenChecks: ["font"], components: ["button"] } })));
-    expect(sub.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
-    const full = JSON.parse(textOf(await client.callTool({ name: "scan_page", arguments: { maxChars: 100_000, url: page } })));
-    expect(full.checksRun.omitted).toEqual([]);
-    expect(full.checksRun.completeOmitted).toBeNull();
-    expect(full.checksRun.limits.length).toBeGreaterThan(0);
-    expect(full.absenceNote).toBe(ABSENCE_NOTE);
+    const { c, scan } = await fresh();
+    try {
+      const narrowed = await scan({ checks: ["axe", "structure"] });
+      expect(narrowed.checksRun.executed.map((i: { check: string }) => i.check)).toEqual(["axe", "structure"]);
+      expect(narrowed.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
+      expect(narrowed.checksRun.omitted[0].why).toContain("tokens");
+      expect(narrowed.checksRun.omitted.some((i: { alreadyMeasuredIn?: string }) => i.alreadyMeasuredIn)).toBe(false);
+      expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
+      expect(narrowed.checksRun.coverageNote).toBe(MESSAGES["scan-coverage"]);
+      expect(narrowed.checksRun.limits.map((l: { code: string }) => l.code)).toEqual(expect.arrayContaining(["no-state-semantics", "single-state"]));
+      const sub = await scan({ checks: ["tokens"], tokenChecks: ["font"], components: ["button"] });
+      expect(sub.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["structure", "axe", "page", "tokens.color", "tokens.radius", "tokens.spacing"]);
+      const full = await scan({});
+      expect(full.checksRun.omitted).toEqual([]);
+      expect(full.checksRun.completeOmitted).toBeNull();
+      expect(full.checksRun.limits.length).toBeGreaterThan(0);
+      expect(full.absenceNote).toBe(ABSENCE_NOTE);
+      // depois do scan inteiro do mesmo estado: nada a completar, e o omitted aponta o scan que mediu
+      const again = await scan({ checks: ["axe", "structure"] });
+      expect(again.checksRun.omitted.map((i: { check: string }) => i.check)).toEqual(["tokens", "page"]);
+      for (const o of again.checksRun.omitted) {
+        expect(o.alreadyMeasuredIn).toMatch(/^S-/);
+        expect(o.why).toMatch(/já medido neste estado/);
+      }
+      expect(again.checksRun.omitted.find((o: { check: string }) => o.check === "page").alreadyMeasuredIn).toBe(full.scanId);
+      expect(again.checksRun.completeOmitted).toBeNull();
+    } finally { await c.close(); }
+  });
+
+  it("um scan de escopo parcial (tokenChecks/components) não conta como medido: nas duas ordens", async () => {
+    {
+      const { c, scan } = await fresh();
+      try {
+        await scan({ checks: ["tokens", "structure"], tokenChecks: ["font"], components: ["button"] });
+        const narrowed = await scan({ checks: ["axe", "structure"] });
+        expect(narrowed.checksRun.omitted.some((i: { alreadyMeasuredIn?: string }) => i.alreadyMeasuredIn)).toBe(false);
+        expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
+      } finally { await c.close(); }
+    }
+    {
+      const { c, scan } = await fresh();
+      try {
+        const narrowed = await scan({ checks: ["axe", "structure"] });
+        const sub = await scan({ checks: ["tokens"], tokenChecks: ["font"], components: ["button"] });
+        const byCheck = Object.fromEntries(sub.checksRun.omitted.map((o: { check: string; alreadyMeasuredIn?: string }) => [o.check, o.alreadyMeasuredIn ?? null]));
+        expect(byCheck).toEqual({ structure: narrowed.scanId, axe: narrowed.scanId, page: null, "tokens.color": null, "tokens.radius": null, "tokens.spacing": null });
+        expect(sub.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["page", "tokens"], tokenChecks: ["color", "radius", "spacing"] } });
+      } finally { await c.close(); }
+    }
   });
 });
