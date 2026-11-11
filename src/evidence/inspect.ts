@@ -135,187 +135,47 @@ export async function inspectPageComputedStyles(
         return out;
       }
 
-      /*
-       * Localizadores (3.7.11; auditoria V-1 e 2ª revisão MED 3/5). Forma base = a de sempre: #id, data-testid (único,
-       * aspas escapadas) ou até 5 passos estruturais (tag, com :nth-of-type quando há irmãos da mesma tag), ancorados no
-       * pai com id. Ela fica sempre que já resolve só o elemento. Só quando não resolve, sobe além dos 5 passos até ficar
-       * única, parando numa âncora única (id/test id), no <body> ou no topo da raiz de sombra (`body >` / `:host >`).
-       * Custo: as posições entre irmãos são calculadas uma vez por pai; a unicidade de um caminho sem âncora é contada
-       * por grupos (mesma tag, mesmos passos) numa passada — nada de uma consulta ao documento por elemento.
-       */
-      let rootsCache: (Document | ShadowRoot)[] | null = null;
-      function allRoots(): (Document | ShadowRoot)[] {
-        if (rootsCache) return rootsCache;
-        const out: (Document | ShadowRoot)[] = [document];
-        const visit = (root: Document | ShadowRoot) => {
-          for (const e of Array.from(root.querySelectorAll("*"))) {
-            if (e.shadowRoot) {
-              out.push(e.shadowRoot);
-              visit(e.shadowRoot);
-            }
-          }
-        };
-        visit(document);
-        rootsCache = out;
-        return out;
-      }
-      let rootSeq = 0;
-      const rootNo = new Map<Node, number>();
-      const noOf = (r: Node) => {
-        if (!rootNo.has(r)) rootNo.set(r, ++rootSeq);
-        return rootNo.get(r)!;
-      };
-      /** Raízes onde o resolvedor procura um segmento: a do próprio nó; no documento, com `pierce`, todas (seletor de um segmento só). */
-      function scopeOf(node: Element, pierce: boolean): { key: string; roots: (Document | ShadowRoot)[] } {
-        const root = node.getRootNode() as Document | ShadowRoot;
-        if (root instanceof ShadowRoot) return { key: `r${noOf(root)}`, roots: [root] };
-        return pierce ? { key: "all", roots: allRoots() } : { key: "doc", roots: [document] };
-      }
-      const counts = new Map<string, number>();
-      /** Quantos elementos um seletor simples (id, atributo) casa no escopo; em cache. */
-      function countIn(scope: { key: string; roots: (Document | ShadowRoot)[] }, sel: string): number {
-        const k = `${scope.key}\u0001${sel}`;
-        const hit = counts.get(k);
-        if (hit !== undefined) return hit;
-        let n = 0;
-        try {
-          for (const r of scope.roots) n += r.querySelectorAll(sel).length;
-        } catch {
-          n = Infinity;
-        }
-        counts.set(k, n);
-        return n;
-      }
-      const partCache = new Map<Element, string>();
-      /** O passo de um nó: a tag, com :nth-of-type quando há irmãos da mesma tag (calculado para todos os filhos do pai de uma vez). */
-      function partOf(node: Element): string {
-        const hit = partCache.get(node);
-        if (hit !== undefined) return hit;
-        const parent = node.parentElement;
-        const root = node.getRootNode();
-        const pool = parent ? parent.children : root instanceof ShadowRoot ? root.children : null;
-        if (!pool) {
-          const t = node.tagName.toLowerCase();
-          partCache.set(node, t);
-          return t;
-        }
-        const byTag = new Map<string, Element[]>();
-        for (const c of Array.from(pool)) {
-          const list = byTag.get(c.tagName);
-          if (list) list.push(c);
-          else byTag.set(c.tagName, [c]);
-        }
-        for (const list of byTag.values()) {
-          list.forEach((c, i) => partCache.set(c, list.length > 1 ? `${c.tagName.toLowerCase()}:nth-of-type(${i + 1})` : c.tagName.toLowerCase()));
-        }
-        return partCache.get(node)!;
-      }
-      const testIdSel = (n: Element) => {
-        const v = n.getAttribute("data-testid");
-        // valor entre aspas: escapa só a barra invertida e as aspas (o resto do valor sai como está)
-        return v ? `[data-testid="${v.replace(/["\\]/g, (m) => `\\${m}`)}"]` : null;
-      };
-      /** Âncora do passo acima: id (como sempre) ou test id único. */
-      function anchorOf(parent: Element): string | null {
-        if (parent.id) return `#${CSS.escape(parent.id)}`;
-        const t = testIdSel(parent);
-        return t && countIn(scopeOf(parent, false), t) === 1 ? t : null;
-      }
-      /** A cadeia de passos de um nó para cima, dentro da raiz dele (sem o <body>), até `depth` passos; em cache. */
-      const chainCache = new Map<Element, { parts: string[]; nodes: Element[]; ended: boolean }>();
-      function chainOf(el: Element, depth: number): { parts: string[]; nodes: Element[]; ended: boolean } {
-        let c = chainCache.get(el);
-        if (!c) {
-          c = { parts: [], nodes: [], ended: false };
-          chainCache.set(el, c);
-        }
-        while (!c.ended && c.parts.length < depth) {
-          const node: Element = c.nodes.length ? (c.nodes[c.nodes.length - 1].parentElement as Element) : el;
-          if (!node || node === document.body || node === document.documentElement) {
-            c.ended = true;
+      const quoted = (v: string) => v.replace(/["\\]/g, (m) => `\\${m}`);
+      // Build a stable, unique CSS locator for an element, within its own root.
+      function locatorWithinRoot(el: Element): string {
+        if (el.id) return `#${CSS.escape(el.id)}`;
+        const testId = el.getAttribute("data-testid");
+        // 3.7.11: o valor vai entre aspas — escapa a barra invertida e as aspas (sem isso, um valor com aspas dava seletor
+        // inválido); qualquer outro valor sai como antes
+        if (testId) return `[data-testid="${quoted(testId)}"]`;
+        const parts: string[] = [];
+        let node: Element | null = el;
+        while (node && node !== document.body && parts.length < 5) {
+          const parent: Element | null = node.parentElement;
+          if (!parent) {
+            // Top of a shadow tree: there is no parent element, but the node still needs a
+            // segment — without one the locator ends at the host and points at nothing.
+            const root = node.getRootNode();
+            const tag = node.tagName.toLowerCase();
+            const siblings =
+              root instanceof ShadowRoot
+                ? Array.from(root.children).filter((c) => c.tagName === node!.tagName)
+                : [];
+            const idx = siblings.indexOf(node) + 1;
+            parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
             break;
           }
-          c.parts.push(partOf(node));
-          c.nodes.push(node);
-          if (!node.parentElement) c.ended = true;
-        }
-        return c;
-      }
-      const tagOfPart = (p: string) => p.split(":")[0];
-      /** Um passo do seletor casa com o passo de outro nó: mesma tag; com :nth-of-type, a mesma posição (filho único = 1). */
-      const stepMatches = (want: string, got: string | undefined) => {
-        if (got === undefined) return false;
-        if (!want.includes(":nth-of-type(")) return tagOfPart(got) === want;
-        return got === want || (want.endsWith(":nth-of-type(1)") && got === tagOfPart(want));
-      };
-      const groupCache = new Map<string, Element[]>();
-      /** Os elementos que podem casar com um caminho sem âncora que termina em `el`: a mesma tag, no escopo do resolvedor. */
-      function sameTag(el: Element, scope: { key: string; roots: (Document | ShadowRoot)[] }): Element[] {
-        const k = `${scope.key}\u0001${el.tagName}`;
-        let g = groupCache.get(k);
-        if (!g) {
-          g = [];
-          const tag = el.tagName.toLowerCase();
-          for (const r of scope.roots) {
-            for (const x of Array.from(r.querySelectorAll(CSS.escape(tag)))) if (x.tagName === el.tagName) g.push(x);
-          }
-          groupCache.set(k, g);
-        }
-        return g;
-      }
-      /** Os elementos do grupo que casam com os passos (de baixo para cima) `steps`. */
-      function matching(group: Element[], steps: string[]): Element[] {
-        return group.filter((x) => {
-          const c = chainOf(x, steps.length);
-          if (c.parts.length < steps.length) return false;
-          for (let i = 0; i < steps.length; i += 1) if (!stepMatches(steps[i], c.parts[i])) return false;
-          return true;
-        });
-      }
-
-      /** O segmento de um nó na própria raiz: a forma base quando já é única; senão estendida até ficar única. */
-      function segmentOf(el: Element, pierce: boolean): string {
-        const scope = scopeOf(el, pierce);
-        if (el.id && countIn(scope, `#${CSS.escape(el.id)}`) === 1) return `#${CSS.escape(el.id)}`;
-        const own = testIdSel(el);
-        if (own && countIn(scope, own) === 1) return own;
-        // forma base (até 5 passos, ancorada no pai com id/test id)
-        const c = chainOf(el, 5);
-        const steps: string[] = [];
-        for (let i = 0; i < c.parts.length; i += 1) {
-          steps.push(c.parts[i]);
-          const parent = c.nodes[i].parentElement;
-          const anchor = parent ? anchorOf(parent) : null;
-          if (anchor) {
-            // por construção: âncora única → cada passo abaixo dela escolhe um só filho
-            const base = [anchor, ...[...steps].reverse()].join(" > ");
-            if (countIn(scope, anchor) === 1 || countIn(scope, base) === 1) return base;
+          const tag = node.tagName.toLowerCase();
+          const siblings = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+          const idx = siblings.indexOf(node) + 1;
+          parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
+          if (parent.id) {
+            parts.unshift(`#${CSS.escape(parent.id)}`);
             break;
           }
-        }
-        if (!steps.length) return "";
-        // 3.7.10: o elemento com id repetido ficava `#id`; agora, como não identifica, segue o caminho
-        const group = sameTag(el, scope);
-        let candidates = matching(group, steps);
-        if (candidates.length <= 1) return [...steps].reverse().join(" > ");
-        // ambíguo: sobe (posição exata em cada passo novo) até ficar único ou chegar a uma âncora única / ao topo
-        for (let depth = steps.length; ; depth += 1) {
-          const cc = chainOf(el, depth + 1);
-          if (cc.parts.length <= depth) {
-            const top = cc.nodes[cc.nodes.length - 1] ?? el;
-            const prefix = top.parentElement ? "body" : top.getRootNode() instanceof ShadowRoot ? ":host" : "";
-            return [prefix, ...[...steps].reverse()].filter(Boolean).join(" > ");
+          const parentTestId = parent.getAttribute("data-testid");
+          if (parentTestId) {
+            parts.unshift(`[data-testid="${quoted(parentTestId)}"]`);
+            break;
           }
-          const node = cc.nodes[depth];
-          const anchor = anchorOf(node);
-          if (anchor) {
-            const anchored = [anchor, ...[...steps].reverse()].join(" > ");
-            if (countIn(scope, anchor) === 1 || countIn(scope, anchored) === 1) return anchored;
-          }
-          steps.push(cc.parts[depth]);
-          candidates = candidates.filter((x) => stepMatches(cc.parts[depth], chainOf(x, depth + 1).parts[depth]));
-          if (candidates.length <= 1) return [...steps].reverse().join(" > ");
+          node = parent;
         }
+        return parts.join(" > ");
       }
 
       /** Full locator: one segment per shadow tree crossed, joined by ` >>> `. */
@@ -323,7 +183,7 @@ export async function inspectPageComputedStyles(
         const segments: string[] = [];
         let node: Element = el;
         for (let depth = 0; depth < 6; depth += 1) {
-          segments.unshift(segmentOf(node, node === el));
+          segments.unshift(locatorWithinRoot(node));
           const root = node.getRootNode();
           if (root instanceof ShadowRoot) node = root.host;
           else break;
@@ -364,9 +224,6 @@ export async function inspectPageComputedStyles(
       // que o nome acessível seja lido do próprio Chromium depois desta passagem (ver accessibleName.ts).
       const nameProbe: Element[] = [];
       (window as unknown as Record<string, unknown>)[probeKey] = nameProbe;
-
-      // os localizadores de todos antes de qualquer foco/blur (que pode mudar o DOM)
-      const locatorOf = new Map(matched.map((el) => [el, locatorFor(el)] as const));
 
       return matched.map((el) => {
         const htmlEl = el as HTMLElement;
@@ -628,7 +485,7 @@ export async function inspectPageComputedStyles(
 
         return {
           nameProbeIndex,
-          locator: locatorOf.get(el)!,
+          locator: locatorFor(el),
           tagName: el.tagName.toLowerCase(),
           id: el.id || null,
           classes: Array.from(el.classList),

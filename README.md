@@ -83,6 +83,17 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.7.11 — limitações conhecidas (decisão da 3ª revisão)
+
+- **Localizador (auditoria V-1).** O localizador do elemento é o da 3.7.10: até 5 passos estruturais, ancorado no pai
+  com id. Dois elementos diferentes podem dividir o mesmo localizador; nesse caso o scan dá um achado por localizador
+  (o segundo desvio no mesmo caminho não vira achado próprio) e um `verify_finding` vivo com esse localizador pode voltar
+  `locator-ambiguous`. A tentativa de localizador único (e5c14b0/5887868) saiu da 3.7.11: mudava a identidade do mesmo
+  elemento entre estados. Da mudança fica só o `data-testid` com aspas escapadas (antes saía seletor inválido).
+- **Envio do campo de arquivo.** O oráculo não examina o envio do formulário (nem receita de envio, nem fatos depois do
+  clique). Quando a receita aplicou ao campo um arquivo a recusar, a pendência `upload-paths` diz, em `measure`, que a
+  recusa pode só aparecer no envio e que o agente inclua a própria ação de envio e meça o campo.
+
 ## 3.7.5 — revisão independente de dev-3.7.5 (NAT-111)
 
 `package.json` e o `serverInfo` passam a 3.7.5. Defeitos da revisão (sondas `.tmp-eval/rev375/p1…p14`):

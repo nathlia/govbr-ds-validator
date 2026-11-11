@@ -1867,35 +1867,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
    * 3.7.9 (D1/D2): as pendências de estado já vistas abertas nesta rota nascem fechadas (✓), e a ordem passa a ser estados
    * recolhidos, campo de arquivo, demais — a mesma no ledger e na linha do scan.
    */
-  const settleStateItems = (route: string, items: PendingItem[], checks: string[], scanId: string, previousScanId?: string): PendingItem[] => {
+  const settleStateItems = (route: string, items: PendingItem[], checks: string[], scanId: string): PendingItem[] => {
     const born = new Set(session.settleStates(route, items.filter((i) => i.code === "state-unscanned").map((i) => i.pendingId as string), checks, scanId));
-    // 3.7.11 (2ª revisão LOW): com compareToScanId, a mensagem do campo que já estava no scan anterior vem marcada (não é
-    // efeito desta receita).
-    const before = new Set(
-      previousScanId
-        ? (observationStore.get(previousScanId) ?? []).flatMap((o) => {
-            const d = o.data as { code?: string; fieldNow?: { associated?: Array<{ text: string }> } } | undefined;
-            return d?.code === "upload-paths" ? (d.fieldNow?.associated ?? []).map((a) => a.text) : [];
-          })
-        : [],
-    );
-    // 3.7.11 (revisão H4): a receita de envio compara com o scan desta resposta (o antes do envio)
-    const settled = items.map((i) => {
-      let it = born.has(i.pendingId as string) ? { ...i, resolved: "state-scanned" } : i;
-      const fn = (it as { fieldNow?: { associated: Array<{ text: string; inPrevious?: boolean }> } }).fieldNow;
-      if (it.code === "upload-paths" && fn && before.size) {
-        const same = fn.associated.filter((x) => before.has(x.text)).length;
-        if (same) {
-          it = {
-            ...it,
-            fieldNow: { ...fn, associated: fn.associated.map((x) => (before.has(x.text) ? { ...x, inPrevious: true } : x)) },
-            observed: `${it.observed ?? ""}; ${same} das mensagens do campo já estavam no scan ${previousScanId} (não são efeito desta receita)`,
-          } as PendingItem;
-        }
-      }
-      const sr = (it as { submitRecipe?: { tool: string; arguments: Record<string, unknown> } }).submitRecipe;
-      return sr ? { ...it, submitRecipe: { ...sr, arguments: { ...sr.arguments, compareToScanId: scanId } } } : it;
-    });
+    const settled = items.map((i) => (born.has(i.pendingId as string) ? { ...i, resolved: "state-scanned" } : i));
     const rank = (i: PendingItem) => (i.code === "state-unscanned" ? 0 : i.code === "upload-paths" ? 1 : 2);
     return settled.map((i, k) => ({ i, k })).sort((a, b) => rank(a.i) - rank(b.i) || a.k - b.k).map(({ i }) => i);
   };
@@ -2170,7 +2144,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const statesSeen = states.closed;
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
         // na linha (a página do next começa por eles).
-        const regularItems = hasNorms ? settleStateItems(route, withPendingIds(scanId, route, notJudged), executedChecks, scanId, compareToScanId) : [];
+        const regularItems = hasNorms ? settleStateItems(route, withPendingIds(scanId, route, notJudged), executedChecks, scanId) : [];
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
         // das de sempre), não só contagem em observations.byKind.
         const observedItems = hasNorms ? withPendingIds(scanId, route, observedRequiredItems(result.observations)) : [];
@@ -2346,7 +2320,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
       const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
         (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"]).closed;
-      const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId, compareToScanId);
+      const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
       observationStore.set(scanId, notJudgedObservations(pageItems, url));

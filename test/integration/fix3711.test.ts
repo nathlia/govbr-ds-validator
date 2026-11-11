@@ -4,9 +4,8 @@
  *       nada não fecha a pendência; aria-expanded="true" estático com conteúdo oculto continua pendente; a chegada de um
  *       diálogo com id é o próprio diálogo (outro diálogo não chega). Conteúdo que aparece depois de um instante: a leitura
  *       espera a página assentar e lê de novo — fecha (a sequência do rastro: checks sem page, depois só page);
- *   R2 (revisão H4): o envio só com UM controle de envio determinável; receita sem chegada errorVisible, com compareToScanId
- *       deste scan; a relação arquivo × accept (sem presumir recusa; arquivo dentro do accept: nada de envio sugerido); os
- *       fatos do campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner) como medida;
+ *   R2 (decisão da 3ª revisão): o oráculo não examina o envio — com arquivo a recusar aplicado, uma frase neutra manda o
+ *       agente incluir o próprio envio e medir o campo; a relação arquivo × accept (sem presumir recusa);
  *   R3: inform com o referente literal (seção; frase anterior quando a cláusula tem demonstrativo em qualquer posição); o
  *       texto não é cortado antes do verbo;
  *   R4: o arrasto vai no elemento com ouvinte de drop no campo ou no contêiner dele; acima disso, zona desconhecida;
@@ -25,7 +24,7 @@ import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { resetKnowledgeLock } from "../../src/data/lock.js";
 import { citationForceWarning } from "../../src/responses/verify.js";
-import { acceptRelation, KF_END_NOTE, uploadInformClauses, type PendingItem } from "../../src/scan/notJudged.js";
+import { acceptRelation, KF_END_NOTE, UPLOAD_SUBMIT_NOTE, uploadInformClauses, type PendingItem } from "../../src/scan/notJudged.js";
 import type { Finding } from "../../src/schema/finding.js";
 import { filterRules } from "../../src/data/knowledge.js";
 
@@ -76,7 +75,7 @@ async function connect(profile: "evaluation" | "knowledge-free" = "evaluation") 
   return { client, call };
 }
 type Recipe = { tool: string; arguments: Record<string, unknown> };
-type Item = PendingItem & { recipe?: Recipe; dropRecipe?: Recipe; submitRecipe?: Recipe; fieldNow?: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> } };
+type Item = PendingItem & { recipe?: Recipe; dropRecipe?: Recipe };
 const itemOf = (d: { checksRun: { pageLevel: { notMeasured: Array<PendingItem | string> } } }, code: string) =>
   d.checksRun.pageLevel.notMeasured.find((i) => typeof i !== "string" && i.code === code) as Item | undefined;
 
@@ -129,7 +128,7 @@ describe("3.7.11 R1 — aberto = o conteúdo aparece (revisão H1–H3)", () => 
   });
 });
 
-describe("3.7.11 R2/R4 — envio e arrasto do campo de arquivo (revisão H4)", () => {
+describe("3.7.11 R2/R4 — arrasto do campo de arquivo; o envio fica com o agente (decisão da 3ª revisão)", () => {
   it("relação arquivo × accept, sem presumir recusa", () => {
     expect(acceptRelation(".pdf", { name: "a.exe", mimeType: "application/x-msdownload" })).toBe("fora do accept");
     expect(acceptRelation(".pdf,image/*", { name: "a.png", mimeType: "image/png" })).toBe("dentro do accept");
@@ -137,43 +136,38 @@ describe("3.7.11 R2/R4 — envio e arrasto do campo de arquivo (revisão H4)", (
   });
 
   for (const profile of ["evaluation", "knowledge-free"] as const) {
-    it(`um envio determinável: receita sem errorVisible, com compareToScanId; os fatos do campo depois do envio (${profile})`, async () => {
+    it(`drop no ouvinte do contêiner; arquivo a recusar: só a frase neutra do envio, sem receita nem fatos do envio (${profile})`, async () => {
       const { client, call } = await connect(profile);
       try {
         const url = `${base}/upload`;
         const u = itemOf(await call("scan_page", { url, maxChars: 60000 }), "upload-paths")!;
         expect(u.dropRecipe!.arguments.actions).toEqual([{ action: "drop", selector: "#f > div > button", files: [{ name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 }] }]);
         expect((await call("scan_page", { ...u.dropRecipe!.arguments })).status).toBe("scanned");
-        expect(u.measure).toMatch(/envio do formulário: clique em #enviar/);
-        expect(u.measure).not.toMatch(/recusa|errorVisible|não chegar/);
+        expect(u.measure).not.toContain(UPLOAD_SUBMIT_NOTE);
         const exe = [{ action: "upload", selector: "#arquivo", files: [{ name: "programa.exe", mimeType: "application/x-msdownload", size: 2048 }] }];
-        const up = await call("scan_page", { url, actions: exe, maxChars: 60000 });
-        const u2 = itemOf(up, "upload-paths")!;
-        expect(u2.observed).toMatch(/^upload de programa\.exe \(fora do accept\); no campo: aria-describedby: "Apoio do campo\."/);
-        expect(u2.submitRecipe!.arguments).toEqual({ url, actions: [...exe, { action: "click", selector: "#enviar" }], compareToScanId: up.scanId });
-        const sent = await call("scan_page", { ...u2.submitRecipe!.arguments, maxChars: 60000 });
-        const u3 = itemOf(sent, "upload-paths")!;
-        expect(u3.submitRecipe).toBeUndefined();
-        expect(u3.observed).toMatch(/depois do clique em #enviar, no campo: aria-invalid="true"/);
-        expect(u3.fieldNow!.associated).toEqual(expect.arrayContaining([{ via: "aria-describedby", role: "alert", text: "Formato não aceito." }]));
-        // arquivo dentro do accept: nada de envio sugerido, nada de recusa
+        const u2 = itemOf(await call("scan_page", { url, actions: exe, maxChars: 60000 }), "upload-paths")!;
+        expect(u2.observed).toMatch(/^upload de programa\.exe \(fora do accept\); accept="\.pdf"/);
+        expect(u2.measure).toContain(UPLOAD_SUBMIT_NOTE);
+        expect(u2).not.toHaveProperty("submitRecipe");
+        expect(u2).not.toHaveProperty("fieldNow");
+        // a receita de arrasto constrói sobre a receita deste scan (o upload), sem empilhar drop
+        expect(u2.dropRecipe!.arguments.actions.map((x) => (x as { action: string }).action)).toEqual(["upload", "drop"]);
+        // arquivo dentro do accept: nenhuma frase de envio, nada de recusa
         const pdf = itemOf(await call("scan_page", { url, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "doc.pdf", mimeType: "application/pdf", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;
         expect(pdf.observed).toMatch(/\(dentro do accept\)/);
-        expect(pdf.submitRecipe).toBeUndefined();
         expect(`${pdf.observed} ${pdf.measure}`).not.toMatch(/recusa/);
       } finally { await client.close(); }
     });
   }
 
-  it("sem envio único determinável: sem seletor; ouvinte de drop só acima do contêiner: zona desconhecida", async () => {
+  it("ouvinte de drop só acima do contêiner: zona desconhecida, sem receita", async () => {
     const { client, call } = await connect();
     try {
       const url = `${base}/ambiguo`;
       const u = itemOf(await call("scan_page", { url, actions: [{ action: "upload", selector: "#arq2", files: [{ name: "a.txt", mimeType: "text/plain", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;
-      expect(u.submitRecipe).toBeUndefined();
       expect(u.dropRecipe).toBeUndefined();
       expect(u.measure).toMatch(/zona de soltar desconhecida/);
-      expect(u.measure).toMatch(/2 botões no formulário, sem um envio único determinável/);
+      expect(u.measure).toContain(UPLOAD_SUBMIT_NOTE);
     } finally { await client.close(); }
   });
 });
