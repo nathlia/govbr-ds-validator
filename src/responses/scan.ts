@@ -5,7 +5,7 @@
  */
 import type { Finding, Observation } from "../schema/finding.js";
 import { CONTRACT, MESSAGES, budgetPage, step, textSize } from "./contract.js";
-import { pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
+import { STATE_IDS_NOTE, idLabelOf, pageLevelCodes, pageLevelMinimal, pageLevelNorm, pageLevelShort, type NotJudgedItem } from "../scan/notJudged.js";
 import { CROSS_ROUTE, sessionPendingChecklistCount, sessionPendingCodes } from "../scan/session.js";
 import { clausesSummary, deferredReserve, referenceFloor, selectReserve, splitDelivered, type ClauseDelivered, type ContextDelivered, type ReserveCandidate } from "../tools/clauseReserve.js";
 
@@ -41,7 +41,7 @@ export interface ScanRecipe {
   arrival?: unknown;
 }
 
-function limits(actionsApplied: number, viewport: { width: number; height: number } | undefined, knowledgeFree: boolean) {
+function limits(actionsApplied: number, viewport: { width: number; height: number } | undefined, knowledgeFree: boolean, statesPending = false) {
   const where = viewport ? ` nesta janela (${viewport.width}×${viewport.height})` : " nesta janela";
   const state = actionsApplied ? `o estado depois de ${actionsApplied} ação(ões) reproduzida(s)` : "o estado inicial, sem interação";
   return [
@@ -51,7 +51,10 @@ function limits(actionsApplied: number, viewport: { width: number; height: numbe
     },
     {
       code: "single-state",
-      text: `Mediu só ${state}${where}; outros estados, conteúdo que só aparece após interação ou tempo e outras larguras não foram vistos.`,
+      // 3.7.9 (D1): com estados recolhidos pendentes, o limite aponta para eles (a forma acionável) em vez da frase longa.
+      text: statesPending
+        ? "Só este estado; ver state-unscanned."
+        : `Mediu só ${state}${where}; outros estados, conteúdo que só aparece após interação ou tempo e outras larguras não foram vistos.`,
     },
     ...(knowledgeFree
       ? []
@@ -72,6 +75,8 @@ export function checksRunFor(
   knowledgeFree: boolean,
   /** 3.6.5 (item 6): o que a revisita de elementos antes ocultos mediu neste scan (pageScan.RevisitItem). */
   revisited?: Array<{ locator: string; checker: string; now: string; findings?: string[] }>,
+  /** 3.7.9 (D1): há pendência state-unscanned aberta neste scan. */
+  statesPending = false,
 ) {
   const scope = recipe.selectors?.length ? recipe.selectors.join(", ") : "document";
   const engine = coverage.axe ? `${coverage.axe.engine.name} ${coverage.axe.engine.version}` : undefined;
@@ -81,7 +86,7 @@ export function checksRunFor(
       // 3.7.3 A8: a medida ARIA × estado nativo também roda neste perfil (só pendências, sem norma da base).
       executed: [{ check: "axe", scope, ...(engine ? { engine } : {}) }, { check: "aria-native-state", scope }],
       omitted: [],
-      limits: limits(actionsApplied, viewport, true),
+      limits: limits(actionsApplied, viewport, true, statesPending),
       coverageNote: MESSAGES["scan-coverage"],
       completeOmitted: null,
     };
@@ -143,7 +148,7 @@ export function checksRunFor(
     omitted,
     // 3.6.1 (item 3): o mínimo — pular um check não é conformidade.
     ...(omitted.length ? { omittedNote: "Omitido ≠ conforme: sem medida neste estado; achados dele não sumiram (stateDiff.notRemeasured)." } : {}),
-    limits: limits(actionsApplied, viewport, false),
+    limits: limits(actionsApplied, viewport, false, statesPending),
     coverageNote: MESSAGES["scan-coverage"],
     completeOmitted,
   };
@@ -589,7 +594,7 @@ function pageLevelNormStep(r: Record<string, unknown>): Record<string, unknown> 
 }
 
 /** 3.6.3 (revisão MEDIUM 2): pendências em códigos → só os ids (`P-NN`), contagem e continuação. */
-function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> | null {
+export function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown } } | undefined;
   const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number; conditions?: Record<string, string> } | undefined;
   // Sem pendência com sinal nesta página (lista vazia, ou só as sem sinal, contadas): não há id a guardar — fica a contagem.
@@ -598,10 +603,18 @@ function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> |
   }
   if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
   // 3.7.5 (item 6): a linha de leitura agrega ids (`L-01..L-04` ou `L-01,L-04`; revisão M4: espaço próprio) — um rótulo só.
-  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^[PO]-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$|^P-\d+(?:(?:\.\.|,)P-\d+)+$/.test(i));
+  // 3.7.9 (D1): estado recolhido e campo de arquivo ficam com o código e o 1º seletor (`P-18:state-unscanned@#gatilho`).
+  const ids = (pl.notMeasured as string[]).map(idLabelOf).filter((i) => /^[PO]-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$|^P-\d+(?:(?:\.\.|,)P-\d+)+$|^P-\d+:(?:state-unscanned|upload-paths)(?:@|$)/.test(i));
   if (!ids.length) return null;
+  // estados sem seletor curto e consecutivos numa entrada só (`P-07,P-08:state-unscanned`)
+  for (let k = ids.length - 1; k > 0; k--) {
+    const [a, b] = [ids[k - 1], ids[k]];
+    const code = (x: string) => (x.includes("@") ? null : x.split(":")[1] ?? null);
+    if (code(a) && code(a) === code(b)) ids.splice(k - 1, 2, `${a.split(":")[0]},${b}`);
+  }
+  const located = ids.some((i) => /:(?:state-unscanned|upload-paths)/.test(i));
   // revisão 3.7.8 (MED 6): a condição exata do verify por id de O-NN fica também aqui.
-  return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, ...(pl.conditions ? { conditions: pl.conditions } : {}), next: pl.next ?? pl.full } } };
+  return { ...r, checksRun: { ...cr, pageLevel: { ids, ...(located ? { idsNote: STATE_IDS_NOTE } : { count: pl.count ?? pl.notMeasured.length }), ...(pl.conditions ? { conditions: pl.conditions } : {}), next: pl.next ?? pl.full } } };
 }
 
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {

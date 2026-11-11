@@ -940,8 +940,43 @@ export function pageLevelMinimal<T extends { notMeasured?: Array<unknown> }>(blo
 export function pendingLineNorm(line: string): string {
   // 3.7.8 (H3): a condição exata do verify sobrevive também neste degrau.
   const condition = conditionOf(splitOnce(line, " · ")[1]);
-  return `${line.split(" @")[0].split(" · ")[0]}${condition ? ` · expectedCondition ${condition}` : ""}`;
+  const head = line.split(" @")[0].split(" · ")[0];
+  // 3.7.9 (D1): o estado recolhido e o campo de arquivo guardam o 1º seletor (o que a pendência manda abrir/exercer).
+  const at = locatedAt(line);
+  return `${head}${at ? `@${at}` : ""}${condition ? ` · expectedCondition ${condition}` : ""}`;
 }
+
+/** 3.7.9 (D1): a frase da forma de ids quando há estado recolhido ou campo de arquivo (receita/procedimento no next). */
+export const STATE_IDS_NOTE = "receita pronta no next";
+
+/** 3.7.9 (D1): códigos cuja forma compacta leva o 1º seletor — o agente vê onde está o estado/campo sem abrir o ledger. */
+export const LOCATED_CODES = ["state-unscanned", "upload-paths"] as const;
+const LOCATED = /^([PO]-\d+):(state-unscanned|upload-paths)(?::\d+)?$/;
+/** A linha na forma norma: `P-18:state-unscanned:1@#gatilho` ou `P-06:upload-paths:1⇒wcag-3.3.1@#campo` (+ ` · …`). */
+const ID_LOCATED = /^([PO]-\d+):(state-unscanned|upload-paths)(?::\d+)?(?:⇒[^@]*)?@(.+?)(?: · .*)?$/;
+
+/** O 1º seletor de uma linha curta/mínima de estado recolhido ou campo de arquivo (`… @<seletor>; …`), ou null. */
+function locatedAt(line: string): string | null {
+  const [left] = splitOnce(line, " · ");
+  const [head, where] = splitOnce(left, " @");
+  if (!LOCATED.test(head.split("⇒")[0]) || !where || where.startsWith("mais ")) return null;
+  return clip(where.split("; ")[0], 60);
+}
+
+/**
+ * 3.7.9 (D1): o rótulo de uma linha na forma de ids — o id e, para estado recolhido e campo de arquivo, o código e o 1º
+ * seletor (`P-18:state-unscanned@#gatilho`); a forma norma já os traz no fim da linha.
+ */
+export function idLabelOf(line: string): string {
+  const m = ID_LOCATED.exec(line);
+  if (!m) {
+    const code = /^([PO]-\d+):(state-unscanned|upload-paths)(?::\d+)?(?:⇒|$| |@)/.exec(line);
+    return code ? `${code[1]}:${code[2]}` : line.split(":")[0];
+  }
+  // seletor longo (caminho estrutural) não cabe com proveito: fica o código; o seletor inteiro está na receita do next
+  return m[3].length <= ID_SELECTOR_MAX ? `${m[1]}:${m[2]}@${m[3]}` : `${m[1]}:${m[2]}`;
+}
+const ID_SELECTOR_MAX = 40;
 
 /** 3.6.3: a forma mínima → `código⇒norma`; null se já está nela. */
 export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block: T): T | null {
@@ -954,7 +989,11 @@ export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block:
 /** Último recurso do teto: só os códigos das pendências (inteiras no ledger: get_finding_details(scanId)). */
 export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string> }, scanId = "") {
   const codes = (block.notMeasured ?? []).map((i) => {
-    if (typeof i === "string") return i.split(/[⇒ ]/)[0];
+    if (typeof i === "string") {
+      // 3.7.9 (D1): estado recolhido e campo de arquivo guardam o código e o 1º seletor também aqui
+      const located = idLabelOf(i);
+      return /:(?:state-unscanned|upload-paths)/.test(located) ? located : i.split(/[⇒ ]/)[0];
+    }
     const pid = (i as PendingItem).pendingId;
     return `${pid ? `${pid}:` : ""}${i.count !== undefined ? `${i.code}:${i.count}` : i.code}`;
   });

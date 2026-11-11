@@ -142,6 +142,8 @@ export interface PendingEntry {
   deliveredTick?: number;
   /** 3.7.8 (N5): estado sem chegada verificável — fecha pelo scan cuja receita clicou no controle. */
   stateByClick?: boolean;
+  /** 3.7.9 (D3): os checks do scan que abriu a pendência de estado — o scan que a fecha roda pelo menos estes. */
+  stateChecks?: string[];
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -683,20 +685,62 @@ export class ScanSession {
    * aparece aberto no estado escaneado (aria-expanded=true, aba selecionada, details aberto, conteúdo controlado visível)
    * ou a receita alcançada clicou nele. Uma instância basta para o padrão. Devolve os ids fechados.
    */
-  resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = []): string[] {
+  /**
+   * 3.7.9 (teste à mão da 3.7.8, D2/D3): por rota, os controles vistos ABERTOS num scan e com quais checks esse scan rodou.
+   * Um estado já escaneado não vira pendência nova (nasce fechado), e só fecha o scan que rodou pelo menos os checks do scan
+   * que abriu a pendência.
+   */
+  private readonly openSeen = new Map<string, Map<string, Set<string>>>();
+
+  resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = [], checks: string[] = []): { closed: string[]; incomplete: Array<{ id: string; missing: string[] }> } {
     // revisão MED 5a: fecha o que o estado ESCANEADO mostra aberto (o conteúdo aparece); o clique só vale para o estado
     // sem chegada verificável (sem alvo nem aria-expanded) — clicar duas vezes (fechar de novo) não fecha nada.
+    const ran = new Set(checks);
+    const seenHere = this.openSeen.get(route) ?? new Map<string, Set<string>>();
+    for (const sel of opened) seenHere.set(sel, new Set([...(seenHere.get(sel) ?? []), ...ran]));
+    this.openSeen.set(route, seenHere);
     const seen = new Set(opened);
     const byClick = new Set(clicked);
-    if (!seen.size && !byClick.size) return [];
     const closed: string[] = [];
+    const incomplete: Array<{ id: string; missing: string[] }> = [];
+    if (!seen.size && !byClick.size) return { closed, incomplete };
     for (const entry of this.open()) {
       if (entry.code !== STATE_CODE) continue;
       const slot = slotOf(entry, route);
       if (!slot || slot.status !== "open") continue;
       if (!slot.locators.some((l) => seen.has(l) || (entry.stateByClick && byClick.has(l)))) continue;
+      // D3: o scan parcial (checks a menos que o do scan que abriu a pendência) não fecha: diz o que falta
+      const missing = (entry.stateChecks ?? []).filter((c) => !ran.has(c));
+      if (missing.length) {
+        incomplete.push({ id: slotLabel(entry, route), missing });
+        continue;
+      }
       resolveSlot(entry, slot, { by: "state-scanned", ref: scanId });
       closed.push(slotLabel(entry, route));
+    }
+    return { closed, incomplete };
+  }
+
+  /**
+   * 3.7.9 (D2): depois do registro, a pendência de estado cujo controle já foi visto ABERTO nesta rota (por um scan com pelo
+   * menos os checks dela) nasce fechada. Também guarda, uma vez, os checks do scan que abriu a pendência (D3).
+   */
+  settleStates(route: string, ids: string[], checks: string[], scanId: string): string[] {
+    const seenHere = this.openSeen.get(route);
+    const closed: string[] = [];
+    for (const id of ids) {
+      const entry = this.byId.get(id);
+      if (!entry || entry.code !== STATE_CODE) continue;
+      if (!entry.stateChecks) entry.stateChecks = [...checks];
+      const slot = slotOf(entry, route);
+      if (!seenHere || !slot || slot.status !== "open") continue;
+      const covered = slot.locators.some((l) => {
+        const ran = seenHere.get(l);
+        return ran && (entry.stateChecks ?? []).every((c) => ran.has(c));
+      });
+      if (!covered) continue;
+      resolveSlot(entry, slot, { by: "state-scanned", ref: scanId });
+      closed.push(entry.id);
     }
     return closed;
   }
@@ -892,7 +936,9 @@ export function sessionPendingBlock(
       return { code, ids: [pendingIdsLabel(sorted.map((e) => e.id))], components: sorted.map((e) => e.subject), ...(usageNext ? { next: usageNext } : {}) };
     }
     const rule = entries[0].rule;
-    const labels = entries.map(label);
+    // 3.7.9 (D1): estado recolhido e campo de arquivo levam o 1º seletor no rótulo (`P-07@#gatilho`).
+    const located = code === STATE_CODE || code === "upload-paths";
+    const labels = entries.map((e) => (located && e.locators[0] ? `${label(e)}@${clip(e.locators[0], 60)}` : label(e)));
     const partial = entries.filter((e) => label(e).includes("×")).slice(0, 3);
     const halfDone = entries.flatMap((e) => openSlots(e).filter((x) => x.decided?.length).map((x) => [label(e), slotRemaining(x).slice(0, 3).map((l) => clip(l, 60))] as const));
     return {
@@ -971,7 +1017,8 @@ export function sessionPendingChecklistCount<T extends { checklist?: unknown }>(
 /** Encolhimento do teto: sem textos; depois só ids. */
 export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[]; remaining?: Record<string, readonly string[]> }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
   const checklist = checklistIds(block.checklist);
-  const ids = (block.items ?? []).flatMap((i) => i.ids.map((id) => `${id}:${i.code}`));
+  // 3.7.9 (D1): `P-07:state-unscanned@#gatilho` (o seletor depois do código)
+  const ids = (block.items ?? []).flatMap((i) => i.ids.map((id) => (id.includes("@") ? `${id.slice(0, id.indexOf("@"))}:${i.code}${id.slice(id.indexOf("@"))}` : `${id}:${i.code}`)));
   // 3.7.4 (D2): verificada em parte — os elementos que faltam ficam também na forma de ids.
   const remaining = Object.assign({}, ...(block.items ?? []).map((i) => i.remaining ?? {})) as Record<string, readonly string[]>;
   return {

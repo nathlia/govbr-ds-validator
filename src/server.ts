@@ -1863,6 +1863,17 @@ export function createServer(options: ServerOptions = {}): McpServer {
     });
   };
 
+  /**
+   * 3.7.9 (D1/D2): as pendências de estado já vistas abertas nesta rota nascem fechadas (✓), e a ordem passa a ser estados
+   * recolhidos, campo de arquivo, demais — a mesma no ledger e na linha do scan.
+   */
+  const settleStateItems = (route: string, items: PendingItem[], checks: string[], scanId: string): PendingItem[] => {
+    const born = new Set(session.settleStates(route, items.filter((i) => i.code === "state-unscanned").map((i) => i.pendingId as string), checks, scanId));
+    const settled = items.map((i) => (born.has(i.pendingId as string) ? { ...i, resolved: "state-scanned" } : i));
+    const rank = (i: PendingItem) => (i.code === "state-unscanned" ? 0 : i.code === "upload-paths" ? 1 : 2);
+    return settled.map((i, k) => ({ i, k })).sort((a, b) => rank(a.i) - rank(b.i) || a.k - b.k).map(({ i }) => i);
+  };
+
   /** 3.6.1 (revisão H1): os códigos cuja cláusula com texto saiu nesta resposta não repetem o texto na sessão. */
   const markDeliveredTexts = (response: Record<string, unknown>) => {
     const pl = (response.checksRun as { pageLevel?: { notMeasured?: unknown[] } } | undefined)?.pageLevel;
@@ -2118,11 +2129,15 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // ledger, com todas as pendências de leitura abertas na sessão.
         // 3.7.8 (N5): este scan mediu um estado aberto (controle aberto no estado, ou a receita clicou nele): fecha a
         // pendência state-unscanned desse gatilho nesta rota, antes de registrar as deste estado.
-        const statesSeen = hasNorms
+        // 3.7.9 (D3): fecha só se este scan rodou pelo menos os checks do scan que abriu a pendência; senão diz o que falta.
+        const states = hasNorms
           ? session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])))
-          : [];
-        const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
+              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), executedChecks)
+          : { closed: [], incomplete: [] };
+        const statesSeen = states.closed;
+        // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
+        // na linha (a página do next começa por eles).
+        const regularItems = hasNorms ? settleStateItems(route, withPendingIds(scanId, route, notJudged), executedChecks, scanId) : [];
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
         // das de sempre), não só contagem em observations.byKind.
         const observedItems = hasNorms ? withPendingIds(scanId, route, observedRequiredItems(result.observations)) : [];
@@ -2191,6 +2206,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           coverage: boundStrings(result.coverage),
           ...(pendingResolution ? { pendingResolution } : {}),
           ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
+          ...(states.incomplete.length ? { statesIncomplete: states.incomplete, statesIncompleteNote: "estado aberto escaneado com checks a menos que o scan que abriu a pendência: continua aberta; repita a receita com os checks que faltam (missing)." } : {}),
           checksRun: {
             ...checksRunFor(
               { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
@@ -2198,6 +2214,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               result.state.observed.viewport,
               false,
               result.revisited,
+              hasNorms && first && pageItems.some((i) => i.code === "state-unscanned" && i.resolved === undefined),
             ),
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
             // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).
@@ -2295,8 +2312,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const first = !cursor;
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
       const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])));
-      const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
+        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"]).closed;
+      const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
       observationStore.set(scanId, notJudgedObservations(pageItems, url));
@@ -2318,7 +2335,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         coverage: boundStrings(result.coverage),
         ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
         checksRun: {
-          ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
+          ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true, undefined,
+            pageItems.some((i) => i.code === "state-unscanned" && i.resolved === undefined)),
           ...(first && pageItems.length ? { pageLevel: pageLevelBlockKnowledgeFree(capStateItems(pageItems, { scanId, cursorOf: (id) => { const k = pageItems.findIndex((i) => i.pendingId === id); return k < 0 ? undefined : k; } })) } : {}),
         },
         ...(sessionPending ? { sessionPending } : {}),
