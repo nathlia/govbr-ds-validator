@@ -154,7 +154,7 @@ describe("3.7.11 R2/R4 — envio e arrasto do campo de arquivo (revisão H4)", (
         const sent = await call("scan_page", { ...u2.submitRecipe!.arguments, maxChars: 60000 });
         const u3 = itemOf(sent, "upload-paths")!;
         expect(u3.submitRecipe).toBeUndefined();
-        expect(u3.observed).toMatch(/depois do envio, no campo: aria-invalid="true"/);
+        expect(u3.observed).toMatch(/depois do clique em #enviar, no campo: aria-invalid="true"/);
         expect(u3.fieldNow!.associated).toEqual(expect.arrayContaining([{ via: "aria-describedby", role: "alert", text: "Formato não aceito." }]));
         // arquivo dentro do accept: nada de envio sugerido, nada de recusa
         const pdf = itemOf(await call("scan_page", { url, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "doc.pdf", mimeType: "application/pdf", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;

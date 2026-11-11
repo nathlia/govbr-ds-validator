@@ -17,6 +17,7 @@ import { inspectDisclosures, type DisclosureFacts } from "../evidence/disclosure
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
+import { locatorKey } from "../evidence/locatorKey.js";
 import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, statePendings, stateRecipe, uploadPathsPending, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
@@ -242,16 +243,23 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
 }
 
 /**
- * 3.7.11 (R2/R4; revisão H4 e LOW): para cada campo de arquivo, lido no estado do scan, sem mudar o DOM:
- *   (a) `dropZone`: o elemento que recebe o arrasto — o ancestral-ou-próprio mais próximo dentro do contêiner do campo (o
- *       pai dele e os descendentes desse pai) que tem ouvinte de `drop` (CDP do Chromium: DOMDebugger.getEventListeners);
- *       nada acima do contêiner. Sem ouvinte: `null` (zona desconhecida, nunca uma receita que falha);
- *   (b) `submit`: o controle de envio do formulário do campo só quando há EXATAMENTE um (button/input type=submit, ou
- *       button sem type); `submitCount` diz quantos há (0 ou vários: sem seletor);
- *   (c) `uploadedFiles`: os arquivos que a receita deste scan pôs neste campo (ação upload);
- *   (d) `fieldNow`: o que está associado ao campo agora — aria-invalid, o texto de aria-describedby / aria-errormessage e
- *       textos com role=alert/status/aria-live dentro do contêiner do campo — como fatos (texto, papel, associação);
- *   (e) `examined: false` quando o campo está em shadow DOM (não examinado).
+ * 3.7.11 (R2/R4; revisões H4, LOW e 2ª revisão HIGH/MED 1/MED 5): para cada campo de arquivo, lido no estado do scan,
+ * sem mudar o DOM:
+ *   (a) `wrapper`: o contêiner do PRÓPRIO campo — o ancestral mais externo que não contém outro controle de formulário
+ *       (outro campo, select, textarea, botão de envio) e não é o formulário, o main nem o body (ex.: a raiz do
+ *       componente de upload). Sem um assim, não há contêiner: só vale o que está associado ao campo;
+ *   (b) `dropZone`: o elemento mais próximo com ouvinte de `drop` (CDP: DOMDebugger.getEventListeners) entre o campo, os
+ *       ancestrais dele até o contêiner e os descendentes do contêiner (no máximo DROP_LOOKUP_MAX); nada acima. Sem
+ *       ouvinte: `null` (zona desconhecida, nunca uma receita que falha);
+ *   (c) `submit`: o controle de envio do formulário do campo só quando há EXATAMENTE um; `submitCount` diz quantos há;
+ *   (d) `uploadedFiles`: os arquivos que a receita deste scan pôs neste campo (ação upload);
+ *   (e) `fieldNow`: o que está ASSOCIADO ao campo agora — aria-invalid, o texto de aria-describedby / aria-errormessage,
+ *       alertas e regiões vivas dentro do rótulo e dentro do contêiner do campo — como fatos; `otherMessages` = quantas
+ *       mensagens (alert/status/aria-live com texto) há no resto do formulário, só contadas (não são do campo);
+ *   (f) `now`: os fatos para ler um clique de envio — o campo ainda guarda o arquivo, quantos outros controles do
+ *       formulário estão inválidos (:invalid com validação nativa, ou aria-invalid="true"), e se um documento novo
+ *       carregou durante a receita (a página recarregou ou navegou);
+ *   (g) `examined: false` quando o campo está em shadow DOM (não examinado).
  */
 export type FileInputPaths = {
   examined: boolean;
@@ -259,24 +267,48 @@ export type FileInputPaths = {
   submit: string | null;
   submitCount: number;
   uploadedFiles: Array<{ name: string; mimeType: string }>;
-  fieldNow: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> };
+  fieldNow: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }>; otherMessages?: number };
+  now?: { fileHeld: boolean; othersInvalid: number; newDocument: boolean; url: string };
 };
 const FILE_CANDIDATES = "__govbrFileCandidates";
+/** Teto de elementos examinados por campo na busca do ouvinte de drop (o campo, os ancestrais até o contêiner, o contêiner). */
+const DROP_LOOKUP_MAX = 40;
+/** 3.7.11 (2ª revisão MED 1): documentos novos carregados durante a receita de cada página (reproduceState). */
+const replayDocuments = new WeakMap<Page, number>();
 export async function fileInputPaths(page: Page, locators: string[], uploads: Array<{ selector: string; files: Array<{ name: string; mimeType: string }> }>): Promise<Record<string, FileInputPaths>> {
-  const count = await page.evaluate(({ locators, KEY }: { locators: string[]; KEY: string }) => {
+  const count = await page.evaluate(({ locators, KEY, MAX }: { locators: string[]; KEY: string; MAX: number }) => {
     const all: Element[] = [];
     const owner: number[] = [];
+    const OTHER = "input:not([type=hidden]), select, textarea, button[type=submit], input[type=submit], input[type=image]";
+    const wrapperOf = (input: Element): Element | null => {
+      let best: Element | null = null;
+      for (let node = input.parentElement; node && node !== document.body && node.tagName !== "MAIN" && node.tagName !== "FORM" && node.getAttribute("role") !== "main"; node = node.parentElement) {
+        const others = Array.from(node.querySelectorAll(OTHER)).filter((c) => c !== input);
+        // botão sem type dentro de formulário também envia
+        const untyped = (input as HTMLInputElement).form ? Array.from(node.querySelectorAll("button:not([type])")) : [];
+        if (others.length || untyped.length) break;
+        best = node;
+      }
+      return best;
+    };
     locators.forEach((locator, k) => {
       let input: Element | null = null;
       try { input = locator.includes(">>>") ? null : document.querySelector(locator); } catch { input = null; }
       if (!input) return;
-      const host = input.parentElement;
-      const near: Element[] = [input, ...(host ? [host, ...Array.from(host.querySelectorAll("*"))] : [])];
-      for (const el of near) if (!all.includes(el)) { all.push(el); owner.push(k); }
+      const wrapper = wrapperOf(input);
+      const near: Element[] = [input];
+      if (wrapper) {
+        for (let node = input.parentElement; node; node = node.parentElement) {
+          near.push(node);
+          if (node === wrapper) break;
+        }
+        near.push(...Array.from(wrapper.querySelectorAll("*")));
+      }
+      for (const el of near.slice(0, MAX)) if (!all.includes(el)) { all.push(el); owner.push(k); }
     });
     (window as unknown as Record<string, unknown>)[KEY] = { all, owner };
     return all.length;
-  }, { locators, KEY: FILE_CANDIDATES });
+  }, { locators, KEY: FILE_CANDIDATES, MAX: DROP_LOOKUP_MAX });
   const withDrop: number[] = [];
   try {
     const cdp = await page.context().newCDPSession(page);
@@ -290,7 +322,8 @@ export async function fileInputPaths(page: Page, locators: string[], uploads: Ar
   } catch {
     /* sem CDP: zona desconhecida */
   }
-  return page.evaluate(({ locators, KEY, drops, uploads }: { locators: string[]; KEY: string; drops: number[]; uploads: Array<{ selector: string; files: Array<{ name: string; mimeType: string }> }> }) => {
+  const newDocument = (replayDocuments.get(page) ?? 0) > 0;
+  return page.evaluate(({ locators, KEY, drops, uploads, newDocument }: { locators: string[]; KEY: string; drops: number[]; uploads: Array<{ selector: string; files: Array<{ name: string; mimeType: string }> }>; newDocument: boolean }) => {
     const w = window as unknown as Record<string, { all: Element[]; owner: number[] } | undefined>;
     const store = w[KEY];
     delete w[KEY];
@@ -314,8 +347,21 @@ export async function fileInputPaths(page: Page, locators: string[], uploads: Ar
       const sel = parts.join(" > ");
       return parts.length && unique(sel, el) ? sel : null;
     };
+    const OTHER = "input:not([type=hidden]), select, textarea, button[type=submit], input[type=submit], input[type=image]";
+    const wrapperOf = (input: Element): Element | null => {
+      let best: Element | null = null;
+      for (let node = input.parentElement; node && node !== document.body && node.tagName !== "MAIN" && node.tagName !== "FORM" && node.getAttribute("role") !== "main"; node = node.parentElement) {
+        const others = Array.from(node.querySelectorAll(OTHER)).filter((c) => c !== input);
+        const untyped = (input as HTMLInputElement).form ? Array.from(node.querySelectorAll("button:not([type])")) : [];
+        if (others.length || untyped.length) break;
+        best = node;
+      }
+      return best;
+    };
+    const MESSAGES = "[role=alert], [role=status], [aria-live]";
+    const roleOf = (el: Element) => el.getAttribute("role") ?? `aria-live=${el.getAttribute("aria-live")}`;
     const empty = { invalid: null, associated: [] };
-    const out: Record<string, { examined: boolean; dropZone: string | null; submit: string | null; submitCount: number; uploadedFiles: Array<{ name: string; mimeType: string }>; fieldNow: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> } }> = {};
+    const out: Record<string, unknown> = {};
     locators.forEach((locator, k) => {
       if (locator.includes(">>>")) {
         out[locator] = { examined: false, dropZone: null, submit: null, submitCount: 0, uploadedFiles: [], fieldNow: empty };
@@ -324,43 +370,51 @@ export async function fileInputPaths(page: Page, locators: string[], uploads: Ar
       let input: HTMLInputElement | null = null;
       try { input = document.querySelector(locator) as HTMLInputElement | null; } catch { input = null; }
       if (!input) return;
-      // (a) o mais próximo do campo (ordem: o próprio, o contêiner, os descendentes do contêiner)
       const zoneAt = store ? drops.find((i) => store.owner[i] === k) : undefined;
       const zone = store && zoneAt !== undefined ? store.all[zoneAt] : null;
-      // (b) exatamente um controle de envio
       const form = input.form;
-      // um type=submit explícito; sem nenhum, o ÚNICO botão do formulário quando ele não tem type (submete por padrão)
       const explicit = form ? Array.from(form.querySelectorAll("button[type=submit], input[type=submit]")) : [];
       const buttons = form ? Array.from(form.querySelectorAll("button, input[type=submit], input[type=button]")) : [];
       const submits = explicit.length ? explicit : buttons.length === 1 && buttons[0].tagName === "BUTTON" && !buttons[0].hasAttribute("type") ? buttons : buttons.filter((b) => b.tagName === "BUTTON" && !b.hasAttribute("type"));
       const single = explicit.length === 1 ? explicit[0] : !explicit.length && buttons.length === 1 && submits.length === 1 ? submits[0] : null;
-      // (c) arquivos que a receita pôs neste campo
       const uploadedFiles = uploads.filter((u) => { try { return document.querySelector(u.selector) === input; } catch { return false; } }).flatMap((u) => u.files);
-      // (d) o que está associado ao campo agora (fatos: texto, papel, associação)
+      // (e) só o que está associado ao campo: aria-describedby/aria-errormessage, o rótulo e o contêiner do próprio campo
       const associated: Array<{ via: string; role: string | null; text: string }> = [];
+      const counted = new Set<Element>();
+      const add = (el: Element, via: string, role: string | null) => {
+        if (counted.has(el) || !visible(el) || !text(el) || associated.some((a) => a.text === text(el))) return;
+        counted.add(el);
+        associated.push({ via, role, text: text(el) });
+      };
       for (const attr of ["aria-describedby", "aria-errormessage"]) {
         for (const id of (input.getAttribute(attr) ?? "").split(/\s+/).filter(Boolean)) {
           const el = document.getElementById(id);
-          if (el && visible(el) && text(el)) associated.push({ via: attr, role: el.getAttribute("role"), text: text(el) });
+          if (el) add(el, attr, el.getAttribute("role"));
         }
       }
-      const wrapper = input.parentElement;
-      if (wrapper) {
-        for (const el of Array.from(wrapper.querySelectorAll("[role=alert], [role=status], [aria-live]"))) {
-          if (visible(el) && text(el) && !associated.some((a) => a.text === text(el))) associated.push({ via: "contêiner do campo", role: el.getAttribute("role") ?? `aria-live=${el.getAttribute("aria-live")}`, text: text(el) });
-        }
-      }
+      for (const label of Array.from(input.labels ?? [])) for (const el of Array.from(label.querySelectorAll(MESSAGES))) add(el, "rótulo do campo", roleOf(el));
+      const wrapper = wrapperOf(input);
+      if (wrapper) for (const el of Array.from(wrapper.querySelectorAll(MESSAGES))) add(el, "contêiner do campo", roleOf(el));
+      // o resto do formulário (ou da página, sem formulário): só a contagem — não são mensagens do campo
+      const scope: ParentNode = form ?? document.body;
+      const otherMessages = Array.from(scope.querySelectorAll(MESSAGES)).filter((el) => !counted.has(el) && !(wrapper && wrapper.contains(el)) && visible(el) && text(el) && !Array.from(el.querySelectorAll("*")).includes(input as Element)).length;
+      // (f) fatos para ler um clique de envio
+      const native = form ? !form.noValidate && !(single as HTMLButtonElement | null)?.formNoValidate : false;
+      const othersInvalid = form
+        ? Array.from(form.elements).filter((c) => c !== input && ((native && (c as HTMLInputElement).matches?.(":invalid") && c.tagName !== "FIELDSET") || c.getAttribute("aria-invalid") === "true")).length
+        : 0;
       out[locator] = {
         examined: true,
         dropZone: zone ? selectorOf(zone) : null,
         submit: single ? selectorOf(single) : null,
         submitCount: single ? 1 : explicit.length || buttons.length,
         uploadedFiles,
-        fieldNow: { invalid: input.getAttribute("aria-invalid"), associated: associated.slice(0, 3) },
+        fieldNow: { invalid: input.getAttribute("aria-invalid"), associated: associated.slice(0, 3), ...(otherMessages ? { otherMessages } : {}) },
+        now: { fileHeld: (input.files?.length ?? 0) > 0, othersInvalid, newDocument, url: location.href },
       };
     });
-    return out;
-  }, { locators, KEY: FILE_CANDIDATES, drops: withDrop, uploads });
+    return out as Record<string, FileInputPaths>;
+  }, { locators, KEY: FILE_CANDIDATES, drops: withDrop, uploads, newDocument });
 }
 
 /**
@@ -479,10 +533,17 @@ export async function reproduceState(
   recipe: StateAttestation["recipe"],
   observe?: ReplayObserver
 ): Promise<{ attestation: StateAttestation; fingerprint: string }> {
+  // 3.7.11 (2ª revisão MED 1): um documento novo carregado durante a receita (envio que recarrega ou navega) é um fato
+  // para ler o clique de envio; contado do início das ações até o assentamento.
+  let documents = 0;
+  const onDocument = () => { documents += 1; };
+  page.on("domcontentloaded", onDocument);
   const replay = await applyActions(page, recipe.actions, observe);
   // Mesma espera no scan e na reprodução: o fingerprint é tirado do estado assentado, não do meio
   // de uma transição disparada pela última ação.
   const settle = await settlePage(page);
+  page.off("domcontentloaded", onDocument);
+  replayDocuments.set(page, documents);
   const snapshot = await snapshotPageState(page);
   const arrival: ArrivalAttestation =
     replay.status === "applied"
@@ -785,7 +846,9 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       revisited = revisit.map((r) => {
         const base = { locator: r.locator, checker: r.checker, fromScan: r.fromScan, n: r.n };
         if (covered(r)) return { ...base, now: "covered" as const };
-        const element = byLocator.get(r.locator);
+        // 3.7.11 (2ª revisão MED 3): o localizador guardado pode ter ganhado passos neste estado (outro bloco igual
+        // apareceu): casa pela chave (locatorKey), o primeiro em ordem de documento.
+        const element = byLocator.get(r.locator) ?? evidence.elements.find((e) => locatorKey(e.locator) === locatorKey(r.locator));
         if (!element) return { ...base, now: "absent" as const };
         const own = ownershipOf(element);
         if (own !== "page") return { ...base, now: own === "not-rendered" ? ("hidden" as const) : ("outside" as const) };

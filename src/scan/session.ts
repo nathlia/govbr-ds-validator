@@ -741,6 +741,8 @@ export class ScanSession {
     const key = `${route}|${fingerprint}`;
     const map = this.checksOnState.get(key) ?? new Map<string, string>();
     for (const c of fullScopeChecks) if (!map.has(c)) map.set(c, scanId);
+    // 3.7.11 (2ª revisão MED 4): os subchecks de tokens rodados em scans diferentes do mesmo estado somam o check inteiro
+    if (!map.has("tokens") && ["color", "font", "radius", "spacing"].every((t) => map.has(`tokens.${t}`))) map.set("tokens", scanId);
     this.checksOnState.set(key, map);
     return Object.fromEntries(map);
   }

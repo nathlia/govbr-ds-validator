@@ -284,8 +284,43 @@ async function collectRawState(page: Page): Promise<RawState> {
       return el.getClientRects().length > 0;
     };
 
-    // 3.7.11 (auditoria V-1): mesma regra do localizador do inspect — a forma de antes fica quando
-    // já resolve só o elemento; senão sobe (sem o teto de 8) até ficar única ou chegar à raiz.
+    const withinRoot = (el: Element): string => {
+      if (el.id) return `#${CSS.escape(el.id)}`;
+      const testId = el.getAttribute("data-testid");
+      if (testId) return `[data-testid="${testId}"]`;
+      const parts: string[] = [];
+      let node: Element | null = el;
+      while (node && node !== document.documentElement && parts.length < 8) {
+        const parent: Element | null = node.parentElement;
+        const tag = node.tagName.toLowerCase();
+        const pool = parent ? Array.from(parent.children) : Array.from((node.getRootNode() as ShadowRoot | Document).children ?? []);
+        const same = pool.filter((c) => c.tagName === node!.tagName);
+        parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(node) + 1})` : tag);
+        if (!parent) break;
+        if (parent.id) {
+          parts.unshift(`#${CSS.escape(parent.id)}`);
+          break;
+        }
+        node = parent;
+      }
+      return parts.join(" > ");
+    };
+    const locatorFor = (el: Element): string => {
+      const segments: string[] = [];
+      let node: Element = el;
+      for (let depth = 0; depth < 8; depth += 1) {
+        segments.unshift(withinRoot(node));
+        const root = node.getRootNode();
+        if (root instanceof ShadowRoot) node = root.host;
+        else break;
+      }
+      return segments.join(` ${shadowStep} `);
+    };
+
+    // 3.7.11 (2ª revisão MED 3/6): a identidade do estado (fingerprint) usa o localizador de sempre (3.7.10) —
+    // ele só entra no hash, nunca é resolvido; o que a resposta MOSTRA (diálogos, alertas, foco, raízes fechadas) usa a
+    // forma única (auditoria V-1): a de sempre quando já resolve só o elemento; senão sobe (sem o teto de 8) até ficar
+    // única, ou ancora no topo da raiz de sombra (:host >). São poucos elementos: a conferência é por consulta.
     let rootsCache: Array<Document | ShadowRoot> | null = null;
     const allRoots = (): Array<Document | ShadowRoot> => {
       if (rootsCache) return rootsCache;
@@ -321,7 +356,7 @@ async function collectRawState(page: Page): Promise<RawState> {
       if (root instanceof ShadowRoot) return [root];
       return pierce ? allRoots() : [document];
     };
-    const withinRoot = (el: Element, extend = false, pierce = false): string => {
+    const uniqueWithinRoot = (el: Element, extend = false, pierce = false): string => {
       const scope = scopeOf(el, pierce);
       if (el.id && (!extend || onlyIn(scope, `#${CSS.escape(el.id)}`, el))) return `#${CSS.escape(el.id)}`;
       const testId = el.getAttribute("data-testid");
@@ -337,7 +372,11 @@ async function collectRawState(page: Page): Promise<RawState> {
         const pool = parent ? Array.from(parent.children) : Array.from((node.getRootNode() as ShadowRoot | Document).children ?? []);
         const same = pool.filter((c) => c.tagName === node!.tagName);
         parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(node) + 1})` : tag);
-        if (!parent) break;
+        if (!parent) {
+          // topo da raiz de sombra ainda ambíguo: ancora nela
+          if (extend && !done() && node.getRootNode() instanceof ShadowRoot) parts.unshift(":host");
+          break;
+        }
         if (parent.id) {
           parts.unshift(`#${CSS.escape(parent.id)}`);
           if (!extend || done()) break;
@@ -362,12 +401,12 @@ async function collectRawState(page: Page): Promise<RawState> {
       }
       return found.length === 1 && found[0] === el;
     };
-    const locatorFor = (el: Element): string => {
+    const shownLocatorFor = (el: Element): string => {
       const build = (extend: boolean) => {
         const segments: string[] = [];
         let node: Element = el;
         for (let depth = 0; depth < 8; depth += 1) {
-          segments.unshift(withinRoot(node, extend, extend && node === el));
+          segments.unshift(uniqueWithinRoot(node, extend, extend && node === el));
           const root = node.getRootNode();
           if (root instanceof ShadowRoot) node = root.host;
           else break;
@@ -392,24 +431,25 @@ async function collectRawState(page: Page): Promise<RawState> {
     visit(document, null);
     for (const el of closedHosts) delete (el as unknown as Record<string, unknown>)[closedMark];
     const unobservableRoots: string[] | null = closedKnown ? Array.from(closedHosts).map(locatorFor) : null;
+    const unobservableShown: string[] | null = closedKnown ? Array.from(closedHosts).map(shownLocatorFor) : null;
     const all = (selector: string): Element[] => roots.flatMap(({ root }) => Array.from(root.querySelectorAll(selector)));
 
     const dialogs = all("dialog[open], [role='dialog'], [role='alertdialog'], [aria-modal='true']")
       .filter((el) => el.tagName.toLowerCase() !== "dialog" || (el as HTMLDialogElement).open)
       .filter(isVisible)
       .map((el) => ({
-        locator: locatorFor(el),
+        locator: shownLocatorFor(el),
         role: el.getAttribute("role") ?? el.tagName.toLowerCase(),
         modal: el.getAttribute("aria-modal") === "true" || (() => { try { return el.matches(":modal"); } catch { return false; } })(),
       }));
-    const expanded = all("[aria-expanded='true']").map(locatorFor);
+    const expanded = all("[aria-expanded='true']").map(shownLocatorFor);
     const errors = [
       ...all("[role='alert']")
         .filter((el) => isVisible(el) && (el.textContent ?? "").trim().length > 0)
-        .map((el) => ({ locator: locatorFor(el), kind: "role-alert" as const, text: (el.textContent ?? "").trim().slice(0, 200) })),
+        .map((el) => ({ locator: shownLocatorFor(el), kind: "role-alert" as const, text: (el.textContent ?? "").trim().slice(0, 200) })),
       ...all("[aria-invalid='true']")
         .filter(isVisible)
-        .map((el) => ({ locator: locatorFor(el), kind: "aria-invalid" as const, text: "" })),
+        .map((el) => ({ locator: shownLocatorFor(el), kind: "aria-invalid" as const, text: "" })),
     ];
 
     // Foco: desce por shadowRoot.activeElement enquanto a raiz for aberta.
@@ -430,7 +470,7 @@ async function collectRawState(page: Page): Promise<RawState> {
     }
     const focus =
       active && active !== document.body
-        ? { locator: locatorFor(active), tag: active.tagName.toLowerCase(), inShadow: active.getRootNode() instanceof ShadowRoot, interior }
+        ? { locator: shownLocatorFor(active), tag: active.tagName.toLowerCase(), inShadow: active.getRootNode() instanceof ShadowRoot, interior }
         : null;
 
     const controls = all("input, select, textarea, details, dialog, [aria-expanded], [aria-selected], [aria-checked], [aria-pressed]").map((element) => {
@@ -461,7 +501,7 @@ async function collectRawState(page: Page): Promise<RawState> {
         expanded,
         errors,
         focus,
-        unobservableRoots,
+        unobservableRoots: unobservableShown,
       },
       identity: {
         url: location.href,

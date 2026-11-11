@@ -17,11 +17,13 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
-import { closeBrowser } from "../../src/evidence/browser.js";
+import { closeBrowser, withPage } from "../../src/evidence/browser.js";
+import { inspectPageComputedStyles } from "../../src/evidence/inspect.js";
 import { resetKnowledgeLock } from "../../src/data/lock.js";
 import { checksRunFor } from "../../src/responses/scan.js";
 import { ScanSession } from "../../src/scan/session.js";
 import { observedRequiredItems } from "../../src/scan/notJudged.js";
+import { locatorKey } from "../../src/evidence/locatorKey.js";
 import type { Observation } from "../../src/schema/finding.js";
 import { CHECK_GROUNDING } from "../../src/checkers/grounding.js";
 
@@ -40,10 +42,40 @@ const FX: Record<string, string> = {
   "/link": `<main><h1>T</h1><p><a href="#x" title="Solicitar atendimento presencial na unidade">Solicitar${" ".repeat(90)}atendimento presencial na unidade</a></p></main>`,
 };
 
+// 2ª revisão (rev3711b/fx): documentos inteiros, servidos como estão
+const DOC = (body: string) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>T</title></head><body><header><h1>Teste</h1></header><main>${body}</main></body></html>`;
+const RAW: Record<string, string> = {
+  // HIGH: o campo de arquivo direto no formulário; o alerta é do OUTRO campo
+  "/fn-wrap": DOC(`<form id="f" novalidate><label for="nome">Nome</label><input id="nome" name="nome" aria-describedby="e1"><span id="e1" role="alert"></span>
+<label for="arq">Documento</label><input type="file" id="arq" name="arq" accept=".pdf"><button type="submit" id="env">Enviar</button></form>
+<script>document.getElementById('f').onsubmit=function(ev){ev.preventDefault();if(!document.getElementById('nome').value){document.getElementById('e1').textContent='Informe o nome.';document.getElementById('nome').setAttribute('aria-invalid','true');}};</script>`),
+  // MED 1: a validação nativa de outro campo barra o envio
+  "/r2-native": DOC(`<form id="f" action="/posted" method="post"><label for="nome">Nome</label><input id="nome" name="nome" required>
+<label for="arq">Documento</label><input type="file" id="arq" name="arq" accept=".pdf"><button type="submit" id="env">Enviar</button></form>`),
+  // MED 1: o envio GET recarrega a página (documento novo, campo vazio); o ouvinte de drop no contêiner do campo
+  "/r4-ok": DOC(`<form id="f"><div id="zona" class="zona"><label for="arq">Documento</label><input type="file" id="arq" accept=".pdf"><p>Arraste aqui</p></div><button type="submit" id="env">Enviar</button><p id="msg" role="status"></p></form>
+<script>var z=document.getElementById('zona');z.addEventListener('dragover',e=>e.preventDefault());z.addEventListener('drop',e=>{e.preventDefault();});</script>`),
+  // MED 2: dois campos de arquivo; o upload vai no segundo
+  "/fn-two": DOC(`<form id="f" novalidate>
+<div><label for="a1">RG</label><input type="file" id="a1" accept=".pdf" aria-describedby="m1"><p id="m1"></p></div>
+<div><label for="a2">CPF</label><input type="file" id="a2" accept=".pdf" aria-describedby="m2"><p id="m2"></p></div>
+<button type="submit" id="env">Enviar</button></form>
+<script>document.getElementById('f').onsubmit=function(ev){ev.preventDefault();for(const k of ['1','2']){const i=document.getElementById('a'+k);const f=i.files[0];if(f&&!f.name.endsWith('.pdf')){document.getElementById('m'+k).textContent='Formato inválido: envie PDF.';i.setAttribute('aria-invalid','true');}}};</script>`),
+  // MED 3: um clique insere, noutro lugar, um bloco de estrutura idêntica à do link
+  "/loc-dyn": DOC(`<section><div><div><div><div><a href="/a" title="Ver detalhes">Ver detalhes</a></div></div></div></div></section>
+<button id="abrir" aria-expanded="false" aria-controls="menu">Mais</button><div id="menu"></div>
+<script>document.getElementById('abrir').onclick=function(){this.setAttribute('aria-expanded','true');document.getElementById('menu').innerHTML='<section><div><div><div><div><a href="/b">Outro</a></div></div></div></div></section>';};</script>`),
+  // LOW: dois botões iguais dentro de uma raiz de sombra (um no topo, outro aninhado)
+  "/x-nest": DOC(`<x-nest></x-nest><script>const r=document.querySelector('x-nest').attachShadow({mode:'open'});r.innerHTML='<style>button{color:#123456}</style><div><button>a</button><div><button>b</button></div></div>';</script>`),
+};
+
 let http: Server;
 let base: string;
 beforeAll(async () => {
-  http = httpServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(PAGE(FX[req.url ?? ""] ?? "")));
+  http = httpServer((req, res) => {
+    const path = new URL(req.url ?? "/", "http://x").pathname;
+    res.writeHead(200, { "content-type": "text/html" }).end(RAW[path] ?? PAGE(FX[path] ?? ""));
+  });
   await new Promise<void>((done) => http.listen(0, "127.0.0.1", done));
   base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
 });
@@ -191,4 +223,116 @@ describe("V-3 entrega da O-NN", () => {
       } finally { await client.close(); }
     }
   }, 120_000);
+});
+
+describe("2ª revisão de e5c14b0", () => {
+  type Up = { observed: string; fieldNow?: { associated: Array<{ text: string }>; otherMessages?: number }; submitRecipe?: { arguments: Record<string, unknown> }; dropRecipe?: { arguments: { actions: Array<{ action: string; selector?: string }> } } };
+  const upOf = (d: unknown): Up | undefined => {
+    let found: Up | undefined;
+    const walk = (o: unknown) => {
+      if (found || !o || typeof o !== "object") return;
+      if ((o as { code?: string }).code === "upload-paths" && typeof (o as Up).observed === "string") { found = o as Up; return; }
+      for (const v of Object.values(o)) walk(v);
+    };
+    walk(d);
+    return found;
+  };
+  const exe = (selector: string) => [{ action: "upload", selector, files: [{ name: "nota.txt", mimeType: "text/plain", size: 10 }] }];
+
+  it("HIGH: o alerta de outro campo não é do campo de arquivo; fica só contado como outra mensagem do formulário", async () => {
+    const { client, call } = await connect();
+    try {
+      const up = await call("scan_page", { url: `${base}/fn-wrap`, actions: exe("#arq"), maxChars: 60_000 });
+      const u = upOf(up.data)!;
+      const sent = await call("scan_page", { ...u.submitRecipe!.arguments, maxChars: 60_000 });
+      const u2 = upOf(sent.data)!;
+      expect(JSON.stringify(u2.fieldNow)).not.toContain("Informe o nome.");
+      expect(u2.observed).not.toContain("Informe o nome.");
+      expect(u2.observed).toMatch(/1 outro\(s\) controle\(s\) do formulário inválido/);
+      expect(u2.observed).toMatch(/outras mensagens no formulário \(não associadas ao campo\): 1/);
+      expect(u2.observed).not.toMatch(/nada associado/);
+    } finally { await client.close(); }
+  }, 120_000);
+
+  it("MED 1: validação nativa de outro campo barra o envio; envio GET que recarrega a página", async () => {
+    const { client, call } = await connect();
+    try {
+      const native = await call("scan_page", { url: `${base}/r2-native`, actions: [...exe("#arq"), { action: "click", selector: "#env" }], maxChars: 60_000 });
+      const n = upOf(native.data)!;
+      expect(n.observed).toMatch(/depois do clique em #env: 1 outro\(s\) controle\(s\) do formulário inválido/);
+      expect(n.observed).not.toMatch(/nada associado/);
+      const reload = await call("scan_page", { url: `${base}/r4-ok`, actions: [...exe("#arq"), { action: "click", selector: "#env" }], maxChars: 60_000 });
+      const r = upOf(reload.data)!;
+      expect(r.observed).toMatch(/depois do clique em #env: um documento novo carregou/);
+      expect(r.observed).toMatch(/o campo não guarda o arquivo/);
+      expect(r.observed).not.toMatch(/nada associado/);
+      // LOW: o arrasto é antes do envio — a receita de drop não repete o clique de envio
+      expect(r.dropRecipe!.arguments.actions.map((a) => a.action)).toEqual(["upload", "drop"]);
+    } finally { await client.close(); }
+  }, 120_000);
+
+  it("MED 2: o upload no segundo campo de arquivo dá os fatos e a receita desse campo; o outro vem listado", async () => {
+    const { client, call } = await connect();
+    try {
+      const up = await call("scan_page", { url: `${base}/fn-two`, actions: exe("#a2"), maxChars: 60_000 });
+      const u = upOf(up.data)!;
+      expect(u.observed).toMatch(/upload de nota\.txt em #a2 \(fora do accept\)/);
+      expect(u.observed).toMatch(/outros campos de arquivo: #a1 \(accept="\.pdf"/);
+      expect(u.submitRecipe!.arguments.actions).toEqual([...exe("#a2"), { action: "click", selector: "#env" }]);
+      const sent = await call("scan_page", { ...u.submitRecipe!.arguments, maxChars: 60_000 });
+      const u2 = upOf(sent.data)!;
+      expect(u2.observed).toMatch(/depois do clique em #env, no campo: aria-invalid="true"; aria-describedby: "Formato inválido: envie PDF\."/);
+    } finally { await client.close(); }
+  }, 120_000);
+
+  it("MED 3: o mesmo elemento entre estados — localizador mais longo no 2º estado, stateDiff inalterado (como na 3.7.10)", async () => {
+    const { client, call } = await connect();
+    try {
+      const s0 = await call("scan_page", { url: `${base}/loc-dyn`, maxChars: 100_000 });
+      const s1 = await call("scan_page", { url: `${base}/loc-dyn`, actions: [{ action: "click", selector: "#abrir" }], arrival: { visible: "#menu a" }, compareToScanId: s0.data.scanId, maxChars: 100_000 });
+      const before = findingsOf(s0.data).map((f) => f.element.locator);
+      const after = findingsOf(s1.data).map((f) => f.element.locator);
+      expect(before).toContain("div > div > div > div > a");
+      expect(after).toContain("main > section > div > div > div > div > a");
+      expect(s1.data.stateDiff.findings).toMatchObject({ added: 0, removed: 0 });
+    } finally { await client.close(); }
+  }, 120_000);
+
+  it("MED 4: completeOmitted com tokenChecks parcial converge (sem laço color ↔ resto)", async () => {
+    const { client, call } = await connect();
+    try {
+      let args: Record<string, unknown> = { url: `${base}/raso`, checks: ["tokens"], tokenChecks: ["color"], maxChars: 100_000 };
+      const seen: string[] = [];
+      for (let step = 0; step < 4; step += 1) {
+        const r = await call("scan_page", args);
+        const next = r.data.checksRun?.completeOmitted;
+        if (!next) { seen.push("null"); break; }
+        const key = JSON.stringify(next.arguments);
+        expect(seen).not.toContain(key);
+        seen.push(key);
+        args = { ...next.arguments, maxChars: 100_000 };
+      }
+      expect(seen[seen.length - 1]).toBe("null");
+      expect(seen.length).toBeLessThanOrEqual(2);
+    } finally { await client.close(); }
+  }, 120_000);
+
+  it("LOW: dentro da raiz de sombra, o botão do topo que casava com o aninhado ganha :host >; cada localizador resolve um só", async () => {
+    const url = `${base}/x-nest`;
+    const locs = await withPage(url, async (page) => (await inspectPageComputedStyles(page, url, "x-nest >>> button", ["color"])).elements.map((e) => e.locator));
+    expect(locs).toEqual(["main > x-nest >>> :host > div > button", "main > x-nest >>> div > div > button"]);
+    for (const locator of locs) {
+      const one = await withPage(url, async (page) => (await inspectPageComputedStyles(page, url, locator, ["color"])).elements.length);
+      expect(one).toBe(1);
+    }
+  }, 120_000);
+
+  it("locatorKey: a forma de sempre dentro da forma estendida", () => {
+    expect(locatorKey("main > section > div > div > div > div > a")).toBe("div > div > div > div > a");
+    expect(locatorKey("#menu > section > div > div > div > div > a")).toBe("div > div > div > div > a");
+    expect(locatorKey("body > div > button")).toBe("div > button");
+    expect(locatorKey("#m > div > button")).toBe("#m > div > button");
+    expect(locatorKey("x-nest >>> :host > div > button")).toBe("x-nest >>> div > button");
+    expect(locatorKey("#a")).toBe("#a");
+  });
 });

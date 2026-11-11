@@ -131,8 +131,10 @@ export function checksRunFor(
   const tokensBefore = before("tokens");
   const omittedTokens = active.includes("tokens") && recipe.tokenChecks ? ALL_TOKEN_CHECKS.filter((t) => !recipe.tokenChecks!.includes(t)) : [];
   for (const sub of omittedTokens) {
-    omitted.push(tokensBefore
-      ? { check: `tokens.${sub}`, why: ALREADY_WHY(tokensBefore), alreadyMeasuredIn: tokensBefore }
+    // 3.7.11 (2ª revisão MED 4): o subcheck já rodado neste estado (noutro scan) também aponta o scan
+    const subBefore = tokensBefore ?? before(`tokens.${sub}`);
+    omitted.push(subBefore
+      ? { check: `tokens.${sub}`, why: ALREADY_WHY(subBefore), alreadyMeasuredIn: subBefore }
       : { check: `tokens.${sub}`, why: TOKEN_CHECK_OMISSION_WHY[sub] });
   }
   const structureBefore = before("structure");
@@ -147,7 +149,10 @@ export function checksRunFor(
   // A chamada exata com SÓ o que faltou, na mesma receita (url, seletores, ações, chegada).
   // o que já foi medido neste estado (escopo inteiro) na sessão não volta na sugestão (sem isso, page ↔ resto em laço).
   const missingChecks = ALL_CHECKS.filter((c) => !active.includes(c) && !before(c));
-  const tokensToComplete = tokensBefore ? [] : omittedTokens;
+  const tokensToComplete = tokensBefore ? [] : omittedTokens.filter((t) => !before(`tokens.${t}`));
+  // tokens fora deste scan, com parte dos subchecks já rodada neste estado: a sugestão pede só o resto
+  const tokensRemaining = !active.includes("tokens") && missingChecks.includes("tokens") ? ALL_TOKEN_CHECKS.filter((t) => !before(`tokens.${t}`)) : [];
+  const tokenChecksArg = tokensToComplete.length ? tokensToComplete : tokensRemaining.length < ALL_TOKEN_CHECKS.length ? tokensRemaining : [];
   const completeChecks = [...missingChecks, ...(tokensToComplete.length && !missingChecks.includes("tokens") ? (["tokens"] as Check[]) : [])];
   const structureToComplete = active.includes("structure") && Boolean(recipe.components?.length) && !structureBefore;
   const base = {
@@ -167,7 +172,7 @@ export function checksRunFor(
             // 3.7.11 (auditoria V-7): a estrutura dos demais componentes entra junto com os outros checks que faltam
             // (antes, só quando nada mais faltava); sem o filtro components.
             checks: [...completeChecks, ...(structureToComplete ? (["structure"] as Check[]) : [])],
-            ...(tokensToComplete.length ? { tokenChecks: tokensToComplete } : {}),
+            ...(tokenChecksArg.length ? { tokenChecks: tokenChecksArg } : {}),
           },
         };
   return {

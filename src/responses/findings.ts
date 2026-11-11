@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Finding } from "../schema/finding.js";
 import { canonical } from "../verify/store.js";
 import { interactionOf } from "../checkers/interaction.js";
+import { locatorKey } from "../evidence/locatorKey.js";
 
 export const FindingDetailSchema = z.enum(["summary", "evidence", "full"]);
 export type FindingDetail = z.infer<typeof FindingDetailSchema>;
@@ -80,6 +81,24 @@ export function deduplicateFindings(input: Finding[]): {
 export function diffFindings(previous: Finding[], current: Finding[]) {
   const previousByKey = new Map(previous.map((finding) => [findingIdentity(finding), finding]));
   const currentByKey = new Map(current.map((finding) => [findingIdentity(finding), finding]));
+  // 3.7.11 (2ª revisão MED 3): o mesmo elemento pode ter localizador mais longo noutro estado (ficou ambíguo pela forma de
+  // sempre). O que não casou pela identidade exata casa, um a um e na ordem, pela identidade com a chave do localizador
+  // (locatorKey); casado, conta pela identidade de antes (inalterado, ou evidência mudada).
+  const looseOf = (finding: Finding) => findingIdentity({ ...finding, element: { ...finding.element, locator: locatorKey(finding.element.locator) } });
+  const unmatchedPrevious = new Map<string, string[]>();
+  for (const [key, finding] of previousByKey) {
+    if (currentByKey.has(key)) continue;
+    const loose = looseOf(finding);
+    unmatchedPrevious.set(loose, [...(unmatchedPrevious.get(loose) ?? []), key]);
+  }
+  for (const [key, finding] of [...currentByKey]) {
+    if (previousByKey.has(key)) continue;
+    const queue = unmatchedPrevious.get(looseOf(finding));
+    const previousKey = queue?.shift();
+    if (previousKey === undefined) continue;
+    currentByKey.delete(key);
+    currentByKey.set(previousKey, finding);
+  }
   const evidenceOf = (finding: Finding) => JSON.stringify(canonical(finding.evidence));
   return {
     added: [...currentByKey.entries()]

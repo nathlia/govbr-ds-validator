@@ -16,7 +16,6 @@
  * estado (para fechar a pendência de quem já escaneou o estado).
  */
 import type { Page } from "playwright";
-import { settlePage } from "../scan/state.js";
 
 export interface DisclosureGroup {
   /** Padrão do grupo (tag, papel, classes, sinal, alvo) — a chave da pendência. */
@@ -49,22 +48,22 @@ export interface DisclosureFacts {
  */
 /**
  * 3.7.11 (revisão H1–H3): a leitura não muda a regra (aberto = conteúdo aparece). Quando um controle diz expanded e o
- * conteúdo ainda não tem caixa — transição em curso no instante da leitura —, espera a página assentar (o mesmo settle do
- * scan: DOM estável e animações terminadas, com teto) e lê de novo; se ainda não aparece, não está aberto.
+ * conteúdo ainda não tem caixa — transição em curso no instante da leitura —, lê de novo a cada 150 ms até AWAIT_CAP_MS
+ * no total; se ainda não aparece, não está aberto.
  */
 export async function inspectDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {
   let facts = await readDisclosures(page, options);
   if (!facts.awaiting) return facts;
-  await settlePage(page);
-  // com teto: o conteúdo pode vir de um temporizador que o settle (DOM estável) não espera
+  // 2ª revisão (LOW): a página já assentou na reprodução do estado; aqui só uma espera com teto TOTAL (sem novo settle,
+  // que somava rede ociosa + teto do settle): o conteúdo pode vir de um temporizador que o settle não espera
   for (const started = Date.now(); ; ) {
+    await page.waitForTimeout(150);
     facts = await readDisclosures(page, options);
     if (!facts.awaiting || Date.now() - started >= AWAIT_CAP_MS) return facts;
-    await page.waitForTimeout(150);
   }
 }
 
-/** Teto da espera pelo conteúdo de um controle que diz expanded (depois do settle). */
+/** Teto total da espera pelo conteúdo de um controle que diz expanded. */
 export const AWAIT_CAP_MS = 1_500;
 
 async function readDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {

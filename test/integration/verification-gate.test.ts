@@ -607,7 +607,8 @@ describe("scan_page.checksRun (3.0.0; checksOmitted da 2.15.0)", () => {
         await scan({ checks: ["tokens", "structure"], tokenChecks: ["font"], components: ["button"] });
         const narrowed = await scan({ checks: ["axe", "structure"] });
         expect(narrowed.checksRun.omitted.some((i: { alreadyMeasuredIn?: string }) => i.alreadyMeasuredIn)).toBe(false);
-        expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"] } });
+        // 3.7.11 (2ª revisão MED 4): o subcheck tokens.font já rodou neste estado (página inteira): a sugestão pede só o resto
+        expect(narrowed.checksRun.completeOmitted).toEqual({ tool: "scan_page", arguments: { url: page, checks: ["tokens", "page"], tokenChecks: ["color", "radius", "spacing"] } });
       } finally { await c.close(); }
     }
     {

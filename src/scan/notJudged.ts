@@ -437,7 +437,8 @@ type FileInputFact = {
   submit?: string | null;
   submitCount?: number;
   uploadedFiles?: Array<{ name: string; mimeType: string }>;
-  fieldNow?: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> };
+  fieldNow?: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }>; otherMessages?: number };
+  now?: { fileHeld: boolean; othersInvalid: number; newDocument: boolean; url: string };
 };
 
 /** Arquivo sintético para a receita de arrasto (o conteúdo não importa: a receita prova o caminho, não o formato). */
@@ -453,15 +454,37 @@ export function acceptRelation(accept: string | null, file: { name: string; mime
   return inside ? "dentro do accept" : "fora do accept";
 }
 
-/** Os fatos associados ao campo agora, em texto curto (papel, via, texto). */
-function fieldNowText(f: FileInputFact): string {
+/** Os fatos associados ao campo agora (papel, via, texto), ou null quando não há nenhum. */
+function fieldFacts(f: FileInputFact): string | null {
   const now = f.fieldNow;
-  if (!now) return "";
+  if (!now) return null;
   const parts = [
     ...(now.invalid !== null ? [`aria-invalid="${now.invalid}"`] : []),
     ...now.associated.map((a) => `${a.via}${a.role ? ` (${a.role})` : ""}: "${clip(a.text, 60)}"`),
   ];
-  return parts.length ? parts.join("; ") : "nada associado ao campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner)";
+  return parts.length ? parts.join("; ") : null;
+}
+const NOTHING_ASSOCIATED = "nada associado ao campo (aria-*, rótulo, contêiner do campo)";
+/** 2ª revisão (HIGH): mensagens do resto do formulário só contadas, rotuladas como não sendo do campo. */
+const othersText = (f: FileInputFact) => (f.fieldNow?.otherMessages ? `; outras mensagens no formulário (não associadas ao campo): ${f.fieldNow.otherMessages}` : "");
+
+/**
+ * 3.7.11 (2ª revisão MED 1): o que o clique de envio fez, como fatos medidos — documento novo (recarregou ou navegou),
+ * outros controles inválidos que barram o envio, o campo ainda com o arquivo — antes de qualquer leitura do campo. Só
+ * quando nada disso aconteceu os fatos do campo são o resultado do envio.
+ */
+function afterClickText(f: FileInputFact, base: StateBase | undefined): string {
+  const now = f.now;
+  const facts = fieldFacts(f);
+  const head = `depois do clique em ${clip(f.submit ?? "", 40)}`;
+  if (now?.newDocument) {
+    const moved = base?.url && now.url.replace(/#.*$/, "") !== base.url.replace(/#.*$/, "") ? ` (agora em ${clip(now.url, 60)})` : "";
+    return `${head}: um documento novo carregou — a página recarregou ou navegou${moved}${now.fileHeld ? "" : "; o campo não guarda o arquivo"}: a resposta ao arquivo não foi medida no campo`;
+  }
+  if (now && now.othersInvalid > 0) {
+    return `${head}: ${now.othersInvalid} outro(s) controle(s) do formulário inválido(s) (validação nativa ou aria-invalid) — o envio pode ter sido barrado por eles; o caminho do arquivo recusado não foi exercido (preencha-os na receita com actions fill e repita)${facts ? `; no campo: ${clip(facts, 80)}` : ""}${othersText(f)}`;
+  }
+  return `${head}${now && !now.fileHeld ? " (o campo não guarda mais o arquivo)" : ""}, no campo: ${clip(facts ?? NOTHING_ASSOCIATED, 80)}${othersText(f)}`;
 }
 
 /** 3.7.11 (R2/R4, revisão H4): o arrasto (zona achada, desconhecida ou não examinada) e o envio, antes do procedimento. */
@@ -472,35 +495,48 @@ function pathsText(f: FileInputFact, relation: string | null): string {
     ? "nenhum botão no formulário do campo (ou campo fora de formulário)"
     : f.submit
       ? relation && relation !== "dentro do accept"
-        ? `envio: submitRecipe (clique em ${f.submit}, compareToScanId deste scan); no scan dele, meça o que aparece no campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner)`
+        ? `envio: submitRecipe (clique em ${f.submit}, compareToScanId deste scan); no scan dele, leia o que o clique fez e o que aparece no campo (fieldNow)`
         : `envio do formulário: clique em ${f.submit}`
       : `${f.submitCount} botões no formulário, sem um envio único determinável: escolha o que envia (sem seletor)`;
   return `${drop}; ${submit}. `;
 }
 
+/** Linha curta de um campo de arquivo que não é o do upload desta receita (2ª revisão MED 2: todos os campos aparecem). */
+function otherFieldText(f: FileInputFact): string {
+  const drop = f.examined === false ? "não examinado" : f.dropZone ? `drop ${clip(f.dropZone, 30)}` : "drop desconhecida";
+  return `${clip(f.locator, 40)} (${f.accept ? `accept="${clip(f.accept, 24)}"` : "sem accept"}; ${drop}${f.submit ? `; envio ${clip(f.submit, 24)}` : ""})`;
+}
+
 export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = false, base?: StateBase): NotJudgedItem | null {
   if (!inputs.length) return null;
-  const first = inputs[0];
+  // 2ª revisão (MED 2): o campo desta receita é o que recebeu o upload (o último); sem upload, o primeiro. Os demais vêm
+  // listados (seletor, accept, zona, envio) para a receita de cada um.
+  const uploaded = inputs.filter((i) => i.uploadedFiles?.length);
+  const first = uploaded[uploaded.length - 1] ?? inputs[0];
+  const others = inputs.filter((i) => i !== first);
+  const file = first.uploadedFiles?.[first.uploadedFiles.length - 1];
+  const relation = file ? acceptRelation(first.accept, file) : null;
+  // o envio já está na receita deste scan: os fatos são o depois do clique (sem nova receita)
+  const isSubmitClick = (a: unknown) => (a as { action?: string }).action === "click" && (a as { selector?: string }).selector === first.submit;
+  const submitted = Boolean(first.submit && (base?.actions ?? []).some(isSubmitClick));
   // 3.7.11 (R4): a receita de arrasto vai no elemento com o ouvinte de drop; sem ele, "zona desconhecida" (sem receita).
-  // Revisão LOW: não empilha drop sobre drop (as ações de arrasto do scan anterior saem da base).
+  // Revisão LOW: não empilha drop sobre drop; 2ª revisão LOW: nem repete o clique de envio (o arrasto é antes do envio).
   const dropRecipe = base && first.dropZone
-    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []).filter((a) => (a as { action?: string }).action !== "drop"), { action: "drop", selector: first.dropZone, files: [DROP_SAMPLE] }] } }
+    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []).filter((a) => (a as { action?: string }).action !== "drop" && !isSubmitClick(a)), { action: "drop", selector: first.dropZone, files: [DROP_SAMPLE] }] } }
     : undefined;
   // 3.7.11 (revisão H4): sem presumir recusa — a relação do arquivo usado com o accept do campo, os fatos do campo agora
   // e, quando o arquivo não é aceito pelo accept (ou o campo não tem accept), o envio com compareToScanId (o servidor o
   // preenche com o scan desta resposta). Nada de chegada errorVisible: quem decide é quem lê o que apareceu no campo.
-  const file = first.uploadedFiles?.[first.uploadedFiles.length - 1];
-  const relation = file ? acceptRelation(first.accept, file) : null;
-  // o envio já está na receita deste scan: os fatos do campo são o depois do envio (sem nova receita)
-  const submitted = Boolean(first.submit && (base?.actions ?? []).some((a) => (a as { action?: string; selector?: string }).action === "click" && (a as { selector?: string }).selector === first.submit));
   const submitRecipe = base && file && first.submit && !submitted && relation !== "dentro do accept"
     ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "click", selector: first.submit }] } }
     : undefined;
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
   // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
-  const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
+  const support = [first, ...others].map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
   const inform = knowledgeFree ? [] : uploadInformClauses();
-  const now = file ? fieldNowText(first) : "";
+  const fileText = file
+    ? `upload de ${clip(file.name, 30)}${others.length ? ` em ${clip(first.locator, 40)}` : ""} (${relation}); ${submitted ? afterClickText(first, base) : `no campo: ${clip(fieldFacts(first) ?? NOTHING_ASSOCIATED, 80)}${othersText(first)}`}; `
+    : "";
   return {
     code: "upload-paths",
     subject: "campos de arquivo (input type=file)",
@@ -509,7 +545,7 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
     elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
     elementBound: true,
     boundLocators: inputs.map((i) => i.locator),
-    observed: `${file ? `upload de ${clip(file.name, 30)} (${relation}); ${submitted ? "depois do envio, " : ""}no campo: ${clip(now, 80)}; ` : ""}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
+    observed: `${fileText}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}${others.length ? `; outros campos de arquivo: ${others.slice(0, 4).map(otherFieldText).join(", ")}${others.length > 4 ? ` e mais ${others.length - 4}` : ""}` : ""}`,
     todo: UPLOAD_PATHS_TODO,
     ...(knowledgeFree ? { norms: ["wcag-3.3.1", "wcag-3.3.2"] } : (() => {
       const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
@@ -518,7 +554,7 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
     ...(dropRecipe ? { dropRecipe } : {}),
     ...(submitRecipe ? { submitRecipe } : {}),
     ...(file && first.fieldNow ? { fieldNow: first.fieldNow } : {}),
-    measure: (submitted ? "envio feito nesta receita: compare o campo com o scan anterior (fieldNow). " : pathsText(first, relation)) + (knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE),
+    measure: (submitted ? "clique de envio nesta receita: leia em observed o que ele fez; compare o campo com o scan anterior (compareToScanId). " : pathsText(first, relation)) + (knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE),
     // 3.7.11 (R3): cada linha com o referente literal da base — a seção e, quando a cláusula tem demonstrativo, a frase anterior
     ...(inform.length ? { inform: inform.map(informLine) } : {}),
   };
