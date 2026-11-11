@@ -2295,6 +2295,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // resolução por verify_finding, e a separação por rota/estado. Nada da base de conhecimento.
       const route = routeKeyOf(result.state.observed.url);
       const first = !cursor;
+      // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
+      const statesSeen = session.resolveStatesSeen(route, [
+        ...(result.disclosuresOpened ?? []),
+        ...(actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])),
+      ], scanId);
       const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
@@ -2315,6 +2320,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         cacheHit: result.cacheHit,
         ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
         coverage: boundStrings(result.coverage),
+        ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
         checksRun: {
           ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
           ...(first && pageItems.length ? { pageLevel: pageLevelBlockKnowledgeFree(pageItems) } : {}),

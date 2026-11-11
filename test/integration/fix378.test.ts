@@ -18,7 +18,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
-import { resetKnowledgeLock } from "../../src/data/lock.js";
+import { knowledgeLockAttempts, resetKnowledgeLock } from "../../src/data/lock.js";
 import { scanPage, PageScanCache } from "../../src/scan/pageScan.js";
 import { componentPartsOf } from "../../src/data/load.js";
 import { investigateFor } from "../../src/responses/scan.js";
@@ -195,12 +195,23 @@ describe("3.7.8 item 5 + N3 — pendência upload-paths", () => {
     expect(none.observed).toContain("nenhum texto de apoio");
   });
 
-  it("knowledge-free: nenhuma pendência upload-paths (nem cláusula da base)", async () => {
+  it("knowledge-free (paridade): a parte de procedimento e o apoio da página, sem id/texto da base nem pendingResolved", async () => {
     const { client, call } = await connect("knowledge-free");
     try {
-      const scan = await call("scan_page", { url: `${base}/upload` });
-      expect(scan.text).not.toContain("upload-paths");
+      const scan = await call("scan_page", { url: `${base}/upload`, maxChars: 20000 });
+      const u = (scan.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).find((i) => typeof i !== "string" && i.code === "upload-paths") as PendingItem & { inform?: unknown };
+      expect(u).toBeDefined();
+      expect(u.todo).toBe(UPLOAD_PATHS_TODO);
+      expect(u.observed).toContain('"Texto de apoio do campo."');
+      expect(u.measure).toMatch(/drop/);
+      expect(u.measure).not.toMatch(/pendingResolved/);
+      expect(u.norms).toEqual(["wcag-3.3.1", "wcag-3.3.2"]);
+      expect(u.inform).toBeUndefined();
+      expect("rule" in u).toBe(false);
       expect(scan.text).not.toContain("govbr-");
+      const ledger = await call("get_finding_details", { scanId: scan.data.scanId, view: "observations" });
+      expect(ledger.text).not.toContain("govbr-");
+      expect(knowledgeLockAttempts().attempts).toBe(0);
     } finally { await client.close(); }
   });
 });
@@ -341,12 +352,24 @@ describe("3.7.8 N5 — estados recolhidos não escaneados viram pendência com r
     } finally { await client.close(); }
   });
 
-  it("knowledge-free: sem a pendência (o perfil não muda nesta versão)", async () => {
-    const { client, call } = await connect("knowledge-free");
+  it("knowledge-free (paridade): a mesma pendência, receita e fechamento pelo scan do estado; nada da base", async () => {
+    const full = await connect();
+    const kf = await connect("knowledge-free");
     try {
-      const scan = await call("scan_page", { url: `${base}/estados` });
-      expect(scan.text).not.toContain("state-unscanned");
-    } finally { await client.close(); }
+      const url = `${base}/estados`;
+      const pick = (d: { checksRun: { pageLevel: { notMeasured: Array<PendingItem | string> } } }) =>
+        (d.checksRun.pageLevel.notMeasured.filter((i) => typeof i !== "string" && i.code === "state-unscanned") as Array<PendingItem & { recipe: { arguments: Record<string, unknown> } }>);
+      const a = pick((await full.call("scan_page", { url, maxChars: 60000 })).data);
+      const scan = await kf.call("scan_page", { url, maxChars: 60000 });
+      const b = pick(scan.data);
+      expect(b.map((i) => [i.count, i.observed, i.recipe])).toEqual(a.map((i) => [i.count, i.observed, i.recipe]));
+      expect(scan.text).not.toContain("govbr-");
+      for (const i of b) expect(i.subject ?? "").not.toMatch(/br-|\./);
+      const run = await kf.call("scan_page", { ...b[0].recipe.arguments });
+      expect(run.data.status).toBe("scanned");
+      expect(run.data.statesScanned).toContain(b[0].pendingId);
+      expect(knowledgeLockAttempts().attempts).toBe(0);
+    } finally { await full.client.close(); await kf.client.close(); }
   });
 });
 

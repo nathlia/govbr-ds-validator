@@ -38,8 +38,12 @@ export interface DisclosureFacts {
   opened: string[];
 }
 
-export async function inspectDisclosures(page: Page): Promise<DisclosureFacts> {
-  return page.evaluate(() => {
+/**
+ * `ds`: usa as classes do próprio DS como pista (diálogo `.br-modal`, casca `.br-header`/`.br-footer`). No perfil
+ * knowledge-free (`ds: false`) só a marcação genérica (papéis, ARIA, tags) — nenhum conhecimento do DS.
+ */
+export async function inspectDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {
+  return page.evaluate((ds: boolean) => {
     const shown = (el: Element | null): boolean => {
       if (!el) return false;
       const s = getComputedStyle(el);
@@ -104,11 +108,11 @@ export async function inspectDisclosures(page: Page): Promise<DisclosureFacts> {
       return null;
     };
     const isDialog = (t: Element | null) =>
-      Boolean(t && (t.tagName === "DIALOG" || ["dialog", "alertdialog"].includes(t.getAttribute("role") ?? "") || t.classList.contains("br-modal") || t.querySelector(":scope > [role=dialog], :scope > .br-modal")));
+      Boolean(t && (t.tagName === "DIALOG" || ["dialog", "alertdialog"].includes(t.getAttribute("role") ?? "") || (ds && t.classList.contains("br-modal")) || t.querySelector(ds ? ":scope > [role=dialog], :scope > .br-modal" : ":scope > [role=dialog]")));
     const disabled = (el: Element) => (el as HTMLButtonElement).disabled === true || el.getAttribute("aria-disabled") === "true";
     // casca = fora do conteúdo principal (cabeçalho, menus, rodapé); sem main na página, pelas regiões de casca.
     const hasMain = Boolean(document.querySelector("main, [role=main]"));
-    const SHELL = "header, [role=banner], .br-header, footer, [role=contentinfo], .br-footer";
+    const SHELL = ds ? "header, [role=banner], .br-header, footer, [role=contentinfo], .br-footer" : "header, [role=banner], footer, [role=contentinfo]";
     const inShell = (el: Element) => (hasMain ? !el.closest("main, [role=main]") : Boolean(el.closest(SHELL)));
     const candidates = Array.from(document.querySelectorAll(
       "[aria-expanded], [aria-haspopup], [aria-controls], [data-target], [data-bs-target], [data-panel], [role=tab], details > summary, a[href^='#']",
@@ -184,5 +188,5 @@ export async function inspectDisclosures(page: Page): Promise<DisclosureFacts> {
     // casca primeiro, depois o conteúdo; dentro de cada um, a ordem do DOM
     out.sort((a, b) => (a.region === b.region ? 0 : a.region === "shell" ? -1 : 1));
     return { collapsed: out, opened: opened.map(selectorOf).filter((s): s is string => Boolean(s)) };
-  });
+  }, options.ds !== false);
 }

@@ -380,12 +380,20 @@ export function uploadInformClauses(): Array<{ id: string; text: string }> {
 export const SUPPORT_HIDDEN = "#oculto-neste-estado";
 export const UPLOAD_INFORM_NOTE = "inform: cláusulas do Upload que mandam informar o usuário (o que o apoio deve dizer); dê estado a cada uma";
 
-export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null; support?: string | null }>): NotJudgedItem | null {
+/**
+ * Profile parity (3.7.8): knowledge-free gets the procedural part only — exercise a file the field must reject and a drop,
+ * the drag state in the browser, the visible support text as a page fact — with the WCAG criteria; no KB id or text, and the
+ * closing path that profile's scan_page has (verify_finding on the field; it has no pendingResolved).
+ */
+export const UPLOAD_PATHS_MEASURE_KF =
+  "scan_page actions upload com arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
+
+export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null; support?: string | null }>, knowledgeFree = false): NotJudgedItem | null {
   if (!inputs.length) return null;
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
   // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
   const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
-  const inform = uploadInformClauses();
+  const inform = knowledgeFree ? [] : uploadInformClauses();
   return {
     code: "upload-paths",
     subject: "campos de arquivo (input type=file)",
@@ -396,11 +404,11 @@ export function uploadPathsPending(inputs: Array<{ locator: string; accept: stri
     boundLocators: inputs.map((i) => i.locator),
     observed: `${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
     todo: UPLOAD_PATHS_TODO,
-    ...(() => {
+    ...(knowledgeFree ? { norms: ["wcag-3.3.1", "wcag-3.3.2"] } : (() => {
       const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
       return { ...g, norms: [...(g.norms ?? []), ...inform.map((c) => c.id)] };
-    })(),
-    measure: inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE,
+    })()),
+    measure: knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE,
     ...(inform.length ? { inform: inform.map((c) => `${c.id} · ${c.text}`) } : {}),
   };
 }
@@ -422,7 +430,7 @@ function arrivalText(arrival: DisclosureGroup["arrival"]): string {
   return "arrival dialogOpen";
 }
 export const STATE_TODO = "escaneie o estado aberto: recipe (click no @ + arrival); feche assim";
-export function statePendings(groups: DisclosureGroup[], url: string): NotJudgedItem[] {
+export function statePendings(groups: DisclosureGroup[], url: string, knowledgeFree = false): NotJudgedItem[] {
   const shown = groups.slice(0, STATE_PENDING_MAX);
   const rest = groups.slice(STATE_PENDING_MAX);
   return shown.map((g, i) => {
@@ -433,7 +441,8 @@ export function statePendings(groups: DisclosureGroup[], url: string): NotJudged
     const last = i === shown.length - 1 && rest.length > 0;
     return {
       code: "state-unscanned" as const,
-      subject: `state-unscanned|${g.pattern}`,
+      // a chave do padrão vai como hash: o padrão tem classes e tags da página (fica fora das respostas e do ledger)
+      subject: `state-unscanned|${setHash([g.pattern])}`,
       count: g.selectors.length,
       examples: g.selectors.slice(0, EXAMPLES).map((s) => clip(s, 120)),
       elementSet: setHash(g.selectors),
@@ -443,7 +452,7 @@ export function statePendings(groups: DisclosureGroup[], url: string): NotJudged
       observed: `${g.signal}; ${arrivalText(g.arrival)}${g.region === "shell" ? " (casca)" : ""}${last ? `; +${rest.length} gatilho(s) no ledger` : ""}${g.label ? ` "${clip(g.label, 30)}"` : ""}`,
       todo: STATE_TODO,
       // a chamada inteira fica em `recipe` (não se repete aqui)
-      measure: `rode recipe${g.selectors.length > 1 ? ` (${g.selectors.length} do mesmo padrão: uma basta)` : ""}; não se aplica: pendingResolved com reason`,
+      measure: `rode recipe${g.selectors.length > 1 ? ` (${g.selectors.length} do mesmo padrão: uma basta)` : ""}${knowledgeFree ? "; fecha ao escanear o estado aberto" : "; não se aplica: pendingResolved com reason"}`,
       recipe,
       ...(last ? { moreTriggers: rest.slice(0, 8).map((x) => ({ selector: x.selectors[0], signal: x.signal, ...(x.arrival ? { arrival: x.arrival } : {}) })) } : {}),
     };
@@ -716,9 +725,13 @@ export function pageLevelBlock(checks: string[], items: PendingItem[], component
 export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
   // 3.7.3 A8: com pendências ARIA × nativo, a nota não atribui a medida só ao axe.
   const aria = items.some((i) => i.code.startsWith("aria-"));
+  // 3.7.8 (paridade): estado recolhido e caminho do campo de arquivo não são medida do axe — a nota diz o que são.
+  const procedural = items.some((i) => i.code === "state-unscanned" || i.code === "upload-paths");
   return {
     notMeasured: items.map((i) => compactItem(i)),
-    note: aria
+    note: procedural
+      ? "notMeasured: pendências suas — o oráculo mediu e não decidiu, ou um estado/caminho da página que este scan não exerceu (recipe, measure); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo: verify_finding (critério em norms) ou o scan do estado."
+      : aria
       ? "notMeasured: pendências suas — o oráculo mediu e não decidiu (axe; estado ARIA × nativo); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério candidato em norms)."
       : "notMeasured: pendências suas — o axe mediu e não decidiu; não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério em norms).",
   };

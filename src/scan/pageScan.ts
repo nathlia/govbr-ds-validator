@@ -17,7 +17,7 @@ import { inspectDisclosures, type DisclosureFacts } from "../evidence/disclosure
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
-import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, type NotJudgedItem } from "./notJudged.js";
+import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, statePendings, uploadPathsPending, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
@@ -212,8 +212,8 @@ export async function revealRecipes(page: Page, locators: string[]): Promise<Rec
     return out;
   }, locators);
 }
-export async function fileInputSupport(page: Page, locators: string[]): Promise<Record<string, string>> {
-  return page.evaluate(({ locators, HIDDEN }: { locators: string[]; HIDDEN: string }) => {
+export async function fileInputSupport(page: Page, locators: string[], ds = true): Promise<Record<string, string>> {
+  return page.evaluate(({ locators, HIDDEN, ds }: { locators: string[]; HIDDEN: string; ds: boolean }) => {
     const shown = (el: Element | null) => Boolean(el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");
     const text = (el: Element | null) => (el && shown(el) ? ((el as HTMLElement).innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim() : "");
     const out: Record<string, string> = {};
@@ -223,7 +223,8 @@ export async function fileInputSupport(page: Page, locators: string[]): Promise<
       try { input = document.querySelector(locator); } catch { continue; }
       if (!input) continue;
       const parts: string[] = [];
-      const host = input.closest(".br-upload") ?? input.parentElement;
+      // knowledge-free: sem a pista da classe do componente do DS, o pai do campo.
+      const host = (ds ? input.closest(".br-upload") : null) ?? input.parentElement;
       const candidates = [
         ...(input.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)),
         host?.nextElementSibling ?? null,
@@ -237,7 +238,7 @@ export async function fileInputSupport(page: Page, locators: string[]): Promise<
       else if (candidates.length) out[locator] = HIDDEN;
     }
     return out;
-  }, { locators, HIDDEN: SUPPORT_HIDDEN });
+  }, { locators, HIDDEN: SUPPORT_HIDDEN, ds });
 }
 
 /**
@@ -864,6 +865,16 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     const cached = cache.get(cacheKey);
     if (cached) return { ...cached, state, cacheHit: true };
 
+    // 3.7.8 (paridade de perfil): estados recolhidos e campos de arquivo são fatos da marcação — o mesmo procedimento do
+    // perfil completo, sem pista de classe do DS e sem nada da base. Lidos antes do axe, no estado alcançado.
+    const disclosures = selectors.length ? undefined : await inspectDisclosures(page, { ds: false });
+    const fileFields = selectors.length ? [] : (await inspectPageComputedStyles(page, request.url, "input[type='file']", [])).elements;
+    const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator), false) : {};
+    const upload = uploadPathsPending(fileFields.map((el) => ({
+      locator: el.locator,
+      accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
+      support: supportOf[el.locator] ?? null,
+    })), true);
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
     const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);
@@ -874,7 +885,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
       ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements.filter((el) => el.nativeState !== undefined)
       : (await inspectPageComputedStyles(page, request.url, ARIA_STATE_SELECTOR, [])).elements;
     const aria = checkAriaNativeStates({ url: request.url }, ariaEvidence, { knowledgeFree: true });
-    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending];
+    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending, ...(upload ? [upload] : []), ...statePendings(disclosures?.collapsed ?? [], request.url, true)];
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
@@ -882,6 +893,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
       findings: pageLevelFirst(deduplicated.findings),
       observations: [],
       ...(notJudged.length ? { notJudged } : {}),
+      ...(disclosures ? { disclosuresOpened: disclosures.opened } : {}),
       coverage: {
         checks,
         selectors,
