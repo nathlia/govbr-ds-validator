@@ -442,7 +442,8 @@ export function statePendings(groups: DisclosureGroup[], url: string): NotJudged
       // a chegada vem antes do rótulo: na forma curta (72 caracteres) o rótulo é o que se corta.
       observed: `${g.signal}; ${arrivalText(g.arrival)}${g.region === "shell" ? " (casca)" : ""}${last ? `; +${rest.length} gatilho(s) no ledger` : ""}${g.label ? ` "${clip(g.label, 30)}"` : ""}`,
       todo: STATE_TODO,
-      measure: `${JSON.stringify(recipe)}${g.selectors.length > 1 ? ` (${g.selectors.length} instâncias do mesmo padrão: uma basta)` : ""}; sem chegada, confira o estado aberto no scan. Não se aplica: pendingResolved {id, status:"não se aplica", reason}`,
+      // a chamada inteira fica em `recipe` (não se repete aqui)
+      measure: `rode recipe${g.selectors.length > 1 ? ` (${g.selectors.length} do mesmo padrão: uma basta)` : ""}; não se aplica: pendingResolved com reason`,
       recipe,
       ...(last ? { moreTriggers: rest.slice(0, 8).map((x) => ({ selector: x.selectors[0], signal: x.signal, ...(x.arrival ? { arrival: x.arrival } : {}) })) } : {}),
     };
