@@ -77,6 +77,8 @@ export function checksRunFor(
   revisited?: Array<{ locator: string; checker: string; now: string; findings?: string[] }>,
   /** 3.7.9 (D1): há pendência state-unscanned aberta neste scan. */
   statesPending = false,
+  /** 3.7.10 (D5): checks já rodados NESTE estado (rota + fingerprint) na sessão — completeOmitted não os sugere de novo. */
+  sessionRun: string[] = [],
 ) {
   const scope = recipe.selectors?.length ? recipe.selectors.join(", ") : "document";
   const engine = coverage.axe ? `${coverage.axe.engine.name} ${coverage.axe.engine.version}` : undefined;
@@ -124,7 +126,7 @@ export function checksRunFor(
     });
   }
   // A chamada exata com SÓ o que faltou, na mesma receita (url, seletores, ações, chegada).
-  const missingChecks = ALL_CHECKS.filter((c) => !active.includes(c));
+  const missingChecks = ALL_CHECKS.filter((c) => !active.includes(c) && !sessionRun.includes(c));
   const completeChecks = [...missingChecks, ...(omittedTokens.length && !missingChecks.includes("tokens") ? (["tokens"] as Check[]) : [])];
   const base = {
     url: recipe.url,
@@ -132,8 +134,9 @@ export function checksRunFor(
     ...(recipe.actions?.length ? { actions: recipe.actions } : {}),
     ...(recipe.arrival ? { arrival: recipe.arrival } : {}),
   };
+  // 3.7.10 (D5): o que a sessão já mediu neste estado não volta na sugestão (sem isso, page ↔ resto em laço).
   const completeOmitted =
-    omitted.length === 0
+    omitted.length === 0 || (!missingChecks.length && !omittedTokens.length && !(active.includes("structure") && recipe.components?.length))
       ? null
       : {
           tool: "scan_page",

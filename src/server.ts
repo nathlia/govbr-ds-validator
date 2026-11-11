@@ -2130,9 +2130,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // 3.7.8 (N5): este scan mediu um estado aberto (controle aberto no estado, ou a receita clicou nele): fecha a
         // pendência state-unscanned desse gatilho nesta rota, antes de registrar as deste estado.
         // 3.7.9 (D3): fecha só se este scan rodou pelo menos os checks do scan que abriu a pendência; senão diz o que falta.
+        // 3.7.10 (D5): os checks se somam entre scans do MESMO estado (rota + fingerprint) na sessão.
+        const ranOnState = session.checksRunOnState(route, result.stateFingerprint, executedChecks);
         const states = hasNorms
           ? session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), executedChecks)
+              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ranOnState)
           : { closed: [], incomplete: [] };
         const statesSeen = states.closed;
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
@@ -2215,6 +2217,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
               false,
               result.revisited,
               hasNorms && first && pageItems.some((i) => i.code === "state-unscanned" && i.resolved === undefined),
+              ranOnState,
             ),
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
             // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).

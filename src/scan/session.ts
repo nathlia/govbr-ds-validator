@@ -691,6 +691,17 @@ export class ScanSession {
    * que abriu a pendência.
    */
   private readonly openSeen = new Map<string, Map<string, Set<string>>>();
+  /** 3.7.10 (D5): por rota + estado (fingerprint), a união dos checks já rodados nesta sessão. */
+  private readonly checksOnState = new Map<string, Set<string>>();
+
+  /** 3.7.10 (D5): acumula os checks deste scan no estado (rota + fingerprint) e devolve a união da sessão. */
+  checksRunOnState(route: string, fingerprint: string, checks: string[]): string[] {
+    const key = `${route}|${fingerprint}`;
+    const set = this.checksOnState.get(key) ?? new Set<string>();
+    for (const c of checks) set.add(c);
+    this.checksOnState.set(key, set);
+    return [...set];
+  }
 
   resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = [], checks: string[] = []): { closed: string[]; incomplete: Array<{ id: string; missing: string[] }> } {
     // revisão MED 5a: fecha o que o estado ESCANEADO mostra aberto (o conteúdo aparece); o clique só vale para o estado
