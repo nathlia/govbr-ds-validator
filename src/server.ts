@@ -1869,7 +1869,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
    */
   const settleStateItems = (route: string, items: PendingItem[], checks: string[], scanId: string): PendingItem[] => {
     const born = new Set(session.settleStates(route, items.filter((i) => i.code === "state-unscanned").map((i) => i.pendingId as string), checks, scanId));
-    const settled = items.map((i) => (born.has(i.pendingId as string) ? { ...i, resolved: "state-scanned" } : i));
+    // 3.7.11 (revisão H4): a receita de envio compara com o scan desta resposta (o antes do envio)
+    const settled = items.map((i) => {
+      const it = born.has(i.pendingId as string) ? { ...i, resolved: "state-scanned" } : i;
+      const sr = (it as { submitRecipe?: { tool: string; arguments: Record<string, unknown> } }).submitRecipe;
+      return sr ? { ...it, submitRecipe: { ...sr, arguments: { ...sr.arguments, compareToScanId: scanId } } } : it;
+    });
     const rank = (i: PendingItem) => (i.code === "state-unscanned" ? 0 : i.code === "upload-paths" ? 1 : 2);
     return settled.map((i, k) => ({ i, k })).sort((a, b) => rank(a.i) - rank(b.i) || a.k - b.k).map(({ i }) => i);
   };
@@ -2137,7 +2142,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const ranOnState = session.checksRunOnState(route, result.stateFingerprint, scanId, fullScope);
         const states = hasNorms
           ? session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), Object.keys(ranOnState), arrival)
+              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), Object.keys(ranOnState))
           : { closed: [], incomplete: [] };
         const statesSeen = states.closed;
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
@@ -2319,7 +2324,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const first = !cursor;
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
       const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"], arrival).closed;
+        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"]).closed;
       const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.

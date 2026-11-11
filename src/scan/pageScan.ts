@@ -228,7 +228,7 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
       const candidates = [
         ...(input.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)),
         host?.nextElementSibling ?? null,
-      ].filter((el): el is Element => el !== null && (el.textContent ?? "").trim().length > 0);
+      ].filter((el): el is Element => el !== null && (el.textContent ?? "").trim().length > 0 && !["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA"].includes(el.tagName));
       for (const el of candidates) {
         const t = text(el);
         if (t && !parts.includes(t)) parts.push(t);
@@ -242,15 +242,27 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
 }
 
 /**
- * 3.7.11 (R2/R4): para cada campo de arquivo, (a) o elemento que de fato recebe o arrasto — o que tem ouvinte de `drop`
- * (lido pelo CDP do Chromium: DOMDebugger.getEventListeners) entre o campo, o contêiner dele e os descendentes e até 3
- * ancestrais; (b) o controle que envia o formulário dono do campo (`input.form`: button/input type=submit, ou button sem
- * type), com seletor único; (c) se a receita deste scan fez `upload` neste campo. Nada é mudado no DOM. Sem CDP ou sem
- * ouvinte: `dropZone: null` (zona desconhecida, nunca uma receita que falha).
+ * 3.7.11 (R2/R4; revisão H4 e LOW): para cada campo de arquivo, lido no estado do scan, sem mudar o DOM:
+ *   (a) `dropZone`: o elemento que recebe o arrasto — o ancestral-ou-próprio mais próximo dentro do contêiner do campo (o
+ *       pai dele e os descendentes desse pai) que tem ouvinte de `drop` (CDP do Chromium: DOMDebugger.getEventListeners);
+ *       nada acima do contêiner. Sem ouvinte: `null` (zona desconhecida, nunca uma receita que falha);
+ *   (b) `submit`: o controle de envio do formulário do campo só quando há EXATAMENTE um (button/input type=submit, ou
+ *       button sem type); `submitCount` diz quantos há (0 ou vários: sem seletor);
+ *   (c) `uploadedFiles`: os arquivos que a receita deste scan pôs neste campo (ação upload);
+ *   (d) `fieldNow`: o que está associado ao campo agora — aria-invalid, o texto de aria-describedby / aria-errormessage e
+ *       textos com role=alert/status/aria-live dentro do contêiner do campo — como fatos (texto, papel, associação);
+ *   (e) `examined: false` quando o campo está em shadow DOM (não examinado).
  */
-export type FileInputPaths = { dropZone: string | null; submit: string | null; uploaded: boolean; errorNear: boolean };
+export type FileInputPaths = {
+  examined: boolean;
+  dropZone: string | null;
+  submit: string | null;
+  submitCount: number;
+  uploadedFiles: Array<{ name: string; mimeType: string }>;
+  fieldNow: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> };
+};
 const FILE_CANDIDATES = "__govbrFileCandidates";
-export async function fileInputPaths(page: Page, locators: string[], uploadSelectors: string[]): Promise<Record<string, FileInputPaths>> {
+export async function fileInputPaths(page: Page, locators: string[], uploads: Array<{ selector: string; files: Array<{ name: string; mimeType: string }> }>): Promise<Record<string, FileInputPaths>> {
   const count = await page.evaluate(({ locators, KEY }: { locators: string[]; KEY: string }) => {
     const all: Element[] = [];
     const owner: number[] = [];
@@ -260,7 +272,6 @@ export async function fileInputPaths(page: Page, locators: string[], uploadSelec
       if (!input) return;
       const host = input.parentElement;
       const near: Element[] = [input, ...(host ? [host, ...Array.from(host.querySelectorAll("*"))] : [])];
-      for (let a = host?.parentElement ?? null, n = 0; a && n < 3; a = a.parentElement, n++) near.push(a);
       for (const el of near) if (!all.includes(el)) { all.push(el); owner.push(k); }
     });
     (window as unknown as Record<string, unknown>)[KEY] = { all, owner };
@@ -279,13 +290,15 @@ export async function fileInputPaths(page: Page, locators: string[], uploadSelec
   } catch {
     /* sem CDP: zona desconhecida */
   }
-  return page.evaluate(({ locators, KEY, drops, uploadSelectors }: { locators: string[]; KEY: string; drops: number[]; uploadSelectors: string[] }) => {
+  return page.evaluate(({ locators, KEY, drops, uploads }: { locators: string[]; KEY: string; drops: number[]; uploads: Array<{ selector: string; files: Array<{ name: string; mimeType: string }> }> }) => {
     const w = window as unknown as Record<string, { all: Element[]; owner: number[] } | undefined>;
     const store = w[KEY];
     delete w[KEY];
     const esc = (v: string) => CSS.escape(v);
     const generated = (v: string) => /\d{3,}|[0-9a-f]{8,}/i.test(v);
     const unique = (sel: string, el: Element) => { try { const f = document.querySelectorAll(sel); return f.length === 1 && f[0] === el; } catch { return false; } };
+    const visible = (el: Element | null) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden"; };
+    const text = (el: Element) => ((el as HTMLElement).innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
     const selectorOf = (el: Element): string | null => {
       if (el.id && !generated(el.id) && unique(`#${esc(el.id)}`, el)) return `#${esc(el.id)}`;
       const parts: string[] = [];
@@ -301,24 +314,53 @@ export async function fileInputPaths(page: Page, locators: string[], uploadSelec
       const sel = parts.join(" > ");
       return parts.length && unique(sel, el) ? sel : null;
     };
-    const out: Record<string, { dropZone: string | null; submit: string | null; uploaded: boolean; errorNear: boolean }> = {};
-    const visible = (el: Element) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden"; };
+    const empty = { invalid: null, associated: [] };
+    const out: Record<string, { examined: boolean; dropZone: string | null; submit: string | null; submitCount: number; uploadedFiles: Array<{ name: string; mimeType: string }>; fieldNow: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> } }> = {};
     locators.forEach((locator, k) => {
+      if (locator.includes(">>>")) {
+        out[locator] = { examined: false, dropZone: null, submit: null, submitCount: 0, uploadedFiles: [], fieldNow: empty };
+        return;
+      }
       let input: HTMLInputElement | null = null;
-      try { input = locator.includes(">>>") ? null : (document.querySelector(locator) as HTMLInputElement | null); } catch { input = null; }
+      try { input = document.querySelector(locator) as HTMLInputElement | null; } catch { input = null; }
       if (!input) return;
+      // (a) o mais próximo do campo (ordem: o próprio, o contêiner, os descendentes do contêiner)
       const zoneAt = store ? drops.find((i) => store.owner[i] === k) : undefined;
       const zone = store && zoneAt !== undefined ? store.all[zoneAt] : null;
+      // (b) exatamente um controle de envio
       const form = input.form;
-      const submit = form ? (form.querySelector("button[type=submit], input[type=submit]") ?? Array.from(form.querySelectorAll("button")).find((b) => !b.hasAttribute("type")) ?? null) : null;
-      const uploaded = uploadSelectors.some((sel) => { try { return document.querySelector(sel) === input; } catch { return false; } });
-      // erro do CAMPO: no formulário dele (ou no contêiner), não um aviso qualquer da página
-      const scope = form ?? input.parentElement?.parentElement ?? null;
-      const errorNear = input.getAttribute("aria-invalid") === "true" || Boolean(scope && Array.from(scope.querySelectorAll("[role=alert], [aria-live], [aria-invalid=true]")).some((e) => visible(e) && ((e.textContent ?? "").trim().length > 0 || e.getAttribute("aria-invalid") === "true")));
-      out[locator] = { dropZone: zone ? selectorOf(zone) : null, submit: submit ? selectorOf(submit) : null, uploaded, errorNear };
+      // um type=submit explícito; sem nenhum, o ÚNICO botão do formulário quando ele não tem type (submete por padrão)
+      const explicit = form ? Array.from(form.querySelectorAll("button[type=submit], input[type=submit]")) : [];
+      const buttons = form ? Array.from(form.querySelectorAll("button, input[type=submit], input[type=button]")) : [];
+      const submits = explicit.length ? explicit : buttons.length === 1 && buttons[0].tagName === "BUTTON" && !buttons[0].hasAttribute("type") ? buttons : buttons.filter((b) => b.tagName === "BUTTON" && !b.hasAttribute("type"));
+      const single = explicit.length === 1 ? explicit[0] : !explicit.length && buttons.length === 1 && submits.length === 1 ? submits[0] : null;
+      // (c) arquivos que a receita pôs neste campo
+      const uploadedFiles = uploads.filter((u) => { try { return document.querySelector(u.selector) === input; } catch { return false; } }).flatMap((u) => u.files);
+      // (d) o que está associado ao campo agora (fatos: texto, papel, associação)
+      const associated: Array<{ via: string; role: string | null; text: string }> = [];
+      for (const attr of ["aria-describedby", "aria-errormessage"]) {
+        for (const id of (input.getAttribute(attr) ?? "").split(/\s+/).filter(Boolean)) {
+          const el = document.getElementById(id);
+          if (el && visible(el) && text(el)) associated.push({ via: attr, role: el.getAttribute("role"), text: text(el) });
+        }
+      }
+      const wrapper = input.parentElement;
+      if (wrapper) {
+        for (const el of Array.from(wrapper.querySelectorAll("[role=alert], [role=status], [aria-live]"))) {
+          if (visible(el) && text(el) && !associated.some((a) => a.text === text(el))) associated.push({ via: "contêiner do campo", role: el.getAttribute("role") ?? `aria-live=${el.getAttribute("aria-live")}`, text: text(el) });
+        }
+      }
+      out[locator] = {
+        examined: true,
+        dropZone: zone ? selectorOf(zone) : null,
+        submit: single ? selectorOf(single) : null,
+        submitCount: single ? 1 : explicit.length || buttons.length,
+        uploadedFiles,
+        fieldNow: { invalid: input.getAttribute("aria-invalid"), associated: associated.slice(0, 3) },
+      };
     });
     return out;
-  }, { locators, KEY: FILE_CANDIDATES, drops: withDrop, uploadSelectors });
+  }, { locators, KEY: FILE_CANDIDATES, drops: withDrop, uploads });
 }
 
 /**
@@ -860,8 +902,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const fileFields = fieldEvidence.filter((el) => el.tagName === "input" && (el.attributes.type ?? "").toLowerCase() === "file");
     const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator)) : {};
     // 3.7.11 (R2/R4): zona de soltar, controle de envio e se a receita deste scan fez upload no campo
-    const uploadSelectors = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [a.selector] : []));
-    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploadSelectors) : {};
+    const uploads = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [{ selector: a.selector, files: a.files.map((f) => ({ name: f.name, mimeType: f.mimeType })) }] : []));
+    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploads) : {};
     const fileInputs = fileFields.map((el) => ({
       ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
@@ -883,7 +925,6 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       // 3.7.8 (N5): estados recolhidos que este scan não mediu, com a receita pronta.
       ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed } : {}),
       stateBase: { url: request.url, actions: request.actions ?? [] },
-      errorVisible: state.observed.errors.length > 0,
     });
     const value: CachedScan = {
       status: "scanned",
@@ -959,14 +1000,14 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     const disclosures = selectors.length ? undefined : await inspectDisclosures(page, { ds: false });
     const fileFields = selectors.length ? [] : (await inspectPageComputedStyles(page, request.url, "input[type='file']", [])).elements;
     const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator), false) : {};
-    const uploadSelectors = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [a.selector] : []));
-    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploadSelectors) : {};
+    const uploads = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [{ selector: a.selector, files: a.files.map((f) => ({ name: f.name, mimeType: f.mimeType })) }] : []));
+    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploads) : {};
     const upload = uploadPathsPending(fileFields.map((el) => ({
       ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
       accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
       support: supportOf[el.locator] ?? null,
-    })), true, { url: request.url, actions: request.actions ?? [] }, state.observed.errors.length > 0);
+    })), true, { url: request.url, actions: request.actions ?? [] });
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
     const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);

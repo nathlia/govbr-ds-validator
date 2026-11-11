@@ -7,8 +7,8 @@
         "query": "foco visível ao navegar pelo teclado"
       },
       "isError": false,
-      "chars": 3914,
-      "sha256": "b8ca98bfe8081dfcccb9ce83424e193ddf2c9b40f48c6e5b8f75d5fab09e2d8a"
+      "chars": 3960,
+      "sha256": "de6b6bae99d51a5bd65b1aba6217dd09a038b8d52ce95bd061ddb024f292bbc3"
     },
     {
       "args": {
@@ -17,8 +17,8 @@
         "limit": 4
       },
       "isError": false,
-      "chars": 6864,
-      "sha256": "48bdfb5d29d95e27dfb2aa5112860fc654a0eb6028c230c2233cef6079f7df25"
+      "chars": 6910,
+      "sha256": "f2ef476694b8c4ef32e661d5caa3840cba3e2425821946c29be9daee4e2dc407"
     },
     {
       "args": {
@@ -448,5 +448,12 @@
   },
   "changed373A4": [
     10
-  ]
+  ],
+  "changed3711": {
+    "steps": [
+      0,
+      1
+    ],
+    "why": "3.7.11 (R5): a mensagem 'specification' da leitura deixou de mandar citar outra norma ('para afirmar violação, cite a norma que obriga') e diz que o desvio medido é fato a relatar, citando a unidade; diferença conferida: só essa frase (build 3.7.10 reproduz a fixture antiga)."
+  }
 }

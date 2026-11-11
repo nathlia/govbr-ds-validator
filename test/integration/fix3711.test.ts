@@ -1,13 +1,17 @@
 /**
- * 3.7.11 (leituras dev-3710 A2/A), genérico — nenhuma tela:
- *   R1: o estado aberto com o conteúdo ainda em transição (aria-expanded="true", alvo sem caixa no instante da leitura)
- *       fecha a pendência — pela leitura do controle e pela receita da própria pendência (clique + chegada alcançada); a
- *       sequência exata do rastro: checks sem page, depois só page;
- *   R2: upload sem erro do campo no estado → a recusa pode vir no envio: submitRecipe com o controle de envio do formulário;
- *   R3: as linhas inform levam o referente literal da base (seção; a frase anterior quando a cláusula abre com anafórico);
- *   R4: a receita de arrasto vai no elemento que tem o ouvinte de drop e roda; sem ouvinte, "zona desconhecida";
- *   R5: o aviso de força 'especificacao' não manda trocar nem largar a norma e não fala em violação;
- *   R6: knowledge-free diz como encerrar a pendência (limitations), em todas as formas.
+ * 3.7.11 (leituras dev-3710 A2/A; revisão independente de 569cea5), genérico — nenhuma tela:
+ *   R1 (revisão H1–H3): aberto = o conteúdo controlado aparece (a regra da 3.7.10). Um controle que vira expanded e não abre
+ *       nada não fecha a pendência; aria-expanded="true" estático com conteúdo oculto continua pendente; a chegada de um
+ *       diálogo com id é o próprio diálogo (outro diálogo não chega). Conteúdo que aparece depois de um instante: a leitura
+ *       espera a página assentar e lê de novo — fecha (a sequência do rastro: checks sem page, depois só page);
+ *   R2 (revisão H4): o envio só com UM controle de envio determinável; receita sem chegada errorVisible, com compareToScanId
+ *       deste scan; a relação arquivo × accept (sem presumir recusa; arquivo dentro do accept: nada de envio sugerido); os
+ *       fatos do campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner) como medida;
+ *   R3: inform com o referente literal (seção; frase anterior quando a cláusula tem demonstrativo em qualquer posição); o
+ *       texto não é cortado antes do verbo;
+ *   R4: o arrasto vai no elemento com ouvinte de drop no campo ou no contêiner dele; acima disso, zona desconhecida;
+ *   R5: aviso de força 'especificacao' neutro;
+ *   R6: knowledge-free diz como encerrar a pendência (endNote na forma inteira).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer as httpServer, type Server } from "node:http";
@@ -21,28 +25,41 @@ import { createServer } from "../../src/server.js";
 import { closeBrowser } from "../../src/evidence/browser.js";
 import { resetKnowledgeLock } from "../../src/data/lock.js";
 import { citationForceWarning } from "../../src/responses/verify.js";
-import { KF_END_NOTE, pageLevelShort, uploadInformClauses, type PendingItem } from "../../src/scan/notJudged.js";
+import { acceptRelation, KF_END_NOTE, uploadInformClauses, type PendingItem } from "../../src/scan/notJudged.js";
 import type { Finding } from "../../src/schema/finding.js";
 import { filterRules } from "../../src/data/knowledge.js";
 
-// R1: o conteúdo controlado só aparece 4 s depois do clique (o scan lê antes); aria-expanded vira true na hora.
-const SLOW = `<header><button type="button" id="conta" aria-expanded="false" aria-controls="menu-conta">Conta</button><div id="menu-conta" hidden><a href="/sair">Sair</a></div></header>
+const PAGE = (body: string) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>T</title></head><body>${body}</body></html>`;
+const FX: Record<string, string> = {
+  // R1: o conteúdo aparece 700 ms depois do clique (a leitura espera a página assentar)
+  "/lento": `<header><button type="button" id="conta" aria-expanded="false" aria-controls="menu-conta">Conta</button><div id="menu-conta" hidden><a href="/sair">Sair</a></div></header>
 <main><h1>Lento</h1></main>
-<script>document.getElementById("conta").addEventListener("click",function(){this.setAttribute("aria-expanded","true");setTimeout(function(){document.getElementById("menu-conta").hidden=false;},4000);});</script>`;
-// R2/R4: campo de arquivo num formulário com envio; o ouvinte de drop está num botão irmão (não no input oculto).
-const UPLOAD = (withDrop: boolean, withError: boolean) => `<main><h1>Envio</h1><form id="f" onsubmit="event.preventDefault();document.getElementById('erro').hidden=false;">
-<div class="campo"><input type="file" id="arquivo" style="display:none" aria-describedby="apoio"><button type="button" class="zona">Selecionar arquivo</button></div>
-<p id="apoio">Apoio do campo.</p><p id="erro" role="alert" ${withError ? "" : "hidden"}>Formato não aceito.</p>
+<script>document.getElementById("conta").addEventListener("click",function(){this.setAttribute("aria-expanded","true");setTimeout(function(){document.getElementById("menu-conta").hidden=false;},700);});</script>`,
+  // H1: o clique muda aria-expanded e não abre nada
+  "/noopen": `<main><h1>T</h1><button id="m" aria-expanded="false" aria-controls="painel">Mais</button><div id="painel" hidden><a href="/x">Item</a></div>
+<script>document.getElementById('m').onclick=function(){this.setAttribute('aria-expanded',this.getAttribute('aria-expanded')==='true'?'false':'true');};</script></main>`,
+  // H2: aria-expanded="true" estático com o conteúdo oculto
+  "/static": `<main><h1>T</h1><button id="s" aria-expanded="true" aria-controls="p2">Filtros</button><div id="p2" hidden><a href="/y">A</a></div></main>`,
+  // H3: o gatilho abre OUTRO diálogo
+  "/wrongdlg": `<main><h1>T</h1><button id="d" aria-haspopup="dialog" aria-controls="dlgA">Ajuda</button>
+<div id="dlgA" role="dialog" aria-label="Ajuda" hidden><p>Ajuda</p></div><div id="dlgB" role="dialog" aria-label="Outro" hidden><p>Outro</p></div>
+<script>document.getElementById('d').onclick=function(){document.getElementById('dlgB').hidden=false;};</script></main>`,
+  // R2/R4: um campo num formulário com UM envio; o ouvinte de drop num botão do contêiner do campo
+  "/upload": `<main><h1>Envio</h1><form id="f" onsubmit="event.preventDefault();var e=document.getElementById('erro');e.hidden=false;document.getElementById('arquivo').setAttribute('aria-invalid','true');">
+<div class="campo"><input type="file" id="arquivo" accept=".pdf" style="display:none" aria-describedby="apoio erro"><button type="button" class="zona">Selecionar arquivo</button></div>
+<p id="apoio">Apoio do campo.</p><p id="erro" role="alert" hidden>Formato não aceito.</p>
 <button type="submit" id="enviar">Enviar</button></form></main>
-${withDrop ? `<script>var z=document.querySelector(".zona");z.addEventListener("dragover",function(e){e.preventDefault();});z.addEventListener("drop",function(e){e.preventDefault();});</script>` : ""}`;
+<script>var z=document.querySelector(".zona");z.addEventListener("dragover",function(e){e.preventDefault();});z.addEventListener("drop",function(e){e.preventDefault();});</script>`,
+  // R2: dois botões sem type=submit explícito (nenhum envio determinável); R4: o ouvinte só no main (acima do contêiner)
+  "/ambiguo": `<main><h1>Envio</h1><form id="g"><div class="campo"><input type="file" id="arq2" accept=".pdf"></div>
+<button id="limpar">Limpar</button><button type="button" id="env">Enviar</button></form></main>
+<script>document.querySelector("main").addEventListener("drop",function(e){e.preventDefault();});</script>`,
+};
 
 let http: Server;
 let base: string;
 beforeAll(async () => {
-  http = httpServer((req, res) => {
-    const body = req.url === "/lento" ? SLOW : req.url === "/upload" ? UPLOAD(true, false) : req.url === "/upload-sem-drop" ? UPLOAD(false, false) : req.url === "/upload-com-erro" ? UPLOAD(true, true) : "";
-    res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html><html lang="pt-BR"><head><title>T</title></head><body>${body}</body></html>`);
-  });
+  http = httpServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(PAGE(FX[req.url ?? ""] ?? "")));
   await new Promise<void>((done) => http.listen(0, "127.0.0.1", done));
   base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
 });
@@ -58,65 +75,118 @@ async function connect(profile: "evaluation" | "knowledge-free" = "evaluation") 
   };
   return { client, call };
 }
-type Item = PendingItem & { recipe?: { tool: string; arguments: Record<string, unknown> }; dropRecipe?: { tool: string; arguments: Record<string, unknown> }; submitRecipe?: { tool: string; arguments: Record<string, unknown> } };
+type Recipe = { tool: string; arguments: Record<string, unknown> };
+type Item = PendingItem & { recipe?: Recipe; dropRecipe?: Recipe; submitRecipe?: Recipe; fieldNow?: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> } };
 const itemOf = (d: { checksRun: { pageLevel: { notMeasured: Array<PendingItem | string> } } }, code: string) =>
   d.checksRun.pageLevel.notMeasured.find((i) => typeof i !== "string" && i.code === code) as Item | undefined;
 
-describe("3.7.11 R1 — estado aberto em transição fecha a pendência (sequência do rastro)", () => {
-  it("checks sem page, depois só page: a soma fecha mesmo com o conteúdo ainda sem caixa", async () => {
+describe("3.7.11 R1 — aberto = o conteúdo aparece (revisão H1–H3)", () => {
+  it("conteúdo que aparece depois de um instante: a leitura espera assentar e fecha (checks sem page, depois só page)", async () => {
     const { client, call } = await connect();
     try {
       const p = itemOf(await call("scan_page", { url: `${base}/lento`, maxChars: 60000 }), "state-unscanned")!;
-      expect(p.recipe!.arguments.arrival).toEqual({ visible: "#menu-conta, #menu-conta *" });
+      // a chegada do rastro (expanded no próprio controle): o conteúdo ainda não tem caixa quando o scan lê
       const args = { ...p.recipe!.arguments, arrival: { expanded: "#conta" } };
       const step1 = await call("scan_page", { ...args, checks: ["axe", "structure", "tokens"] });
+      expect(step1.status).toBe("scanned");
       expect(step1.statesIncomplete).toEqual([{ id: p.pendingId, missing: ["page"] }]);
       const step2 = await call("scan_page", { ...args, checks: ["page"] });
       expect(step2.statesScanned).toContain(p.pendingId);
     } finally { await client.close(); }
   });
+
+  it("H1: o clique muda aria-expanded e não abre nada → a pendência não fecha", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/noopen`;
+      const p = itemOf(await call("scan_page", { url, maxChars: 60000 }), "state-unscanned")!;
+      const run = await call("scan_page", { url, actions: [{ action: "click", selector: "#m" }], arrival: { expanded: "#m" } });
+      expect(run.statesScanned).toBeUndefined();
+      expect(itemOf(await call("scan_page", { url, maxChars: 60000 }), "state-unscanned")!.resolved).toBeUndefined();
+      expect(p.pendingId).toMatch(/^P-/);
+    } finally { await client.close(); }
+  });
+
+  it("H2: aria-expanded=\"true\" estático com o conteúdo oculto continua pendente", async () => {
+    const { client, call } = await connect();
+    try {
+      const p = itemOf(await call("scan_page", { url: `${base}/static`, maxChars: 60000 }), "state-unscanned")!;
+      expect(p.observed).toMatch(/aria-controls→#p2 oculto/);
+    } finally { await client.close(); }
+  });
+
+  it("H3: a chegada é o próprio diálogo (com id); outro diálogo não chega e nada fecha", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/wrongdlg`;
+      const p = itemOf(await call("scan_page", { url, maxChars: 60000 }), "state-unscanned")!;
+      expect(p.recipe!.arguments.arrival).toEqual({ visible: "#dlgA, #dlgA *" });
+      const run = await call("scan_page", { ...p.recipe!.arguments });
+      expect(run.status).toBe("state-not-reached");
+      const open = await call("scan_page", { url, actions: [{ action: "click", selector: "#d" }] });
+      expect(open.statesScanned).toBeUndefined();
+    } finally { await client.close(); }
+  });
 });
 
-describe("3.7.11 R2/R4 — envio e alvo do arrasto do campo de arquivo", () => {
+describe("3.7.11 R2/R4 — envio e arrasto do campo de arquivo (revisão H4)", () => {
+  it("relação arquivo × accept, sem presumir recusa", () => {
+    expect(acceptRelation(".pdf", { name: "a.exe", mimeType: "application/x-msdownload" })).toBe("fora do accept");
+    expect(acceptRelation(".pdf,image/*", { name: "a.png", mimeType: "image/png" })).toBe("dentro do accept");
+    expect(acceptRelation(null, { name: "a.exe", mimeType: "application/x-msdownload" })).toBe("campo sem accept");
+  });
+
   for (const profile of ["evaluation", "knowledge-free"] as const) {
-    it(`drop no elemento com ouvinte (a receita roda); upload sem erro do campo → submitRecipe (${profile})`, async () => {
+    it(`um envio determinável: receita sem errorVisible, com compareToScanId; os fatos do campo depois do envio (${profile})`, async () => {
       const { client, call } = await connect(profile);
       try {
         const url = `${base}/upload`;
         const u = itemOf(await call("scan_page", { url, maxChars: 60000 }), "upload-paths")!;
         expect(u.dropRecipe!.arguments.actions).toEqual([{ action: "drop", selector: "#f > div > button", files: [{ name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 }] }]);
         expect((await call("scan_page", { ...u.dropRecipe!.arguments })).status).toBe("scanned");
-        expect(u.measure).toMatch(/depois do upload, envie \(clique em #enviar\)/);
-        const up = await call("scan_page", { url, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "programa.exe", mimeType: "application/x-msdownload", size: 2048 }] }], maxChars: 60000 });
+        expect(u.measure).toMatch(/envio do formulário: clique em #enviar/);
+        expect(u.measure).not.toMatch(/recusa|errorVisible|não chegar/);
+        const exe = [{ action: "upload", selector: "#arquivo", files: [{ name: "programa.exe", mimeType: "application/x-msdownload", size: 2048 }] }];
+        const up = await call("scan_page", { url, actions: exe, maxChars: 60000 });
         const u2 = itemOf(up, "upload-paths")!;
-        expect(u2.observed).toMatch(/^upload sem erro visível: a recusa pode vir no envio/);
-        expect(u2.submitRecipe!.arguments).toEqual({ url, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "programa.exe", mimeType: "application/x-msdownload", size: 2048 }] }, { action: "click", selector: "#enviar" }], arrival: { errorVisible: true } });
-        const sent = await call("scan_page", { ...u2.submitRecipe!.arguments });
-        expect(sent.status).toBe("scanned");
+        expect(u2.observed).toMatch(/^upload de programa\.exe \(fora do accept\); no campo: aria-describedby: "Apoio do campo\."/);
+        expect(u2.submitRecipe!.arguments).toEqual({ url, actions: [...exe, { action: "click", selector: "#enviar" }], compareToScanId: up.scanId });
+        const sent = await call("scan_page", { ...u2.submitRecipe!.arguments, maxChars: 60000 });
+        const u3 = itemOf(sent, "upload-paths")!;
+        expect(u3.submitRecipe).toBeUndefined();
+        expect(u3.observed).toMatch(/depois do envio, no campo: aria-invalid="true"/);
+        expect(u3.fieldNow!.associated).toEqual(expect.arrayContaining([{ via: "aria-describedby", role: "alert", text: "Formato não aceito." }]));
+        // arquivo dentro do accept: nada de envio sugerido, nada de recusa
+        const pdf = itemOf(await call("scan_page", { url, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "doc.pdf", mimeType: "application/pdf", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;
+        expect(pdf.observed).toMatch(/\(dentro do accept\)/);
+        expect(pdf.submitRecipe).toBeUndefined();
+        expect(`${pdf.observed} ${pdf.measure}`).not.toMatch(/recusa/);
       } finally { await client.close(); }
     });
   }
 
-  it("sem ouvinte de drop: zona desconhecida e nenhuma receita; com erro do campo visível: sem submitRecipe", async () => {
+  it("sem envio único determinável: sem seletor; ouvinte de drop só acima do contêiner: zona desconhecida", async () => {
     const { client, call } = await connect();
     try {
-      const none = itemOf(await call("scan_page", { url: `${base}/upload-sem-drop`, maxChars: 60000 }), "upload-paths")!;
-      expect(none.dropRecipe).toBeUndefined();
-      expect(none.measure).toMatch(/zona de soltar desconhecida/);
-      const withError = itemOf(await call("scan_page", { url: `${base}/upload-com-erro`, actions: [{ action: "upload", selector: "#arquivo", files: [{ name: "a.exe", mimeType: "application/x-msdownload", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;
-      expect(withError.submitRecipe).toBeUndefined();
-      expect(withError.observed).not.toMatch(/recusa pode vir no envio/);
+      const url = `${base}/ambiguo`;
+      const u = itemOf(await call("scan_page", { url, actions: [{ action: "upload", selector: "#arq2", files: [{ name: "a.txt", mimeType: "text/plain", size: 10 }] }], maxChars: 60000 }), "upload-paths")!;
+      expect(u.submitRecipe).toBeUndefined();
+      expect(u.dropRecipe).toBeUndefined();
+      expect(u.measure).toMatch(/zona de soltar desconhecida/);
+      expect(u.measure).toMatch(/2 botões no formulário, sem um envio único determinável/);
     } finally { await client.close(); }
   });
 });
 
 describe("3.7.11 R3 — inform com o referente literal da base", () => {
-  it("cada cláusula leva a seção; a que abre com anafórico leva a frase anterior da mesma seção", () => {
+  it("toda cláusula leva a seção; com demonstrativo (em qualquer posição), a frase anterior; texto inteiro", () => {
     const inform = uploadInformClauses();
     expect(inform.length).toBeGreaterThan(0);
-    for (const c of inform) expect(c.section).toBeTruthy();
-    const anaphoric = inform.filter((c) => /^(est|ess|isso|isto|nest|ness|dest|dess)/i.test(c.text));
-    for (const c of anaphoric) expect(c.before, c.id).toBeTruthy();
+    for (const c of inform) {
+      expect(c.section).toBeTruthy();
+      if (/(^|[^\p{L}])(est[ae]s?|ess[ae]s?|isso|isto|tal|tais)(?![\p{L}])/iu.test(c.text)) expect(c.before, c.id).toBeTruthy();
+      expect(c.text.endsWith("…")).toBe(false);
+    }
   });
 });
 
@@ -133,12 +203,11 @@ describe("3.7.11 R5 — aviso de força 'especificacao' neutro", () => {
 });
 
 describe("3.7.11 R6 — knowledge-free diz como encerrar a pendência", () => {
-  it("endNote no bloco e nas formas compactas", async () => {
+  it("endNote na forma inteira do bloco", async () => {
     const { client, call } = await connect("knowledge-free");
     try {
       const scan = await call("scan_page", { url: `${base}/upload`, maxChars: 60000 });
       expect(scan.checksRun.pageLevel.endNote).toBe(KF_END_NOTE);
-      expect(pageLevelShort(scan.checksRun.pageLevel).endNote).toBe(KF_END_NOTE);
     } finally { await client.close(); }
   });
 });

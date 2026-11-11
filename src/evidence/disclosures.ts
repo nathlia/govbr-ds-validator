@@ -16,6 +16,7 @@
  * estado (para fechar a pendência de quem já escaneou o estado).
  */
 import type { Page } from "playwright";
+import { settlePage } from "../scan/state.js";
 
 export interface DisclosureGroup {
   /** Padrão do grupo (tag, papel, classes, sinal, alvo) — a chave da pendência. */
@@ -35,6 +36,8 @@ export interface DisclosureGroup {
 }
 
 export interface DisclosureFacts {
+  /** 3.7.11: algum controle diz aria-expanded="true" e o conteúdo dele ainda não tem caixa (transição em curso?). */
+  awaiting?: boolean;
   collapsed: DisclosureGroup[];
   /** Seletores (mesma construção) dos controles abertos neste estado. */
   opened: string[];
@@ -44,7 +47,27 @@ export interface DisclosureFacts {
  * `ds`: usa as classes do próprio DS como pista (diálogo `.br-modal`, casca `.br-header`/`.br-footer`). No perfil
  * knowledge-free (`ds: false`) só a marcação genérica (papéis, ARIA, tags) — nenhum conhecimento do DS.
  */
+/**
+ * 3.7.11 (revisão H1–H3): a leitura não muda a regra (aberto = conteúdo aparece). Quando um controle diz expanded e o
+ * conteúdo ainda não tem caixa — transição em curso no instante da leitura —, espera a página assentar (o mesmo settle do
+ * scan: DOM estável e animações terminadas, com teto) e lê de novo; se ainda não aparece, não está aberto.
+ */
 export async function inspectDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {
+  let facts = await readDisclosures(page, options);
+  if (!facts.awaiting) return facts;
+  await settlePage(page);
+  // com teto: o conteúdo pode vir de um temporizador que o settle (DOM estável) não espera
+  for (const started = Date.now(); ; ) {
+    facts = await readDisclosures(page, options);
+    if (!facts.awaiting || Date.now() - started >= AWAIT_CAP_MS) return facts;
+    await page.waitForTimeout(150);
+  }
+}
+
+/** Teto da espera pelo conteúdo de um controle que diz expanded (depois do settle). */
+export const AWAIT_CAP_MS = 1_500;
+
+async function readDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {
   return page.evaluate((ds: boolean) => {
     // "aparece" = a mesma noção do Playwright (a chegada `visible` usa o Playwright): caixa com largura E altura e sem
     // visibility hidden. Revisão 3.7.8 (HIGH 2): getClientRects aceitava a caixa 1280×0 do menu aberto do DS, e o
@@ -160,9 +183,8 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
       const isOpen = summary
         ? (el.parentElement as HTMLDetailsElement).open
         : target
-          // 3.7.11 (R1): aria-expanded="true" também conta como aberto (o conteúdo pode ainda estar em transição quando o
-          // scan lê; a chegada `expanded` já provou o estado) — sem isso o estado escaneado não fechava a pendência.
-          ? shownDeep(target) || expanded === "true"
+          // 3.7.11 (revisão H1–H3): aberto = o conteúdo controlado aparece (o ARIA do controle pode ser o defeito).
+          ? shownDeep(target)
           : expanded === "true" || (tab && el.getAttribute("aria-selected") === "true");
       if (isOpen) {
         if (expanded !== null || tab || summary || target) { opened.push(el); openedTargets.set(el, target); }
@@ -223,7 +245,8 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
       // a chegada prova o CONTEÚDO aberto (não depende de o controle atualizar o próprio ARIA, que pode ser o defeito):
       // diálogo → dialogOpen; alvo com id → visible no alvo OU num descendente (o painel fixo dentro de um contêiner de
       // altura 0: revisão HIGH 2); só então aria-expanded → expanded.
-      const arrival = isDialog(g.target)
+      // 3.7.11 (revisão H3): diálogo com id → visible nele (o diálogo CERTO); sem id, dialogOpen
+      const arrival = isDialog(g.target) && !target
         ? { dialogOpen: true as const }
         : target
           ? { visible: `${target}, ${target} *` }
@@ -236,6 +259,7 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
     // casca primeiro, depois o conteúdo; listas de opções por último; dentro de cada faixa, a ordem do DOM
     const rank = (x: { region: string; low: boolean }) => (x.region === "shell" ? 0 : x.low ? 2 : 1);
     out.sort((a, b) => rank(a) - rank(b));
-    return { collapsed: out, opened: opened.map(selectorOf).filter((s): s is string => Boolean(s)) };
+    const awaiting = candidates.some((el) => el.getAttribute("aria-expanded") === "true" && targetOf(el) !== null && !shownDeep(targetOf(el)));
+    return { collapsed: out, opened: opened.map(selectorOf).filter((s): s is string => Boolean(s)), awaiting };
   }, options.ds !== false);
 }

@@ -159,6 +159,8 @@ function reasonsOf(finding: Finding, v: GateVerification, knowledgeFree: boolean
   return { reasons, legacy };
 }
 
+const SPEC_DEVIATION_VERIFIED = "O predicado recalculou o desvio da especificação em cada elemento do localizador, no estado do scan citado.";
+
 const FACT_NOT_MEASURED =
   "O oráculo não tem predicado que meça este fato: nada foi medido; o fato não foi avaliado nem desmentido.";
 
@@ -441,7 +443,8 @@ export function verificationEnvelope(
     verificationId: options.verificationId,
     verdict: verification.verdict,
     about,
-    observation: { status, message: observationMessage(status, about) },
+    // 3.7.11 (revisão LOW): unidade de especificação — o predicado recalculou o DESVIO, não uma violação
+    observation: { status, message: status === "verified" && citationForce?.force === "especificacao" ? SPEC_DEVIATION_VERIFIED : observationMessage(status, about) },
     ...(normResolution ? { normResolution } : {}),
     ...(citationForce ? { citationForce } : {}),
     reasons: confirmed ? [] : reasons.map(({ status: _s, ...r }) => r),

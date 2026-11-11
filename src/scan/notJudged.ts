@@ -109,9 +109,7 @@ export interface NotJudgedInput {
   /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
   ariaStates?: NotJudgedItem[];
   /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
-  fileInputs?: Array<{ locator: string; accept: string | null; support?: string | null; dropZone?: string | null; submit?: string | null; uploaded?: boolean; errorNear?: boolean }>;
-  /** 3.7.11 (R2): há erro visível (role=alert / aria-invalid) no estado escaneado. */
-  errorVisible?: boolean;
+  fileInputs?: FileInputFact[];
   /** 3.7.8 (N5): estados recolhidos deste estado (evidence/disclosures.ts), casca primeiro, e a url da receita. */
   disclosures?: DisclosureGroup[];
   url?: string;
@@ -362,9 +360,9 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
  * arrasto só aparece exercendo esses caminhos; nenhum check os exerce. Pendência de ELEMENTOS (os campos de arquivo), por
  * rota, com o `accept` lido da marcação. Procedimento genérico: nada de tela, nenhum veredito.
  */
-export const UPLOAD_PATHS_TODO = "exerça upload a recusar e drop no campo, cada um com arrival";
+export const UPLOAD_PATHS_TODO = "exerça upload de arquivo fora do accept e drop no campo; meça o campo";
 export const UPLOAD_PATHS_MEASURE =
-  "scan_page actions upload com arquivo de tipo fora do aceito (o arquivo sintético vai até 1 MiB: tamanho só se o limite da página for menor) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
+  "scan_page actions upload com arquivo de tipo fora do accept (o arquivo sintético vai até 1 MiB) e, depois, o envio do formulário; em cada scan meça o que aparece associado ao campo (fieldNow); actions drop no alvo; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
 
 /**
  * 3.7.8 (análise "especificações não achadas", N3): as cláusulas do componente Upload que mandam INFORMAR o usuário (a
@@ -375,8 +373,16 @@ export const UPLOAD_PATHS_MEASURE =
 const UPLOAD_INFORM_TEXT = /\binform|mensage|feedback/i;
 let uploadInform: Array<{ id: string; text: string; section?: string; before?: string }> | undefined;
 const plain = (t: string) => t.replace(/[*_]/g, "").replace(/\s+/g, " ").trim();
-/** Cláusula que começa por anafórico ("Esta funcionalidade", "Neste caso", "Isso"…): o referente está na frase anterior. */
-const ANAPHORIC = /^(est[ae]s?|ess[ae]s?|isso|isto|nest[ae]|ness[ae]|dest[ae]|dess[ae]|nesses|nestes)\b/i;
+/** Cláusula com demonstrativo (em qualquer posição: "Esta funcionalidade…", "…sobre este comportamento", "tal…"): o referente está na frase anterior. */
+const ANAPHORIC = /(^|[^\p{L}])(est[ae]s?|ess[ae]s?|isso|isto|nest[ae]s?|ness[ae]s?|dest[ae]s?|dess[ae]s?|tal|tais)(?![\p{L}])/iu;
+/** Texto da cláusula até onde cabe sem cortar antes do verbo modal; maior que isso, só id + seção (o texto pelo get_ds_rules). */
+const INFORM_TEXT_MAX = 220;
+
+/** 3.7.11 (R3, revisão MED): a linha inform — id, seção, a frase anterior quando há demonstrativo, e o texto inteiro. */
+function informLine(c: { id: string; text: string; section?: string; before?: string }): string {
+  const head = `${c.id} · ${c.section ? `[${c.section}] ` : ""}${c.before ? `(antes: "${c.before}") ` : ""}`;
+  return c.text.length <= INFORM_TEXT_MAX ? `${head}${c.text}` : `${head}(texto longo: get_ds_rules{ids:["${c.id}"]})`;
+}
 
 /**
  * 3.7.11 (R3): o referente da cláusula, do PRÓPRIO registro da base (literal): a seção (`source.section`) e, quando a
@@ -394,7 +400,7 @@ function referentOf(r: { originalText?: string; source?: Record<string, unknown>
     const end = Number(os.charRange[1]);
     if (end <= start && (!best || end > best.end)) best = { end, text: plain(String(o.originalText ?? "")) };
   }
-  return { ...(section ? { section } : {}), ...(best ? { before: clip(best.text, 110) } : {}) };
+  return { ...(section ? { section } : {}), ...(best ? { before: best.text.length <= INFORM_TEXT_MAX ? best.text : clip(best.text, INFORM_TEXT_MAX) } : {}) };
 }
 
 export function uploadInformClauses(): Array<{ id: string; text: string; section?: string; before?: string }> {
@@ -403,7 +409,7 @@ export function uploadInformClauses(): Array<{ id: string; text: string; section
     uploadInform = filterRules({ component: "upload", category: "component" })
       .filter((r) => !r.legacy && OBSERVED_PENDING_FORCES.has(r.force) && !USAGE_SUBCATEGORY.test(r.subcategory ?? "") &&
         !/^anatomia/.test(r.subcategory ?? "") && UPLOAD_INFORM_TEXT.test(r.originalText ?? ""))
-      .map((r) => ({ id: r.id, text: clip(plain(String(r.originalText)), 90), ...referentOf(r) }));
+      .map((r) => ({ id: r.id, text: plain(String(r.originalText)), ...referentOf(r) }));
   } catch {
     uploadInform = [];
   }
@@ -420,42 +426,81 @@ export const UPLOAD_INFORM_NOTE = "inform: cláusulas do Upload que mandam infor
  * closing path that profile's scan_page has (verify_finding on the field; it has no pendingResolved).
  */
 export const UPLOAD_PATHS_MEASURE_KF =
-  "scan_page actions upload com arquivo de tipo fora do aceito (o arquivo sintético vai até 1 MiB: tamanho só se o limite da página for menor) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
+  "scan_page actions upload com arquivo de tipo fora do accept (o arquivo sintético vai até 1 MiB) e, depois, o envio do formulário; em cada scan meça o que aparece associado ao campo (fieldNow); actions drop no alvo; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
 
-type FileInputFact = { locator: string; accept: string | null; support?: string | null; dropZone?: string | null; submit?: string | null; uploaded?: boolean; errorNear?: boolean };
+type FileInputFact = {
+  locator: string;
+  accept: string | null;
+  support?: string | null;
+  examined?: boolean;
+  dropZone?: string | null;
+  submit?: string | null;
+  submitCount?: number;
+  uploadedFiles?: Array<{ name: string; mimeType: string }>;
+  fieldNow?: { invalid: string | null; associated: Array<{ via: string; role: string | null; text: string }> };
+};
 
 /** Arquivo sintético para a receita de arrasto (o conteúdo não importa: a receita prova o caminho, não o formato). */
 const DROP_SAMPLE = { name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 };
 
-/** 3.7.11 (R2/R4): o caminho do arrasto (zona achada ou desconhecida) e do envio, em texto curto antes do procedimento. */
-function pathsText(f: FileInputFact, pendingSubmit: boolean): string {
-  const drop = f.dropZone ? `drop em ${f.dropZone} (dropRecipe)` : "zona de soltar desconhecida (nenhum ouvinte de drop achado): ache-a no navegador";
-  const submit = f.submit
-    ? pendingSubmit
-      ? `upload sem erro visível neste estado: a recusa pode vir só no envio — submitRecipe (clique em ${f.submit}, chegada errorVisible; se não chegar, o envio não mostrou recusa)`
-      : `depois do upload, envie (clique em ${f.submit}) com chegada no retorno: a recusa pode vir só no envio`
-    : "controle de envio do formulário não achado: se houver envio, exerça-o depois do upload";
+/** 3.7.11 (revisão H4): o arquivo usado × o `accept` do campo — só a relação, sem presumir recusa. */
+export function acceptRelation(accept: string | null, file: { name: string; mimeType: string }): "fora do accept" | "campo sem accept" | "dentro do accept" {
+  if (!accept?.trim()) return "campo sem accept";
+  const name = file.name.toLowerCase();
+  const mime = file.mimeType.toLowerCase();
+  const inside = accept.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean).some((t) =>
+    t.startsWith(".") ? name.endsWith(t) : t.endsWith("/*") ? mime.startsWith(t.slice(0, -1)) : mime === t);
+  return inside ? "dentro do accept" : "fora do accept";
+}
+
+/** Os fatos associados ao campo agora, em texto curto (papel, via, texto). */
+function fieldNowText(f: FileInputFact): string {
+  const now = f.fieldNow;
+  if (!now) return "";
+  const parts = [
+    ...(now.invalid !== null ? [`aria-invalid="${now.invalid}"`] : []),
+    ...now.associated.map((a) => `${a.via}${a.role ? ` (${a.role})` : ""}: "${clip(a.text, 60)}"`),
+  ];
+  return parts.length ? parts.join("; ") : "nada associado ao campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner)";
+}
+
+/** 3.7.11 (R2/R4, revisão H4): o arrasto (zona achada, desconhecida ou não examinada) e o envio, antes do procedimento. */
+function pathsText(f: FileInputFact, relation: string | null): string {
+  if (f.examined === false) return "campo em shadow DOM: zona de soltar e envio não examinados. ";
+  const drop = f.dropZone ? `drop em ${f.dropZone} (dropRecipe)` : "zona de soltar desconhecida (nenhum ouvinte de drop no campo nem no contêiner dele): ache-a no navegador";
+  const submit = (f.submitCount ?? 0) === 0
+    ? "nenhum botão no formulário do campo (ou campo fora de formulário)"
+    : f.submit
+      ? relation && relation !== "dentro do accept"
+        ? `envio: submitRecipe (clique em ${f.submit}, compareToScanId deste scan); no scan dele, meça o que aparece no campo (aria-invalid, aria-describedby/aria-errormessage, texto no contêiner)`
+        : `envio do formulário: clique em ${f.submit}`
+      : `${f.submitCount} botões no formulário, sem um envio único determinável: escolha o que envia (sem seletor)`;
   return `${drop}; ${submit}. `;
 }
 
-export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = false, base?: StateBase, errorVisible = false): NotJudgedItem | null {
+export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = false, base?: StateBase): NotJudgedItem | null {
   if (!inputs.length) return null;
   const first = inputs[0];
-  // 3.7.11 (R4): a receita de arrasto vai no elemento que tem o ouvinte de drop; sem ele, "zona desconhecida" (sem receita)
+  // 3.7.11 (R4): a receita de arrasto vai no elemento com o ouvinte de drop; sem ele, "zona desconhecida" (sem receita).
+  // Revisão LOW: não empilha drop sobre drop (as ações de arrasto do scan anterior saem da base).
   const dropRecipe = base && first.dropZone
-    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "drop", selector: first.dropZone, files: [DROP_SAMPLE] }] } }
+    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []).filter((a) => (a as { action?: string }).action !== "drop"), { action: "drop", selector: first.dropZone, files: [DROP_SAMPLE] }] } }
     : undefined;
-  // 3.7.11 (R2): a recusa pode vir só no ENVIO. Com upload neste scan e nenhum erro visível, a pendência continua e dá o
-  // envio (o controle de envio do formulário do campo) com a chegada no retorno.
-  // o erro que conta é o do campo (no formulário dele); sem essa leitura, o do estado
-  const pendingSubmit = Boolean(first.uploaded && !(first.errorNear ?? errorVisible));
-  const submitRecipe = base && first.submit && pendingSubmit
-    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "click", selector: first.submit }], arrival: { errorVisible: true } } }
+  // 3.7.11 (revisão H4): sem presumir recusa — a relação do arquivo usado com o accept do campo, os fatos do campo agora
+  // e, quando o arquivo não é aceito pelo accept (ou o campo não tem accept), o envio com compareToScanId (o servidor o
+  // preenche com o scan desta resposta). Nada de chegada errorVisible: quem decide é quem lê o que apareceu no campo.
+  const file = first.uploadedFiles?.[first.uploadedFiles.length - 1];
+  const relation = file ? acceptRelation(first.accept, file) : null;
+  // o envio já está na receita deste scan: os fatos do campo são o depois do envio (sem nova receita)
+  const submitted = Boolean(first.submit && (base?.actions ?? []).some((a) => (a as { action?: string; selector?: string }).action === "click" && (a as { selector?: string }).selector === first.submit));
+  const submitRecipe = base && file && first.submit && !submitted && relation !== "dentro do accept"
+    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "click", selector: first.submit }] } }
     : undefined;
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
   // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
   const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
   const inform = knowledgeFree ? [] : uploadInformClauses();
+  const now = file ? fieldNowText(first) : "";
   return {
     code: "upload-paths",
     subject: "campos de arquivo (input type=file)",
@@ -464,7 +509,7 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
     elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
     elementBound: true,
     boundLocators: inputs.map((i) => i.locator),
-    observed: `${pendingSubmit ? "upload sem erro visível: a recusa pode vir no envio; " : ""}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
+    observed: `${file ? `upload de ${clip(file.name, 30)} (${relation}); ${submitted ? "depois do envio, " : ""}no campo: ${clip(now, 80)}; ` : ""}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
     todo: UPLOAD_PATHS_TODO,
     ...(knowledgeFree ? { norms: ["wcag-3.3.1", "wcag-3.3.2"] } : (() => {
       const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
@@ -472,9 +517,10 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
     })()),
     ...(dropRecipe ? { dropRecipe } : {}),
     ...(submitRecipe ? { submitRecipe } : {}),
-    measure: pathsText(first, pendingSubmit) + (knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE),
-    // 3.7.11 (R3): cada linha com o referente literal da base — a seção e, se a cláusula abre com anafórico, a frase anterior
-    ...(inform.length ? { inform: inform.map((c) => `${c.id} · ${c.section ? `[${c.section}] ` : ""}${c.before ? `(antes: "${c.before}") ` : ""}${c.text}`) } : {}),
+    ...(file && first.fieldNow ? { fieldNow: first.fieldNow } : {}),
+    measure: (submitted ? "envio feito nesta receita: compare o campo com o scan anterior (fieldNow). " : pathsText(first, relation)) + (knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE),
+    // 3.7.11 (R3): cada linha com o referente literal da base — a seção e, quando a cláusula tem demonstrativo, a frase anterior
+    ...(inform.length ? { inform: inform.map(informLine) } : {}),
   };
 }
 
@@ -681,7 +727,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   const embedded = embeddedIconButtonPending(input.embeddedIconButtons ?? []);
   if (embedded) items.push(embedded);
   items.push(...(input.ariaStates ?? []));
-  const upload = uploadPathsPending(input.fileInputs ?? [], false, input.stateBase ?? (input.url ? { url: input.url } : undefined), input.errorVisible ?? false);
+  const upload = uploadPathsPending(input.fileInputs ?? [], false, input.stateBase ?? (input.url ? { url: input.url } : undefined));
   if (upload) items.push(upload);
   items.push(...statePendings(input.disclosures ?? [], input.stateBase ?? { url: input.url ?? "" }));
   return items;
@@ -838,7 +884,7 @@ export function pageLevelBlock(checks: string[], items: PendingItem[], component
  * 3.7.11 (R6): no perfil knowledge-free o scan_page não tem pendingResolved. A pendência que você mediu e julgou conforme
  * (ou não aplicável) se encerra registrando-a em limitations, com o id e a medida (passo 9 da skill).
  */
-export const KF_END_NOTE = "sem pendingResolved aqui: julgou conforme? registre em limitations o id e a medida";
+export const KF_END_NOTE = "sem pendingResolved: feche em limitations (id + medida)";
 
 export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
   // 3.7.3 A8: com pendências ARIA × nativo, a nota não atribui a medida só ao axe.
@@ -951,7 +997,7 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
     notMeasured: items,
     ...(low ? { lowSignal: low } : {}),
     ...(block.conditions ? { conditions: block.conditions } : {}),
-    ...(block.endNote ? { endNote: block.endNote } : {}),
+    // revisão MED: o endNote fica só na forma inteira (no aperto ele deslocava família)
     ...(block.full ? { full: block.full } : {}),
   };
 }

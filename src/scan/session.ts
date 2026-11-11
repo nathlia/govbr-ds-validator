@@ -142,8 +142,6 @@ export interface PendingEntry {
   deliveredTick?: number;
   /** 3.7.8 (N5): estado sem chegada verificável — fecha pelo scan cuja receita clicou no controle. */
   stateByClick?: boolean;
-  /** 3.7.11 (R1): a chegada da receita da pendência de estado (JSON) — o scan com o clique e esta chegada alcançada a fecha. */
-  stateArrival?: string;
   /** 3.7.9 (D3): os checks do scan que abriu a pendência de estado — o scan que a fecha roda pelo menos estes. */
   stateChecks?: string[];
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
@@ -408,7 +406,6 @@ export class ScanSession {
           ...(item.resolveRequires ? { requires: item.resolveRequires } : {}),
           ...(item.resolveByRead?.length ? { readIds: [...item.resolveByRead] } : {}),
           ...(item.stateByClick ? { stateByClick: true } : {}),
-          ...(item.code === STATE_CODE && item.recipe?.arguments?.arrival ? { stateArrival: JSON.stringify(item.recipe.arguments.arrival) } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -710,10 +707,7 @@ export class ScanSession {
     return Object.fromEntries(map);
   }
 
-  resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = [], checks: string[] = [], arrival?: unknown): { closed: string[]; incomplete: Array<{ id: string; missing: string[] }> } {
-    // 3.7.11 (R1): a receita da própria pendência (o clique no controle + a chegada dela, satisfeita: o scan alcançou o
-    // estado) também prova o estado aberto, mesmo que a leitura do DOM não o veja aberto naquele instante.
-    const arrivalKey = arrival === undefined ? undefined : JSON.stringify(arrival);
+  resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = [], checks: string[] = []): { closed: string[]; incomplete: Array<{ id: string; missing: string[] }> } {
     // revisão MED 5a: fecha o que o estado ESCANEADO mostra aberto (o conteúdo aparece); o clique só vale para o estado
     // sem chegada verificável (sem alvo nem aria-expanded) — clicar duas vezes (fechar de novo) não fecha nada.
     const ran = new Set(checks);
@@ -729,8 +723,7 @@ export class ScanSession {
       if (entry.code !== STATE_CODE) continue;
       const slot = slotOf(entry, route);
       if (!slot || slot.status !== "open") continue;
-      const byRecipe = (l: string) => byClick.has(l) && entry.stateArrival !== undefined && entry.stateArrival === arrivalKey;
-      if (!slot.locators.some((l) => seen.has(l) || (entry.stateByClick && byClick.has(l)) || byRecipe(l))) continue;
+      if (!slot.locators.some((l) => seen.has(l) || (entry.stateByClick && byClick.has(l)))) continue;
       // D3: o scan parcial (checks a menos que o do scan que abriu a pendência) não fecha: diz o que falta
       const missing = (entry.stateChecks ?? []).filter((c) => !ran.has(c));
       if (missing.length) {
