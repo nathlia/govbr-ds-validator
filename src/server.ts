@@ -2254,10 +2254,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         markDeliveredTexts(response);
         markDeliveredContexts(response, scanId);
         // 3.7.6-pre.2 (revisão MED): as `O-NN` que esta resposta mostra ficam entregues (a leitura por id depois as fecha).
-        if (response.kind !== "error") {
-          const text = JSON.stringify(response);
-          session.markObservedDelivered(session.observedIds().filter((id) => new RegExp(`${id}(?!\\d)`).test(text)));
-        }
+        // 3.7.11 (auditoria V-3): só com a norma ou a condição junto (o id sozinho não diz o que ler).
+        if (response.kind !== "error") session.markObservedDeliveredIn(response);
         if (response.kind === "error") return fail(response as ContractError);
         return ok(response);
       }
@@ -2620,6 +2618,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
               scanId, view: "observations", cursor: cursor ?? 0, maxChars: Math.min(100_000, textSize(page)),
             })],
           });
+          // 3.7.11 (auditoria V-3): a página do ledger que traz a O-NN com a norma também a entrega.
+          session.markObservedDeliveredIn(page);
           return ok(page);
         }
         if (scanId && (view as string | undefined) === "diff") {
@@ -2681,13 +2681,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
               }
             : {}),
         };
-        return ok(
-          assembleScan(head, null, scanId ?? "", budget, (pageBudget) =>
+        const details = assembleScan(head, null, scanId ?? "", budget, (pageBudget) =>
             scanId
               ? batchView(found, stateFingerprint, { view: familyView, detail: detail ?? "summary", cursor, limit, maxChars: pageBudget, memberLimit }, scanId)
               : buildFindingPage(found, { detail: detail ?? "evidence", cursor, limit, maxChars: pageBudget, recipeActionsOf: recipeActionsOfFinding }),
-          ),
         );
+        if ((details as { kind?: string }).kind !== "error") session.markObservedDeliveredIn(details);
+        return ok(details);
       }
     )
   );

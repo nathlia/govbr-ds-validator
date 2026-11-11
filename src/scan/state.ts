@@ -284,13 +284,54 @@ async function collectRawState(page: Page): Promise<RawState> {
       return el.getClientRects().length > 0;
     };
 
-    const withinRoot = (el: Element): string => {
-      if (el.id) return `#${CSS.escape(el.id)}`;
+    // 3.7.11 (auditoria V-1): mesma regra do localizador do inspect — a forma de antes fica quando
+    // já resolve só o elemento; senão sobe (sem o teto de 8) até ficar única ou chegar à raiz.
+    let rootsCache: Array<Document | ShadowRoot> | null = null;
+    const allRoots = (): Array<Document | ShadowRoot> => {
+      if (rootsCache) return rootsCache;
+      const out: Array<Document | ShadowRoot> = [document];
+      const walk = (root: Document | ShadowRoot) => {
+        for (const e of Array.from(root.querySelectorAll("*"))) {
+          if (e.shadowRoot) {
+            out.push(e.shadowRoot);
+            walk(e.shadowRoot);
+          }
+        }
+      };
+      walk(document);
+      rootsCache = out;
+      return out;
+    };
+    const onlyIn = (scope: Array<Document | ShadowRoot>, sel: string, el: Element): boolean => {
+      let n = 0;
+      try {
+        for (const r of scope) {
+          for (const x of Array.from(r.querySelectorAll(sel))) {
+            if (x !== el) return false;
+            n += 1;
+          }
+        }
+      } catch {
+        return false;
+      }
+      return n === 1;
+    };
+    const scopeOf = (node: Element, pierce: boolean): Array<Document | ShadowRoot> => {
+      const root = node.getRootNode();
+      if (root instanceof ShadowRoot) return [root];
+      return pierce ? allRoots() : [document];
+    };
+    const withinRoot = (el: Element, extend = false, pierce = false): string => {
+      const scope = scopeOf(el, pierce);
+      if (el.id && (!extend || onlyIn(scope, `#${CSS.escape(el.id)}`, el))) return `#${CSS.escape(el.id)}`;
       const testId = el.getAttribute("data-testid");
-      if (testId) return `[data-testid="${testId}"]`;
+      // valor entre aspas: escapa só a barra invertida e as aspas
+      const testIdSel = testId ? `[data-testid="${testId.replace(/["\\]/g, (m) => `\\${m}`)}"]` : null;
+      if (testIdSel && onlyIn(scope, testIdSel, el)) return testIdSel;
       const parts: string[] = [];
+      const done = () => extend && onlyIn(scope, parts.join(" > "), el);
       let node: Element | null = el;
-      while (node && node !== document.documentElement && parts.length < 8) {
+      while (node && node !== document.documentElement && (parts.length < 8 || (extend && !done()))) {
         const parent: Element | null = node.parentElement;
         const tag = node.tagName.toLowerCase();
         const pool = parent ? Array.from(parent.children) : Array.from((node.getRootNode() as ShadowRoot | Document).children ?? []);
@@ -299,22 +340,42 @@ async function collectRawState(page: Page): Promise<RawState> {
         if (!parent) break;
         if (parent.id) {
           parts.unshift(`#${CSS.escape(parent.id)}`);
-          break;
+          if (!extend || done()) break;
+          parts.shift();
         }
         node = parent;
       }
       return parts.join(" > ");
     };
-    const locatorFor = (el: Element): string => {
-      const segments: string[] = [];
-      let node: Element = el;
-      for (let depth = 0; depth < 8; depth += 1) {
-        segments.unshift(withinRoot(node));
-        const root = node.getRootNode();
-        if (root instanceof ShadowRoot) node = root.host;
-        else break;
+    const resolvesOnly = (locator: string, el: Element): boolean => {
+      if (!locator.includes(shadowStep)) return onlyIn(allRoots(), locator, el);
+      const hops = locator.split(shadowStep).map((s) => s.trim()).filter(Boolean);
+      let scope: Array<Document | ShadowRoot> = [document];
+      let found: Element[] = [];
+      try {
+        hops.forEach((hop, i) => {
+          found = scope.flatMap((root) => Array.from(root.querySelectorAll(hop)));
+          if (i < hops.length - 1) scope = found.map((x) => x.shadowRoot).filter((r): r is ShadowRoot => r !== null);
+        });
+      } catch {
+        return false;
       }
-      return segments.join(` ${shadowStep} `);
+      return found.length === 1 && found[0] === el;
+    };
+    const locatorFor = (el: Element): string => {
+      const build = (extend: boolean) => {
+        const segments: string[] = [];
+        let node: Element = el;
+        for (let depth = 0; depth < 8; depth += 1) {
+          segments.unshift(withinRoot(node, extend, extend && node === el));
+          const root = node.getRootNode();
+          if (root instanceof ShadowRoot) node = root.host;
+          else break;
+        }
+        return segments.join(` ${shadowStep} `);
+      };
+      const base = build(false);
+      return resolvesOnly(base, el) ? base : build(true);
     };
 
     // Todas as árvores abertas, em ordem de documento.

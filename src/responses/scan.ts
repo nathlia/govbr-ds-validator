@@ -164,7 +164,9 @@ export function checksRunFor(
           tool: "scan_page",
           arguments: {
             ...base,
-            ...(completeChecks.length ? { checks: completeChecks } : { checks: ["structure"] }),
+            // 3.7.11 (auditoria V-7): a estrutura dos demais componentes entra junto com os outros checks que faltam
+            // (antes, só quando nada mais faltava); sem o filtro components.
+            checks: [...completeChecks, ...(structureToComplete ? (["structure"] as Check[]) : [])],
             ...(tokensToComplete.length ? { tokenChecks: tokensToComplete } : {}),
           },
         };

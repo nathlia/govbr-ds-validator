@@ -135,14 +135,68 @@ export async function inspectPageComputedStyles(
         return out;
       }
 
-      // Build a stable, unique CSS locator for an element, within its own root.
-      function locatorWithinRoot(el: Element): string {
-        if (el.id) return `#${CSS.escape(el.id)}`;
-        const testId = el.getAttribute("data-testid");
-        if (testId) return `[data-testid="${testId}"]`;
+      // 3.7.11 (auditoria V-1): o localizador de 5 passos podia nomear dois elementos. Ele fica como
+      // era quando já resolve só o elemento; senão sobe até ficar único (ou chegar à raiz).
+      let rootsCache: (Document | ShadowRoot)[] | null = null;
+      function allRoots(): (Document | ShadowRoot)[] {
+        if (rootsCache) return rootsCache;
+        const out: (Document | ShadowRoot)[] = [document];
+        const visit = (root: Document | ShadowRoot) => {
+          for (const e of Array.from(root.querySelectorAll("*"))) {
+            if (e.shadowRoot) {
+              out.push(e.shadowRoot);
+              visit(e.shadowRoot);
+            }
+          }
+        };
+        visit(document);
+        rootsCache = out;
+        return out;
+      }
+      /** `sel` casa só com `el` nas raízes dadas. */
+      function onlyIn(roots: (Document | ShadowRoot)[], sel: string, el: Element): boolean {
+        let n = 0;
+        try {
+          for (const r of roots) {
+            const f = r.querySelectorAll(sel);
+            for (const x of Array.from(f)) {
+              if (x !== el) return false;
+              n += 1;
+            }
+          }
+        } catch {
+          return false;
+        }
+        return n === 1;
+      }
+      /** Raízes onde o resolvedor procura este segmento: o do próprio elemento, na raiz do documento, desce às raízes de sombra. */
+      function scopeOf(node: Element, pierce: boolean): (Document | ShadowRoot)[] {
+        const root = node.getRootNode();
+        if (root instanceof ShadowRoot) return [root];
+        return pierce ? allRoots() : [document];
+      }
+
+      /**
+       * Build a stable CSS locator for an element, within its own root. Base form (as before 3.7.11):
+       * #id, data-testid, or up to 5 structural steps. `extend` (only when the base form named more than
+       * one element) keeps climbing past 5 steps and skips ids/test ids that are not unique, until the
+       * path resolves only `el` or the root is reached. `pierce`: in the document, the resolver also
+       * searches open shadow roots (single-segment locator).
+       */
+      function locatorWithinRoot(el: Element, extend = false, pierce = false): string {
+        const scope = scopeOf(el, pierce);
+        const testIdSel = (n: Element) => {
+          const v = n.getAttribute("data-testid");
+          // valor entre aspas: escapa só a barra invertida e as aspas (o resto do valor sai como está)
+          return v ? `[data-testid="${v.replace(/["\\]/g, (m) => `\\${m}`)}"]` : null;
+        };
+        if (el.id && (!extend || onlyIn(scope, `#${CSS.escape(el.id)}`, el))) return `#${CSS.escape(el.id)}`;
+        const ownTestId = testIdSel(el);
+        if (ownTestId && onlyIn(scope, ownTestId, el)) return ownTestId;
         const parts: string[] = [];
+        const done = () => extend && onlyIn(scope, parts.join(" > "), el);
         let node: Element | null = el;
-        while (node && node !== document.body && parts.length < 5) {
+        while (node && node !== document.body && (parts.length < 5 || (extend && !done()))) {
           const parent: Element | null = node.parentElement;
           if (!parent) {
             // Top of a shadow tree: there is no parent element, but the node still needs a
@@ -163,29 +217,54 @@ export async function inspectPageComputedStyles(
           parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${idx})` : tag);
           if (parent.id) {
             parts.unshift(`#${CSS.escape(parent.id)}`);
-            break;
+            if (!extend || done()) break;
+            parts.shift();
           }
-          const parentTestId = parent.getAttribute("data-testid");
-          if (parentTestId) {
-            parts.unshift(`[data-testid="${parentTestId}"]`);
-            break;
+          const parentTestId = testIdSel(parent);
+          if (parentTestId && onlyIn(scopeOf(parent, false), parentTestId, parent)) {
+            parts.unshift(parentTestId);
+            if (!extend || done()) break;
+            parts.shift();
           }
           node = parent;
         }
+        // Reached <body> still ambiguous: anchor the path at it.
+        if (extend && node === document.body && !done()) parts.unshift("body");
         return parts.join(" > ");
       }
 
       /** Full locator: one segment per shadow tree crossed, joined by ` >>> `. */
       function locatorFor(el: Element): string {
-        const segments: string[] = [];
-        let node: Element = el;
-        for (let depth = 0; depth < 6; depth += 1) {
-          segments.unshift(locatorWithinRoot(node));
-          const root = node.getRootNode();
-          if (root instanceof ShadowRoot) node = root.host;
-          else break;
+        const build = (extend: boolean) => {
+          const segments: string[] = [];
+          let node: Element = el;
+          for (let depth = 0; depth < 6; depth += 1) {
+            segments.unshift(locatorWithinRoot(node, extend, extend && node === el));
+            const root = node.getRootNode();
+            if (root instanceof ShadowRoot) node = root.host;
+            else break;
+          }
+          return segments.join(` ${shadowStep} `);
+        };
+        const base = build(false);
+        return resolvesOnly(base, el) ? base : build(true);
+      }
+
+      /** O localizador completo, resolvido como o resolvedor faz (deepQueryAll), dá só `el`. */
+      function resolvesOnly(locator: string, el: Element): boolean {
+        if (!locator.includes(shadowStep)) return onlyIn(allRoots(), locator, el);
+        const hops = locator.split(shadowStep).map((s) => s.trim()).filter(Boolean);
+        let roots: (Document | ShadowRoot)[] = [document];
+        let found: Element[] = [];
+        try {
+          hops.forEach((hop, i) => {
+            found = roots.flatMap((root) => Array.from(root.querySelectorAll(hop)));
+            if (i < hops.length - 1) roots = found.map((x) => x.shadowRoot).filter((r): r is ShadowRoot => r !== null);
+          });
+        } catch {
+          return false;
         }
-        return segments.join(` ${shadowStep} `);
+        return found.length === 1 && found[0] === el;
       }
 
       const matched: Element[] = [];
@@ -509,7 +588,9 @@ export async function inspectPageComputedStyles(
           },
           ...(nativeState ? { nativeState } : {}),
           content: {
-            textContent: text.slice(0, 100),
+            // 3.7.11 (auditoria V-10): espaços normalizados ANTES do corte — texto de várias linhas indentado
+            // era cortado no meio e a comparação com o title falhava.
+            textContent: text.replace(/\s+/g, " ").slice(0, 100),
             hasVisibleText: text.length > 0,
             ...(renderedText ? { hasRenderedText: el instanceof HTMLElement && el.innerText.trim().length > 0 } : {}),
             hasIconOnly,

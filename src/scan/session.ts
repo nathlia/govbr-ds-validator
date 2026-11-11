@@ -554,6 +554,44 @@ export class ScanSession {
     }
   }
 
+  /**
+   * 3.7.11 (auditoria V-3): marca entregues as `O-NN` que a resposta mostra JUNTO com o que ler — a norma da pendência
+   * (na mesma linha ou no mesmo item) ou a condição dela (mapa `conditions`). O id sozinho (forma de ids, contagem)
+   * não conta: ler a norma por outro motivo não fecharia uma pendência que o agente nem sabia do que era.
+   */
+  markObservedDeliveredIn(response: unknown): string[] {
+    const entries = [...this.byId.values()].filter((e) => e.readIds?.length && e.deliveredTick === undefined);
+    if (!entries.length) return [];
+    const shown = new Set<string>();
+    const idIn = (s: string, id: string) => new RegExp(`(?:^|[^\\w-])${id}(?!\\d)`).test(s);
+    const walk = (node: unknown): void => {
+      if (typeof node === "string") {
+        for (const e of entries) if (idIn(node, e.id) && e.readIds!.some((r) => node.includes(r))) shown.add(e.id);
+        return;
+      }
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        for (const v of node) walk(v);
+        return;
+      }
+      const o = node as Record<string, unknown>;
+      const conditions = o.conditions;
+      if (conditions && typeof conditions === "object" && !Array.isArray(conditions)) {
+        for (const e of entries) if (typeof (conditions as Record<string, unknown>)[e.id] === "string") shown.add(e.id);
+      }
+      const own = Object.values(o).filter((v): v is string => typeof v === "string");
+      for (const e of entries) {
+        if (shown.has(e.id) || !own.includes(e.id)) continue;
+        const whole = JSON.stringify(o);
+        if (e.readIds!.some((r) => whole.includes(r))) shown.add(e.id);
+      }
+      for (const v of Object.values(o)) walk(v);
+    };
+    walk(response);
+    this.markObservedDelivered(shown);
+    return [...shown];
+  }
+
   /** 3.7.6-pre.2: as pendências `O-NN` abertas desta sessão (ids), para conferir quais uma resposta entregou. */
   observedIds(): string[] {
     return [...this.byId.values()].filter((e) => e.readIds?.length).map((e) => e.id);
