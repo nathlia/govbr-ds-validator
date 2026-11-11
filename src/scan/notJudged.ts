@@ -16,7 +16,7 @@ import type { LabelSource } from "../checkers/formLabels.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import type { ContrastIncompleteNode } from "../checkers/axe.js";
 import { createHash } from "node:crypto";
-import { filterRules, getRuleById } from "../data/knowledge.js";
+import { filterRules, getKnowledgeBase, getRuleById } from "../data/knowledge.js";
 import { USAGE_SUBCATEGORY } from "../tools/usageClauses.js";
 import type { DisclosureGroup } from "../evidence/disclosures.js";
 import { BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
@@ -109,7 +109,9 @@ export interface NotJudgedInput {
   /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
   ariaStates?: NotJudgedItem[];
   /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
-  fileInputs?: Array<{ locator: string; accept: string | null; support?: string | null }>;
+  fileInputs?: Array<{ locator: string; accept: string | null; support?: string | null; dropZone?: string | null; submit?: string | null; uploaded?: boolean; errorNear?: boolean }>;
+  /** 3.7.11 (R2): há erro visível (role=alert / aria-invalid) no estado escaneado. */
+  errorVisible?: boolean;
   /** 3.7.8 (N5): estados recolhidos deste estado (evidence/disclosures.ts), casca primeiro, e a url da receita. */
   disclosures?: DisclosureGroup[];
   url?: string;
@@ -371,14 +373,37 @@ export const UPLOAD_PATHS_MEASURE =
  * mensagem ou feedback. Viram itens "a medir contra o texto de apoio visível". Nenhum id fixo: o que a base tiver.
  */
 const UPLOAD_INFORM_TEXT = /\binform|mensage|feedback/i;
-let uploadInform: Array<{ id: string; text: string }> | undefined;
-export function uploadInformClauses(): Array<{ id: string; text: string }> {
+let uploadInform: Array<{ id: string; text: string; section?: string; before?: string }> | undefined;
+const plain = (t: string) => t.replace(/[*_]/g, "").replace(/\s+/g, " ").trim();
+/** Cláusula que começa por anafórico ("Esta funcionalidade", "Neste caso", "Isso"…): o referente está na frase anterior. */
+const ANAPHORIC = /^(est[ae]s?|ess[ae]s?|isso|isto|nest[ae]|ness[ae]|dest[ae]|dess[ae]|nesses|nestes)\b/i;
+
+/**
+ * 3.7.11 (R3): o referente da cláusula, do PRÓPRIO registro da base (literal): a seção (`source.section`) e, quando a
+ * cláusula abre com anafórico, a frase imediatamente anterior na mesma seção do mesmo arquivo do corpus (pelo charRange).
+ */
+function referentOf(r: { originalText?: string; source?: Record<string, unknown> }): { section?: string; before?: string } {
+  const src = (r.source ?? {}) as { section?: unknown; corpusFile?: unknown; charRange?: unknown };
+  const section = typeof src.section === "string" ? src.section : undefined;
+  if (!ANAPHORIC.test(plain(String(r.originalText ?? ""))) || !Array.isArray(src.charRange)) return section ? { section } : {};
+  const start = Number(src.charRange[0]);
+  let best: { end: number; text: string } | undefined;
+  for (const o of getKnowledgeBase().rules) {
+    const os = (o.source ?? {}) as { section?: unknown; corpusFile?: unknown; charRange?: unknown };
+    if (os.corpusFile !== src.corpusFile || os.section !== src.section || !Array.isArray(os.charRange)) continue;
+    const end = Number(os.charRange[1]);
+    if (end <= start && (!best || end > best.end)) best = { end, text: plain(String(o.originalText ?? "")) };
+  }
+  return { ...(section ? { section } : {}), ...(best ? { before: clip(best.text, 110) } : {}) };
+}
+
+export function uploadInformClauses(): Array<{ id: string; text: string; section?: string; before?: string }> {
   if (uploadInform) return uploadInform;
   try {
     uploadInform = filterRules({ component: "upload", category: "component" })
       .filter((r) => !r.legacy && OBSERVED_PENDING_FORCES.has(r.force) && !USAGE_SUBCATEGORY.test(r.subcategory ?? "") &&
         !/^anatomia/.test(r.subcategory ?? "") && UPLOAD_INFORM_TEXT.test(r.originalText ?? ""))
-      .map((r) => ({ id: r.id, text: clip(String(r.originalText).replace(/[*_]/g, "").replace(/\s+/g, " ").trim(), 90) }));
+      .map((r) => ({ id: r.id, text: clip(plain(String(r.originalText)), 90), ...referentOf(r) }));
   } catch {
     uploadInform = [];
   }
@@ -397,8 +422,36 @@ export const UPLOAD_INFORM_NOTE = "inform: cláusulas do Upload que mandam infor
 export const UPLOAD_PATHS_MEASURE_KF =
   "scan_page actions upload com arquivo de tipo fora do aceito (o arquivo sintético vai até 1 MiB: tamanho só se o limite da página for menor) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
 
-export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null; support?: string | null }>, knowledgeFree = false): NotJudgedItem | null {
+type FileInputFact = { locator: string; accept: string | null; support?: string | null; dropZone?: string | null; submit?: string | null; uploaded?: boolean; errorNear?: boolean };
+
+/** Arquivo sintético para a receita de arrasto (o conteúdo não importa: a receita prova o caminho, não o formato). */
+const DROP_SAMPLE = { name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 };
+
+/** 3.7.11 (R2/R4): o caminho do arrasto (zona achada ou desconhecida) e do envio, em texto curto antes do procedimento. */
+function pathsText(f: FileInputFact, pendingSubmit: boolean): string {
+  const drop = f.dropZone ? `drop em ${f.dropZone} (dropRecipe)` : "zona de soltar desconhecida (nenhum ouvinte de drop achado): ache-a no navegador";
+  const submit = f.submit
+    ? pendingSubmit
+      ? `upload sem erro visível neste estado: a recusa pode vir só no envio — submitRecipe (clique em ${f.submit}, chegada errorVisible; se não chegar, o envio não mostrou recusa)`
+      : `depois do upload, envie (clique em ${f.submit}) com chegada no retorno: a recusa pode vir só no envio`
+    : "controle de envio do formulário não achado: se houver envio, exerça-o depois do upload";
+  return `${drop}; ${submit}. `;
+}
+
+export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = false, base?: StateBase, errorVisible = false): NotJudgedItem | null {
   if (!inputs.length) return null;
+  const first = inputs[0];
+  // 3.7.11 (R4): a receita de arrasto vai no elemento que tem o ouvinte de drop; sem ele, "zona desconhecida" (sem receita)
+  const dropRecipe = base && first.dropZone
+    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "drop", selector: first.dropZone, files: [DROP_SAMPLE] }] } }
+    : undefined;
+  // 3.7.11 (R2): a recusa pode vir só no ENVIO. Com upload neste scan e nenhum erro visível, a pendência continua e dá o
+  // envio (o controle de envio do formulário do campo) com a chegada no retorno.
+  // o erro que conta é o do campo (no formulário dele); sem essa leitura, o do estado
+  const pendingSubmit = Boolean(first.uploaded && !(first.errorNear ?? errorVisible));
+  const submitRecipe = base && first.submit && pendingSubmit
+    ? { tool: "scan_page", arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "click", selector: first.submit }], arrival: { errorVisible: true } } }
+    : undefined;
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
   // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
   const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
@@ -411,14 +464,17 @@ export function uploadPathsPending(inputs: Array<{ locator: string; accept: stri
     elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
     elementBound: true,
     boundLocators: inputs.map((i) => i.locator),
-    observed: `${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
+    observed: `${pendingSubmit ? "upload sem erro visível: a recusa pode vir no envio; " : ""}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
     todo: UPLOAD_PATHS_TODO,
     ...(knowledgeFree ? { norms: ["wcag-3.3.1", "wcag-3.3.2"] } : (() => {
       const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
       return { ...g, norms: [...(g.norms ?? []), ...inform.map((c) => c.id)] };
     })()),
-    measure: knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE,
-    ...(inform.length ? { inform: inform.map((c) => `${c.id} · ${c.text}`) } : {}),
+    ...(dropRecipe ? { dropRecipe } : {}),
+    ...(submitRecipe ? { submitRecipe } : {}),
+    measure: pathsText(first, pendingSubmit) + (knowledgeFree ? UPLOAD_PATHS_MEASURE_KF : inform.length ? `${UPLOAD_PATHS_MEASURE}. Meça o apoio visível × ${UPLOAD_INFORM_NOTE}` : UPLOAD_PATHS_MEASURE),
+    // 3.7.11 (R3): cada linha com o referente literal da base — a seção e, se a cláusula abre com anafórico, a frase anterior
+    ...(inform.length ? { inform: inform.map((c) => `${c.id} · ${c.section ? `[${c.section}] ` : ""}${c.before ? `(antes: "${c.before}") ` : ""}${c.text}`) } : {}),
   };
 }
 
@@ -625,7 +681,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   const embedded = embeddedIconButtonPending(input.embeddedIconButtons ?? []);
   if (embedded) items.push(embedded);
   items.push(...(input.ariaStates ?? []));
-  const upload = uploadPathsPending(input.fileInputs ?? []);
+  const upload = uploadPathsPending(input.fileInputs ?? [], false, input.stateBase ?? (input.url ? { url: input.url } : undefined), input.errorVisible ?? false);
   if (upload) items.push(upload);
   items.push(...statePendings(input.disclosures ?? [], input.stateBase ?? { url: input.url ?? "" }));
   return items;
@@ -778,6 +834,12 @@ export function pageLevelBlock(checks: string[], items: PendingItem[], component
  * 3.6.1 (item 5): pendências do perfil knowledge-free — só o que o axe mediu e não decidiu, com o critério WCAG
  * (nenhum texto, id ou força da base de conhecimento).
  */
+/**
+ * 3.7.11 (R6): no perfil knowledge-free o scan_page não tem pendingResolved. A pendência que você mediu e julgou conforme
+ * (ou não aplicável) se encerra registrando-a em limitations, com o id e a medida (passo 9 da skill).
+ */
+export const KF_END_NOTE = "sem pendingResolved aqui: julgou conforme? registre em limitations o id e a medida";
+
 export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
   // 3.7.3 A8: com pendências ARIA × nativo, a nota não atribui a medida só ao axe.
   const aria = items.some((i) => i.code.startsWith("aria-"));
@@ -785,6 +847,8 @@ export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
   const procedural = items.some((i) => i.code === "state-unscanned" || i.code === "upload-paths");
   return {
     notMeasured: items.map((i) => compactItem(i)),
+    // 3.7.11 (R6): este perfil não tem pendingResolved — como encerrar o que você mediu e julgou (fica em todas as formas)
+    ...(items.length ? { endNote: KF_END_NOTE } : {}),
     note: procedural
       ? "notMeasured: pendências suas — o oráculo mediu e não decidiu, ou um estado/caminho da página que este scan não exerceu (recipe, measure); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo: verify_finding (critério em norms) ou o scan do estado."
       : aria
@@ -869,7 +933,7 @@ function shortTodo(todo: string): string {
  * regiões) só contadas. A cláusula inteira está em `full` (get_finding_details) e no scan seguinte (sessionPending)
  * enquanto não foi entregue.
  */
-export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown; conditions?: Record<string, string> }) {
+export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown; conditions?: Record<string, string>; endNote?: string }) {
   let low = 0;
   const items: string[] = [];
   for (const i of block.notMeasured ?? []) {
@@ -887,6 +951,7 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
     notMeasured: items,
     ...(low ? { lowSignal: low } : {}),
     ...(block.conditions ? { conditions: block.conditions } : {}),
+    ...(block.endNote ? { endNote: block.endNote } : {}),
     ...(block.full ? { full: block.full } : {}),
   };
 }
@@ -987,7 +1052,7 @@ export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block:
 }
 
 /** Último recurso do teto: só os códigos das pendências (inteiras no ledger: get_finding_details(scanId)). */
-export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string> }, scanId = "") {
+export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string>; endNote?: string }, scanId = "") {
   const codes = (block.notMeasured ?? []).map((i) => {
     if (typeof i === "string") {
       // 3.7.9 (D1): estado recolhido e campo de arquivo guardam o código e o 1º seletor também aqui
@@ -1001,6 +1066,7 @@ export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array
     notMeasured: codes,
     count: codes.length,
     ...(block.conditions ? { conditions: block.conditions } : {}),
+    ...(block.endNote ? { endNote: block.endNote } : {}),
     ...(block.full ? { next: block.full } : scanId ? { next: { tool: "get_finding_details", arguments: { scanId, view: "observations" } } } : {}),
   };
 }

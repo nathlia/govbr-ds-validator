@@ -242,6 +242,86 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
 }
 
 /**
+ * 3.7.11 (R2/R4): para cada campo de arquivo, (a) o elemento que de fato recebe o arrasto — o que tem ouvinte de `drop`
+ * (lido pelo CDP do Chromium: DOMDebugger.getEventListeners) entre o campo, o contêiner dele e os descendentes e até 3
+ * ancestrais; (b) o controle que envia o formulário dono do campo (`input.form`: button/input type=submit, ou button sem
+ * type), com seletor único; (c) se a receita deste scan fez `upload` neste campo. Nada é mudado no DOM. Sem CDP ou sem
+ * ouvinte: `dropZone: null` (zona desconhecida, nunca uma receita que falha).
+ */
+export type FileInputPaths = { dropZone: string | null; submit: string | null; uploaded: boolean; errorNear: boolean };
+const FILE_CANDIDATES = "__govbrFileCandidates";
+export async function fileInputPaths(page: Page, locators: string[], uploadSelectors: string[]): Promise<Record<string, FileInputPaths>> {
+  const count = await page.evaluate(({ locators, KEY }: { locators: string[]; KEY: string }) => {
+    const all: Element[] = [];
+    const owner: number[] = [];
+    locators.forEach((locator, k) => {
+      let input: Element | null = null;
+      try { input = locator.includes(">>>") ? null : document.querySelector(locator); } catch { input = null; }
+      if (!input) return;
+      const host = input.parentElement;
+      const near: Element[] = [input, ...(host ? [host, ...Array.from(host.querySelectorAll("*"))] : [])];
+      for (let a = host?.parentElement ?? null, n = 0; a && n < 3; a = a.parentElement, n++) near.push(a);
+      for (const el of near) if (!all.includes(el)) { all.push(el); owner.push(k); }
+    });
+    (window as unknown as Record<string, unknown>)[KEY] = { all, owner };
+    return all.length;
+  }, { locators, KEY: FILE_CANDIDATES });
+  const withDrop: number[] = [];
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    for (let i = 0; i < count; i++) {
+      const { result } = await cdp.send("Runtime.evaluate", { expression: "window." + FILE_CANDIDATES + ".all[" + i + "]" });
+      if (!result.objectId) continue;
+      const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId });
+      if (listeners.some((l: { type: string }) => l.type === "drop")) withDrop.push(i);
+    }
+    await cdp.detach().catch(() => undefined);
+  } catch {
+    /* sem CDP: zona desconhecida */
+  }
+  return page.evaluate(({ locators, KEY, drops, uploadSelectors }: { locators: string[]; KEY: string; drops: number[]; uploadSelectors: string[] }) => {
+    const w = window as unknown as Record<string, { all: Element[]; owner: number[] } | undefined>;
+    const store = w[KEY];
+    delete w[KEY];
+    const esc = (v: string) => CSS.escape(v);
+    const generated = (v: string) => /\d{3,}|[0-9a-f]{8,}/i.test(v);
+    const unique = (sel: string, el: Element) => { try { const f = document.querySelectorAll(sel); return f.length === 1 && f[0] === el; } catch { return false; } };
+    const selectorOf = (el: Element): string | null => {
+      if (el.id && !generated(el.id) && unique(`#${esc(el.id)}`, el)) return `#${esc(el.id)}`;
+      const parts: string[] = [];
+      let node: Element | null = el;
+      while (node && node !== document.body && node !== document.documentElement) {
+        if (node !== el && node.id && !generated(node.id) && unique(`#${esc(node.id)}`, node)) { parts.unshift(`#${esc(node.id)}`); break; }
+        const parent: Element | null = node.parentElement;
+        if (!parent) return null;
+        const same = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+        parts.unshift(same.length > 1 ? `${node.tagName.toLowerCase()}:nth-of-type(${same.indexOf(node) + 1})` : node.tagName.toLowerCase());
+        node = parent;
+      }
+      const sel = parts.join(" > ");
+      return parts.length && unique(sel, el) ? sel : null;
+    };
+    const out: Record<string, { dropZone: string | null; submit: string | null; uploaded: boolean; errorNear: boolean }> = {};
+    const visible = (el: Element) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden"; };
+    locators.forEach((locator, k) => {
+      let input: HTMLInputElement | null = null;
+      try { input = locator.includes(">>>") ? null : (document.querySelector(locator) as HTMLInputElement | null); } catch { input = null; }
+      if (!input) return;
+      const zoneAt = store ? drops.find((i) => store.owner[i] === k) : undefined;
+      const zone = store && zoneAt !== undefined ? store.all[zoneAt] : null;
+      const form = input.form;
+      const submit = form ? (form.querySelector("button[type=submit], input[type=submit]") ?? Array.from(form.querySelectorAll("button")).find((b) => !b.hasAttribute("type")) ?? null) : null;
+      const uploaded = uploadSelectors.some((sel) => { try { return document.querySelector(sel) === input; } catch { return false; } });
+      // erro do CAMPO: no formulário dele (ou no contêiner), não um aviso qualquer da página
+      const scope = form ?? input.parentElement?.parentElement ?? null;
+      const errorNear = input.getAttribute("aria-invalid") === "true" || Boolean(scope && Array.from(scope.querySelectorAll("[role=alert], [aria-live], [aria-invalid=true]")).some((e) => visible(e) && ((e.textContent ?? "").trim().length > 0 || e.getAttribute("aria-invalid") === "true")));
+      out[locator] = { dropZone: zone ? selectorOf(zone) : null, submit: submit ? selectorOf(submit) : null, uploaded, errorNear };
+    });
+    return out;
+  }, { locators, KEY: FILE_CANDIDATES, drops: withDrop, uploadSelectors });
+}
+
+/**
  * 3.7.8 (item 4): visibilidade e hospedeiro de cada componente encontrado, lidos no DOM (claro e shadow roots abertos) do
  * estado alcançado. Componente que o DOM não devolve (só a evidência o viu) fica visível e sem hospedeiro: a ordem antiga.
  */
@@ -779,7 +859,11 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     const deduplicated = deduplicateFindings(rawFindings);
     const fileFields = fieldEvidence.filter((el) => el.tagName === "input" && (el.attributes.type ?? "").toLowerCase() === "file");
     const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator)) : {};
+    // 3.7.11 (R2/R4): zona de soltar, controle de envio e se a receita deste scan fez upload no campo
+    const uploadSelectors = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [a.selector] : []));
+    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploadSelectors) : {};
     const fileInputs = fileFields.map((el) => ({
+      ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
       accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
       support: supportOf[el.locator] ?? null,
@@ -797,7 +881,9 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       // 3.7.8 (item 5; N3): campos de arquivo do escopo — o caminho de erro, o arrasto e o texto de apoio ficam como pendência.
       fileInputs,
       // 3.7.8 (N5): estados recolhidos que este scan não mediu, com a receita pronta.
-      ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed, stateBase: { url: request.url, actions: request.actions ?? [] } } : {}),
+      ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed } : {}),
+      stateBase: { url: request.url, actions: request.actions ?? [] },
+      errorVisible: state.observed.errors.length > 0,
     });
     const value: CachedScan = {
       status: "scanned",
@@ -873,11 +959,14 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     const disclosures = selectors.length ? undefined : await inspectDisclosures(page, { ds: false });
     const fileFields = selectors.length ? [] : (await inspectPageComputedStyles(page, request.url, "input[type='file']", [])).elements;
     const supportOf = fileFields.length ? await fileInputSupport(page, fileFields.map((el) => el.locator), false) : {};
+    const uploadSelectors = (request.actions ?? []).flatMap((a) => (a.action === "upload" ? [a.selector] : []));
+    const pathsOf = fileFields.length ? await fileInputPaths(page, fileFields.map((el) => el.locator), uploadSelectors) : {};
     const upload = uploadPathsPending(fileFields.map((el) => ({
+      ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
       accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
       support: supportOf[el.locator] ?? null,
-    })), true);
+    })), true, { url: request.url, actions: request.actions ?? [] }, state.observed.errors.length > 0);
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
     const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
     const deduplicated = deduplicateFindings(result.findings);

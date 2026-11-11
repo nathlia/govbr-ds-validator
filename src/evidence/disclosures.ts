@@ -160,7 +160,9 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
       const isOpen = summary
         ? (el.parentElement as HTMLDetailsElement).open
         : target
-          ? shownDeep(target)
+          // 3.7.11 (R1): aria-expanded="true" também conta como aberto (o conteúdo pode ainda estar em transição quando o
+          // scan lê; a chegada `expanded` já provou o estado) — sem isso o estado escaneado não fechava a pendência.
+          ? shownDeep(target) || expanded === "true"
           : expanded === "true" || (tab && el.getAttribute("aria-selected") === "true");
       if (isOpen) {
         if (expanded !== null || tab || summary || target) { opened.push(el); openedTargets.set(el, target); }

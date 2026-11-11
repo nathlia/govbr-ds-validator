@@ -387,6 +387,24 @@ export function citationForceWarning(finding: Finding) {
     const m = wcagMembership(ref.num);
     if (m.status === "member") push(m.normalizedId, "wcag", `registro WCAG ligado ao termo da cláusula (${ref.route}): ${m.entry?.handle ?? ""}`.trim());
   }
+  // 3.7.11 (R5; leituras dev-3710): para a unidade de ESPECIFICAÇÃO o texto de sempre ("sozinha não sustenta uma violação…
+  // troque a norma… senão mantenha como recomendação não atendida") fez o agente tirar a norma (rule: null) ou descartar o
+  // desvio medido e confirmado. Texto neutro, como o do icon-only-embedded: o desvio medido é um fato a relatar; a unidade é
+  // a referência de que ele se desvia; a força dela é especificacao (descreve, não obriga). Os dados ficam iguais.
+  if (rule.force === "especificacao") {
+    return {
+      citedId: rule.id,
+      force: rule.force,
+      modality,
+      warning:
+        "Força 'especificacao': a unidade descreve como o componente é especificado; não é uma obrigação. O desvio medido em " +
+        "relação a ela é um fato a relatar, com a medida; cite esta unidade como a referência de que o elemento se desvia.",
+      requiredNorms: required.slice(0, 4),
+      next: required.length
+        ? "Relate o desvio citando esta unidade como referência. Se o mesmo fato também descumprir uma destas normas obrigatórias (leia a unidade antes), cite-a junto."
+        : "Relate o desvio citando esta unidade como referência, com a medida.",
+    };
+  }
   return {
     citedId: rule.id,
     force: rule.force,

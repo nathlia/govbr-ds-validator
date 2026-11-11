@@ -2137,7 +2137,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         const ranOnState = session.checksRunOnState(route, result.stateFingerprint, scanId, fullScope);
         const states = hasNorms
           ? session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), Object.keys(ranOnState))
+              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), Object.keys(ranOnState), arrival)
           : { closed: [], incomplete: [] };
         const statesSeen = states.closed;
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
@@ -2319,7 +2319,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const first = !cursor;
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
       const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
-        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"]).closed;
+        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"], arrival).closed;
       const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
