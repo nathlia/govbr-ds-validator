@@ -140,6 +140,8 @@ export interface PendingEntry {
   readIds?: string[];
   /** 3.7.6-pre.2: o instante (relógio lógico da sessão) da 1ª resposta de scan que entregou a pendência `O-NN`. */
   deliveredTick?: number;
+  /** 3.7.8 (N5): estado sem chegada verificável — fecha pelo scan cuja receita clicou no controle. */
+  stateByClick?: boolean;
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -401,6 +403,7 @@ export class ScanSession {
           ...(item.elementBound ? { elementBound: true } : {}),
           ...(item.resolveRequires ? { requires: item.resolveRequires } : {}),
           ...(item.resolveByRead?.length ? { readIds: [...item.resolveByRead] } : {}),
+          ...(item.stateByClick ? { stateByClick: true } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -680,14 +683,18 @@ export class ScanSession {
    * aparece aberto no estado escaneado (aria-expanded=true, aba selecionada, details aberto, conteúdo controlado visível)
    * ou a receita alcançada clicou nele. Uma instância basta para o padrão. Devolve os ids fechados.
    */
-  resolveStatesSeen(route: string, selectors: string[], scanId: string): string[] {
-    const seen = new Set(selectors);
-    if (!seen.size) return [];
+  resolveStatesSeen(route: string, opened: string[], scanId: string, clicked: string[] = []): string[] {
+    // revisão MED 5a: fecha o que o estado ESCANEADO mostra aberto (o conteúdo aparece); o clique só vale para o estado
+    // sem chegada verificável (sem alvo nem aria-expanded) — clicar duas vezes (fechar de novo) não fecha nada.
+    const seen = new Set(opened);
+    const byClick = new Set(clicked);
+    if (!seen.size && !byClick.size) return [];
     const closed: string[] = [];
     for (const entry of this.open()) {
       if (entry.code !== STATE_CODE) continue;
       const slot = slotOf(entry, route);
-      if (!slot || slot.status !== "open" || !slot.locators.some((l) => seen.has(l))) continue;
+      if (!slot || slot.status !== "open") continue;
+      if (!slot.locators.some((l) => seen.has(l) || (entry.stateByClick && byClick.has(l)))) continue;
       resolveSlot(entry, slot, { by: "state-scanned", ref: scanId });
       closed.push(slotLabel(entry, route));
     }
@@ -716,6 +723,7 @@ export class ScanSession {
     const partialVerify: Array<{ id: string; verified: string[]; verifiedCount: number; declared: string[]; declaredCount: number }> = [];
     const usageUnread: string[] = [];
     const readOrVerify: string[] = [];
+    const stateScanOnly: string[] = [];
     for (const r of list) {
       const entry = this.byId.get(r.id);
       if (!entry) {
@@ -725,6 +733,12 @@ export class ScanSession {
       // 3.7.5 (item 6): a pendência de leitura fecha só pela leitura que passa pelo servidor, nunca por declaração.
       if (entry.usage) {
         if (entry.status === "open") usageUnread.push(`${entry.id}:${entry.usage.component}`);
+        continue;
+      }
+      // revisão 3.7.8 (MED 5c): estado recolhido não "viola" nem é "conforme" — fecha escaneando o estado, ou "não se aplica"
+      // com reason.
+      if (entry.code === STATE_CODE && r.status !== "não se aplica") {
+        if (entry.status === "open") stateScanOnly.push(entry.id);
         continue;
       }
       // 3.7.6 (item 3): a pendência de observação com norma obrigatória fecha medindo (verify) ou lendo a norma.
@@ -768,6 +782,9 @@ export class ScanSession {
         : {}),
       ...(readOrVerify.length
         ? { readOrVerify, readOrVerifyNote: "Pendência de observação com norma obrigatória: não fecha por declaração. Fecha com verify_finding que decide cada elemento citando a norma, ou lendo a norma por id (get_ds_rules{ids}) depois de recebê-la." }
+        : {}),
+      ...(stateScanOnly.length
+        ? { stateScanOnly, stateScanOnlyNote: "state-unscanned fecha escaneando o estado aberto (recipe) ou com status 'não se aplica' e reason; 'violada'/'conforme' não se aplicam a um estado." }
         : {}),
       ...(usageUnread.length
         ? { usageUnread, usageUnreadNote: "usage-unread não fecha por declaração: continua aberta até o servidor ver devolvidas todas as cláusulas do componente (get_ds_rules{ids} da observação de leitura do scan)." }

@@ -28,6 +28,8 @@ export interface DisclosureGroup {
   target: string | null;
   arrival: { expanded: string } | { visible: string } | { dialogOpen: true } | null;
   region: "shell" | "main";
+  /** Lista de opções (select/combobox): vem depois dos demais estados. */
+  low: boolean;
   /** Texto/nome curto do controle (para leitura). */
   label: string;
 }
@@ -44,10 +46,22 @@ export interface DisclosureFacts {
  */
 export async function inspectDisclosures(page: Page, options: { ds?: boolean } = {}): Promise<DisclosureFacts> {
   return page.evaluate((ds: boolean) => {
+    // "aparece" = a mesma noção do Playwright (a chegada `visible` usa o Playwright): caixa com largura E altura e sem
+    // visibility hidden. Revisão 3.7.8 (HIGH 2): getClientRects aceitava a caixa 1280×0 do menu aberto do DS, e o
+    // Playwright não — o detector e a chegada discordavam.
     const shown = (el: Element | null): boolean => {
       if (!el) return false;
       const s = getComputedStyle(el);
-      return el.getClientRects().length > 0 && s.visibility !== "hidden" && s.visibility !== "collapse";
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.visibility !== "collapse";
+    };
+    /** O conteúdo aparece: o próprio alvo ou algum descendente (o painel fixo dentro de um contêiner de altura 0). */
+    const shownDeep = (el: Element | null): boolean => {
+      if (!el) return false;
+      if (shown(el)) return true;
+      const all = el.querySelectorAll("*");
+      for (let i = 0; i < all.length && i < 400; i++) if (shown(all[i])) return true;
+      return false;
     };
     const esc = (s: string) => CSS.escape(s);
     const unique = (selector: string, el: Element): boolean => {
@@ -119,34 +133,31 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
     ));
     const collapsed: Array<{ el: Element; signal: string; target: Element | null }> = [];
     const opened: Element[] = [];
+    const openedTargets = new Map<Element, Element | null>();
     for (const el of candidates) {
       const target = targetOf(el);
       const expanded = el.getAttribute("aria-expanded");
       const popup = el.getAttribute("aria-haspopup");
       const tab = el.getAttribute("role") === "tab";
       const summary = el.tagName === "SUMMARY";
-      let signal: string | null = null;
-      let open = false;
-      if (expanded === "false") signal = "aria-expanded=false";
-      else if (expanded === "true") open = true;
-      else if (tab) {
-        if (el.getAttribute("aria-selected") === "false" || (target && !shown(target))) signal = "aba não selecionada";
-        else open = true;
-      } else if (summary) {
-        if (!(el.parentElement as HTMLDetailsElement).open) signal = "details fechado";
-        else open = true;
-      } else if (popup && popup !== "false") signal = `aria-haspopup=${popup}`;
-      else if (target && target !== document.body) {
-        // ligação por atributo: só conta quando o alvo não aparece neste estado (âncora para conteúdo visível não é gatilho)
-        if (!shown(target)) signal = `${el.hasAttribute("aria-controls") ? "aria-controls" : el.hasAttribute("href") ? "href" : "data-target"}→oculto`;
-        else if (!el.hasAttribute("href")) open = true;
-      }
-      if (open) {
-        if (target ? shown(target) : true) opened.push(el);
+      // aberto = o CONTEÚDO aparece neste estado (com alvo); sem alvo, o que o controle declara. Revisão (MED 5a): o
+      // controle clicado duas vezes (fechado de novo) não está aberto.
+      const isOpen = summary
+        ? (el.parentElement as HTMLDetailsElement).open
+        : target
+          ? shownDeep(target)
+          : expanded === "true" || (tab && el.getAttribute("aria-selected") === "true");
+      if (isOpen) {
+        if (expanded !== null || tab || summary || target) { opened.push(el); openedTargets.set(el, target); }
         continue;
       }
+      let signal: string | null = null;
+      if (expanded === "false") signal = "aria-expanded=false";
+      else if (tab) signal = "aba não selecionada";
+      else if (summary) signal = "details fechado";
+      else if (popup && popup !== "false" && expanded !== "true") signal = `aria-haspopup=${popup}`;
+      else if (target && target !== document.body) signal = `${el.hasAttribute("aria-controls") ? "aria-controls" : el.hasAttribute("href") ? "href" : "data-target"}→oculto`;
       if (!signal || !shown(el) || disabled(el)) continue;
-      if (target && shown(target) && signal !== "aria-expanded=false" && !signal.startsWith("aria-haspopup")) continue;
       collapsed.push({ el, signal, target });
     }
     // o mesmo conteúdo controlado por dois elementos (o campo combobox e o botão da lista) é um estado só: fica o botão.
@@ -158,35 +169,51 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
       if (!seen || pref(c.el) < pref(seen.el)) byTarget.set(c.target, c);
     }
     const kept = collapsed.filter((c) => !c.target || byTarget.get(c.target) === c);
-    const groups = new Map<string, { pattern: string; els: Element[]; signal: string; target: Element | null }>();
-    for (const c of kept) {
-      const cls = Array.from(c.el.classList).filter((x) => !/^(active|open|is-|show|selected|focus|hover)/.test(x)).sort().join(".");
-      const tcls = c.target ? `${c.target.tagName.toLowerCase()}.${Array.from(c.target.classList).sort().join(".")}` : "-";
-      const pattern = `${c.el.tagName.toLowerCase()}|${c.el.getAttribute("role") ?? ""}|${cls}|${c.signal.replace(/→.*/, "")}|${tcls}`;
-      const g = groups.get(pattern) ?? { pattern, els: [], signal: c.signal, target: c.target };
-      g.els.push(c.el);
-      groups.set(pattern, g);
+    // Revisão (MED 5b): só é UM padrão repetido o que se repete de verdade — 3 instâncias ou mais com o mesmo controle
+    // (tag, papel, classes, sinal) E alvo de estrutura equivalente (tag, classes e filhos). Menos que isso, cada controle é
+    // um estado próprio (dois menus diferentes nunca dividem uma pendência).
+    // a família do controle — sem o sinal e sem classes de estado: a mesma aberta ou fechada (o padrão sobrevive à abertura
+    // de uma instância e a pendência do padrão continua a mesma).
+    const STATE_CLASS = /^(active|open|is-|show|selected|focus|hover|expanded|collapsed)/;
+    const clsOf = (e: Element) => Array.from(e.classList).filter((x) => !STATE_CLASS.test(x)).sort().join(".");
+    const familyOf = (el: Element, t: Element | null) => `${el.tagName.toLowerCase()}|${el.getAttribute("role") ?? ""}|${clsOf(el)}|${t
+      ? `${t.tagName.toLowerCase()}.${clsOf(t)}>${Array.from(t.children).slice(0, 8).map((c) => `${c.tagName.toLowerCase()}.${clsOf(c)}`).join(",")}`
+      : "-"}`;
+    const openPerFamily = new Map<string, number>();
+    for (const el of opened) { const k = familyOf(el, openedTargets.get(el) ?? null); openPerFamily.set(k, (openPerFamily.get(k) ?? 0) + 1); }
+    const byKey = new Map<string, Array<(typeof kept)[number]>>();
+    for (const c of kept) { const k = familyOf(c.el, c.target); byKey.set(k, [...(byKey.get(k) ?? []), c]); }
+    const groups: Array<{ pattern: string; els: Element[]; signal: string; target: Element | null }> = [];
+    for (const [key, list] of byKey) {
+      // repetido = 3 ou mais instâncias da família na página (abertas contam): o padrão é um só, com chave estável
+      if (list.length + (openPerFamily.get(key) ?? 0) >= 3) groups.push({ pattern: key, els: list.map((c) => c.el), signal: list[0].signal, target: list[0].target });
+      else for (const c of list) groups.push({ pattern: `${key}|${selectorOf(c.el) ?? ""}`, els: [c.el], signal: c.signal, target: c.target });
     }
+    // lista de opções (select/combobox): estado de menor prioridade, depois da casca e dos menus/abas/acordeões do conteúdo.
+    const lowPriority = (el: Element, t: Element | null) =>
+      el.getAttribute("role") === "combobox" || t?.getAttribute("role") === "listbox" || (ds && Boolean(el.closest(".br-select")));
     const out = [];
-    for (const g of groups.values()) {
+    for (const g of groups) {
       const selectors = g.els.map(selectorOf).filter((s): s is string => Boolean(s));
       if (!selectors.length) continue;
-      const first = g.els[selectors.length ? g.els.findIndex((e) => selectorOf(e) === selectors[0]) : 0];
+      const first = g.els[g.els.findIndex((e) => selectorOf(e) === selectors[0])];
       const target = g.target && g.target.id && !generated(g.target.id) ? `#${esc(g.target.id)}` : null;
       // a chegada prova o CONTEÚDO aberto (não depende de o controle atualizar o próprio ARIA, que pode ser o defeito):
-      // diálogo → dialogOpen; alvo com id → visible; só então aria-expanded → expanded.
+      // diálogo → dialogOpen; alvo com id → visible no alvo OU num descendente (o painel fixo dentro de um contêiner de
+      // altura 0: revisão HIGH 2); só então aria-expanded → expanded.
       const arrival = isDialog(g.target)
         ? { dialogOpen: true as const }
         : target
-          ? { visible: target }
+          ? { visible: `${target}, ${target} *` }
           : first.hasAttribute("aria-expanded")
             ? { expanded: selectors[0] }
             : null;
       const label = ((first.getAttribute("aria-label") ?? (first as HTMLElement).innerText ?? first.textContent ?? "").replace(/\s+/g, " ").trim()).slice(0, 40);
-      out.push({ pattern: g.pattern, selectors, signal: g.signal.replace(/→oculto$/, target ? `→${target} oculto` : "→oculto"), target, arrival, region: inShell(first) ? "shell" as const : "main" as const, label });
+      out.push({ pattern: g.pattern, selectors, signal: g.signal.replace(/→oculto$/, target ? `→${target} oculto` : "→oculto"), target, arrival, region: inShell(first) ? "shell" as const : "main" as const, label, low: lowPriority(first, g.target) });
     }
-    // casca primeiro, depois o conteúdo; dentro de cada um, a ordem do DOM
-    out.sort((a, b) => (a.region === b.region ? 0 : a.region === "shell" ? -1 : 1));
+    // casca primeiro, depois o conteúdo; listas de opções por último; dentro de cada faixa, a ordem do DOM
+    const rank = (x: { region: string; low: boolean }) => (x.region === "shell" ? 0 : x.low ? 2 : 1);
+    out.sort((a, b) => rank(a) - rank(b));
     return { collapsed: out, opened: opened.map(selectorOf).filter((s): s is string => Boolean(s)) };
   }, options.ds !== false);
 }

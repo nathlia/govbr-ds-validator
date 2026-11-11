@@ -17,7 +17,7 @@ import { inspectDisclosures, type DisclosureFacts } from "../evidence/disclosure
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
-import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, statePendings, uploadPathsPending, type NotJudgedItem } from "./notJudged.js";
+import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, statePendings, stateRecipe, uploadPathsPending, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
 import { deduplicateFindings } from "../responses/findings.js";
@@ -639,7 +639,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
           const r = reveal[o.element.locator];
           if (!r) continue;
           const g = byTarget.get(r.container);
-          o.data = { ...(o.data ?? {}), reveal: g ? { container: r.container, trigger: g.selectors[0], arrival: g.arrival } : r };
+          // revisão MED 3: a receita vai estruturada (a mesma do estado recolhido: ações deste scan + o clique)
+          const trigger = g ? g.selectors[0] : r.trigger;
+          const recipe = trigger ? stateRecipe({ url: request.url, actions: request.actions ?? [] }, trigger, g ? g.arrival : { visible: o.element.locator }) : null;
+          o.data = { ...(o.data ?? {}), reveal: { container: r.container, trigger, ...(recipe ? { recipe } : {}) } };
         }
       }
     }
@@ -794,7 +797,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       // 3.7.8 (item 5; N3): campos de arquivo do escopo — o caminho de erro, o arrasto e o texto de apoio ficam como pendência.
       fileInputs,
       // 3.7.8 (N5): estados recolhidos que este scan não mediu, com a receita pronta.
-      ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed, url: request.url } : {}),
+      ...(disclosures?.collapsed.length ? { disclosures: disclosures.collapsed, stateBase: { url: request.url, actions: request.actions ?? [] } } : {}),
     });
     const value: CachedScan = {
       status: "scanned",
@@ -885,7 +888,7 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
       ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements.filter((el) => el.nativeState !== undefined)
       : (await inspectPageComputedStyles(page, request.url, ARIA_STATE_SELECTOR, [])).elements;
     const aria = checkAriaNativeStates({ url: request.url }, ariaEvidence, { knowledgeFree: true });
-    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending, ...(upload ? [upload] : []), ...statePendings(disclosures?.collapsed ?? [], request.url, true)];
+    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending, ...(upload ? [upload] : []), ...statePendings(disclosures?.collapsed ?? [], { url: request.url, actions: request.actions ?? [] }, true)];
     const value: CachedScan = {
       status: "scanned",
       url: request.url,

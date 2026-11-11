@@ -49,6 +49,8 @@ const PAGES: Record<string, string> = {
   "/oculto": `<style>.cor{color:#123457}</style>
     <button type="button" id="abre" aria-controls="menu1" aria-expanded="false">Abrir</button>
     <div id="menu1" hidden><p class="cor">Item com cor fora do registro</p></div>
+    <button type="button" aria-controls="menu2" aria-expanded="false">Abrir dois</button>
+    <div id="menu2" hidden><p class="cor">Outro item com cor fora do registro</p></div>
     <div id="sem-gatilho" style="display:none"><p class="cor">Outro conteúdo oculto</p></div>
     <span class="br-tag">Etiqueta</span>`,
 };
@@ -59,14 +61,17 @@ const TOGGLE = `<script>document.addEventListener("click",function(e){var b=e.ta
 var id=(b.getAttribute("aria-controls")||b.getAttribute("data-target")||"").replace("#","");var t=document.getElementById(id);if(!t)return;
 t.hidden=!t.hidden;if(b.hasAttribute("aria-expanded"))b.setAttribute("aria-expanded",String(!t.hidden));
 if(b.getAttribute("role")==="tab")b.setAttribute("aria-selected","true");});</script>`;
+const ZERO = `<script>document.getElementById("menu-btn").setAttribute("aria-controls","menu-zero");document.getElementById("menu-btn").addEventListener("click",function(e){e.stopPropagation();var z=document.getElementById("menu-zero");z.classList.toggle("active");this.setAttribute("aria-expanded",String(z.classList.contains("active")));});</script>`;
 const ROWS = Array.from({ length: 5 }, (_, i) => `<tr><td>Linha ${i}</td><td><button type="button" class="acoes" aria-expanded="false" aria-controls="menu-linha-${i}">Ações</button><ul id="menu-linha-${i}" hidden><li>Editar</li></ul></td></tr>`).join("");
-const STATES_BODY = `<header><button type="button" id="conta" aria-expanded="false" aria-controls="menu-conta">Conta</button><div id="menu-conta" hidden><a href="/sair">Sair</a></div></header>
+const STATES_BODY = `<header><button type="button" id="conta" aria-expanded="false" aria-controls="menu-conta">Conta</button><div id="menu-conta" hidden><a href="/sair">Sair</a></div><button type="button" id="ajuda" aria-expanded="false" aria-controls="menu-ajuda">Ajuda</button><div id="menu-ajuda" hidden><a href="/faq">FAQ</a></div></header>
   <main><h1>Estados</h1><table><tbody>${ROWS}</tbody></table>
   <div role="tablist"><button type="button" role="tab" id="aba-a" aria-selected="true" aria-controls="painel-a">A</button><button type="button" role="tab" id="aba-b" aria-selected="false" aria-controls="painel-b">B</button></div>
-  <div id="painel-a">Painel A</div><div id="painel-b" hidden>Painel B</div>
+  <div id="painel-a">Painel A</div><div id="painel-b" hidden>Painel B <button type="button" id="sub-b" aria-expanded="false" aria-controls="sub-conteudo">Sub</button><div id="sub-conteudo" hidden>Sub conteúdo</div></div>
   <details><summary>Mais detalhes</summary><p>Detalhe</p></details>
   <button type="button" id="abre-dialogo" data-target="#dlg">Abrir diálogo</button><div id="dlg" role="dialog" aria-label="Diálogo" hidden><p>Conteúdo</p></div>
-  <button type="button" id="popup" aria-haspopup="menu">Opções</button></main>${TOGGLE}`;
+  <button type="button" id="popup" aria-haspopup="menu">Opções</button>
+  <style>#menu-zero{height:0} #menu-zero .painel{display:none;position:fixed;top:120px;left:0;width:300px;height:200px;background:#fff} #menu-zero.active .painel{display:block}</style>
+  <button type="button" id="menu-btn" aria-expanded="false" data-zero="1">Menu</button><div id="menu-zero"><div class="painel"><a href="/x">Item</a></div></div></main>${TOGGLE}${ZERO}`;
 
 let http: Server;
 let base: string;
@@ -224,15 +229,21 @@ describe("3.7.8 N1 — desvio em conteúdo oculto vira O-NN com o gatilho", () =
     expect(hidden.length).toBeGreaterThanOrEqual(2);
     const reveal = Object.fromEntries(hidden.map((o) => [o.element.locator, (o.data as { reveal?: unknown }).reveal]));
     // N5: o gatilho reconhecido como estado recolhido dá a mesma receita (com a chegada dele)
+    // revisão MED 3: a receita vai estruturada (ações do scan + o clique + a chegada), nunca JSON montado em texto
+    const url = `${base}/oculto`;
     expect(Object.values(reveal)).toEqual(expect.arrayContaining([
-      { container: "#menu1", trigger: "#abre", arrival: { visible: "#menu1" } },
+      { container: "#menu1", trigger: "#abre", recipe: { tool: "scan_page", arguments: { url, actions: [{ action: "click", selector: "#abre" }], arrival: { visible: "#menu1, #menu1 *" } } } },
+      { container: "#menu2", trigger: 'button[aria-controls="menu2"]', recipe: { tool: "scan_page", arguments: { url, actions: [{ action: "click", selector: 'button[aria-controls="menu2"]' }], arrival: { visible: "#menu2, #menu2 *" } } } },
       { container: "#sem-gatilho", trigger: null },
     ]));
     const items = observedRequiredItems(r.observations).filter((i) => i.subject.startsWith("oculto|"));
-    expect(items.map((i) => i.subject).sort()).toEqual(["oculto|#menu1", "oculto|#sem-gatilho"]);
+    expect(items.map((i) => i.subject).sort()).toEqual(["oculto|#menu1", "oculto|#menu2", "oculto|#sem-gatilho"]);
     const withTrigger = items.find((i) => i.subject === "oculto|#menu1")!;
     expect(withTrigger.todo).toContain("click #abre");
-    expect(withTrigger.measure).toContain('selector:"#abre"');
+    expect((withTrigger as { recipe?: unknown }).recipe).toEqual({ tool: "scan_page", arguments: { url, actions: [{ action: "click", selector: "#abre" }], arrival: { visible: "#menu1, #menu1 *" } } });
+    const quoted = items.find((i) => i.subject === "oculto|#menu2") as { recipe?: unknown };
+    expect(JSON.parse(JSON.stringify(quoted.recipe))).toEqual(quoted.recipe);
+    expect(withTrigger.condition).toBeTruthy();
     expect(withTrigger.elementBound).toBe(true);
     expect(withTrigger.idSpace).toBe("O");
     expect(withTrigger.rule?.force).toMatch(/required|prohibited/);
@@ -300,55 +311,99 @@ describe("3.7.8 H1/H2 — pendingId no ledger; leitura de outra rota marcada", (
 });
 
 describe("3.7.8 N5 — estados recolhidos não escaneados viram pendência com receita pronta", () => {
-  it("casca primeiro, padrões agrupados, teto com o resto no ledger; cada receita roda e fecha a pendência", async () => {
+  type StateItem = PendingItem & { recipe: { tool: string; arguments: Record<string, unknown> } };
+  const stateItems = (d: { checksRun: { pageLevel: { notMeasured: Array<PendingItem | string> } } }) =>
+    d.checksRun.pageLevel.notMeasured.filter((i) => typeof i !== "string" && i.code === "state-unscanned") as StateItem[];
+  async function ledgerStates(call: Awaited<ReturnType<typeof connect>>["call"], scanId: string) {
+    return (await ledger(call, scanId)).filter((o) => o.data?.code === "state-unscanned").map((o) => o.data as unknown as StateItem);
+  }
+
+  it("todo padrão tem id e receita (no ledger); a linha mostra 4 abertas + o resto com ids; cada receita roda, chega e fecha", async () => {
     const { client, call } = await connect();
     try {
       const url = `${base}/estados`;
       const scan = await call("scan_page", { url, maxChars: 60000 });
-      const items = (scan.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).filter((i) => typeof i !== "string" && i.code === "state-unscanned") as Array<PendingItem & { recipe: { tool: string; arguments: Record<string, unknown> }; moreTriggers?: Array<{ selector: string; arrival?: unknown }> }>;
-      expect(items).toHaveLength(STATE_PENDING_MAX);
-      // casca (o cabeçalho, fora do main) primeiro
-      expect(items[0].recipe.arguments).toEqual({ url, actions: [{ action: "click", selector: "#conta" }], arrival: { visible: "#menu-conta" } });
-      expect(items[0].observed).toContain("(casca)");
-      // os cinco menus de linha: um item, contagem 5, um exemplo de receita
-      const rows = items.find((i) => i.count === 5)!;
-      expect(rows).toBeDefined();
-      expect(rows.boundLocators ?? rows.examples).toBeDefined();
-      // o resto vem contado e listado na última
-      const last = items[items.length - 1];
-      expect(last.observed).toMatch(/\+\d+ gatilho\(s\) no ledger/);
-      expect(last.moreTriggers!.length).toBeGreaterThan(0);
-      for (const i of items) expect(i.todo.length).toBeLessThanOrEqual(72);
-      // a forma curta guarda o id, o seletor e a chegada
-      const short = pageLevelShort({ notMeasured: items });
-      expect(short.notMeasured[0]).toMatch(/^P-\d+:state-unscanned:1 @#conta; aria-expanded=false; arrival visible #menu-conta/);
-      // todas as receitas (as 4 e as do ledger) rodam: estado alcançado e a pendência do padrão fecha
-      const recipes = [
-        ...items.map((i) => ({ id: i.pendingId, args: i.recipe.arguments })),
-        ...(last.moreTriggers ?? []).map((m) => ({ id: null, args: { url, actions: [{ action: "click", selector: m.selector }], ...(m.arrival ? { arrival: m.arrival } : {}) } })),
-      ];
-      for (const r of recipes) {
-        const run = await call("scan_page", { ...r.args });
-        expect(run.data.status, JSON.stringify(run.data.limitation ?? null)).toBe("scanned");
+      const shown = stateItems(scan.data);
+      expect(shown).toHaveLength(STATE_PENDING_MAX + 1);
+      const aggregate = shown[shown.length - 1];
+      expect(aggregate.pendingId).toMatch(/^P-\d+(?:(?:\.\.|,)P-\d+)*$/);
+      expect(aggregate.observed).toMatch(/mais \d+ estado\(s\) recolhido\(s\), \d+ aberto\(s\)/);
+      // casca primeiro; dois menus DIFERENTES do cabeçalho são dois estados (nunca uma pendência só)
+      expect(shown[0].recipe.arguments).toEqual({ url, actions: [{ action: "click", selector: "#conta" }], arrival: { visible: "#menu-conta, #menu-conta *" } });
+      expect(shown[1].recipe.arguments.actions).toEqual([{ action: "click", selector: "#ajuda" }]);
+      const all = await ledgerStates(call, scan.data.scanId);
+      expect(all.length).toBeGreaterThan(STATE_PENDING_MAX);
+      for (const s of all) expect(s.pendingId).toMatch(/^P-\d+$/);
+      // o padrão repetido (5 menus de linha): um item ×5, dito no texto
+      const rows = all.find((i) => i.count === 5)!;
+      expect(rows.measure).toMatch(/×5 do mesmo padrão: o scan de uma instância aberta fecha o padrão/);
+      for (const s of all) {
+        const run = await call("scan_page", { ...s.recipe.arguments });
+        expect(run.data.status, `${s.pendingId} ${JSON.stringify(run.data.limitation ?? null)}`).toBe("scanned");
         expect(run.text.length).toBeLessThanOrEqual(8000);
-        if (r.id) expect(run.data.statesScanned).toContain(r.id);
+        expect(run.data.statesScanned, s.pendingId).toContain(s.pendingId);
       }
-      const after = await call("scan_page", { url, maxChars: 60000 });
-      const again = (after.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).filter((i) => typeof i !== "string" && i.code === "state-unscanned") as PendingItem[];
-      for (const i of again.filter((x) => items.some((y) => y.pendingId === x.pendingId))) expect(i.resolved).toBe("state-scanned");
+      const after = await ledgerStates(call, (await call("scan_page", { url, maxChars: 60000 })).data.scanId);
+      for (const s of after.filter((x) => all.some((y) => y.pendingId === x.pendingId))) expect(s.resolved, s.pendingId).toBe("state-scanned");
     } finally { await client.close(); }
   });
 
-  it("pendingResolved 'não se aplica' com reason fecha; sem reason não", async () => {
+  it("estado profundo: a receita é a do scan que viu o controle + o clique (aba aberta → controle dentro dela)", async () => {
     const { client, call } = await connect();
     try {
       const url = `${base}/estados`;
-      const scan = await call("scan_page", { url, maxChars: 60000 });
-      const item = (scan.data.checksRun.pageLevel.notMeasured as Array<PendingItem | string>).find((i) => typeof i !== "string" && i.code === "state-unscanned") as PendingItem;
-      const noReason = await call("scan_page", { url, pendingResolved: [{ id: item.pendingId, status: "não se aplica" }] });
-      expect(noReason.data.pendingResolution.needsReason).toContain(item.pendingId);
-      const withReason = await call("scan_page", { url, pendingResolved: [{ id: item.pendingId, status: "não se aplica", reason: "menu só com links de navegação já medidos" }] });
-      expect(withReason.data.pendingResolution.resolved).toContain(item.pendingId);
+      const tab = await call("scan_page", { url, actions: [{ action: "click", selector: "#aba-b" }], arrival: { visible: "#painel-b" }, maxChars: 60000 });
+      const all = await ledgerStates(call, tab.data.scanId);
+      const sub = all.find((s) => (s.recipe.arguments.actions as Array<{ selector?: string }>).some((a) => a.selector === "#sub-b"))!;
+      expect(sub.recipe.arguments.actions).toEqual([{ action: "click", selector: "#aba-b" }, { action: "click", selector: "#sub-b" }]);
+      const run = await call("scan_page", { ...sub.recipe.arguments });
+      expect(run.data.status).toBe("scanned");
+      expect(run.data.statesScanned).toContain(sub.pendingId);
+    } finally { await client.close(); }
+  });
+
+  it("menu de altura 0 com painel fixo: detector e chegada usam a mesma noção de aparecer", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/estados`;
+      const all = await ledgerStates(call, (await call("scan_page", { url, maxChars: 60000 })).data.scanId);
+      const zero = all.find((s) => (s.recipe.arguments.actions as Array<{ selector?: string }>).some((a) => a.selector === "#menu-btn"))!;
+      expect(zero.recipe.arguments.arrival).toEqual({ visible: "#menu-zero, #menu-zero *" });
+      const run = await call("scan_page", { ...zero.recipe.arguments });
+      expect(run.data.status, JSON.stringify(run.data.limitation ?? null)).toBe("scanned");
+      expect(run.data.statesScanned).toContain(zero.pendingId);
+    } finally { await client.close(); }
+  });
+
+  it("fechar exige o estado aberto no scan: clicar duas vezes não fecha; 'violada' não fecha; 'não se aplica' com reason fecha", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/estados`;
+      const first = stateItems((await call("scan_page", { url, maxChars: 60000 })).data)[0];
+      const twice = await call("scan_page", { url, actions: [{ action: "click", selector: "#conta" }, { action: "click", selector: "#conta" }] });
+      expect(twice.data.statesScanned).toBeUndefined();
+      const violada = await call("scan_page", { url, pendingResolved: [{ id: first.pendingId, status: "violada" }] });
+      expect(violada.data.pendingResolution.stateScanOnly).toContain(first.pendingId);
+      expect(violada.data.pendingResolution.recordAsFinding).toBeUndefined();
+      const noReason = await call("scan_page", { url, pendingResolved: [{ id: first.pendingId, status: "não se aplica" }] });
+      expect(noReason.data.pendingResolution.needsReason).toContain(first.pendingId);
+      const withReason = await call("scan_page", { url, pendingResolved: [{ id: first.pendingId, status: "não se aplica", reason: "menu só com links de navegação já medidos" }] });
+      expect(withReason.data.pendingResolution.resolved).toContain(first.pendingId);
+    } finally { await client.close(); }
+  });
+
+  it("padrão repetido: abrir uma instância fecha o padrão e as outras não viram pendências novas", async () => {
+    const { client, call } = await connect();
+    try {
+      const url = `${base}/estados`;
+      const all = await ledgerStates(call, (await call("scan_page", { url, maxChars: 60000 })).data.scanId);
+      const rows = all.find((i) => i.count === 5)!;
+      const run = await call("scan_page", { ...rows.recipe.arguments });
+      expect(run.data.statesScanned).toContain(rows.pendingId);
+      const after = await ledgerStates(call, run.data.scanId);
+      const rowsAfter = after.filter((s) => (s.examples ?? []).some((e) => e.includes("menu-linha")));
+      expect(rowsAfter.map((s) => s.pendingId)).toEqual([rows.pendingId]);
+      expect(rowsAfter[0].resolved).toBe("state-scanned");
     } finally { await client.close(); }
   });
 
@@ -357,11 +412,9 @@ describe("3.7.8 N5 — estados recolhidos não escaneados viram pendência com r
     const kf = await connect("knowledge-free");
     try {
       const url = `${base}/estados`;
-      const pick = (d: { checksRun: { pageLevel: { notMeasured: Array<PendingItem | string> } } }) =>
-        (d.checksRun.pageLevel.notMeasured.filter((i) => typeof i !== "string" && i.code === "state-unscanned") as Array<PendingItem & { recipe: { arguments: Record<string, unknown> } }>);
-      const a = pick((await full.call("scan_page", { url, maxChars: 60000 })).data);
+      const a = stateItems((await full.call("scan_page", { url, maxChars: 60000 })).data);
       const scan = await kf.call("scan_page", { url, maxChars: 60000 });
-      const b = pick(scan.data);
+      const b = stateItems(scan.data);
       expect(b.map((i) => [i.count, i.observed, i.recipe])).toEqual(a.map((i) => [i.count, i.observed, i.recipe]));
       expect(scan.text).not.toContain("govbr-");
       for (const i of b) expect(i.subject ?? "").not.toMatch(/br-|\./);
@@ -387,6 +440,19 @@ describe("3.7.8 H3 — a condição exata do verify sobrevive à compactação",
     const block = pageLevelShort({ notMeasured: [item] });
     expect(JSON.stringify(pageLevelNorm(pageLevelMinimal(block)!))).toContain("font-size-on-ds-scale");
   });
+  it("revisão MED 6: o mapa conditions (id da O-NN → condição) sobrevive até a forma de ids e a de códigos", async () => {
+    const { pageLevelBlock, pageLevelCodes } = await import("../../src/scan/notJudged.js");
+    const { enforceCeiling } = await import("../../src/responses/scan.js");
+    const block = pageLevelBlock(["tokens"], [{ ...item, condition: "font-size-on-ds-scale" }]);
+    expect(block.conditions).toEqual({ "O-01": "font-size-on-ds-scale" });
+    expect(pageLevelShort(block).conditions).toEqual({ "O-01": "font-size-on-ds-scale" });
+    expect(pageLevelCodes(pageLevelShort(block)).conditions).toEqual({ "O-01": "font-size-on-ds-scale" });
+    const filler = "x".repeat(3000);
+    const squeezed = enforceCeiling({ kind: "scan", checksRun: { pageLevel: { ...block, full: { tool: "get_finding_details", arguments: { scanId: "S-1", view: "observations", cursor: 0 } } } }, absenceNote: filler }, 3400, "S-1");
+    const pl = (squeezed.checksRun as { pageLevel: { ids?: string[]; conditions?: Record<string, string>; notMeasured?: unknown } }).pageLevel;
+    expect(pl.conditions).toEqual({ "O-01": "font-size-on-ds-scale" });
+  });
+
   it("condição longa não é cortada no meio na forma curta", () => {
     const long = { ...item, todo: observedTodo("part-value-matches-spec-token") };
     const short = pendingLine(long);

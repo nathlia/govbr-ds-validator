@@ -82,8 +82,10 @@ export interface NotJudgedItem {
   inform?: string[];
   /** 3.7.8 (N5): na pendência state-unscanned, a chamada pronta que escaneia o estado aberto. */
   recipe?: { tool: string; arguments: Record<string, unknown> };
-  /** 3.7.8 (N5): os padrões de gatilho além do teto (seletor, sinal, chegada), na última pendência state-unscanned. */
-  moreTriggers?: Array<{ selector: string; signal: string; arrival?: unknown }>;
+  /** Revisão 3.7.8 (MED 6): a condição exata do verify da O-NN — vai para o mapa `conditions` do bloco (todas as formas). */
+  condition?: string;
+  /** 3.7.8 (N5): estado sem chegada verificável (sem alvo nem aria-expanded): fecha pelo scan que clicou no controle. */
+  stateByClick?: true;
 }
 
 export interface NotJudgedInput {
@@ -111,6 +113,8 @@ export interface NotJudgedInput {
   /** 3.7.8 (N5): estados recolhidos deste estado (evidence/disclosures.ts), casca primeiro, e a url da receita. */
   disclosures?: DisclosureGroup[];
   url?: string;
+  /** Revisão HIGH 1: a receita do scan (url + ações) — a do estado recolhido parte dela. */
+  stateBase?: StateBase;
 }
 
 const EXAMPLES = 3;
@@ -246,10 +250,11 @@ function hiddenItem(subject: string, obs: Observation[]): NotJudgedItem {
   const checkers = new Map<string, number>();
   for (const d of data) checkers.set(d.rule!.checker ?? d.rule!.id, (checkers.get(d.rule!.checker ?? d.rule!.id) ?? 0) + 1);
   const conditions = [...new Set(data.map((d) => d.expectedCondition).filter((c): c is string => typeof c === "string"))];
-  // N5: o mesmo gatilho da pendência state-unscanned dá a mesma chegada (expanded/visible/dialogOpen).
-  const arrival = (data.find((d) => d.reveal && (d.reveal as { arrival?: unknown }).arrival)?.reveal as { arrival?: unknown } | undefined)?.arrival;
-  const recipe = trigger
-    ? `scan_page {actions:[{action:"click",selector:"${trigger}"}], arrival:${arrival ? JSON.stringify(arrival) : `{visible:"${clip(obs[0].element.locator, 120)}"}`}}`
+  // N5 + revisão MED 3: a receita estruturada (a do estado recolhido do mesmo gatilho: ações do scan + o clique + a chegada)
+  // vem pronta da observação; nada de JSON montado em texto (seletor com aspas quebrava).
+  const recipe = (data.find((d) => (d.reveal as { recipe?: unknown } | undefined)?.recipe)?.reveal as { recipe?: { tool: string; arguments: Record<string, unknown> } } | undefined)?.recipe;
+  const how = recipe
+    ? "rode recipe"
     : "o oráculo não achou o controle que mostra este conteúdo (aria-controls, data-target, href ou aria-expanded): ache-o e escaneie o estado aberto (scan_page com a ação + arrival visible)";
   return {
     code: "observed-required",
@@ -263,7 +268,10 @@ function hiddenItem(subject: string, obs: Observation[]): NotJudgedItem {
     todo: hiddenTodo(trigger),
     norms: ruleIds,
     ...(rule ? { rule } : {}),
-    measure: `${recipe}; no estado aberto, verify_finding live por elemento (a mesma receita) citando a norma${conditions.length ? ` (evidence.data.expectedCondition ${conditions.join(" | ")})` : ""}, ou leia a norma por id`,
+    ...(recipe ? { recipe } : {}),
+    // revisão MED 6: a condição exata também na linha (o mapa conditions da forma compacta lê daqui)
+    ...(conditions.length ? { condition: conditions.join("|") } : {}),
+    measure: `${how}; no estado aberto, verify_finding live por elemento (a mesma receita) citando a norma${conditions.length ? ` (evidence.data.expectedCondition ${conditions.join(" | ")})` : ""}, ou leia a norma por id`,
     resolveByRead: ruleIds,
     idSpace: "O",
   };
@@ -300,6 +308,7 @@ export function observedRequiredItems(observations: Observation[]): NotJudgedIte
       boundLocators: obs.map((o) => o.element.locator),
       observed: `${kind}: ${observedValue(first)}${obs.length > 1 ? ` (+${obs.length - 1})` : ""}`,
       todo: observedTodo(condition),
+      ...(condition ? { condition } : {}),
       norms: [ruleId],
       ...(rule ? { rule } : {}),
       measure: condition
@@ -353,7 +362,7 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
  */
 export const UPLOAD_PATHS_TODO = "exerça upload a recusar e drop no campo, cada um com arrival";
 export const UPLOAD_PATHS_MEASURE =
-  "scan_page actions upload com arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
+  "scan_page actions upload com arquivo de tipo fora do aceito (o arquivo sintético vai até 1 MiB: tamanho só se o limite da página for menor) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo ou pendingResolved {id,status,reason}";
 
 /**
  * 3.7.8 (análise "especificações não achadas", N3): as cláusulas do componente Upload que mandam INFORMAR o usuário (a
@@ -386,7 +395,7 @@ export const UPLOAD_INFORM_NOTE = "inform: cláusulas do Upload que mandam infor
  * closing path that profile's scan_page has (verify_finding on the field; it has no pendingResolved).
  */
 export const UPLOAD_PATHS_MEASURE_KF =
-  "scan_page actions upload com arquivo fora do aceito (tipo/tamanho) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
+  "scan_page actions upload com arquivo de tipo fora do aceito (o arquivo sintético vai até 1 MiB: tamanho só se o limite da página for menor) + arrival (errorVisible ou visible da mensagem); actions drop no alvo + arrival; o drop termina no evento drop: o estado DURANTE o arrasto meça no navegador. Feche: verify_finding no campo (critério em norms)";
 
 export function uploadPathsPending(inputs: Array<{ locator: string; accept: string | null; support?: string | null }>, knowledgeFree = false): NotJudgedItem | null {
   if (!inputs.length) return null;
@@ -430,15 +439,27 @@ function arrivalText(arrival: DisclosureGroup["arrival"]): string {
   return "arrival dialogOpen";
 }
 export const STATE_TODO = "escaneie o estado aberto: recipe (click no @ + arrival); feche assim";
-export function statePendings(groups: DisclosureGroup[], url: string, knowledgeFree = false): NotJudgedItem[] {
-  const shown = groups.slice(0, STATE_PENDING_MAX);
-  const rest = groups.slice(STATE_PENDING_MAX);
-  return shown.map((g, i) => {
-    const recipe = {
-      tool: "scan_page",
-      arguments: { url, actions: [{ action: "click", selector: g.selectors[0] }], ...(g.arrival ? { arrival: g.arrival } : {}) },
-    };
-    const last = i === shown.length - 1 && rest.length > 0;
+/**
+ * Revisão 3.7.8 (HIGH 1): a receita é a do scan que viu o controle (url, ações que alcançaram o estado) + o clique — numa
+ * rota profunda (navigate) ou num estado aberto (a aba) a receita só com o clique abria outra página/estado.
+ */
+export type StateBase = { url: string; actions?: unknown[] };
+export function stateRecipe(base: StateBase, selector: string, arrival: DisclosureGroup["arrival"]) {
+  return {
+    tool: "scan_page",
+    arguments: { url: base.url, actions: [...(base.actions ?? []), { action: "click", selector }], ...(arrival ? { arrival } : {}) },
+  };
+}
+
+/**
+ * Todos os padrões viram pendência com id (revisão MED 4: o teto escondia os demais para sempre); quantos aparecem na linha
+ * do scan decide capStateItems, no servidor. Padrão repetido (×N, 3 ou mais instâncias de estrutura igual): um scan de uma
+ * instância aberta fecha o padrão — dito no texto.
+ */
+export function statePendings(groups: DisclosureGroup[], base: StateBase | string, knowledgeFree = false): NotJudgedItem[] {
+  const b: StateBase = typeof base === "string" ? { url: base } : base;
+  return groups.map((g) => {
+    const recipe = stateRecipe(b, g.selectors[0], g.arrival);
     return {
       code: "state-unscanned" as const,
       // a chave do padrão vai como hash: o padrão tem classes e tags da página (fica fora das respostas e do ledger)
@@ -448,15 +469,47 @@ export function statePendings(groups: DisclosureGroup[], url: string, knowledgeF
       elementSet: setHash(g.selectors),
       elementBound: true as const,
       boundLocators: [...g.selectors],
+      ...(g.arrival ? {} : { stateByClick: true as const }),
       // a chegada vem antes do rótulo: na forma curta (72 caracteres) o rótulo é o que se corta.
-      observed: `${g.signal}; ${arrivalText(g.arrival)}${g.region === "shell" ? " (casca)" : ""}${last ? `; +${rest.length} gatilho(s) no ledger` : ""}${g.label ? ` "${clip(g.label, 30)}"` : ""}`,
+      observed: `${g.signal}; ${arrivalText(g.arrival)}${g.region === "shell" ? " (casca)" : ""}${g.label ? ` "${clip(g.label, 30)}"` : ""}`,
       todo: STATE_TODO,
       // a chamada inteira fica em `recipe` (não se repete aqui)
-      measure: `rode recipe${g.selectors.length > 1 ? ` (${g.selectors.length} do mesmo padrão: uma basta)` : ""}${knowledgeFree ? "; fecha ao escanear o estado aberto" : "; não se aplica: pendingResolved com reason"}`,
+      measure: `rode recipe${g.selectors.length > 1 ? ` (×${g.selectors.length} do mesmo padrão: o scan de uma instância aberta fecha o padrão)` : ""}${knowledgeFree ? "; fecha ao escanear o estado aberto" : "; fecha ao escanear o estado aberto, ou pendingResolved não se aplica com reason"}`,
       recipe,
-      ...(last ? { moreTriggers: rest.slice(0, 8).map((x) => ({ selector: x.selectors[0], signal: x.signal, ...(x.arrival ? { arrival: x.arrival } : {}) })) } : {}),
     };
   });
+}
+
+/**
+ * Revisão MED 4: na linha do scan, até STATE_PENDING_MAX pendências de estado ABERTAS (as fechadas cedem o lugar); as
+ * demais numa linha só com os ids, quantas faltam e onde estão (o ledger, pelo cursor). Todas estão no ledger com id.
+ */
+export function capStateItems<T extends PendingItem>(items: T[], ledger?: { scanId: string; cursorOf: (pendingId: string) => number | undefined }): PendingItem[] {
+  const state = items.filter((i) => i.code === "state-unscanned");
+  if (state.length <= STATE_PENDING_MAX) return items;
+  const open = state.filter((i) => i.resolved === undefined);
+  const shown = new Set([...open, ...state.filter((i) => i.resolved !== undefined)].slice(0, STATE_PENDING_MAX));
+  const rest = state.filter((i) => !shown.has(i));
+  const restOpen = rest.filter((i) => i.resolved === undefined).length;
+  const cursor = ledger ? Math.min(...rest.map((i) => ledger.cursorOf(i.pendingId as string) ?? Infinity)) : Infinity;
+  const aggregate: PendingItem = {
+    code: "state-unscanned",
+    subject: "state-unscanned|+",
+    count: rest.length,
+    pendingId: pendingIdsLabel(rest.map((i) => i.pendingId as string)),
+    observed: `mais ${rest.length} estado(s) recolhido(s), ${restOpen} aberto(s)`,
+    todo: Number.isFinite(cursor) && ledger
+      ? `receitas: ledger cursor ${cursor} (get_finding_details, view observations)`
+      : "receitas no ledger (get_finding_details view observations)",
+    measure: "cada um tem id e receita no ledger; fecham como os demais",
+  };
+  const out: PendingItem[] = [];
+  let placed = false;
+  for (const i of items) {
+    if (i.code !== "state-unscanned" || shown.has(i)) { out.push(i); continue; }
+    if (!placed) { out.push(aggregate); placed = true; }
+  }
+  return out;
 }
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -574,7 +627,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   items.push(...(input.ariaStates ?? []));
   const upload = uploadPathsPending(input.fileInputs ?? []);
   if (upload) items.push(upload);
-  items.push(...statePendings(input.disclosures ?? [], input.url ?? ""));
+  items.push(...statePendings(input.disclosures ?? [], input.stateBase ?? { url: input.url ?? "" }));
   return items;
 }
 
@@ -661,7 +714,7 @@ function compactItem(item: PendingItem, withText: (code: string) => boolean = ()
     const { subject: _s, ...rest } = item;
     return rest;
   }
-  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, condition: _cond, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -702,7 +755,7 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string, short
     whyNotAFinding: short
       ? "Pendência: nenhum check deste scan julgou — a tarefa em data.todo, como medir em data.measure."
       : `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, ...rest }) => rest)(item),
+    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, ...rest }) => rest)(item),
   }));
 }
 
@@ -711,9 +764,12 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string, short
  * que está nela e nenhum check julgou (pendências, nunca veredito). Só encolhe como último recurso do teto.
  */
 export function pageLevelBlock(checks: string[], items: PendingItem[], componentsRestricted = false, withText: (code: string) => boolean = () => true) {
+  // revisão MED 6: por id de O-NN, a condição exata do verify — sobrevive a toda compactação (forma de ids inclusive).
+  const conditions = Object.fromEntries(items.filter((i) => i.condition && i.pendingId).map((i) => [i.pendingId as string, i.condition as string]));
   return {
     measured: pageLevelMeasured(checks, componentsRestricted),
     notMeasured: items.map((i) => compactItem(i, withText)),
+    ...(Object.keys(conditions).length ? { conditions } : {}),
     note: "notMeasured: pendências suas (nenhum check julgou; não é conformidade); cada pendingId volta até verify_finding ou pendingResolved; rule = a cláusula obrigatória.",
   };
 }
@@ -813,7 +869,7 @@ function shortTodo(todo: string): string {
  * regiões) só contadas. A cláusula inteira está em `full` (get_finding_details) e no scan seguinte (sessionPending)
  * enquanto não foi entregue.
  */
-export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown }) {
+export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown; conditions?: Record<string, string> }) {
   let low = 0;
   const items: string[] = [];
   for (const i of block.notMeasured ?? []) {
@@ -830,6 +886,7 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
   return {
     notMeasured: items,
     ...(low ? { lowSignal: low } : {}),
+    ...(block.conditions ? { conditions: block.conditions } : {}),
     ...(block.full ? { full: block.full } : {}),
   };
 }
@@ -895,7 +952,7 @@ export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block:
 }
 
 /** Último recurso do teto: só os códigos das pendências (inteiras no ledger: get_finding_details(scanId)). */
-export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown }, scanId = "") {
+export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string> }, scanId = "") {
   const codes = (block.notMeasured ?? []).map((i) => {
     if (typeof i === "string") return i.split(/[⇒ ]/)[0];
     const pid = (i as PendingItem).pendingId;
@@ -904,6 +961,7 @@ export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array
   return {
     notMeasured: codes,
     count: codes.length,
+    ...(block.conditions ? { conditions: block.conditions } : {}),
     ...(block.full ? { next: block.full } : scanId ? { next: { tool: "get_finding_details", arguments: { scanId, view: "observations" } } } : {}),
   };
 }

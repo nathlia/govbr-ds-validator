@@ -148,7 +148,7 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { capStateItems, notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
@@ -2119,10 +2119,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // 3.7.8 (N5): este scan mediu um estado aberto (controle aberto no estado, ou a receita clicou nele): fecha a
         // pendência state-unscanned desse gatilho nesta rota, antes de registrar as deste estado.
         const statesSeen = hasNorms
-          ? session.resolveStatesSeen(route, [
-              ...(result.disclosuresOpened ?? []),
-              ...(actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])),
-            ], scanId)
+          ? session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
+              (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])))
           : [];
         const regularItems = hasNorms ? withPendingIds(scanId, route, notJudged) : [];
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
@@ -2204,7 +2202,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
             // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).
             // 3.6.1 (revisão H1): o texto da cláusula só enquanto não foi entregue nesta sessão; depois, só o id.
-            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, pageItems, Boolean(components?.length), (c) => !session.textDelivered(c)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
+            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, capStateItems(pageItems, { scanId, cursorOf: (id) => { const k = regularItems.findIndex((i) => i.pendingId === id); return k < 0 ? undefined : result.observations.length + k; } }), Boolean(components?.length), (c) => !session.textDelivered(c)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
           },
           ...(sessionPending ? { sessionPending } : {}),
           ...(revisited ? { revisited } : {}),
@@ -2296,10 +2294,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const route = routeKeyOf(result.state.observed.url);
       const first = !cursor;
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
-      const statesSeen = session.resolveStatesSeen(route, [
-        ...(result.disclosuresOpened ?? []),
-        ...(actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])),
-      ], scanId);
+      const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
+        (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])));
       const pageItems = withPendingIds(scanId, route, result.notJudged ?? []);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
@@ -2323,7 +2319,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
         checksRun: {
           ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true),
-          ...(first && pageItems.length ? { pageLevel: pageLevelBlockKnowledgeFree(pageItems) } : {}),
+          ...(first && pageItems.length ? { pageLevel: pageLevelBlockKnowledgeFree(capStateItems(pageItems, { scanId, cursorOf: (id) => { const k = pageItems.findIndex((i) => i.pendingId === id); return k < 0 ? undefined : k; } })) } : {}),
         },
         ...(sessionPending ? { sessionPending } : {}),
         summary: summarize(result.findings),

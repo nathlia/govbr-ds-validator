@@ -591,16 +591,17 @@ function pageLevelNormStep(r: Record<string, unknown>): Record<string, unknown> 
 /** 3.6.3 (revisão MEDIUM 2): pendências em códigos → só os ids (`P-NN`), contagem e continuação. */
 function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown } } | undefined;
-  const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number } | undefined;
+  const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number; conditions?: Record<string, string> } | undefined;
   // Sem pendência com sinal nesta página (lista vazia, ou só as sem sinal, contadas): não há id a guardar — fica a contagem.
   if (pl && Array.isArray(pl.notMeasured) && pl.notMeasured.every((i) => typeof i === "object" && (i as { signal?: string }).signal === "low")) {
     return { ...r, checksRun: { ...cr, pageLevel: { count: pl.notMeasured.length + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
   }
   if (!pl?.notMeasured?.length || pl.ids || !pl.notMeasured.every((i) => typeof i === "string")) return null;
   // 3.7.5 (item 6): a linha de leitura agrega ids (`L-01..L-04` ou `L-01,L-04`; revisão M4: espaço próprio) — um rótulo só.
-  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^[PO]-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$/.test(i));
+  const ids = (pl.notMeasured as string[]).map((i) => i.split(":")[0]).filter((i) => /^[PO]-\d+$|^L-\d+(?:(?:\.\.|,)L-\d+)*$|^P-\d+(?:(?:\.\.|,)P-\d+)+$/.test(i));
   if (!ids.length) return null;
-  return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, next: pl.next ?? pl.full } } };
+  // revisão 3.7.8 (MED 6): a condição exata do verify por id de O-NN fica também aqui.
+  return { ...r, checksRun: { ...cr, pageLevel: { ids, count: pl.count ?? pl.notMeasured.length, ...(pl.conditions ? { conditions: pl.conditions } : {}), next: pl.next ?? pl.full } } };
 }
 
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {
