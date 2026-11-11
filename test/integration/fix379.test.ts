@@ -29,10 +29,23 @@ const BODY = `<header><button type="button" id="conta" aria-expanded="false" ari
 <button type="button" role="tab" id="aba-b" aria-selected="false" aria-controls="painel-b">B</button></div>
 <div id="painel-a"><p>Painel A</p></div><div id="painel-b" hidden><p>Painel B</p></div></main>${TOGGLE}`;
 
+// D4: o mesmo menu e as mesmas abas, com um diálogo modal aberto por cima (com véu fixo) e um acordeão dentro dele.
+const MODAL_BODY = `${BODY}
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.5)"></div>
+<div role="dialog" aria-modal="true" aria-label="Diálogo" style="position:fixed;top:100px;left:100px;width:400px;height:300px;background:#fff">
+<button type="button" id="dlg-mais" aria-expanded="false" aria-controls="dlg-conteudo">Mais</button><div id="dlg-conteudo" hidden><p>Mais conteúdo</p></div></div>`;
+// D4: sem diálogo, um controle coberto no centro por outro elemento (não descendente nem ancestral).
+const COVERED_BODY = `<main><h1>Coberto</h1>
+<button type="button" id="livre" aria-expanded="false" aria-controls="c-livre">Livre</button><div id="c-livre" hidden><p>x</p></div>
+<button type="button" id="coberto" aria-expanded="false" aria-controls="c-coberto" style="position:absolute;top:300px;left:20px;width:120px;height:40px">Coberto</button><div id="c-coberto" hidden><p>y</p></div>
+<div style="position:absolute;top:290px;left:0;width:300px;height:80px;background:#eee"></div></main>${TOGGLE}`;
+
 let http: Server;
 let base: string;
 beforeAll(async () => {
-  http = httpServer((_req, res) => res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html><html lang="pt-BR"><head><title>Abas</title></head><body>${BODY}</body></html>`));
+  http = httpServer((req, res) => res.writeHead(200, { "content-type": "text/html" }).end(
+    `<!doctype html><html lang="pt-BR"><head><title>Abas</title></head><body>${req.url === "/modal" ? MODAL_BODY : req.url === "/coberto" ? COVERED_BODY : BODY}</body></html>`,
+  ));
   await new Promise<void>((done) => http.listen(0, "127.0.0.1", done));
   base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
 });
@@ -113,6 +126,32 @@ describe("3.7.9 D3 — scan parcial não fecha a pendência de estado", () => {
       expect(partial.data.statesIncomplete).toEqual([{ id: conta.pendingId, missing: ["tokens", "structure", "axe"] }]);
       const full = await call("scan_page", { ...conta.recipe.arguments });
       expect(full.data.statesScanned).toContain(conta.pendingId);
+    } finally { await client.close(); }
+  });
+});
+
+describe("3.7.9 D4 — atrás de um diálogo modal ou coberto, o controle não vira estado a escanear", () => {
+  const selectorsOf = (items: Array<{ recipe: { arguments: Record<string, unknown> } }>) =>
+    items.map((i) => (i.recipe.arguments.actions as Array<{ selector?: string }>).at(-1)?.selector);
+  for (const profile of ["evaluation", "knowledge-free"] as const) {
+    it(`com o modal aberto, só os controles dentro dele; a receita chega (${profile})`, async () => {
+      const { client, call } = await connect(profile);
+      try {
+        const scan = await call("scan_page", { url: `${base}/modal`, maxChars: 60000 });
+        const items = states(scan.data);
+        expect(selectorsOf(items)).toEqual(["#dlg-mais"]);
+        const run = await call("scan_page", { ...items[0].recipe.arguments });
+        expect(run.data.status).toBe("scanned");
+        expect(run.data.statesScanned).toContain(items[0].pendingId);
+      } finally { await client.close(); }
+    });
+  }
+
+  it("controle coberto no centro por outro elemento não ganha receita; o livre sim", async () => {
+    const { client, call } = await connect();
+    try {
+      const scan = await call("scan_page", { url: `${base}/coberto`, maxChars: 60000 });
+      expect(selectorsOf(states(scan.data))).toEqual(["#livre"]);
     } finally { await client.close(); }
   });
 });

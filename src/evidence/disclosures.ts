@@ -128,6 +128,21 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
     const hasMain = Boolean(document.querySelector("main, [role=main]"));
     const SHELL = ds ? "header, [role=banner], .br-header, footer, [role=contentinfo], .br-footer" : "header, [role=banner], footer, [role=contentinfo]";
     const inShell = (el: Element) => (hasMain ? !el.closest("main, [role=main]") : Boolean(el.closest(SHELL)));
+    // 3.7.9 (D4): os diálogos modais abertos deste estado — a mesma leitura da chegada dialogOpen (dialog[open], role
+    // dialog/alertdialog, aria-modal), visíveis; e, com a pista do DS, o .br-modal visível.
+    const modals = Array.from(document.querySelectorAll(
+      ds ? "dialog[open], [role='dialog'], [role='alertdialog'], [aria-modal='true'], .br-modal" : "dialog[open], [role='dialog'], [role='alertdialog'], [aria-modal='true']",
+    )).filter((m) => shown(m) && (m.tagName !== "DIALOG" || (m as HTMLDialogElement).open));
+    /** O clique alcança o controle: fora de [inert] e, com o centro na janela, o elemento no ponto é ele, um descendente ou um ancestral. */
+    const reachable = (el: Element): boolean => {
+      if (el.closest("[inert]")) return false;
+      const r = el.getBoundingClientRect();
+      const x = r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return true; // fora da janela: o clique rola até ele; sem como medir aqui
+      const hit = document.elementFromPoint(x, y);
+      return !hit || hit === el || el.contains(hit) || hit.contains(el);
+    };
     const candidates = Array.from(document.querySelectorAll(
       "[aria-expanded], [aria-haspopup], [aria-controls], [data-target], [data-bs-target], [data-panel], [role=tab], details > summary, a[href^='#']",
     ));
@@ -158,6 +173,11 @@ export async function inspectDisclosures(page: Page, options: { ds?: boolean } =
       else if (popup && popup !== "false" && expanded !== "true") signal = `aria-haspopup=${popup}`;
       else if (target && target !== document.body) signal = `${el.hasAttribute("aria-controls") ? "aria-controls" : el.hasAttribute("href") ? "href" : "data-target"}→oculto`;
       if (!signal || !shown(el) || disabled(el)) continue;
+      // 3.7.9 (D4): com diálogo modal aberto, só os controles DENTRO dele são estados deste estado (os de trás pertencem
+      // ao estado sem o diálogo); e controle que o clique não alcança (inert, ou coberto no centro por outro elemento)
+      // não ganha receita — ela voltaria state-not-reached.
+      if (modals.length && !modals.some((m) => m.contains(el))) continue;
+      if (!reachable(el)) continue;
       collapsed.push({ el, signal, target });
     }
     // o mesmo conteúdo controlado por dois elementos (o campo combobox e o botão da lista) é um estado só: fica o botão.
