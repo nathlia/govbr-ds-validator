@@ -174,7 +174,7 @@ export function comparePartTokens(
         element: { locator: el.locator, snippet: el.outerHTML.slice(0, 300), page: url },
         note: `${component} · parte "${names.join('" | "')}": ${css} ${observedRaw}; a especificação do DS dá ${token} (${expectedValue}). Unidade${parts.length > 1 ? "s" : ""}: ${parts.map((p) => p.id).join(", ")} (especificacao). Decida por elemento: verify_finding live com expectedCondition ${SPEC_PART_CONDITION}.`,
         whyNotAFinding:
-          "Unidade de especificação (tabela de Especificações do componente): descreve o valor da parte, não obriga. Candidata a investigar; para afirmar violação, cite a norma que obriga.",
+          "Unidade de especificação (tabela de Especificações do componente): descreve o valor da parte, não é obrigação (força especificacao). O desvio medido é um fato a relatar, citando a unidade como a referência de que se desvia.",
         data: {
           component,
           property: css,

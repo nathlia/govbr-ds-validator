@@ -75,7 +75,7 @@ export const MESSAGES = {
     "Linha de tabela da documentação (API ou anatomia): descreve a implementação do componente; leia a unidade por id antes de tratá-la como obrigação de comportamento.",
   /** 3.7.3 (D-167): unidade de especificação (emenda-2 da base). */
   specification:
-    "Unidade de especificação (tabela de Especificações ou frase descritiva da página do componente, texto literal): diz o valor ou o comportamento que o DS especifica para a parte do componente; candidata a investigar, não obrigação nem proibição. Meça a parte e compare; para afirmar violação, cite a norma que obriga.",
+    "Unidade de especificação (tabela de Especificações ou frase descritiva da página do componente, texto literal): diz o valor ou o comportamento que o DS especifica para a parte do componente; não é obrigação nem proibição (força especificacao). Meça a parte e compare: o desvio medido é um fato a relatar, citando esta unidade como a referência de que se desvia.",
 } as const;
 
 export type MessageCode = keyof typeof MESSAGES;
