@@ -100,15 +100,16 @@ describe("3.7.11 item 1 — fato já medido: medido, só decidir", () => {
     } finally { await client.close(); }
   }, 120_000);
 
-  it("verify sem predicado que fecha a pendência diz que nada foi decidido e o que citar; verify que decide não leva o aviso", async () => {
+  it("verify sem predicado não fecha a pendência de fato medido: diz que nada foi decidido e o que citar", async () => {
     const { client, call } = await connect();
     try {
       const r = await call("scan_page", { url: `${base}/tabela`, maxChars: 100000 });
       const table = itemsOf(r.data).find((i) => i.code === "table-name")!;
       const v = await call("verify_finding", { live: true, scanId: r.data.scanId, finding: mk({ id: table.rule!.id, source: "govbr-ds-kb", description: "caption" } as Finding["rule"], table.examples![0], `${base}/tabela`) });
       expect(v.data.verification.verdict).toBe("unverifiable");
-      expect(v.data.pendingResolved).toEqual([table.pendingId]);
-      expect(v.data.pendingUndecided).toEqual([{ id: table.pendingId, code: "table-name", cite: table.rule!.id, norms: expect.arrayContaining(["emag-3.9"]) }]);
+      // teste à mão (B-22/A-05): a pendência de fato medido não fecha por verify que não decide — fica só em pendingUndecided
+      expect(v.data.pendingResolved).toBeUndefined();
+      expect(v.data.pendingUndecided).toEqual([{ id: table.pendingId, code: "table-name", cite: table.rule!.id, norms: expect.arrayContaining(["emag-3.9"]), observed: table.observed }]);
       expect(v.data.pendingUndecidedNote).toMatch(/^Nada foi decidido/);
       // controle: o pendingResolved violada segue devolvendo recordAsFinding com a mesma cláusula
       const c = await connect();

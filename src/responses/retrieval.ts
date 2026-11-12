@@ -896,6 +896,8 @@ export interface LookupInput {
   detail: "index" | "brief" | "full";
   project: (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => unknown;
   budget?: number;
+  /** 3.7.11 (teste à mão): campos uma vez por resposta, conforme as unidades da página (p. ex. forceNote), dentro do orçamento. */
+  noteFor?: (rules: KnowledgeRule[]) => Record<string, unknown>;
 }
 
 export function lookupResponse(input: LookupInput) {
@@ -904,6 +906,7 @@ export function lookupResponse(input: LookupInput) {
   const first = input.position === 0;
   const compose = (items: unknown[]) => {
     const end = input.position + items.length;
+    const note = input.noteFor ? input.noteFor(input.found.slice(input.position, end)) : {};
     const cursor = end < input.found.length ? encodeCursor(end, input.cursorKey) : null;
     const messages = Object.fromEntries([...used].map((code) => [code, MESSAGES[code]]));
     const next: NextStep[] = [];
@@ -919,6 +922,7 @@ export function lookupResponse(input: LookupInput) {
       requested: input.requested.length,
       missing: input.missing,
       detail: input.detail,
+      ...note,
       results: items,
       page: {
         returned: items.length,

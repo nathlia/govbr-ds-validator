@@ -230,3 +230,79 @@ describe.skipIf(!CORPUS)("MED 4 — 1º scan de A, A2, B: os blocos do pai conti
     }, 300_000);
   }
 });
+
+// 3.7.11 (teste à mão do coordenador, B-22/A-05): verify sem decisão numa pendência de fato já medido com cláusula que obriga.
+describe("teste à mão — fato medido pelo scan + verify que não decide: a pendência não fecha e a resposta diz o que decidir", () => {
+  const finding = (locator: string, rule: Record<string, unknown>) => ({
+    id: "H-1", rule, element: { locator, page: `${base}/tabela` },
+    evidence: { observed: "tabela sem caption, aria-label, aria-labelledby ou title", expected: "caption" },
+    severity: "serious", nature: "semantic", mode: "display", pathway: "heuristic",
+  });
+  it("evaluation: nem pendingResolved nem keep-uncertain/rule: null; judge-fact com o observed e o cite; segue aberta e fecha por pendingResolved", async () => {
+    const { client, call } = await connect();
+    try {
+      const s = await call("scan_page", { url: `${base}/tabela`, maxChars: 100000 });
+      const t = itemsOf(s.data).find((i) => i.code === "table-name")!;
+      const cite = t.rule!.id;
+      const v = await call("verify_finding", { scanId: s.data.scanId, finding: finding(t.examples![0], { id: cite, source: "govbr-ds-kb", description: "caption" }) });
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.pendingResolved ?? []).not.toContain(t.pendingId);
+      expect(v.data.pendingUndecided).toEqual([{ id: t.pendingId, code: "table-name", cite, norms: expect.arrayContaining(["wcag-1.3.1"]), observed: t.observed }]);
+      expect(v.data.pendingUndecidedNote).toMatch(/continuam abertas/);
+      expect(v.data.pendingUndecidedNote).not.toMatch(/fecharam/);
+      expect(v.data.actions).toHaveLength(1);
+      expect(v.data.actions[0]).toMatchObject({ action: "judge-fact", tool: null });
+      expect(v.data.actions[0].what).toContain(t.observed!);
+      expect(v.data.actions[0].what).toContain(cite);
+      expect(v.data.actions[0].what).not.toMatch(/rule: null|é (uma )?viola|confirm/);
+      expect(v.data.observation.message).toMatch(/^Este verify não mediu o fato/);
+      expect(v.data.observation.message).toContain(t.observed!);
+      expect(v.text.length).toBeLessThanOrEqual(8000);
+      // segue aberta no scan seguinte; pendingResolved violada fecha e devolve a mesma cláusula
+      const again = await call("scan_page", { url: `${base}/tabela`, maxChars: 100000 });
+      expect(itemsOf(again.data).find((i) => i.code === "table-name")?.pendingId).toBe(t.pendingId);
+      const d = await call("scan_page", { url: `${base}/tabela`, maxChars: 100000, pendingResolved: [{ id: t.pendingId, status: "violada" }] });
+      expect(d.data.pendingResolution.recordAsFinding[0]).toMatchObject({ id: t.pendingId, cite });
+    } finally { await client.close(); resetKnowledgeLock(); }
+  }, 120_000);
+
+  it("controles: sem pendência medida o keep-uncertain continua; knowledge-free não tem pendência de fato medido (só axe) e não muda", async () => {
+    const { client, call } = await connect();
+    try {
+      // a mesma cláusula sem predicado, numa página sem pendência de fato medido: o keep-uncertain de sempre
+      const s = await call("scan_page", { url: `${base}/apoio`, maxChars: 100000 });
+      const v = await call("verify_finding", { scanId: s.data.scanId, finding: { ...finding("#u1", { id: "govbr-3.7.0-accessibility-global-29bd6bf04fc5", source: "govbr-ds-kb", description: "caption" }), element: { locator: "#u1", page: `${base}/apoio` } } });
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.actions.map((a: { action: string }) => a.action)).toContain("keep-uncertain");
+      expect(v.data.pendingUndecided).toBeUndefined();
+    } finally { await client.close(); resetKnowledgeLock(); }
+    const kf = await connect("knowledge-free");
+    try {
+      const s = await kf.call("scan_page", { url: `${base}/tabela`, maxChars: 100000 });
+      expect(itemsOf(s.data).some((i) => i.code === "table-name")).toBe(false);
+      const v = await kf.call("verify_finding", { scanId: s.data.scanId, finding: finding("table", { id: "wcag-1.3.1", source: "wcag", description: "tabela" }) });
+      expect(v.data.pendingUndecided).toBeUndefined();
+      expect(v.text).not.toMatch(/govbr-3\.7\.0-/);
+    } finally { await kf.client.close(); resetKnowledgeLock(); }
+  }, 120_000);
+});
+
+describe("teste à mão — forceNote também no lote por ids, uma vez por resposta", () => {
+  it("lote com unidade de especificação leva forceNote no topo (não por item), ≤ 8.000; lote só normativo não", async () => {
+    const specs = getKnowledgeBase().rules.filter((r) => isSpecification(r) && !r.legacy).slice(0, 8).map((r) => r.id);
+    const { client, call } = await connect();
+    try {
+      for (const detail of [undefined, "index", "full"] as const) {
+        const r = await call("get_ds_rules", { ids: specs, ...(detail ? { detail } : {}) });
+        expect(r.isError).toBe(false);
+        expect(typeof r.data.forceNote, String(detail)).toBe("string");
+        expect((r.text.match(/"forceNote"/g) ?? []).length).toBe(1);
+        expect(r.text.length).toBeLessThanOrEqual(8000);
+        const one = await call("get_ds_rules", { id: specs[0] });
+        expect(r.data.forceNote).toBe(one.data.forceNote);
+      }
+      const plain = await call("get_ds_rules", { ids: ["govbr-3.7.0-accessibility-global-29bd6bf04fc5"] });
+      expect(plain.data.forceNote).toBeUndefined();
+    } finally { await client.close(); resetKnowledgeLock(); }
+  }, 60_000);
+});

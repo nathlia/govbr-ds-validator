@@ -153,6 +153,11 @@ export interface PendingEntry {
   stateChecks?: string[];
   /** 3.7.11 (conserto E): o scan do estado aberto que mediu os elementos desta O-NN e os achados dele nesses elementos. */
   measuredIn?: { scanId: string; findings: string[] };
+  /**
+   * 3.7.11 (teste à mão, B-22/A-05): o fato desta pendência já foi medido pelo scan (o `observed` dela) e a cláusula obriga
+   * ou proíbe — falta só a decisão. Um verify que não decide (unverifiable) não a fecha: ela volta em `undecided`.
+   */
+  measuredFact?: string;
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -415,6 +420,7 @@ export class ScanSession {
           ...(item.resolveRequires ? { requires: item.resolveRequires } : {}),
           ...(item.resolveByRead?.length ? { readIds: [...item.resolveByRead] } : {}),
           ...(item.stateByClick ? { stateByClick: true } : {}),
+          ...(item.measuredFact ? { measuredFact: item.observed ?? "" } : {}),
           status: "open",
         };
         this.pending.set(routeKey, entry);
@@ -684,8 +690,9 @@ export class ScanSession {
    * `partial` (mesmo pendingId, com os elementos que faltam). As demais pendências seguem como antes (qualquer verify
    * na rota com a norma fecha).
    */
-  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number; decision?: string | null }): { resolved: string[]; partial: PendingPartial[] } {
+  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number; decision?: string | null }): { resolved: string[]; partial: PendingPartial[]; undecided?: string[] } {
     const partial: PendingPartial[] = [];
+    const undecided: string[] = [];
     const route = routeKeyOf(finding.element.page);
     const cited = citedNorms(finding.rule);
     const resolved: string[] = [];
@@ -710,7 +717,14 @@ export class ScanSession {
         : here
           ? here.status === "open" ? [here] : []
           : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
+      // 3.7.11 (teste à mão, B-22/A-05): fato já medido + cláusula que obriga/proíbe — só um verify que DECIDE fecha; o que
+      // não decide devolve a pendência em `undecided` (continua aberta; a decisão é do agente).
+      const factUndecided = entry.measuredFact !== undefined && decision !== "confirmed" && decision !== "rejected" && decision !== "measured";
       for (const slot of targets) {
+        if (factUndecided) {
+          undecided.push(slotLabel(entry, slot.route));
+          continue;
+        }
         if (entry.elementBound) {
           slot.decided = [...new Set([...(slot.decided ?? []), finding.element.locator])];
           const remaining = slotRemaining(slot);
@@ -724,7 +738,7 @@ export class ScanSession {
         resolved.push(slotLabel(entry, slot.route));
       }
     }
-    return { resolved, partial };
+    return { resolved, partial, ...(undecided.length ? { undecided } : {}) };
   }
 
   /**
@@ -854,14 +868,14 @@ export class ScanSession {
    * 3.7.11 (auditoria A/A2, A-05): o que citar ao registrar uma pendência que um verify sem decisão fechou — o mesmo
    * `cite`/`norms` que o pendingResolved violada devolve em recordAsFinding.
    */
-  citeFor(labels: string[]): Array<{ id: string; code: string; cite: string | null; norms: string[] }> {
+  citeFor(labels: string[]): Array<{ id: string; code: string; cite: string | null; norms: string[]; observed?: string }> {
     const seen = new Set<string>();
     return labels.flatMap((l) => {
       const id = l.split("@")[0];
       const entry = this.byId.get(id);
       if (!entry || seen.has(id)) return [];
       seen.add(id);
-      return [{ id: l, code: entry.code, cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3) }];
+      return [{ id: l, code: entry.code, cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3), ...(entry.measuredFact ? { observed: entry.measuredFact } : {}) }];
     });
   }
 

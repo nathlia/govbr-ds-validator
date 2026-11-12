@@ -129,7 +129,12 @@ describe("3.6.1 item 1 — pendências com cláusula, id de sessão e repetiçã
           severity: "moderate", nature: "semantic", mode: "display", pathway: "heuristic",
         },
       });
-      expect(verify.data.pendingResolved).toContain(tableId);
+      // 3.7.11 (teste à mão, B-22/A-05): o fato desta pendência já foi medido pelo scan e a cláusula obriga — o verify sem
+      // predicado não a fecha (pendingUndecided, com o fato e a cláusula); fecha a decisão do agente (pendingResolved).
+      expect(verify.data.pendingResolved ?? []).not.toContain(tableId);
+      expect(verify.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(tableId);
+      const decidedScan = await call("scan_page", { url: `${base}/agenda/sobre`, checks: ["axe"], pendingResolved: [{ id: tableId, status: "violada" }] });
+      expect(decidedScan.data.pendingResolution.resolved).toContain(tableId);
       const third = await call("scan_page", { url: `${base}/agenda/sobre`, checks: ["axe"] });
       expect(JSON.stringify(third.data.sessionPending ?? {})).not.toContain(tableId);
 

@@ -404,6 +404,8 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
         cursorKey: key,
         detail,
         project,
+        // 3.7.11 (teste à mão): a nota de força da unidade de especificação, uma vez por resposta (a de um id só já a traz)
+        noteFor: (rules) => (rules.some((r) => isSpecification(r)) ? { forceNote: SPECIFICATION_FORCE_NOTE } : {}),
       }),
       ...(start.deprecation ? { deprecation: start.deprecation } : {}),
     });
