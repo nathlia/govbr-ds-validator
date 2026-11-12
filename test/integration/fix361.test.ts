@@ -328,12 +328,7 @@ describe("3.6.1 item 5 — contraste que o axe não decidiu vira pendência", ()
           severity: "serious", nature: "syntactic", mode: "display", pathway: "heuristic",
         },
       });
-      // 3.7.12 (auditoria da cadeia 3.7.11): o verify sem live não decide (unverifiable) — não fecha a pendência; ela volta
-      // em pendingUndecided e segue aberta
-      expect(v.data.verdict).toBe("unverifiable");
-      expect(v.data.pendingResolved).toBeUndefined();
-      expect(v.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(pid);
-      expect(v.text).not.toMatch(/govbr-3\.7\.0|emag-/);
+      expect(v.data.pendingResolved).toContain(pid);
     } finally {
       await kf.client.close();
     }

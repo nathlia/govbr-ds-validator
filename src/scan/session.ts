@@ -697,7 +697,7 @@ export class ScanSession {
    * `partial` (mesmo pendingId, com os elementos que faltam). As demais pendências seguem como antes (qualquer verify
    * na rota com a norma fecha).
    */
-  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number; decision?: string | null }): { resolved: string[]; partial: PendingPartial[]; undecided?: string[] } {
+  resolveByVerifyDetailed(finding: Finding, verificationId: string, verdict: string, measured?: { live: boolean; reached: boolean; actions: number; decision?: string | null; keepOpenUndecided?: boolean }): { resolved: string[]; partial: PendingPartial[]; undecided?: string[] } {
     const partial: PendingPartial[] = [];
     const undecided: string[] = [];
     const route = routeKeyOf(finding.element.page);
@@ -729,8 +729,11 @@ export class ScanSession {
       // 3.7.12 (auditoria da cadeia 3.7.11, A-10/U-12): um verify que não decidiu nada (unverifiable sem medida: sem predicado,
       // evidência incompleta, estado não reproduzido…) não fecha pendência NENHUMA, nem marca elemento como decidido — todas
       // voltam em `undecided`. O rejected (citação/aplicabilidade/evidência desmentida) segue como antes.
+      // 3.7.12 (revisão do coordenador): quem chama pode desligar isso (`keepOpenUndecided: false`) — o knowledge-free, que não
+      // tem pendingResolved, segue a 3.7.11 para a pendência sem fato medido, salvo recusa do payload. O padrão é manter aberta.
       const nonDeciding = decision !== "confirmed" && decision !== "rejected" && decision !== "measured";
-      const factUndecided = nonDeciding && (entry.measuredFact !== undefined || verdict === "unverifiable");
+      const strict = measured?.keepOpenUndecided ?? true;
+      const factUndecided = nonDeciding && (entry.measuredFact !== undefined || (verdict === "unverifiable" && strict));
       for (const slot of targets) {
         if (factUndecided) {
           undecided.push(slotLabel(entry, slot.route));

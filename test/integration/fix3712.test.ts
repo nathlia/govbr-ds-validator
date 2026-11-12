@@ -30,6 +30,7 @@ const PAGES: Record<string, string> = {
   "/alerta": upload("u2", '<p id="e2" role="alert">Arquivo recusado: tipo inválido.</p>', "e2"),
   "/botao": '<button type="button" id="sair" href="#"><p>Sair</p></button>',
   "/outra": "<p>Outra rota.</p>",
+  "/cor": '<div id="cor" class="br-card" style="color:#ff5733">texto</div><p id="nada">x</p>',
 };
 let http: Server;
 let base: string;
@@ -189,28 +190,76 @@ describe("3.7.12 (d) — o verify que decide segue fechando", () => {
   }, 180_000);
 });
 
-describe("3.7.12 (e) — knowledge-free", () => {
-  it("o mesmo comportamento sem nada da base: não fecha, conselho único, nenhum id nem texto da base", async () => {
+describe("3.7.12 (e) — knowledge-free (revisão do coordenador: sem pendingResolved, segue a 3.7.11 salvo recusa do payload)", () => {
+  const NOTE_3711_KF = "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências listadas fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, rejeite-o com o motivo.";
+  it("unverifiable sem predicado na pendência do upload: fecha como na 3.7.11, com um conselho só e nada da base", async () => {
     const { client, call } = await connect("knowledge-free");
     try {
-      for (const [path, locator] of [["/apoio", "#u1"], ["/alerta", "#u2"]] as const) {
-        const s = await call("scan_page", { url: `${base}${path}`, maxChars: 100000 });
-        const up = uploadOf(s.data);
-        const v = await call("verify_finding", { live: true, scanId: s.data.scanId, finding: finding("K1", `${base}${path}`, locator,
-          { id: "3.3.1", source: "wcag", description: "erro de entrada" }, "campo de arquivo") });
-        expect(v.isError, path).toBe(false);
-        expect(v.data.verdict, path).toBe("unverifiable");
-        expect(v.data.pendingResolved, path).toBeUndefined();
-        expect(v.data.pendingUndecided.map((x: { id: string }) => x.id), path).toContain(up.pendingId);
-        expect(v.data.pendingUndecidedNote, path).toMatch(/continuam abertas/);
-        expect(v.data.pendingUndecidedNote, path).not.toMatch(/pendingResolved/);
-        expectOneAdvice(v);
-        for (const a of v.data.actions as Step[]) expect(a.what, path).not.toMatch(/pendingResolved/);
-        expect(v.text, path).not.toMatch(/govbr-3\.7\.0-|emag-\d/);
-        expect(JSON.stringify(v.data.actions), path).not.toContain('"K1"');
-        const again = await call("scan_page", { url: `${base}${path}`, maxChars: 100000 });
-        expect(uploadOf(again.data).resolved, path).toBeUndefined();
-      }
+      const s = await call("scan_page", { url: `${base}/apoio`, maxChars: 100000 });
+      const up = uploadOf(s.data);
+      const v = await call("verify_finding", { live: true, scanId: s.data.scanId, finding: finding("K1", `${base}/apoio`, "#u1",
+        { id: "3.3.2", source: "wcag", description: "Labels or Instructions" }, "apoio não diz que se pode arrastar") });
+      expect(v.isError).toBe(false);
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.reasons[0].code).toBe("no-predicate");
+      expect(v.data.pendingResolved).toContain(up.pendingId);
+      expect(v.data.pendingUndecided).toEqual([{ id: up.pendingId, code: "upload-paths", cite: expect.stringMatching(/^wcag-/), norms: expect.any(Array) }]);
+      expect(v.data.pendingUndecidedNote).toBe(NOTE_3711_KF);
+      // um conselho só: o mesmo da nota, sem keep-uncertain/"rule: null" e sem "limitations" (a pendência fechou)
+      expect(v.data.actions.map((a: Step) => a.action)).not.toContain("keep-uncertain");
+      expect(v.data.actions[0]).toMatchObject({ action: "judge-fact", tool: null });
+      expect(v.data.actions[0].what).toContain(v.data.pendingUndecided[0].cite);
+      for (const a of v.data.actions as Step[]) expect(a.what).not.toMatch(/rule: null|limitations|pendingResolved/);
+      expect(v.text).not.toMatch(/govbr-3\.7\.0-|emag-\d|limitations/);
+      expect(v.text.length).toBeLessThanOrEqual(8000);
+      const again = await call("scan_page", { url: `${base}/apoio`, maxChars: 100000 });
+      expect(uploadOf(again.data).resolved).toBeTruthy();
+    } finally { await client.close(); resetKnowledgeLock(); }
+  }, 180_000);
+
+  it("evidence-incomplete (recusa do payload): não fecha; o passo nomeia as condições; nada da base", async () => {
+    const { client, call } = await connect("knowledge-free");
+    try {
+      const s = await call("scan_page", { url: `${base}/alerta`, maxChars: 100000 });
+      const up = uploadOf(s.data);
+      const v = await call("verify_finding", { live: true, scanId: s.data.scanId, finding: finding("K2", `${base}/alerta`, "#u2",
+        { id: "3.3.1", source: "wcag", description: "erro de entrada" }, "erro exibido") });
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.reasons.map((r: { code: string }) => r.code)).toContain("evidence-incomplete");
+      expect(v.data.pendingResolved).toBeUndefined();
+      expect(v.data.pendingUndecided.map((x: { id: string }) => x.id)).toContain(up.pendingId);
+      expect(v.data.pendingUndecidedNote).toMatch(/continuam abertas/);
+      expect(v.data.pendingUndecidedNote).not.toMatch(/pendingResolved/);
+      expectOneAdvice(v);
+      for (const a of v.data.actions as Step[]) expect(a.what).not.toMatch(/pendingResolved/);
+      const fix = (v.data.actions as Step[]).find((a) => a.action === "fix-evidence-data")!;
+      expect(fix.what).toMatch(/input-error-item-identified/);
+      expect(JSON.stringify(v.data.actions)).not.toContain('"K2"');
+      expect(v.text).not.toMatch(/govbr-3\.7\.0-|emag-\d/);
+      const again = await call("scan_page", { url: `${base}/alerta`, maxChars: 100000 });
+      expect(uploadOf(again.data).resolved).toBeUndefined();
+    } finally { await client.close(); resetKnowledgeLock(); }
+  }, 180_000);
+});
+
+describe("3.7.12 conserto 3 — id de um achado guardado do scan", () => {
+  it("evidence-incomplete com o id de um achado do scan: request-detail com esse id, que o get_finding_details devolve", async () => {
+    const { client, call } = await connect();
+    try {
+      const s = await call("scan_page", { url: `${base}/cor`, checks: ["tokens"], view: "findings", detail: "summary", maxChars: 100000 });
+      const color = s.data.findings.find((f: { rule: { checker?: string }; element: { locator: string } }) => f.rule.checker === "ds-token-color" && f.element.locator.includes("cor"));
+      expect(color).toBeDefined();
+      // o mesmo id e a mesma norma noutro elemento, sem evidence.data: nada é herdado (o localizador difere) e faltam campos
+      const v = await call("verify_finding", { live: true, scanId: s.data.scanId, finding: {
+        id: color.id, rule: { ...color.rule, description: "cor fora dos tokens" }, element: { ...color.element, locator: "#nada" }, evidence: { observed: "#ff5733", expected: "token" },
+        severity: color.severity, nature: color.nature, mode: color.mode, pathway: color.pathway } });
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.reasons.map((r: { code: string }) => r.code)).toContain("evidence-incomplete");
+      const step0 = (v.data.actions as Step[]).find((a) => a.action === "request-detail")!;
+      expect(step0).toMatchObject({ tool: "get_finding_details", arguments: { ids: [color.id], detail: "full" } });
+      const d = await call("get_finding_details", { ids: [color.id], detail: "full" });
+      expect(d.data.missing ?? []).toEqual([]);
+      expect(d.data.findings[0].evidence.data).toBeDefined();
     } finally { await client.close(); resetKnowledgeLock(); }
   }, 180_000);
 });

@@ -749,6 +749,12 @@ function contextResponse(
   return { ...head, ...groups, ...page, ...tail };
 }
 
+/**
+ * 3.7.12 (revisão do coordenador): recusas do payload — o predicado não rodou (ou não pôde decidir) porque a entrada do agente
+ * estava errada. Um verify assim não fecha pendência em nenhum perfil; o agente corrige e reenvia.
+ */
+const PAYLOAD_REFUSAL_ISSUES: ReadonlySet<string> = new Set(["evidence-incomplete", "evidence-inconsistent", "invalid-locator", "locator-ambiguous"]);
+
 export function createServer(options: ServerOptions = {}): McpServer {
   const reportsDir = options.reportsDir ?? process.env.GOVBR_VALIDATOR_REPORTS_DIR ?? DEFAULT_REPORTS_DIR;
   const toolProfile = resolveToolProfile(options.toolProfile ?? process.env.GOVBR_VALIDATOR_TOOL_PROFILE);
@@ -2919,7 +2925,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
       const decision = verification.issue === "measured-not-decided" && verification.measured?.length
         ? "measured"
         : decided ? verification.verdict : null;
-      const { resolved: pendingResolved, partial: pendingPartial, undecided = [] } = session.resolveByVerifyDetailed(candidate, stored.verificationId, verification.verdict, { live: verification.binding?.live === true, reached, actions: recipeActions.length, decision });
+      // 3.7.12 (revisão do coordenador): recusa do payload — o predicado não rodou porque a entrada estava errada (faltam ou
+      // não batem os dados de evidence.data, seletor inválido, localizador que resolve elementos diferentes do alegado). Não
+      // fecha nada em nenhum perfil: o agente corrige e reenvia.
+      const refused = verification.verdict === "unverifiable" && PAYLOAD_REFUSAL_ISSUES.has(verification.issue ?? "");
+      // evaluation: o verify que não decide não fecha pendência nenhuma. knowledge-free (sem pendingResolved): a pendência sem
+      // fato medido fecha como na 3.7.11 (o elemento foi verificado), salvo recusa do payload.
+      const keepOpenUndecided = !knowledgeFree || refused;
+      const { resolved: pendingResolved, partial: pendingPartial, undecided = [] } = session.resolveByVerifyDetailed(candidate, stored.verificationId, verification.verdict, { live: verification.binding?.live === true, reached, actions: recipeActions.length, decision, keepOpenUndecided });
       // 3.7.11 (teste à mão, B-22/A-05): pendência cujo fato o scan já mediu, com cláusula que obriga/proíbe, e verify que não
       // decidiu — ela NÃO fecha (não entra em pendingResolved) e a resposta não manda "manter incerto com rule: null": diz o
       // fato medido pelo scan, a norma a citar, e que a decisão é do agente (registrar citando-a ou recusar com o motivo).
@@ -2965,6 +2978,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
             `Nada foi decidido e a pendência segue aberta (${undecidedItems.map((u) => `${u.id} ${u.code}`).join("; ")}). Meça o que ela pede (measure) e decida; fecha por ${closeBy}.`), ...kept].slice(0, 3) as typeof envelope.actions;
         }
       }
+      // 3.7.12 (revisão do coordenador): knowledge-free, pendência sem fato medido fechada por um verify que não decidiu (como
+      // na 3.7.11). O conselho é um só, o mesmo da nota: nada foi decidido, a decisão é do agente com a norma de cite — sem
+      // keep-uncertain/"rule: null" ao lado, e sem "feche em limitations" (ela já fechou).
+      const closedUndecided = knowledgeFree && !undecidedItems.length && pendingResolved.length && verification.verdict === "unverifiable" && !decided && decision !== "measured"
+        ? session.citeFor(pendingResolved).map(({ observed: _o, ...item }) => item)
+        : [];
+      if (closedUndecided.length) {
+        const cites = [...new Set(closedUndecided.map((u) => u.cite).filter((c): c is string => Boolean(c)))];
+        const kept = (envelope.actions ?? []).filter((a) => a.action !== "keep-uncertain" && !/rule: null/.test(a.what));
+        envelope.actions = [step("judge-fact",
+          `Nada foi decidido: ${closedUndecided.map((u) => u.id).join(", ")} fechou só por este verify ter verificado o elemento. A decisão é sua: se o fato viola a norma, registre o achado citando ${cites.join(", ") || "cite"}; se não, descarte-o com o motivo.`), ...kept].slice(0, 3) as typeof envelope.actions;
+      }
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
       // 3.0.0 (§11): campos de leitura ao lado do objeto verification, que continua inteiro.
@@ -2985,6 +3010,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
                 : knowledgeFree
                   ? "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable). observed é o que o scan leu nelas. A decisão é sua: se o fato viola a norma, registre o achado citando cite; se não, recuse-o com o motivo. Sem um verify que decida, feche em limitations (id + o fato)."
                   : "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable). observed é o que o scan leu nelas. A decisão é sua: registre o achado citando cite (ou declare pendingResolved violada, que devolve o mesmo), ou recuse com status \"não se aplica\" e o motivo." }
+          // knowledge-free: a nota da 3.7.11 (73913ec) para a pendência que fechou por verificação sem decisão
+          : closedUndecided.length
+            ? { pendingUndecided: closedUndecided,
+                pendingUndecidedNote: "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências listadas fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, rejeite-o com o motivo." }
             : {}),
         // 3.7.4 (D2): pendência de N elementos com só parte decidida — continua aberta (mesmo pendingId) com os que faltam.
         ...(pendingPartial.length
