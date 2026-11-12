@@ -34,6 +34,7 @@ const PAGES: Record<string, string> = {
   "/apoio": upload("u1", '<p id="h1">Apenas PDF até 5 MB.</p>', "h1"),
   "/alerta": upload("u2", '<p id="e2" role="alert">Arquivo recusado: tipo inválido.</p>', "e2"),
   "/sucesso": upload("u3", '<span id="s3" class="feedback success">Arquivo enviado com sucesso.</span>', "s3"),
+  "/erro-oculto": upload("u9", '<p id="h9">Até 3 MB.<span role="alert" hidden>Arquivo recusado.</span></p>', "h9"),
   "/viva-vazia": upload("u4", '<div id="h4">Formatos aceitos: PDF ou PNG. <span role="alert"></span></div>', "h4"),
   "/info": upload("u5", '<p id="h5">Até 2 MB.</p><span id="i5" class="feedback info">Dica: você pode arrastar.</span>', "h5 i5"),
   "/erro-ds": upload("u6", '<p id="h6" style="display:none">Apenas PDF.</p><span id="e6" class="feedback danger">O arquivo deve estar em PDF.</span>', "h6 e6"),
@@ -130,6 +131,7 @@ describe("MED 3 — apoio × erro exibido no campo de arquivo", () => {
   const expected: Record<string, { evaluation: string; "knowledge-free": string }> = {
     "/apoio": { evaluation: 'accept=".pdf" × apoio "Apenas PDF até 5 MB."', "knowledge-free": 'accept=".pdf" × apoio "Apenas PDF até 5 MB."' },
     "/alerta": { evaluation: 'accept=".pdf" × nenhum texto de apoio associado; erro exibido "Arquivo recusado: tipo inválido."', "knowledge-free": 'accept=".pdf" × nenhum texto de apoio associado; erro exibido "Arquivo recusado: tipo inválido."' },
+    "/erro-oculto": { evaluation: 'accept=".pdf" × apoio "Até 3 MB."', "knowledge-free": 'accept=".pdf" × apoio "Até 3 MB."' },
     "/sucesso": { evaluation: 'accept=".pdf" × apoio "Arquivo enviado com sucesso."', "knowledge-free": 'accept=".pdf" × apoio "Arquivo enviado com sucesso."' },
     "/viva-vazia": { evaluation: 'accept=".pdf" × apoio "Formatos aceitos: PDF ou PNG."', "knowledge-free": 'accept=".pdf" × apoio "Formatos aceitos: PDF ou PNG."' },
     "/info": { evaluation: 'accept=".pdf" × apoio "Até 2 MB. | Dica: você pode arrastar."', "knowledge-free": 'accept=".pdf" × apoio "Até 2 MB. | Dica: você pode arrastar."' },

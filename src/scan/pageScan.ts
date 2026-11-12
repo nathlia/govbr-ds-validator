@@ -233,7 +233,8 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
       const errorTarget = input.getAttribute("aria-errormessage");
       // revisão MED 3: só conta como erro o que tem TEXTO — região viva vazia dentro do apoio continua apoio — e, com a pista
       // do DS, só o feedback de erro (danger/error/invalid); `.feedback success`/`info` não é erro.
-      const filled = (el: Element) => (el.textContent ?? "").trim().length > 0;
+      // 2ª revisão (p24): erro com texto mas OCULTO não está exibido — só conta o texto visível (o mesmo `text` do apoio).
+      const filled = (el: Element) => text(el).length > 0;
       const ERROR_FEEDBACK = ".feedback.danger, .feedback.error, .feedback.invalid";
       const isError = (el: Element) => {
         if (filled(el) && (el.matches(ALERT) || (errorTarget !== null && el.id === errorTarget) || (ds && el.matches(ERROR_FEEDBACK)))) return true;
