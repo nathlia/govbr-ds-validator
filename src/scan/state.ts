@@ -87,6 +87,11 @@ export interface ArrivalCondition {
   observed: string | boolean | number | null;
   satisfied: boolean;
   detail?: string;
+  /**
+   * 3.7.11 (auditoria da cadeia B, conserto C; B-24): dialogOpen esperado e não observado — os contêineres VISÍVEIS com classe
+   * de modal (`modal`, `*-modal`) que não declaram papel de diálogo (nem estão dentro de um que declara). Fato da página.
+   */
+  undeclaredDialogs?: string[];
 }
 
 export interface ArrivalAttestation {
@@ -532,6 +537,54 @@ function countFailureDetail(failure: CountFailure): string {
   return `${what} (${failure.reason}): ${failure.error}`;
 }
 
+/**
+ * 3.7.11 (conserto C): contêineres visíveis com classe de modal (`modal` ou terminada em `-modal`, p. ex. `br-modal`) que não
+ * declaram papel de diálogo — nem eles, nem um ancestral, nem um descendente (dialog aberto, role=dialog/alertdialog,
+ * aria-modal=true). Até 3, com um seletor curto (id, ou caminho por nth-of-type até um ancestral com id). Só lê o DOM.
+ */
+export async function undeclaredDialogContainers(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const roots: Array<Document | ShadowRoot> = [document];
+    for (let i = 0; i < roots.length; i++) for (const el of Array.from(roots[i].querySelectorAll("*"))) if (el.shadowRoot) roots.push(el.shadowRoot);
+    const DECLARED = "dialog[open], [role='dialog'], [role='alertdialog'], [aria-modal='true']";
+    const modalClass = (el: Element) => Array.from(el.classList).some((c) => c === "modal" || /-modal$/.test(c));
+    const shown = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && Number(cs.opacity) > 0;
+    };
+    const esc = (s: string) => (typeof CSS !== "undefined" && CSS.escape ? CSS.escape(s) : s);
+    const selectorOf = (el: Element): string => {
+      const parts: string[] = [];
+      let node: Element | null = el;
+      for (let depth = 0; node && depth < 6; depth++) {
+        if (node.id) { parts.unshift(`#${esc(node.id)}`); break; }
+        const parent: Element | null = node.parentElement;
+        const tag = node.tagName.toLowerCase();
+        const same = parent ? Array.from(parent.children).filter((c) => c.tagName === node!.tagName) : [];
+        const cls = Array.from(node.classList).find((c) => c === "modal" || /-modal$/.test(c));
+        parts.unshift(`${tag}${cls && depth === 0 ? `.${esc(cls)}` : ""}${same.length > 1 ? `:nth-of-type(${same.indexOf(node) + 1})` : ""}`);
+        node = parent;
+      }
+      return parts.join(" > ");
+    };
+    const out: string[] = [];
+    for (const root of roots) {
+      for (const el of Array.from(root.querySelectorAll("[class]"))) {
+        if (!modalClass(el) || !shown(el)) continue;
+        if (el.closest(DECLARED) || el.querySelector(DECLARED)) continue;
+        // o contêiner mais externo com classe de modal (o filho .modal-x de um .br-modal não conta duas vezes)
+        let up = el.parentElement;
+        while (up && !modalClass(up)) up = up.parentElement;
+        if (up) continue;
+        out.push(selectorOf(el));
+        if (out.length >= 3) return out;
+      }
+    }
+    return out;
+  }).catch(() => []);
+}
+
 /** Mede cada condição declarada no estado atual da página. */
 export async function evaluateArrival(page: Page, observed: ObservedState, arrival: Arrival | undefined): Promise<ArrivalAttestation> {
   if (!arrival || Object.keys(arrival).length === 0) return { status: "not-declared", conditions: [] };
@@ -542,7 +595,13 @@ export async function evaluateArrival(page: Page, observed: ObservedState, arriv
   }
   if (arrival.dialogOpen !== undefined) {
     const open = observed.dialogs.length > 0;
-    conditions.push({ condition: "dialogOpen", expected: arrival.dialogOpen, observed: open, satisfied: open === arrival.dialogOpen });
+    // 3.7.11 (conserto C): com dialogOpen:true não satisfeito, o que está aberto e não se declara diálogo é o fato a relatar
+    // (não um erro da receita): o contêiner visível com classe de modal sem role=dialog/alertdialog nem aria-modal.
+    const undeclared = arrival.dialogOpen === true && !open ? await undeclaredDialogContainers(page) : [];
+    conditions.push({
+      condition: "dialogOpen", expected: arrival.dialogOpen, observed: open, satisfied: open === arrival.dialogOpen,
+      ...(undeclared.length ? { detail: `nenhum diálogo declarado; visível e sem papel de diálogo (role=dialog/alertdialog, aria-modal): ${undeclared.join(", ")}`, undeclaredDialogs: undeclared } : {}),
+    });
   }
   if (arrival.errorVisible !== undefined) {
     const visible = observed.errors.length > 0;

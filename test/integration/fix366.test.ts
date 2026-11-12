@@ -285,7 +285,7 @@ describe("3.6.6 itens 2 e 5 — os acréscimos saem em degraus marcados; o alsoI
     expect(keptLabel, "rótulo extras:alsoIn-kept em algum teto").toBeGreaterThan(0);
     // o último recurso sem rótulo é exceção (o rótulo marca a saída nos demais tetos)
     expect(unlabeled, "tetos em que o rótulo saiu").toBeLessThan(cut / 4);
-  });
+  }, 90_000); // varredura de tetos: ~21 s sozinha (HEAD), passa de 30 s com a suíte inteira em paralelo
 });
 
 // ── 4. pendência só com id à vista; a lista nunca abaixo da nota curta ─────────────────────────────

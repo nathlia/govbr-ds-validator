@@ -329,6 +329,15 @@ const WEAK_FORCES: Record<string, string> = {
   especificacao: "especificação (descreve o componente; não obriga nem proíbe)",
 };
 
+/**
+ * 3.7.11 (conserto 3): a força de uma unidade de especificação, dita do mesmo jeito no verify e na leitura por id — ela não é
+ * norma de violação, e o desvio medido continua sendo um achado (sem norma: rule: null; instrução 11 do servidor).
+ */
+export const SPECIFICATION_FORCE_NOTE =
+  "Força 'especificacao': a unidade descreve como o componente é especificado; não é uma obrigação (não obriga nem proíbe). " +
+  "O desvio medido em relação a ela é um fato a relatar: pode ir como achado sem norma (rule: null), com a medida e esta " +
+  "unidade como a referência de que o elemento se desvia.";
+
 let emagOfClause: Map<string, string> | undefined;
 
 /** Cláusula literal da base → recomendação e-MAG a que pertence (pelas unidades literais servidas). */
@@ -393,18 +402,18 @@ export function citationForceWarning(finding: Finding) {
   // troque a norma… senão mantenha como recomendação não atendida") fez o agente tirar a norma (rule: null) ou descartar o
   // desvio medido e confirmado. Texto neutro, como o do icon-only-embedded: o desvio medido é um fato a relatar; a unidade é
   // a referência de que ele se desvia; a força dela é especificacao (descreve, não obriga). Os dados ficam iguais.
+  // 3.7.11 (auditoria A/A2, conserto 3; U-01): o texto diz a força da unidade e, alinhado à instrução (11) do servidor, que o
+  // fato medido pode ser relatado como achado sem norma (rule: null) — nunca "mantenha como recomendação, não como violação".
   if (rule.force === "especificacao") {
     return {
       citedId: rule.id,
       force: rule.force,
       modality,
-      warning:
-        "Força 'especificacao': a unidade descreve como o componente é especificado; não é uma obrigação. O desvio medido em " +
-        "relação a ela é um fato a relatar, com a medida; cite esta unidade como a referência de que o elemento se desvia.",
+      warning: SPECIFICATION_FORCE_NOTE,
       requiredNorms: required.slice(0, 4),
       next: required.length
-        ? "Relate o desvio citando esta unidade como referência. Se o mesmo fato também descumprir uma destas normas obrigatórias (leia a unidade antes), cite-a junto."
-        : "Relate o desvio citando esta unidade como referência, com a medida.",
+        ? "Relate o desvio como achado com a medida e esta unidade como referência (rule: null se nenhuma norma obrigatória se aplicar). Se o mesmo fato também descumprir uma destas normas obrigatórias (leia a unidade antes), cite-a como norma."
+        : "Relate o desvio como achado sem norma (rule: null), com a medida e esta unidade como referência; não o descarte por falta de norma.",
     };
   }
   return {

@@ -148,7 +148,7 @@ export function startupChecks(): Promise<void> {
   return startupCheck;
 }
 import { getGuidance } from "./data/guidance.js";
-import { capStateItems, notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
+import { capStateItems, kbRule, notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageClausesLine, usageInfoObservations, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
 import { STATES_PARTIAL_NOTE, ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
@@ -1927,8 +1927,29 @@ export function createServer(options: ServerOptions = {}): McpServer {
     };
   };
 
+  /** 3.7.11 (conserto C): a cláusula WAI-ARIA geral da base (role/states/properties durante o ciclo de vida) — obrigatória. */
+  const DIALOG_SEMANTICS_RULE = "govbr-3.7.0-accessibility-global-5817ddd685a6";
+
   /** Estado não alcançado: nada foi varrido; o próximo passo é reproduzir o estado. */
-  function unreachedResponse(url: string, result: { status: string; limitation: unknown; state: unknown }) {
+  function unreachedResponse(url: string, result: { status: string; limitation: unknown; state: unknown }, actions?: unknown[]) {
+    // 3.7.11 (auditoria da cadeia B, conserto C; B-24): dialogOpen:true falhou e há contêiner de modal visível sem papel de
+    // diálogo — a receita pode ter aberto o que queria; o que falta é a semântica. A resposta dá o fato medido (sem afirmar
+    // violação) e a receita para escanear esse estado com arrival.visible, em vez de mandar "corrigir a receita".
+    const st = result.state as { arrival?: { conditions?: Array<{ condition: string; satisfied: boolean; undeclaredDialogs?: string[] }> } } | undefined;
+    const undeclared = st?.arrival?.conditions?.find((c) => c.condition === "dialogOpen" && !c.satisfied && c.undeclaredDialogs?.length)?.undeclaredDialogs ?? [];
+    const dialogRule = knowledgeFree ? undefined : kbRule(DIALOG_SEMANTICS_RULE);
+    const dialogFact = undeclared.length
+      ? {
+          observation: {
+            kind: "dialog-semantics",
+            observed: `visível e sem papel de diálogo: ${undeclared.join(", ")} (sem role=dialog/alertdialog, sem aria-modal, nem dentro de um elemento que os declare)`,
+            fact: "A receita chegou a um contêiner de modal visível que não se declara diálogo: a tecnologia assistiva não o anuncia como diálogo.",
+            whyNotAFinding: "Medido, não afirmado: o oráculo não sabe se o contêiner é um diálogo; a decisão é sua.",
+            norms: knowledgeFree ? ["wcag-4.1.2", "wcag-1.3.1"] : [DIALOG_SEMANTICS_RULE, "wcag-4.1.2", "wcag-1.3.1"],
+            ...(dialogRule ? { rule: dialogRule } : {}),
+          },
+        }
+      : {};
     return ok({
       contract: CONTRACT,
       kind: "scan",
@@ -1937,8 +1958,14 @@ export function createServer(options: ServerOptions = {}): McpServer {
       scanId: null,
       stateFingerprint: null,
       limitation: result.limitation,
+      ...dialogFact,
       state: boundStrings(result.state),
-      next: [step("reproduce-state", "corrija actions/arrival (limitation.detail diz o que falhou) e repita o scan", "scan_page")],
+      next: undeclared.length
+        ? [
+            step("reproduce-state", "o que a receita abriu não se declara diálogo (observation): escaneie esse estado com arrival.visible e decida a semântica", "scan_page",
+              { url, ...(actions?.length ? { actions } : {}), arrival: { visible: undeclared[0] } }),
+          ]
+        : [step("reproduce-state", "corrija actions/arrival (limitation.detail diz o que falhou) e repita o scan", "scan_page")],
       absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE,
     });
   }
@@ -2043,7 +2070,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         );
         // 2.10.0: estado não alcançado não vira lote — sem scanId, sem findings, sem cobertura; zero
         // achados aqui seria lido como "sem defeito" num estado que ninguém viu.
-        if (result.status === "state-not-reached") return unreachedResponse(url, result);
+        if (result.status === "state-not-reached") return unreachedResponse(url, result, actions);
         const executedChecks = (checks ?? ["tokens", "structure", "axe", "page"]) as string[];
         const route = routeKeyOf(result.state.observed.url);
         const pageWide = !selectors?.length;
@@ -2150,6 +2177,11 @@ export function createServer(options: ServerOptions = {}): McpServer {
           : [];
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
         // na linha (a página do next começa por eles).
+        // 3.7.11 (auditoria da cadeia B, conserto E): as O-NN abertas nesta rota cujos elementos este scan mediu (estado aberto)
+        // apontam os achados deste scan nesses elementos — antes das pendências deste scan (não se liga a si mesmo).
+        const observedMeasured = hasNorms && first
+          ? session.linkObservedMeasured(route, scanId, findings.map((f) => ({ id: f.id, locator: f.element.locator, rule: f.rule.id })))
+          : {};
         const regularItems = hasNorms ? settleStateItems(route, withPendingIds(scanId, route, notJudged), executedChecks, scanId) : [];
         // 3.7.6 (item 3): observação que já traz norma obrigatória/proibitiva vira pendência `O-NN` (espaço próprio, depois
         // das de sempre), não só contagem em observations.byKind.
@@ -2167,32 +2199,22 @@ export function createServer(options: ServerOptions = {}): McpServer {
           observationStore.set(scanId, [...tagged, ...notJudgedObservations(regularItems, url, true), ...notJudgedObservations(observedItems, url, true)]);
         }
         const usageComponents = investigate ? [...new Set([...investigate.items.map((i) => i.component), ...(investigate.more?.components ?? [])])] : [];
-        const usageOpen = usageComponents.flatMap((component) => {
+        // 3.7.11 (auditoria da cadeia B, § 2, opção 1): as cláusulas de uso/juízo não são mais pendência (`L-NN`): nenhuma
+        // execução as leu, fechar custava ~17 mil caracteres e nenhuma spec depende delas. Os componentes desta página que as
+        // têm saem numa linha informativa (pageLevel.usageClauses), e as chamadas que as devolvem ficam no ledger, uma
+        // observação por componente, sem pendingId. Nada abre na sessão.
+        const usageHere = usageComponents.flatMap((component) => {
           const ids = usageClauseIds(component);
-          if (!ids.length) return [];
-          const entry = session.registerUsage(component, route, scanId, ids);
-          return entry.status === "open" ? [{ id: entry.id, component }] : [];
+          return ids.length ? [{ component, ids }] : [];
         });
         const ledger = observationStore.get(scanId);
-        const usageSession = session.open().filter((e) => e.usage);
-        const usageLedger = ledger && usageSession.length ? { scanId, cursor: ledger.length } : undefined;
-        if (ledger && usageLedger) {
-          // 3.7.8 (teste à mão da 3.7.7, H2): as desta rota primeiro (a linha usage-unread aponta para o início); as abertas só
-          // em outras rotas vêm depois, marcadas com a rota e o scan de origem (não são desta página).
-          const here = (e: (typeof usageSession)[number]) => (e.routes.includes(route) ? 0 : 1);
-          const ordered = [...usageSession].sort((x, y) => here(x) - here(y) || Number(x.id.slice(2)) - Number(y.id.slice(2)));
-          ledger.push(...usageLedgerObservations(ordered.map((e) => ({
-            id: e.id, component: e.usage!.component, calls: usageReadCalls(e.usage!.ids),
-            ...(here(e) ? { route: e.route, scanId: e.scans[0] } : {}),
-          })), url));
-        }
-        const usageItem = usageLedger ? usageUnreadItem(usageOpen, usageLedger) : undefined;
-        // Registradas depois das demais: os ids das pendências de sempre não mudam por causa desta.
-        const pageItems = [...regularItems, ...observedItems, ...(usageItem ? [usageItem] : [])];
+        const usageLedger = ledger && usageHere.length ? { scanId, cursor: ledger.length } : undefined;
+        if (ledger && usageLedger) ledger.push(...usageInfoObservations(usageHere.map((u) => ({ component: u.component, calls: usageReadCalls(u.ids) })), url));
+        const usageInfo = usageLedger ? usageClausesLine(usageHere.map((u) => u.component), usageLedger) : undefined;
+        const pageItems = [...regularItems, ...observedItems];
         const currentCodes = new Set<string>(pageItems.map((i) => i.code));
         const sessionPending = hasNorms && first
-          ? sessionPendingBlock(session.open(), new Set([...pageItems.map((i) => i.pendingId as string), ...usageOpen.map((u) => u.id)]), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts(),
-              usageLedger ? { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: usageLedger.cursor } } : undefined)
+          ? sessionPendingBlock(session.open(), new Set(pageItems.map((i) => i.pendingId as string)), (c) => session.textDelivered(c) || currentCodes.has(c), true, route, session.unregisteredCounts())
           : undefined;
         const units = first ? unitsBlock(route, result.stateFingerprint) : undefined;
         // 3.7.6 (item 1): os componentes desta página com linhas de especificação mensuráveis por parte, os desvios já
@@ -2221,6 +2243,9 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
           ...(states.incomplete.length ? { statesIncomplete: states.incomplete, statesIncompleteNote: "estado aberto escaneado com checks a menos que o scan que abriu a pendência: continua aberta; repita a receita com os checks que faltam (missing)." } : {}),
           ...(statesPartial.length ? { statesPartial, statesPartialNote: STATES_PARTIAL_NOTE } : {}),
+          ...(Object.keys(observedMeasured).length
+            ? { observedMeasured, observedMeasuredNote: "O-NN aberta por outro scan desta rota: estes achados deste scan estão nos elementos dela (medidos neste estado). Decida-os: verify_finding num achado que cita a norma da O-NN decide o elemento dela." }
+            : {}),
           checksRun: {
             ...checksRunFor(
               { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
@@ -2235,7 +2260,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
             // 3.5.0 (D-155 item 1, revisão Fable P8): o que foi medido no nível da página e o que está nela e
             // nenhum check julgou — pendências, nunca veredito. 3.6.1: com pendingId e a cláusula (força e texto).
             // 3.6.1 (revisão H1): o texto da cláusula só enquanto não foi entregue nesta sessão; depois, só o id.
-            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, capStateItems(pageItems, { scanId, cursorOf: (id) => { const k = regularItems.findIndex((i) => i.pendingId === id); return k < 0 ? undefined : result.observations.length + k; } }), Boolean(components?.length), (c) => !session.textDelivered(c)), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
+            ...(hasNorms && first ? { pageLevel: { ...pageLevelBlock(executedChecks, capStateItems(pageItems, { scanId, cursorOf: (id) => { const k = regularItems.findIndex((i) => i.pendingId === id); return k < 0 ? undefined : result.observations.length + k; } }), Boolean(components?.length), (c) => !session.textDelivered(c), usageInfo), full: { tool: "get_finding_details", arguments: { scanId, view: "observations", cursor: result.observations.length } } } } : {}),
           },
           ...(sessionPending ? { sessionPending } : {}),
           ...(revisited ? { revisited } : {}),
@@ -2302,7 +2327,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         pageScanCache,
         { knowledgeFree: true }
       );
-      if (result.status === "state-not-reached") return unreachedResponse(url, result);
+      if (result.status === "state-not-reached") return unreachedResponse(url, result, actions);
       const scanId = findingStore.putBatch("page", result.findings, {
         stateFingerprint: result.stateFingerprint,
         cacheHit: result.cacheHit,
@@ -2909,6 +2934,13 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(stateWarning ? { stateWarning } : {}),
         ...(interactionBlock ? { interaction: interactionBlock } : {}),
         ...(pendingResolved.length ? { pendingResolved } : {}),
+        // 3.7.11 (auditoria A/A2, A-05; conserto A): o verify que não decidiu (sem predicado, estado não reproduzido…) fecha
+        // a pendência por ter verificado o elemento — mas não decidiu nada. A resposta diz isso e devolve o que registrar,
+        // como o pendingResolved violada; quem decide é o agente.
+        ...(pendingResolved.length && verification.verdict === "unverifiable" && !decided && decision !== "measured"
+          ? { pendingUndecided: session.citeFor(pendingResolved),
+              pendingUndecidedNote: `Nada foi decidido: este verify não decidiu (unverifiable) e as pendências em pendingResolved fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a cláusula, registre o achado citando cite (o mesmo que pendingResolved violada); se não, rejeite-o com o motivo.` }
+          : {}),
         // 3.7.4 (D2): pendência de N elementos com só parte decidida — continua aberta (mesmo pendingId) com os que faltam.
         ...(pendingPartial.length
           ? { pendingPartial: pendingPartial.slice(0, 5).map((p) => ({

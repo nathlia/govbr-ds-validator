@@ -628,7 +628,7 @@ function pageLevelNormStep(r: Record<string, unknown>): Record<string, unknown> 
 /** 3.6.3 (revisão MEDIUM 2): pendências em códigos → só os ids (`P-NN`), contagem e continuação. */
 export function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown } } | undefined;
-  const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number; conditions?: Record<string, string>; endNote?: string } | undefined;
+  const pl = cr?.pageLevel as { notMeasured?: unknown[]; count?: number; next?: unknown; full?: unknown; ids?: unknown; lowSignal?: number; conditions?: Record<string, string>; uploads?: Record<string, string>; endNote?: string } | undefined;
   // Sem pendência com sinal nesta página (lista vazia, ou só as sem sinal, contadas): não há id a guardar — fica a contagem.
   if (pl && Array.isArray(pl.notMeasured) && pl.notMeasured.every((i) => typeof i === "object" && (i as { signal?: string }).signal === "low")) {
     return { ...r, checksRun: { ...cr, pageLevel: { count: pl.notMeasured.length + (pl.lowSignal ?? 0), next: pl.next ?? pl.full } } };
@@ -646,7 +646,7 @@ export function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unk
   }
   const located = ids.some((i) => /:(?:state-unscanned|upload-paths)/.test(i));
   // revisão 3.7.8 (MED 6): a condição exata do verify por id de O-NN fica também aqui.
-  return { ...r, checksRun: { ...cr, pageLevel: { ids, ...(located ? { idsNote: STATE_IDS_NOTE } : { count: pl.count ?? pl.notMeasured.length }), ...(pl.conditions ? { conditions: pl.conditions } : {}), ...(pl.endNote ? { endNote: pl.endNote } : {}), next: pl.next ?? pl.full } } };
+  return { ...r, checksRun: { ...cr, pageLevel: { ids, ...(located ? { idsNote: STATE_IDS_NOTE } : { count: pl.count ?? pl.notMeasured.length }), ...(pl.conditions ? { conditions: pl.conditions } : {}), ...(pl.uploads ? { uploads: pl.uploads } : {}), ...(pl.endNote ? { endNote: pl.endNote } : {}), next: pl.next ?? pl.full } } };
 }
 
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {

@@ -146,7 +146,8 @@ describe("3.7.11 R2/R4 — arrasto do campo de arquivo; o envio fica com o agent
         expect(u.measure).not.toContain(UPLOAD_SUBMIT_NOTE);
         const exe = [{ action: "upload", selector: "#arquivo", files: [{ name: "programa.exe", mimeType: "application/x-msdownload", size: 2048 }] }];
         const u2 = itemOf(await call("scan_page", { url, actions: exe, maxChars: 60000 }), "upload-paths")!;
-        expect(u2.observed).toMatch(/^upload de programa\.exe \(fora do accept\); accept="\.pdf"/);
+        // 3.7.11 (conserto 1): a restrição medida (accept) × apoio vem primeiro; o arquivo aplicado depois
+        expect(u2.observed).toMatch(/^accept="\.pdf" × apoio .*; upload de programa\.exe \(fora do accept\)$/);
         expect(u2.measure).toContain(UPLOAD_SUBMIT_NOTE);
         expect(u2).not.toHaveProperty("submitRecipe");
         expect(u2).not.toHaveProperty("fieldNow");
@@ -192,7 +193,10 @@ describe("3.7.11 R5 — aviso de força 'especificacao' neutro", () => {
     const text = `${w.warning} ${w.next}`;
     expect(text).toMatch(/não é uma obrigação/);
     expect(text).toMatch(/fato a relatar/);
-    expect(text).not.toMatch(/troque|recomendação não atendida|violação|rule: null/);
+    // 3.7.11 (auditoria A/A2, conserto 3; U-01): alinhado à instrução (11) do servidor, o texto diz que o fato pode ir como
+    // achado sem norma (rule: null), com a unidade como referência — nunca "troque" nem "recomendação não atendida".
+    expect(text).not.toMatch(/troque|recomendação não atendida|violação/);
+    expect(text).toMatch(/achado sem norma \(rule: null\)/);
   });
 });
 

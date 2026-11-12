@@ -4,6 +4,9 @@
  * continuação, ambiguidade, lacunas, orientação e erros. `match:"literal"` não passa por aqui: segue
  * o caminho da 2.16.1/2.17.1 byte a byte (server.ts).
  */
+import { antecedentOf } from "../data/antecedent.js";
+import { isSpecification } from "../data/knowledge.js";
+import { SPECIFICATION_FORCE_NOTE } from "../responses/verify.js";
 import {
   filterRules,
   getEvidence,
@@ -347,7 +350,8 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
       // 3.3.0 (B-15): id histórico diz que não é a norma servida e aponta a regra corrente (ou o WCAG do registro).
       return ok({ ...idResponse(rule, args.clauseCursor), citeAs: null, current: currentPointer(rule), absenceNote: ABSENCE_NOTE });
     }
-    return ok(idResponse(rule, args.clauseCursor));
+    // 3.7.11 (conserto 3; U-01): a leitura por id de uma unidade de especificação diz a força do mesmo jeito que o verify.
+    return ok(isSpecification(rule) ? { ...idResponse(rule, args.clauseCursor), forceNote: SPECIFICATION_FORCE_NOTE } : idResponse(rule, args.clauseCursor));
   }
 
   // ── lote por ids ──
@@ -371,12 +375,18 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     const key = cursorKey({ tool: "get_ds_rules", mode: "ids", ids: requested, detail, kv: kb.meta.knowledgeVersion });
     const start = startPosition(args, key);
     if (!start) return staleCursorError("get_ds_rules", initialArgs(args));
+    // 3.7.11 (auditoria A/A2, conserto 2; A-10): cláusula que COMEÇA por demonstrativo ("Esta funcionalidade…") leva a frase
+    // literal anterior da mesma seção, com o id dela — no lote ela chegava sem o referente (context-deferred).
+    const withAntecedent = <T extends object>(rule: KnowledgeRule, item: T): T => {
+      const antecedent = antecedentOf(rule, true);
+      return antecedent ? { ...item, antecedent } : item;
+    };
     const project =
       detail === "index"
-        ? (rule: KnowledgeRule, n: number) => ({ ...idsIndexItem(rule, n), kind: ruleKind(rule) })
+        ? (rule: KnowledgeRule, n: number) => withAntecedent(rule, { ...idsIndexItem(rule, n), kind: ruleKind(rule) })
         : detail === "full"
-          ? (rule: KnowledgeRule) => asImplementationProperty(rule, { kind: ruleKind(rule), ...(projections.full(rule) as Record<string, unknown>) })
-          : (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => lookupCard(rule, n, used);
+          ? (rule: KnowledgeRule) => withAntecedent(rule, asImplementationProperty(rule, { kind: ruleKind(rule), ...(projections.full(rule) as Record<string, unknown>) }))
+          : (rule: KnowledgeRule, n: number, used: Set<MessageCode>) => withAntecedent(rule, lookupCard(rule, n, used));
     return ok({
       ...lookupResponse({
         requested,

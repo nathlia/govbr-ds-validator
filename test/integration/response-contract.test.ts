@@ -342,17 +342,15 @@ describe("contrato — orçamento, continuação, ausência, erro", () => {
       const page = JSON.parse(text);
       expect(page.cursor).toBe(seen);
       seen += page.count;
-      usageObservations += (page.observations as Array<{ data?: { code?: string } }>).filter((o) => o.data?.code === "usage-unread").length;
+      usageObservations += (page.observations as Array<{ data?: { code?: string } }>).filter((o) => o.data?.code === "usage-clauses").length;
       args = page.next?.arguments;
     }
     // 3.5.0 (revisão, MED): depois das observações do scan vêm as pendências do pageLevel como observações not-judged.
     // 3.6.1: na forma curta as pendências sem sinal medido vêm só contadas (lowSignal).
     const pending = scan.checksRun.pageLevel?.count ?? (scan.checksRun.pageLevel?.notMeasured?.length ?? 0) + (scan.checksRun.pageLevel?.lowSignal ?? 0);
-    // 3.7.5 (revisão H2): a linha de leitura (usage-unread) é UMA pendência na página e uma observação por componente no
-    // ledger (as de leitura abertas na sessão).
-    const usageLine = (scan.checksRun.pageLevel?.notMeasured ?? []).some((i: unknown) => typeof i === "object" ? (i as { code?: string }).code === "usage-unread" : String(i).includes("usage-unread"))
-      || (scan.checksRun.pageLevel?.ids ?? []).some((i: string) => i.startsWith("L-"));
-    expect(seen).toBe(obs.total + pending - (usageLine ? 1 : 0) + usageObservations);
+    // 3.7.11 (auditoria B § 2): as cláusulas de uso não são pendência — uma linha informativa (pageLevel.usageClauses) e uma
+    // observação de leitura por componente no ledger, depois das pendências.
+    expect(seen).toBe(obs.total + pending + usageObservations);
   });
 
   it("S-09: zero achados nunca vêm sem a nota de ausência", async () => {

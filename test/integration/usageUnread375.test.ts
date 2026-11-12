@@ -76,89 +76,57 @@ describe("3.7.5 item 6 — usage-unread", () => {
     } finally { await client.close(); }
   }, 120_000);
 
-  it("abre uma pendência por componente do investigate, agregada numa linha; os ids no ledger; deduplica entre scans e rotas", async () => {
+  // 3.7.11 (auditoria da cadeia B, § 2, opção 1): as cláusulas de uso deixaram de ser pendência (L-NN). Os testes abaixo
+  // passam a conferir o contrato novo: uma linha informativa por scan, as chamadas no ledger, nada na sessão.
+  it("3.7.11: linha informativa com os componentes desta página e as chamadas no ledger; nada vira pendência nem volta noutra rota", async () => {
     const { client, call } = await connect();
     try {
       const a = await call("scan_page", { url: `${base}/a`, maxChars: 100000 });
       const inv: string[] = [...a.data.investigate.items.map((i: { component: string }) => i.component), ...(a.data.investigate.more?.components ?? [])];
       expect(inv).toEqual(expect.arrayContaining(["button", "tag"]));
       const expected = inv.filter((c) => usageClauseIds(c).length > 0);
-      const item = usageOf(a.data)!;
-      expect(item).toMatchObject({ code: "usage-unread", count: expected.length });
-      expect([...item.examples!].sort()).toEqual([...expected].sort());
-      // revisão M4: espaço de ids próprio (L-NN)
-      expect(item.pendingId).toMatch(/^L-\d+(?:(?:\.\.|,)L-\d+)*$/);
-      // a linha diz onde estão os ids: a observação de leitura do ledger
-      const m = /get_finding_details\{scanId:"([^"]+)",view:"observations",cursor:(\d+)\}/.exec(item.todo!)!;
-      expect(item.todo).toMatch(/^get_ds_rules\{ids,detail:"index"\} por componente/);
+      expect(usageOf(a.data)).toBeUndefined();
+      const line: string = a.data.checksRun.pageLevel.usageClauses;
+      for (const c of expected) expect(line).toContain(c);
+      const m = /get_finding_details\{scanId:"([^"]+)",view:"observations",cursor:(\d+)\}/.exec(line)!;
       expect(m[1]).toBe(a.data.scanId);
       const obs = await call("get_finding_details", { scanId: m[1], view: "observations", cursor: Number(m[2]) });
-      // revisão H2: uma observação por pendência de leitura, a partir do cursor
-      const reads = (obs.data.observations as Array<{ data: { code: string; pendingId: string; component: string; calls: Array<{ tool: string; arguments: { ids: string[] } }> } }>)
-        .filter((o) => o.data?.code === "usage-unread").map((o) => o.data);
+      const reads = (obs.data.observations as Array<{ data: { code: string; pendingId?: string; component: string; calls: Array<{ tool: string; arguments: { ids: string[] } }> } }>)
+        .filter((o) => o.data?.code === "usage-clauses").map((o) => o.data);
       expect(reads.length).toBe(expected.length);
       for (const c of expected) {
         const r = reads.find((x) => x.component === c)!;
+        expect(r.pendingId).toBeUndefined();
         expect(r.calls.every((x) => x.tool === "get_ds_rules" && x.arguments.ids.length <= 20 && (x.arguments as { detail?: string }).detail === "index")).toBe(true);
         expect(r.calls.flatMap((x) => x.arguments.ids)).toEqual(usageClauseIds(c));
       }
-      // é a última pendência da página (os ids das de sempre não mudam por causa dela)
-      const nm = a.data.checksRun.pageLevel.notMeasured as Item[];
-      expect(nm[nm.length - 1].code).toBe("usage-unread");
-      // mesmo estado de novo, e outra rota com o mesmo componente: mesmo id, nenhuma pendência nova
-      const again = await call("scan_page", { url: `${base}/a`, maxChars: 100000 });
-      expect(usageOf(again.data)!.pendingId).toBe(item.pendingId);
+      // outra rota: só os componentes dela; nada da /a no sessionPending
       const b = await call("scan_page", { url: `${base}/b`, maxChars: 100000 });
-      const ib = usageOf(b.data)!;
-      expect(ib.examples).toEqual(["button"]);
-      expect(ib.pendingId).toBe(reads.find((x) => x.component === "button")!.pendingId);
-      // tag (de /a) segue aberta noutra rota: aparece no sessionPending de /b, com o componente e onde ler
-      const sp = (b.data.sessionPending?.items ?? []).find((i: { code: string }) => i.code === "usage-unread");
-      expect(sp).toMatchObject({ components: expect.arrayContaining(["tag"]), next: { tool: "get_finding_details", arguments: { scanId: b.data.scanId, view: "observations" } } });
-      expect(sp.components).not.toContain("button");
+      expect(b.data.checksRun.pageLevel.usageClauses).toContain("button");
+      expect(b.data.checksRun.pageLevel.usageClauses).not.toContain("tag");
+      expect(JSON.stringify(b.data.sessionPending ?? {})).not.toMatch(/usage|L-\d/);
     } finally { await client.close(); }
   }, 120_000);
 
-  it("pendingResolved não fecha; ids lidos em parte não fecham; todos fecham (só aquele componente); a listagem também fecha", async () => {
+  it("3.7.11: não há L-NN — pendingResolved com L-01 é id desconhecido; ler as cláusulas não muda a linha (informativa)", async () => {
     const { client, call } = await connect();
     try {
       await call("scan_page", { url: `${base}/b`, maxChars: 100000 });
-      const first = await call("scan_page", { url: `${base}/b`, maxChars: 100000 });
-      const id = usageOf(first.data)!.pendingId!;
-      // declaração sem leitura: continua aberta, com o motivo
-      const declared = await call("scan_page", { url: `${base}/b`, maxChars: 100000, pendingResolved: [{ id, status: "conforme", reason: "li" }] });
-      expect(declared.data.pendingResolution).toMatchObject({ usageUnread: [`${id}:button`], usageUnreadNote: expect.stringContaining("não fecha por declaração") });
-      expect(declared.data.pendingResolution.resolved ?? []).not.toContain(id);
-      expect(usageOf(declared.data)!.pendingId).toBe(id);
-      // leitura por ids, faltando uma: ainda aberta
-      const ids = usageClauseIds("button");
-      expect(ids.length).toBeGreaterThan(1);
-      expect((await call("get_ds_rules", { ids: ids.slice(0, -1) })).isError).toBe(false);
-      expect(usageOf((await call("scan_page", { url: `${base}/b`, maxChars: 100000 })).data)).toBeDefined();
-      // a que faltava: fecha; o scan seguinte não traz mais a linha (só o button estava aberto)
-      expect((await call("get_ds_rules", { ids: ids.slice(-1) })).isError).toBe(false);
+      const declared = await call("scan_page", { url: `${base}/b`, maxChars: 100000, pendingResolved: [{ id: "L-01", status: "conforme", reason: "li" }] });
+      expect(declared.data.pendingResolution).toMatchObject({ unknown: ["L-01"] });
+      expect((await call("get_ds_rules", { ids: usageClauseIds("button") })).isError).toBe(false);
       const after = await call("scan_page", { url: `${base}/b`, maxChars: 100000 });
-      expect(usageOf(after.data)).toBeUndefined();
-      // e a rota /a (button já lido) abre só a do tag
-      const a = await call("scan_page", { url: `${base}/a`, maxChars: 100000 });
-      expect(usageOf(a.data)!.examples).not.toContain("button");
-      expect(usageOf(a.data)!.examples).toContain("tag");
-      // a listagem do componente pelo cursor também fecha
-      await readUsage(call, "tag");
-      expect(usageOf((await call("scan_page", { url: `${base}/a`, maxChars: 100000 })).data)?.examples ?? []).not.toContain("tag");
+      expect(after.data.checksRun.pageLevel.usageClauses).toContain("button");
     } finally { await client.close(); }
   }, 120_000);
 
-  it("teto: 8.000 caracteres respeitados e a pendência de leitura não some no piso de ids; knowledge-free não a tem", async () => {
+  it("teto: 8.000 caracteres respeitados; knowledge-free não tem a linha", async () => {
     const { client, call } = await connect();
     try {
       for (const max of [2000, 4000, 8000]) {
         const r = await call("scan_page", { url: `${base}/a`, maxChars: max });
         expect(r.text.length).toBeLessThanOrEqual(max);
-        if (r.isError) continue;
-        const pl = r.data.checksRun.pageLevel;
-        const shown = JSON.stringify(pl);
-        expect(shown.includes("usage-unread") || (pl.ids ?? []).some((x: string) => /\.\.|,/.test(x) || /^P-\d+$/.test(x))).toBe(true);
+        expect(r.text).not.toContain("usage-unread");
       }
     } finally { await client.close(); }
     resetKnowledgeLock();
@@ -166,13 +134,14 @@ describe("3.7.5 item 6 — usage-unread", () => {
     try {
       const r = await free.call("scan_page", { url: `${base}/a`, maxChars: 100000 });
       expect(r.text).not.toContain("usage-unread");
+      expect(r.text).not.toContain("usageClauses");
     } finally { await free.client.close(); resetKnowledgeLock(); }
   }, 120_000);
 });
 
 describe("3.7.5-pre.3 — get_ds_rules{ids, detail:\"index\"}: a frase da cláusula, a força e o componente", () => {
   const LONG = "govbr-3.7.0-accessibility-global-0e9cecc8b4d7";
-  it("forma, força, frase inteira (ou cortada com marca acima de 300); cartões sem detail iguais; fecha a pendência", async () => {
+  it("forma, força, frase inteira (ou cortada com marca acima de 300); cartões sem detail iguais; as chamadas da linha informativa rodam", async () => {
     const { client, call } = await connect();
     try {
       const ids = usageClauseIds("radio");
@@ -200,18 +169,17 @@ describe("3.7.5-pre.3 — get_ds_rules{ids, detail:\"index\"}: a frase da cláus
       expect(cards.data.results[0]).not.toHaveProperty("text");
       expect(cards.text.length).toBeGreaterThan(index.text.length * 2);
     } finally { await client.close(); }
-    // a leitura pelo índice fecha a pendência de leitura do componente
+    // 3.7.11: as chamadas da observação de leitura (linha informativa) rodam em detail:"index"
     const s = await connect();
     try {
       const first = await s.call("scan_page", { url: `${base}/b`, maxChars: 100000 });
-      expect(usageOf(first.data)!.examples).toEqual(["button"]);
-      const m = /cursor:(\d+)/.exec(usageOf(first.data)!.todo!)!;
+      const m = /cursor:(\d+)/.exec(first.data.checksRun.pageLevel.usageClauses)!;
       const obs = await s.call("get_finding_details", { scanId: first.data.scanId, view: "observations", cursor: Number(m[1]) });
+      expect(obs.data.observations[0].data.component).toBe("button");
       for (const x of obs.data.observations[0].data.calls) {
         expect(x.arguments.detail).toBe("index");
         expect((await s.call(x.tool, x.arguments)).isError).toBe(false);
       }
-      expect(usageOf((await s.call("scan_page", { url: `${base}/b`, maxChars: 100000 })).data)).toBeUndefined();
     } finally { await s.client.close(); }
   }, 120_000);
 });

@@ -16,7 +16,8 @@ import type { LabelSource } from "../checkers/formLabels.js";
 import { emagUnits } from "../data/normativeUnits.js";
 import type { ContrastIncompleteNode } from "../checkers/axe.js";
 import { createHash } from "node:crypto";
-import { filterRules, getKnowledgeBase, getRuleById } from "../data/knowledge.js";
+import { filterRules, getRuleById } from "../data/knowledge.js";
+import { antecedentOf } from "../data/antecedent.js";
 import { USAGE_SUBCATEGORY } from "../tools/usageClauses.js";
 import type { DisclosureGroup } from "../evidence/disclosures.js";
 import { BUTTON_LABEL_EXCEPTION, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
@@ -91,6 +92,13 @@ export interface NotJudgedItem {
   condition?: string;
   /** 3.7.8 (N5): estado sem chegada verificável (sem alvo nem aria-expanded): fecha pelo scan que clicou no controle. */
   stateByClick?: true;
+  /** 3.7.11 (conserto A): o fato já foi medido por inteiro e a cláusula obriga/proíbe — falta só decidir. Nunca sai numa resposta. */
+  measuredFact?: true;
+  /**
+   * 3.7.11 (conserto 1): na upload-paths, a restrição medida do campo × apoio exibido (× erro exibido). Sai no mapa `uploads` do
+   * bloco (por pendingId), que sobrevive a toda compactação das pendências; não se repete no item.
+   */
+  uploadFacts?: string;
 }
 
 export interface NotJudgedInput {
@@ -163,6 +171,24 @@ export const ELEMENT_PENDING = {
 /** 3.6.5: a cláusula obrigatória que a pendência cita (a mesma de `rule` nos itens), para quem não tem o item. */
 export function elementPendingRule(code: keyof typeof ELEMENT_PENDING): NotJudgedItem["rule"] {
   return emagRule(ELEMENT_PENDING[code].emag);
+}
+
+/**
+ * 3.7.11 (auditoria da cadeia B § 3, conserto A; B-22, A-05): pendência cujo fato o oráculo JÁ mediu por inteiro (a tabela
+ * sem caption, aria-label, aria-labelledby e title; o campo cujo nome vem só do title/placeholder) e cuja cláusula citada
+ * obriga ou proíbe. O texto dizia "nenhum check julgou… como medir em data.measure" e o agente tratava como medição por
+ * fazer (e declarava). Agora diz que a medida está feita e que falta só decidir: registrar o achado ou rejeitá-lo com motivo.
+ * O oráculo continua sem afirmar a violação (não sabe, p. ex., se a tabela é de dados).
+ */
+export const MEASURED_TODO = "medido, só decidir: registre o achado ou recuse-o com reason";
+export const MEASURED_MEASURE =
+  "nada a medir: o fato já foi medido (observed). Falta só decidir: pendingResolved {id, status:\"violada\"} (devolve recordAsFinding com a cláusula a citar) ou {status:\"não se aplica\", reason} com o motivo";
+export const MEASURED_WHY =
+  "Medido, não afirmado: a medida está feita (data.observed). Falta só decidir: registre o achado (pendingResolved violada devolve recordAsFinding com a cláusula) ou rejeite-o com o motivo (não se aplica + reason).";
+
+function measuredFact(item: NotJudgedItem, observed: string): NotJudgedItem {
+  if (!item.rule || !OBSERVED_PENDING_FORCES.has(item.rule.force)) return item;
+  return { ...item, observed, todo: MEASURED_TODO, measure: MEASURED_MEASURE, measuredFact: true };
 }
 
 /** Norma + cláusula de uma pendência (a cláusula só quando a base a serve). */
@@ -383,39 +409,32 @@ export const UPLOAD_PATHS_MEASURE =
  * mensagem ou feedback. Viram itens "a medir contra o texto de apoio visível". Nenhum id fixo: o que a base tiver.
  */
 const UPLOAD_INFORM_TEXT = /\binform|mensage|feedback/i;
-let uploadInform: Array<{ id: string; text: string; section?: string; before?: string }> | undefined;
+type InformClause = { id: string; text: string; section?: string; before?: { id: string; text: string } };
+let uploadInform: InformClause[] | undefined;
 const plain = (t: string) => t.replace(/[*_]/g, "").replace(/\s+/g, " ").trim();
-/** Cláusula com demonstrativo (em qualquer posição: "Esta funcionalidade…", "…sobre este comportamento", "tal…"): o referente está na frase anterior. */
-const ANAPHORIC = /(^|[^\p{L}])(est[ae]s?|ess[ae]s?|isso|isto|nest[ae]s?|ness[ae]s?|dest[ae]s?|dess[ae]s?|tal|tais)(?![\p{L}])/iu;
 /** Texto da cláusula até onde cabe sem cortar antes do verbo modal; maior que isso, só id + seção (o texto pelo get_ds_rules). */
 const INFORM_TEXT_MAX = 220;
 
-/** 3.7.11 (R3, revisão MED): a linha inform — id, seção, a frase anterior quando há demonstrativo, e o texto inteiro. */
-function informLine(c: { id: string; text: string; section?: string; before?: string }): string {
-  const head = `${c.id} · ${c.section ? `[${c.section}] ` : ""}${c.before ? `(antes: "${c.before}") ` : ""}`;
+/**
+ * 3.7.11 (R3, revisão MED; auditoria A/A2, conserto 2): a linha inform — id, seção, a frase anterior COM O ID dela quando a
+ * cláusula tem demonstrativo (como a exceção do botão), e o texto inteiro.
+ */
+function informLine(c: InformClause): string {
+  const head = `${c.id} · ${c.section ? `[${c.section}] ` : ""}${c.before ? `(antes, ${c.before.id}: "${c.before.text}") ` : ""}`;
   return c.text.length <= INFORM_TEXT_MAX ? `${head}${c.text}` : `${head}(texto longo: get_ds_rules{ids:["${c.id}"]})`;
 }
 
 /**
  * 3.7.11 (R3): o referente da cláusula, do PRÓPRIO registro da base (literal): a seção (`source.section`) e, quando a
- * cláusula abre com anafórico, a frase imediatamente anterior na mesma seção do mesmo arquivo do corpus (pelo charRange).
+ * cláusula tem demonstrativo, a frase imediatamente anterior na mesma seção do mesmo arquivo do corpus (data/antecedent.ts).
  */
-function referentOf(r: { originalText?: string; source?: Record<string, unknown> }): { section?: string; before?: string } {
-  const src = (r.source ?? {}) as { section?: unknown; corpusFile?: unknown; charRange?: unknown };
-  const section = typeof src.section === "string" ? src.section : undefined;
-  if (!ANAPHORIC.test(plain(String(r.originalText ?? ""))) || !Array.isArray(src.charRange)) return section ? { section } : {};
-  const start = Number(src.charRange[0]);
-  let best: { end: number; text: string } | undefined;
-  for (const o of getKnowledgeBase().rules) {
-    const os = (o.source ?? {}) as { section?: unknown; corpusFile?: unknown; charRange?: unknown };
-    if (os.corpusFile !== src.corpusFile || os.section !== src.section || !Array.isArray(os.charRange)) continue;
-    const end = Number(os.charRange[1]);
-    if (end <= start && (!best || end > best.end)) best = { end, text: plain(String(o.originalText ?? "")) };
-  }
-  return { ...(section ? { section } : {}), ...(best ? { before: best.text.length <= INFORM_TEXT_MAX ? best.text : clip(best.text, INFORM_TEXT_MAX) } : {}) };
+function referentOf(r: { id?: string; originalText?: string; source?: Record<string, unknown> }): { section?: string; before?: { id: string; text: string } } {
+  const section = typeof (r.source as { section?: unknown } | undefined)?.section === "string" ? (r.source as { section: string }).section : undefined;
+  const before = antecedentOf(r);
+  return { ...(section ? { section } : {}), ...(before ? { before } : {}) };
 }
 
-export function uploadInformClauses(): Array<{ id: string; text: string; section?: string; before?: string }> {
+export function uploadInformClauses(): InformClause[] {
   if (uploadInform) return uploadInform;
   try {
     uploadInform = filterRules({ component: "upload", category: "component" })
@@ -444,10 +463,15 @@ type FileInputFact = {
   locator: string;
   accept: string | null;
   support?: string | null;
+  /** 3.7.11 (conserto 1): a mensagem de erro exibida junto do campo (role=alert, aria-errormessage, feedback), separada do apoio. */
+  error?: string | null;
   examined?: boolean;
   dropZone?: string | null;
   uploadedFiles?: Array<{ name: string; mimeType: string }>;
 };
+
+/** 3.7.11 (conserto 1): o apoio e a mensagem de erro, cada um até este tamanho, no fato da pendência de upload. */
+const UPLOAD_TEXT_MAX = 90;
 
 /** Arquivo sintético para a receita de arrasto (o conteúdo não importa: a receita prova o caminho, não o formato). */
 const DROP_SAMPLE = { name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 };
@@ -489,6 +513,10 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
   const accepts = [...new Set(inputs.map((i) => (i.accept ? `accept="${clip(i.accept, 40)}"` : "sem accept")))];
   // N3: o texto de apoio visível junto do campo (aria-describedby ou o texto logo depois do componente), medido no estado.
   const support = inputs.map((i) => i.support).find((t): t is string => typeof t === "string") ?? null;
+  // 3.7.11 (auditoria A/A2, conserto 1; U-12): a mensagem de erro exibida é fato próprio, não "apoio"; e a restrição medida do
+  // campo (accept) vem ao lado do apoio exibido, primeiro na linha — é o que a forma curta guarda e o que vai em uploads.
+  const error = inputs.map((i) => i.error).find((t): t is string => typeof t === "string") ?? null;
+  const uploadFacts = `${accepts.join("; ")} × ${support === SUPPORT_HIDDEN ? "apoio oculto neste estado (meça onde o campo aparece)" : support ? `apoio "${clip(support, UPLOAD_TEXT_MAX)}"` : "nenhum texto de apoio associado"}${error ? `; erro exibido "${clip(error, UPLOAD_TEXT_MAX)}"` : ""}`;
   const inform = knowledgeFree ? [] : uploadInformClauses();
   return {
     code: "upload-paths",
@@ -498,7 +526,8 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
     elementSet: setHash(inputs.map((i) => `${i.locator}=${i.accept ?? ""}`)),
     elementBound: true,
     boundLocators: inputs.map((i) => i.locator),
-    observed: `${applied ? `upload de ${clip(applied.file.name, 30)} (${relation}); ` : ""}${accepts.join("; ")}; apoio: ${support === SUPPORT_HIDDEN ? "oculto neste estado (meça onde o campo aparece)" : support ? `"${clip(support, 60)}"` : "nenhum texto de apoio associado"}`,
+    observed: `${uploadFacts}${applied ? `; upload de ${clip(applied.file.name, 30)} (${relation})` : ""}`,
+    uploadFacts,
     todo: UPLOAD_PATHS_TODO,
     ...(knowledgeFree ? { norms: ["wcag-3.3.1", "wcag-3.3.2"] } : (() => {
       const g = grounded("6.6", ["wcag-3.3.1", "emag-6.5", "wcag-3.3.2"]);
@@ -637,7 +666,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   const byKind = (kind: LabelSource["kind"]) => input.fields.filter((f) => f.source.kind === kind);
   const titleOnly = byKind("title-only");
   if (titleOnly.length) {
-    items.push({
+    items.push(measuredFact({
       code: "field-name-source",
       subject: "campos com nome só pelo title",
       count: titleOnly.length,
@@ -646,11 +675,11 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       todo: "rótulo associado (o axe aceita o title como nome)",
       ...grounded(ELEMENT_PENDING["field-name-source"].emag, [...ELEMENT_PENDING["field-name-source"].extra]),
       measure: "label/aria-labelledby/aria-label",
-    });
+    }, "medido: nome só do title, sem label/aria-labelledby/aria-label"));
   }
   const placeholderOnly = byKind("placeholder-only");
   if (placeholderOnly.length && !input.placeholderChecked) {
-    items.push({
+    items.push(measuredFact({
       code: "field-name-source",
       subject: "campos com nome só pelo placeholder",
       count: placeholderOnly.length,
@@ -659,11 +688,11 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       todo: "rótulo associado (structure não rodou inteiro; o axe aceita o placeholder)",
       ...grounded("6.2", ["wcag-3.3.2"]),
       measure: "label/aria-labelledby/aria-label",
-    });
+    }, "medido: nome só do placeholder, sem label/aria-labelledby/aria-label"));
   }
   const unnamed = byKind("unnamed");
   if (unnamed.length && !input.axeRan) {
-    items.push({
+    items.push(measuredFact({
       code: "field-name-source",
       subject: "campos sem nome acessível",
       count: unnamed.length,
@@ -672,11 +701,11 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       todo: "axe não rodou: campo sem nome não virou achado",
       ...grounded("6.2", ["wcag-4.1.2"]),
       measure: "nome acessível do campo",
-    });
+    }, "medido: sem nome acessível"));
   }
 
   if (input.unnamedTables.length) {
-    items.push({
+    items.push(measuredFact({
       code: "table-name",
       subject: "tabelas sem caption/aria-label/aria-labelledby/title",
       count: input.unnamedTables.length,
@@ -685,7 +714,7 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
       todo: "título da tabela (o axe não exige caption)",
       ...grounded(ELEMENT_PENDING["table-name"].emag, [...ELEMENT_PENDING["table-name"].extra]),
       measure: "<caption> 1º filho",
-    });
+    }, "medido: sem caption/aria-label/aria-labelledby/title"));
   }
 
   // Idioma e regiões: o axe confere presença/validade; a adequação ao conteúdo nenhum check julga.
@@ -786,6 +815,30 @@ export function usageLedgerObservations(open: Array<{ id: string; component: str
   }) as Observation);
 }
 
+/**
+ * 3.7.11 (auditoria da cadeia B, § 2, opção 1): as cláusulas de uso/juízo dos componentes deixam de ser pendência (`L-NN`).
+ * Nenhuma das 9 execuções medidas as leu, fechá-las custava ~17 mil caracteres e nenhuma spec depende delas. No lugar, UMA
+ * linha informativa (sem pendingId) diz que elas existem e onde estão as chamadas que as devolvem (a observação de leitura
+ * do ledger, uma por componente). Não abre nada na sessão e nada volta em scans seguintes.
+ */
+export const USAGE_INFO_CODE = "usage-clauses";
+const USAGE_INFO_COMPONENTS_MAX = 120;
+export function usageClausesLine(components: string[], ledger: UsageLedger): string | undefined {
+  if (!components.length) return undefined;
+  return `não é pendência: cláusulas de uso de ${clip(components.join(","), USAGE_INFO_COMPONENTS_MAX)}; as chamadas: get_finding_details{scanId:"${ledger.scanId}",view:"observations",cursor:${ledger.cursor}}`;
+}
+
+/** 3.7.11 (item 7): as observações de leitura no ledger — uma por componente desta página, sem pendingId. */
+export function usageInfoObservations(list: Array<{ component: string; calls: unknown[] }>, url: string): Observation[] {
+  return list.map((o) => ({
+    kind: USAGE_INFO_CODE,
+    element: { locator: "html", page: url },
+    note: `${USAGE_INFO_CODE}: ${o.component}`,
+    whyNotAFinding: "Informativo, não é pendência: estas chamadas devolvem as cláusulas de uso/juízo do componente; nada foi julgado.",
+    data: { code: USAGE_INFO_CODE, component: o.component, calls: o.calls },
+  }) as Observation);
+}
+
 /** O caminho de uma chave de rota (origem + caminho), para leitura. */
 function routePath(route: string): string {
   try {
@@ -805,7 +858,7 @@ function compactItem(item: PendingItem, withText: (code: string) => boolean = ()
     const { subject: _s, ...rest } = item;
     return rest;
   }
-  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, condition: _cond, ...rest } = item;
+  const { examples, subject: _subject, measured, norms, signal, measure, elementSet: _set, elementBound: _bound, boundLocators: _locs, ariaPairs: _pairs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, condition: _cond, measuredFact: _measured, uploadFacts: _upload, ...rest } = item;
   // 3.6.1: a cláusula em `rule` não se repete em `norms` (fica o resto: e-MAG, WCAG).
   const others = norms && rest.rule ? norms.filter((n) => n !== rest.rule!.id) : norms;
   // Pendência sem sinal medido (idioma, regiões): a cláusula vai só com id e força; `measure` fica no ledger.
@@ -838,6 +891,15 @@ export function pageLevelMeasured(checks: string[], componentsRestricted = false
   return out;
 }
 
+/**
+ * 3.7.11 (conserto 1): por pendingId da upload-paths, a restrição medida do campo × apoio exibido (× erro exibido) — fato da
+ * página nos dois perfis. Como `conditions`, sobrevive a toda forma das pendências (o essencial não some no teto).
+ */
+export function uploadsOf(items: PendingItem[]): Record<string, string> | undefined {
+  const out = Object.fromEntries(items.filter((i) => i.code === "upload-paths" && i.uploadFacts && i.pendingId).map((i) => [i.pendingId as string, i.uploadFacts as string]));
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** 3.5.0 (revisão, MED): os itens inteiros paginam como observações `not-judged` (nunca achado). */
 export function notJudgedObservations(items: NotJudgedItem[], url: string, short = false): Observation[] {
   return items.map((item) => ({
@@ -846,10 +908,13 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string, short
     note: `${item.code}: ${item.observed ?? item.subject}${item.count !== undefined ? ` (${item.count})` : ""}`,
     // 3.7.8 (H1): no perfil com a base (short), a tarefa e a medida ficam só em data (todo, measure) — repetidas aqui, a
     // página do `next` da forma compacta não cabia todas as pendências que a forma lista. O knowledge-free fica como era.
-    whyNotAFinding: short
+    // 3.7.11 (conserto A): fato já medido com cláusula que obriga/proíbe — a medida está feita, falta só decidir.
+    whyNotAFinding: item.measuredFact
+      ? MEASURED_WHY
+      : short
       ? "Pendência: nenhum check deste scan julgou — a tarefa em data.todo, como medir em data.measure."
       : `Pendência: nenhum check deste scan julgou — ${item.todo}. Meça: ${item.measure}.`,
-    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, ...rest }) => rest)(item),
+    data: (({ elementSet: _set, boundLocators: _locs, resolveRequires: _req, resolveByRead: _read, idSpace: _space, stateByClick: _click, measuredFact: _measured, ...rest }) => rest)(item),
   }));
 }
 
@@ -857,13 +922,17 @@ export function notJudgedObservations(items: NotJudgedItem[], url: string, short
  * 3.5.0 (D-155 item 1; revisão Fable P8): `checksRun.pageLevel` — o que foi medido no nível da página e o
  * que está nela e nenhum check julgou (pendências, nunca veredito). Só encolhe como último recurso do teto.
  */
-export function pageLevelBlock(checks: string[], items: PendingItem[], componentsRestricted = false, withText: (code: string) => boolean = () => true) {
+export function pageLevelBlock(checks: string[], items: PendingItem[], componentsRestricted = false, withText: (code: string) => boolean = () => true, usageClauses?: string) {
   // revisão MED 6: por id de O-NN, a condição exata do verify — sobrevive a toda compactação (forma de ids inclusive).
   const conditions = Object.fromEntries(items.filter((i) => i.condition && i.pendingId).map((i) => [i.pendingId as string, i.condition as string]));
+  const uploads = uploadsOf(items);
   return {
     measured: pageLevelMeasured(checks, componentsRestricted),
     notMeasured: items.map((i) => compactItem(i, withText)),
+    // 3.7.11 (item 7): a linha informativa das cláusulas de uso (não é pendência; cede no degrau mínimo)
+    ...(usageClauses ? { usageClauses } : {}),
     ...(Object.keys(conditions).length ? { conditions } : {}),
+    ...(uploads ? { uploads } : {}),
     note: "notMeasured: pendências suas (nenhum check julgou; não é conformidade); cada pendingId volta até verify_finding ou pendingResolved; rule = a cláusula obrigatória.",
   };
 }
@@ -879,12 +948,14 @@ export function pageLevelBlock(checks: string[], items: PendingItem[], component
 export const KF_END_NOTE = "sem pendingResolved: feche em limitations (id + medida)";
 
 export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
+  const uploads = uploadsOf(items);
   // 3.7.3 A8: com pendências ARIA × nativo, a nota não atribui a medida só ao axe.
   const aria = items.some((i) => i.code.startsWith("aria-"));
   // 3.7.8 (paridade): estado recolhido e caminho do campo de arquivo não são medida do axe — a nota diz o que são.
   const procedural = items.some((i) => i.code === "state-unscanned" || i.code === "upload-paths");
   return {
     notMeasured: items.map((i) => compactItem(i)),
+    ...(uploads ? { uploads } : {}),
     // 3.7.11 (R6): este perfil não tem pendingResolved — como encerrar o que você mediu e julgou (fica em todas as formas)
     ...(items.length ? { endNote: KF_END_NOTE } : {}),
     note: procedural
@@ -973,7 +1044,7 @@ function shortTodo(todo: string): string {
  * regiões) só contadas. A cláusula inteira está em `full` (get_finding_details) e no scan seguinte (sessionPending)
  * enquanto não foi entregue.
  */
-export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown; conditions?: Record<string, string>; endNote?: string }) {
+export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string>; full?: unknown; conditions?: Record<string, string>; uploads?: Record<string, string>; endNote?: string; usageClauses?: string }) {
   let low = 0;
   const items: string[] = [];
   for (const i of block.notMeasured ?? []) {
@@ -989,8 +1060,10 @@ export function pageLevelShort(block: { notMeasured?: Array<PendingItem | string
   }
   return {
     notMeasured: items,
+    ...(block.usageClauses ? { usageClauses: block.usageClauses } : {}),
     ...(low ? { lowSignal: low } : {}),
     ...(block.conditions ? { conditions: block.conditions } : {}),
+    ...(block.uploads ? { uploads: block.uploads } : {}),
     // revisão MED: o endNote fica só na forma inteira (no aperto ele deslocava família)
     ...(block.full ? { full: block.full } : {}),
   };
@@ -1034,8 +1107,10 @@ export function conditionOf(task: string): string | null {
 export function pageLevelMinimal<T extends { notMeasured?: Array<unknown> }>(block: T): T | null {
   if (!block.notMeasured?.length || !block.notMeasured.every((i) => typeof i === "string")) return null;
   const next = (block.notMeasured as string[]).map(pendingLineMinimal);
-  if (next.every((l, i) => l === block.notMeasured![i])) return null;
-  return { ...block, notMeasured: next };
+  // 3.7.11 (item 7): a linha informativa das cláusulas de uso sai neste degrau (não é pendência)
+  const { usageClauses, ...rest } = block as T & { usageClauses?: string };
+  if (next.every((l, i) => l === block.notMeasured![i]) && !usageClauses) return null;
+  return { ...(rest as T), notMeasured: next };
 }
 
 /**
@@ -1092,7 +1167,7 @@ export function pageLevelNorm<T extends { notMeasured?: Array<unknown> }>(block:
 }
 
 /** Último recurso do teto: só os códigos das pendências (inteiras no ledger: get_finding_details(scanId)). */
-export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string>; endNote?: string }, scanId = "") {
+export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; full?: unknown; conditions?: Record<string, string>; uploads?: Record<string, string>; endNote?: string }, scanId = "") {
   const codes = (block.notMeasured ?? []).map((i) => {
     if (typeof i === "string") {
       // 3.7.9 (D1): estado recolhido e campo de arquivo guardam o código e o 1º seletor também aqui
@@ -1106,6 +1181,7 @@ export function pageLevelCodes(block: { measured?: string[]; notMeasured?: Array
     notMeasured: codes,
     count: codes.length,
     ...(block.conditions ? { conditions: block.conditions } : {}),
+    ...(block.uploads ? { uploads: block.uploads } : {}),
     ...(block.endNote ? { endNote: block.endNote } : {}),
     ...(block.full ? { next: block.full } : scanId ? { next: { tool: "get_finding_details", arguments: { scanId, view: "observations" } } } : {}),
   };

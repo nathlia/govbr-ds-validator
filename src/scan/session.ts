@@ -151,6 +151,8 @@ export interface PendingEntry {
   stateByClick?: boolean;
   /** 3.7.9 (D3): os checks do scan que abriu a pendência de estado — o scan que a fecha roda pelo menos estes. */
   stateChecks?: string[];
+  /** 3.7.11 (conserto E): o scan do estado aberto que mediu os elementos desta O-NN e os achados dele nesses elementos. */
+  measuredIn?: { scanId: string; findings: string[] };
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -824,6 +826,45 @@ export class ScanSession {
     return closed;
   }
 
+  /**
+   * 3.7.11 (auditoria da cadeia B, conserto E; B-15): a O-NN de conteúdo oculto pedia "abra e decida", mas, depois do scan
+   * do estado aberto, o agente tinha de casar à mão os achados desse scan com a O-NN. Para cada O-NN aberta nesta rota (de
+   * outro scan), os achados DESTE scan nos próprios elementos dela (localizador igual), os da norma dela primeiro. Fica na
+   * pendência (sessionPending) e volta na resposta deste scan. Não cria achado nem fecha nada.
+   */
+  linkObservedMeasured(route: string, scanId: string, findings: Array<{ id: string; locator: string; rule: string }>): Record<string, string[]> {
+    const byLocator = new Map<string, Array<{ id: string; rule: string }>>();
+    for (const f of findings) byLocator.set(f.locator, [...(byLocator.get(f.locator) ?? []), { id: f.id, rule: f.rule }]);
+    const out: Record<string, string[]> = {};
+    for (const entry of this.open()) {
+      if (!entry.readIds?.length) continue;
+      const slot = slotOf(entry, route);
+      if (!slot || slot.status !== "open" || slot.scans.includes(scanId)) continue;
+      const hits = slotRemaining(slot).flatMap((l) => (byLocator.get(l) ?? []).map((f) => ({ ...f, locator: l, own: entry.norms.includes(f.rule) })));
+      if (!hits.length) continue;
+      hits.sort((a, b) => Number(b.own) - Number(a.own));
+      const label = slotLabel(entry, route);
+      out[label] = hits.slice(0, 4).map((h) => `${h.id} ${clip(h.locator, 48)} (${h.rule.replace(/^govbr-[\d.]+-/, "")})`);
+      entry.measuredIn = { scanId, findings: hits.slice(0, 4).map((h) => h.id) };
+    }
+    return out;
+  }
+
+  /**
+   * 3.7.11 (auditoria A/A2, A-05): o que citar ao registrar uma pendência que um verify sem decisão fechou — o mesmo
+   * `cite`/`norms` que o pendingResolved violada devolve em recordAsFinding.
+   */
+  citeFor(labels: string[]): Array<{ id: string; code: string; cite: string | null; norms: string[] }> {
+    const seen = new Set<string>();
+    return labels.flatMap((l) => {
+      const id = l.split("@")[0];
+      const entry = this.byId.get(id);
+      if (!entry || seen.has(id)) return [];
+      seen.add(id);
+      return [{ id: l, code: entry.code, cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3) }];
+    });
+  }
+
   /** 3.6.3: as rotas ainda abertas das pendências citadas (rótulos `P-NN@/rota`). */
   stillOpen(labels: string[]): string[] {
     const ids = new Set(labels.map((l) => l.split("@")[0]));
@@ -1028,6 +1069,8 @@ export function sessionPendingBlock(
       ...(partial.length ? { openOn: Object.fromEntries(partial.map((e) => [e.id, openSlots(e).slice(0, 3).map((x) => shortRoute(x.route))])) } : {}),
       // 3.7.4 (D2): verificada em parte — os elementos que faltam decidir (até 3 por pendência).
       ...(halfDone.length ? { remaining: Object.fromEntries(halfDone.slice(0, 3)) } : {}),
+      // 3.7.11 (conserto E): a O-NN cujos elementos um scan do estado aberto já mediu aponta os achados desse scan
+      ...(entries.some((e) => e.measuredIn) ? { measuredIn: Object.fromEntries(entries.filter((e) => e.measuredIn).slice(0, 3).map((e) => [e.id, `${e.measuredIn!.scanId}: ${e.measuredIn!.findings.join(", ")}`])) } : {}),
       ...(rule ? { rule: withText && !delivered(code) ? { id: rule.id, force: rule.force, text: clip(rule.text, 100) } : { id: rule.id } } : { norms: entries[0].norms.slice(0, 2) }),
     };
   });

@@ -283,20 +283,17 @@ describe("3.7.8 H1/H2 — pendingId no ledger; leitura de outra rota marcada", (
       const pending = tail.filter((o) => o.kind === "not-judged" && (o.data as { code?: string }).code !== "usage-unread");
       expect(pending.length).toBeGreaterThan(0);
       for (const o of pending) expect(String(o.data?.pendingId)).toMatch(/^[PO]-\d+$/);
-      // H2: leitura aberta só na outra rota → marcada com a rota e o scan de origem, depois das desta rota
-      const usage = tail.filter((o) => (o.data as { code?: string }).code === "usage-unread");
+      // 3.7.11 (auditoria B § 2): as cláusulas de uso não são mais pendência — as observações de leitura são só desta
+      // página (sem pendingId, sem as de outra rota)
+      const usage = tail.filter((o) => (o.data as { code?: string }).code === "usage-clauses");
       const direct = await scanPage({ url: `${base}/upload` }, new PageScanCache(1));
       if (direct.status !== "scanned") throw new Error("estado não alcançado");
       const here = new Set<string>(direct.coverage.componentsFound ?? []);
-      expect(usage.some((o) => !here.has(String(o.data?.component)))).toBe(true);
-      const others = usage.filter((o) => !here.has(String(o.data?.component)));
-      for (const o of others) {
-        expect(o.data?.otherRoute).toBe("/oculto");
-        expect(o.data?.fromScan).toBe(first.data.scanId);
-        expect(o.element.page).not.toContain("/upload");
+      for (const o of usage) {
+        expect(here.has(String(o.data?.component))).toBe(true);
+        expect(o.data?.pendingId).toBeUndefined();
+        expect(o.element.page).toContain("/upload");
       }
-      const firstOther = usage.findIndex((o) => o.data?.otherRoute);
-      if (firstOther >= 0) expect(usage.slice(firstOther).every((o) => o.data?.otherRoute)).toBe(true);
       // H1 (O-NN): a do 1º scan está no ledger dele, com a observação de origem marcada
       const firstLedger = await ledger(call, first.data.scanId);
       const oItems = firstLedger.filter((o) => (o.data as { code?: string }).code === "observed-required");

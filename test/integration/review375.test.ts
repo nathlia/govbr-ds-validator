@@ -49,47 +49,23 @@ async function connect() {
 type Item = { code: string; pendingId?: string; count?: number; examples?: string[]; todo?: string };
 const usageOf = (data: { checksRun?: { pageLevel?: { notMeasured?: Array<Item | string> } } }) =>
   (data.checksRun?.pageLevel?.notMeasured ?? []).find((i): i is Item => typeof i === "object" && i.code === "usage-unread");
-const openComponents = async (call: Awaited<ReturnType<typeof connect>>["call"], path: string) =>
-  usageOf((await call("scan_page", { url: `${base}${path}`, maxChars: 100000 })).data)?.examples ?? [];
 
-describe("revisão H1 — fecha só com ids entregues em itens de cláusula", () => {
-  it("lote paginado: os ids ecoados no next não contam; query que ecoa ids não conta; a especificação (anatomia/listas) não conta", async () => {
-    const { client, call } = await connect();
-    try {
-      expect(await openComponents(call, "/x")).toEqual(expect.arrayContaining(["radio", "input", "item", "breadcrumb"]));
-      // lote em cartões que não cabe numa resposta: volta só uma parte, e o next ecoa todos os ids
-      const ids = [...usageClauseIds("radio"), ...usageClauseIds("input"), ...usageClauseIds("item")];
-      const batch = await call("get_ds_rules", { ids });
-      const returned = (batch.data.results as Array<{ citeAs?: string; id?: string }>).map((r) => r.citeAs ?? r.id);
-      expect(returned.length).toBeLessThan(ids.length);
-      expect(batch.data.page.cursor).toBeTruthy();
-      const notReturned = ids.filter((id) => !returned.includes(id));
-      expect(notReturned.every((id) => batch.text.includes(id))).toBe(true);
-      // query com os ids (ecoados em ambiguity/next), nenhum resultado com eles
-      const breadcrumb = usageClauseIds("breadcrumb");
-      await call("get_ds_rules", { query: breadcrumb.join(" ") });
-      // a especificação do componente cita ids em listas de referência (anatomia, regras agrupadas)
-      const spec = await call("get_component_spec", { component: "breadcrumb" });
-      expect(breadcrumb.some((id) => spec.text.includes(id))).toBe(true);
-      const open = await openComponents(call, "/x");
-      const stillOpen = (c: string) => open.includes(c);
-      // o que não foi entregue segue aberto
-      for (const c of ["input", "item"]) if (usageClauseIds(c).some((id) => notReturned.includes(id))) expect(stillOpen(c), c).toBe(true);
-      expect(stillOpen("breadcrumb")).toBe(true);
-      // o componente cujos ids vieram todos nos resultados fechou
-      if (usageClauseIds("radio").every((id) => returned.includes(id))) expect(stillOpen("radio")).toBe(false);
-    } finally { await client.close(); }
-  }, 120_000);
-});
+// 3.7.11 (auditoria da cadeia B, § 2, opção 1): as cláusulas de uso deixaram de ser pendência (L-NN); H1 (fechar só com ids
+// entregues) e M3/M4 (entrada agregada, espaço L-NN) não se aplicam mais. Ficam: H2 (as observações de leitura cabem no teto) e
+// a numeração P-NN contígua, agora sem nenhuma entrada de leitura no sessionPending.
+const usageLine = (data: { checksRun?: { pageLevel?: { usageClauses?: string } } }) => data.checksRun?.pageLevel?.usageClauses;
 
-describe("revisão H2 — uma observação de leitura por pendência, sempre dentro do teto", () => {
+describe("revisão H2 — uma observação de leitura por componente, sempre dentro do teto (3.7.11: informativa)", () => {
   it("26 componentes: todas as observações de leitura recuperáveis com maxChars 8000, 2000 e 1500", async () => {
     const { client, call } = await connect();
     try {
       const s = await call("scan_page", { url: `${base}/all`, maxChars: 100000 });
-      const item = usageOf(s.data)!;
-      expect(item.count).toBeGreaterThanOrEqual(20);
-      const cursor0 = Number(/cursor:(\d+)/.exec(item.todo!)![1]);
+      expect(usageOf(s.data)).toBeUndefined();
+      const line = usageLine(s.data)!;
+      const cursor0 = Number(/cursor:(\d+)/.exec(line)![1]);
+      const inv: string[] = [...s.data.investigate.items.map((i: { component: string }) => i.component), ...(s.data.investigate.more?.components ?? [])];
+      const expected = inv.filter((c) => usageClauseIds(c).length > 0);
+      expect(expected.length).toBeGreaterThanOrEqual(20);
       for (const maxChars of [8000, 2000, 1500]) {
         let cursor: number | undefined = cursor0;
         const seen: string[] = [];
@@ -97,34 +73,28 @@ describe("revisão H2 — uma observação de leitura por pendência, sempre den
           const o = await call("get_finding_details", { scanId: s.data.scanId, view: "observations", cursor, maxChars });
           expect(o.isError, o.text.slice(0, 200)).toBe(false);
           expect(o.text.length).toBeLessThanOrEqual(maxChars);
-          for (const x of o.data.observations as Array<{ data?: { code?: string; pendingId?: string } }>) if (x.data?.code === "usage-unread") seen.push(x.data.pendingId!);
+          for (const x of o.data.observations as Array<{ data?: { code?: string; component?: string } }>) if (x.data?.code === "usage-clauses") seen.push(x.data.component!);
           cursor = o.data.nextCursor ?? undefined;
         }
-        expect(seen.length, String(maxChars)).toBe(item.count);
+        expect(seen.sort(), String(maxChars)).toEqual([...expected].sort());
       }
     } finally { await client.close(); }
   }, 180_000);
 });
 
-describe("revisão M3/M4 — uma entrada no sessionPending; ids L-NN não deslocam os P-NN", () => {
-  it("sessionPending agrega as de leitura de outras rotas numa entrada; count conta uma; P-NN contíguos", async () => {
+describe("revisão M3/M4 (3.7.11) — nenhuma entrada de leitura no sessionPending; P-NN contíguos", () => {
+  it("sessionPending sem leitura; count soma só as pendências; P-NN contíguos entre os scans", async () => {
     const { client, call } = await connect();
     try {
       const x = await call("scan_page", { url: `${base}/x`, maxChars: 100000 });
       const y = await call("scan_page", { url: `${base}/y`, maxChars: 100000 });
-      const usage = (y.data.sessionPending.items as Array<{ code: string; ids: string[]; components: string[]; next?: unknown }>).filter((i) => i.code === "usage-unread");
-      expect(usage).toHaveLength(1);
-      expect(usage[0].ids).toHaveLength(1);
-      expect(usage[0].ids[0]).toMatch(/^L-\d+(?:(?:\.\.|,)L-\d+)*$/);
-      expect(usage[0].components).toEqual(expect.arrayContaining(["radio", "input", "item", "breadcrumb"]));
-      expect(usage[0].next).toMatchObject({ tool: "get_finding_details", arguments: { scanId: y.data.scanId, view: "observations" } });
-      const regular = (y.data.sessionPending.items as Array<{ code: string; ids: string[] }>).filter((i) => i.code !== "usage-unread");
-      expect(y.data.sessionPending.count).toBe(regular.reduce((n, i) => n + i.ids.length + ((i as { more?: number }).more ?? 0), 0) + (y.data.sessionPending.lowSignal ?? 0) + 1);
-      // os ids de pendência P-NN seguem a numeração de sempre: contíguos entre os scans
+      expect(JSON.stringify(y.data.sessionPending ?? {})).not.toMatch(/usage|L-\d/);
+      const regular = ((y.data.sessionPending?.items ?? []) as Array<{ code: string; ids: string[] }>);
+      if (y.data.sessionPending) expect(y.data.sessionPending.count).toBe(regular.reduce((n, i) => n + i.ids.length + ((i as { more?: number }).more ?? 0), 0) + (y.data.sessionPending.lowSignal ?? 0));
       const pids = [x, y].flatMap((r) => (r.data.checksRun.pageLevel.notMeasured as Item[]).map((i) => i.pendingId!).filter((id) => id.startsWith("P-")));
       const nums = [...new Set(pids)].map((id) => Number(id.slice(2))).sort((a, b) => a - b);
       expect(nums).toEqual(nums.map((_, i) => i + 1));
-      expect((x.data.checksRun.pageLevel.notMeasured as Item[]).find((i) => i.code === "usage-unread")!.pendingId).toMatch(/^L-01/);
+      expect(usageLine(x.data)).toMatch(/^não é pendência: /);
     } finally { await client.close(); }
   }, 120_000);
 });

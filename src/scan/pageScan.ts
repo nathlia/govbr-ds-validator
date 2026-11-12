@@ -213,30 +213,47 @@ export async function revealRecipes(page: Page, locators: string[]): Promise<Rec
     return out;
   }, locators);
 }
-export async function fileInputSupport(page: Page, locators: string[], ds = true): Promise<Record<string, string>> {
+/**
+ * 3.7.11 (auditoria A/A2, conserto 1; A-10, U-12): o texto descrito pelo campo separado em APOIO e MENSAGEM DE ERRO. No estado
+ * de erro, a página esconde o apoio e aponta (aria-describedby) a mensagem de recusa; ela era lida como "apoio". É mensagem de
+ * erro o texto que é (ou contém) role=alert, aria-live=assertive, o alvo de aria-errormessage do campo, ou — só com a pista do
+ * DS — o feedback (`.feedback`). O resto é apoio. Só texto com caixa; o apoio que existe e não aparece = SUPPORT_HIDDEN.
+ */
+export async function fileInputSupport(page: Page, locators: string[], ds = true): Promise<Record<string, { support?: string; error?: string }>> {
   return page.evaluate(({ locators, HIDDEN, ds }: { locators: string[]; HIDDEN: string; ds: boolean }) => {
     const shown = (el: Element | null) => Boolean(el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");
     const text = (el: Element | null) => (el && shown(el) ? ((el as HTMLElement).innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim() : "");
-    const out: Record<string, string> = {};
+    const ALERT = "[role='alert'], [aria-live='assertive']";
+    const out: Record<string, { support?: string; error?: string }> = {};
     for (const locator of locators) {
       if (locator.includes(">>>")) continue;
       let input: Element | null = null;
       try { input = document.querySelector(locator); } catch { continue; }
       if (!input) continue;
-      const parts: string[] = [];
+      const errorTarget = input.getAttribute("aria-errormessage");
+      const isError = (el: Element) => el.matches(ALERT) || Boolean(el.querySelector(ALERT)) || (errorTarget !== null && el.id === errorTarget) ||
+        (ds && (el.matches(".feedback") || Boolean(el.querySelector(".feedback"))));
+      const support: string[] = [];
+      const error: string[] = [];
       // knowledge-free: sem a pista da classe do componente do DS, o pai do campo.
       const host = (ds ? input.closest(".br-upload") : null) ?? input.parentElement;
       const candidates = [
         ...(input.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)),
+        ...(errorTarget ? [document.getElementById(errorTarget)] : []),
         host?.nextElementSibling ?? null,
       ].filter((el): el is Element => el !== null && (el.textContent ?? "").trim().length > 0 && !["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA"].includes(el.tagName));
-      for (const el of candidates) {
+      const unique = [...new Set(candidates)];
+      for (const el of unique) {
         const t = text(el);
-        if (t && !parts.includes(t)) parts.push(t);
+        const list = isError(el) ? error : support;
+        if (t && !list.includes(t)) list.push(t);
       }
-      // o texto existe mas não aparece neste estado (aba inativa, região recolhida): diz isso, não "nenhum apoio".
-      if (parts.length) out[locator] = parts.join(" | ").slice(0, 200);
-      else if (candidates.length) out[locator] = HIDDEN;
+      const entry: { support?: string; error?: string } = {};
+      // o texto existe mas não aparece neste estado (aba inativa, região recolhida, apoio escondido no erro): diz isso.
+      if (support.length) entry.support = support.join(" | ").slice(0, 200);
+      else if (unique.some((el) => !isError(el))) entry.support = HIDDEN;
+      if (error.length) entry.error = error.join(" | ").slice(0, 200);
+      if (entry.support !== undefined || entry.error !== undefined) out[locator] = entry;
     }
     return out;
   }, { locators, HIDDEN: SUPPORT_HIDDEN, ds });
@@ -897,7 +914,8 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
       accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
-      support: supportOf[el.locator] ?? null,
+      support: supportOf[el.locator]?.support ?? null,
+      error: supportOf[el.locator]?.error ?? null,
     }));
     const notJudged = notJudgedFor({
       facts,
@@ -996,7 +1014,8 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
       ...(pathsOf[el.locator] ?? {}),
       locator: el.locator,
       accept: /\saccept\s*=\s*"([^"]*)"/i.exec(el.outerHTML.split(">")[0])?.[1]?.trim() || null,
-      support: supportOf[el.locator] ?? null,
+      support: supportOf[el.locator]?.support ?? null,
+      error: supportOf[el.locator]?.error ?? null,
     })), true, { url: request.url, actions: request.actions ?? [] });
     const axeScope = selectors.length ? selectors.join(", ") : undefined;
     const result = await runAxeScanOnPage(page, request.url, axeScope, { emag: false, bestPractice: "inline" });
