@@ -150,7 +150,7 @@ export function startupChecks(): Promise<void> {
 import { getGuidance } from "./data/guidance.js";
 import { capStateItems, notJudgedObservations, observedRequiredItems, observedSubjectOf, pageLevelBlock, pageLevelBlockKnowledgeFree, usageLedgerObservations, usageUnreadItem, type NotJudgedItem, type PendingItem } from "./scan/notJudged.js";
 import { deliveredRuleIds, usageClauseIds, usageReadCalls } from "./tools/usageClauses.js";
-import { ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
+import { STATES_PARTIAL_NOTE, ScanSession, UNITS_NOTE, routeKeyOf, routeLabel, routeTemplateOf, sessionPendingBlock, shortRoute, slotOf, slotRemaining } from "./scan/session.js";
 import { checklistPendingClauses, componentChecklist, investigateClauses, unmeasuredStrongCount } from "./tools/componentChecklist.js";
 import { reserveCandidates } from "./tools/clauseReserve.js";
 import { pageChecklist, pageInvestigateClauses } from "./tools/pageChecklist.js";
@@ -2142,6 +2142,12 @@ export function createServer(options: ServerOptions = {}): McpServer {
               (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), Object.keys(ranOnState))
           : { closed: [], incomplete: [] };
         const statesSeen = states.closed;
+        // 3.7.11 (leitura dev-3710-b § 7.1): com selectors o scan não lê os estados abertos e não fecha a pendência (regra
+        // de 3.7.10); diz quais continuam abertas e o que as fecha, em vez de calar (as de statesIncomplete já têm aviso).
+        const statesPartial = hasNorms && selectors?.length
+          ? session.statesLeftOpenByScope(route, (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), arrival?.expanded)
+              .filter((id) => !states.incomplete.some((i) => i.id === id))
+          : [];
         // 3.7.9 (D2): estado já visto aberto nesta rota nasce fechado; (D1) estados e campos de arquivo primeiro no ledger e
         // na linha (a página do next começa por eles).
         const regularItems = hasNorms ? settleStateItems(route, withPendingIds(scanId, route, notJudged), executedChecks, scanId) : [];
@@ -2214,6 +2220,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
           ...(pendingResolution ? { pendingResolution } : {}),
           ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
           ...(states.incomplete.length ? { statesIncomplete: states.incomplete, statesIncompleteNote: "estado aberto escaneado com checks a menos que o scan que abriu a pendência: continua aberta; repita a receita com os checks que faltam (missing)." } : {}),
+          ...(statesPartial.length ? { statesPartial, statesPartialNote: STATES_PARTIAL_NOTE } : {}),
           checksRun: {
             ...checksRunFor(
               { url, selectors, checks, tokenChecks, components, actions, ...(arrival ? { arrival } : {}) },
@@ -2320,6 +2327,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // 3.7.8 (paridade de perfil, N5): o estado aberto escaneado fecha a pendência state-unscanned, como no perfil completo.
       const statesSeen = session.resolveStatesSeen(route, result.disclosuresOpened ?? [], scanId,
         (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), ["axe"]).closed;
+      // 3.7.11 (paridade de perfil, leitura dev-3710-b § 7.1): o mesmo aviso do scan com selectors sobre os estados abertos.
+      const statesPartial = selectors?.length
+        ? session.statesLeftOpenByScope(route, (actions ?? []).flatMap((a) => (a.action === "click" ? [a.selector] : [])), arrival?.expanded)
+        : [];
       const pageItems = settleStateItems(route, withPendingIds(scanId, route, result.notJudged ?? []), ["axe"], scanId);
       // 3.7.3 A6: a continuação sugerida pelo teto recupera só as pendências do axe deste lote.
       // Não reutilizar observações dos scanners com conhecimento no perfil knowledge-free.
@@ -2341,6 +2352,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(result.cacheMissReason ? { cacheMissReason: result.cacheMissReason } : {}),
         coverage: boundStrings(result.coverage),
         ...(statesSeen.length ? { statesScanned: statesSeen } : {}),
+        ...(statesPartial.length ? { statesPartial, statesPartialNote: STATES_PARTIAL_NOTE } : {}),
         checksRun: {
           ...checksRunFor({ url, selectors, actions, ...(arrival ? { arrival } : {}) }, result.coverage, result.state.observed.viewport, true, undefined,
             pageItems.some((i) => i.code === "state-unscanned" && i.resolved === undefined)),

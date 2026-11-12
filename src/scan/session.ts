@@ -75,6 +75,13 @@ export type PendingResolution = { by: "verify_finding" | "pendingResolved" | "us
 export const STATE_CODE = "state-unscanned";
 
 /**
+ * 3.7.11 (leitura dev-3710-b § 7.1): o aviso do scan com `selectors` sobre as pendências state-unscanned que ele não fecha.
+ * Só procedimento (nenhum conhecimento do DS): o mesmo texto nos dois perfis.
+ */
+export const STATES_PARTIAL_NOTE =
+  "scan com selectors é parcial: não fecha pendência state-unscanned, que continua aberta; fecha o scan do estado sem selectors (a receita da pendência).";
+
+/**
  * 3.7.5 (item 6): pendência de LEITURA das cláusulas de uso/juízo de um componente do DS encontrado na página. Uma por
  * componente na sessão (todas as rotas); fecha só quando o servidor viu, nesta sessão, respostas que devolveram todas
  * essas cláusulas (ScanSession.noteRead); pendingResolved e verify_finding não a fecham. Não julga nada.
@@ -774,6 +781,23 @@ export class ScanSession {
       closed.push(slotLabel(entry, route));
     }
     return { closed, incomplete };
+  }
+
+  /**
+   * 3.7.11 (leitura dev-3710-b § 3(e), § 7.1): o scan com `selectors` não lê os estados abertos (a regra de 3.7.9/3.7.10
+   * continua: escopo parcial não fecha a pendência), mas não pode calar sobre ela. Devolve as pendências state-unscanned
+   * ainda abertas nesta rota que o aviso deve nomear: as do controle que a receita deste scan clicou (ou cuja chegada é o
+   * próprio controle expandido) — o estado em que o scan rodou, lido da receita, sem inspecionar a página; se a receita não
+   * aponta nenhuma, todas as abertas nesta rota (um scan noutra rota não roda no estado delas).
+   */
+  statesLeftOpenByScope(route: string, clicked: string[], expanded?: string): string[] {
+    const open = this.open().flatMap((entry) => {
+      if (entry.code !== STATE_CODE) return [];
+      const slot = slotOf(entry, route);
+      return slot && slot.status === "open" ? [{ entry, slot }] : [];
+    });
+    const here = open.filter(({ slot }) => slot.locators.some((l) => clicked.includes(l) || l === expanded));
+    return (here.length ? here : open).map(({ entry }) => slotLabel(entry, route));
   }
 
   /**

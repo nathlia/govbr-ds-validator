@@ -146,6 +146,21 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
         ]),
       ];
       const snapshot = (list: Array<[string, Element | null, string | null]>) => list.map(([name, node, pseudo]) => [name, read(node, pseudo)] as const);
+      /**
+       * Transições e animações CSS começam no valor antigo: leva cada uma (do elemento, dos descendentes e
+       * pseudo-elementos, do pai, do irmão e do rótulo) ao estado final antes de ler — o mesmo valor que a página
+       * mostra depois de `transition-duration + delay`, sem esperar o tempo passar (o elemento sem transição não
+       * custa nada). `getAnimations` assenta o estilo pendente antes de listar, então a transição que a troca de
+       * foco acabou de disparar já está na lista. Animação infinita não tem fim: fica como está.
+       */
+      const settle = (el: Element) => {
+        for (const [name, node, pseudo] of targets(el)) {
+          if (pseudo || !node) continue;
+          for (const animation of node.getAnimations?.({ subtree: name !== "parent" }) ?? []) {
+            try { animation.finish(); } catch { /* animação infinita: fica como está */ }
+          }
+        }
+      };
       const original = deepActive() as HTMLElement | null;
       const out = locators.map((locator) => {
         const found = resolve(locator);
@@ -155,17 +170,15 @@ export async function measureFocusIndicators(page: Page, locators: string[]): Pr
         if (deepActive() === el) el.blur();
         const desc = descendants(el);
         const list = allTargets(el, desc.nodes);
+        // 3.7.11 (leitura dev-3710-b § 7.4): as duas leituras são feitas com as transições assentadas. Antes, só a
+        // leitura COM foco terminava as animações; o elemento que já estava focado (o botão de confirmação que o
+        // diálogo foca ao abrir) era lido "sem foco" no 1º instante da transição de saída — ainda com o valor de foco —,
+        // e a comparação dizia que nada mudava (falso "sem indicador", confirmado pelo verify).
+        settle(el);
         const before = snapshot(list);
         el.focus({ preventScroll: true });
         const focused = deepActive() === el;
-        // Transições CSS começam no valor antigo: termina-as antes de ler, senão um indicador animado
-        // pareceria ausente.
-        for (const [name, node, pseudo] of targets(el)) {
-          if (pseudo || !node) continue;
-          for (const animation of node.getAnimations?.({ subtree: name !== "parent" }) ?? []) {
-            try { animation.finish(); } catch { /* animação infinita: fica como está */ }
-          }
-        }
+        settle(el);
         const after = focused ? snapshot(list) : before;
         el.blur();
         // 3.4.4 (C6b): o elemento é invisível? Então nada desenhado nele, nos pseudo-elementos ou nos

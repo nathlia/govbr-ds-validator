@@ -1563,6 +1563,8 @@ function hardFloor(scanId: string): Array<(x: Record<string, unknown>) => Record
         ...(st ? { state: { reached: st.reached, ...(st.recipe ? { recipe: st.recipe } : {}) } } : {}),
         ...(cr ? { checksRun: { limits: cr.limits, ...(pl ? { pageLevel: { count: pl.count ?? pl.notMeasured?.length, next: pl.next ?? pl.full } } : {}) } } : {}),
         ...(x.sessionPending ? { sessionPending: x.sessionPending } : {}),
+        // 3.7.11 (leitura dev-3710-b § 7.1): o aviso do scan parcial sobre os estados abertos fica com o texto (nunca id solto).
+        ...(x.statesPartial ? { statesPartial: x.statesPartial, statesPartialNote: x.statesPartialNote } : {}),
         ...(x.revisited ? { revisited: { count: (x.revisited as { count?: unknown }).count } } : {}),
         ...(x.investigate ? { investigate: x.investigate } : {}),
         ...(x.specification ? { specification: x.specification } : {}),
