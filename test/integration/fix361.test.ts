@@ -328,7 +328,12 @@ describe("3.6.1 item 5 — contraste que o axe não decidiu vira pendência", ()
           severity: "serious", nature: "syntactic", mode: "display", pathway: "heuristic",
         },
       });
-      expect(v.data.pendingResolved).toContain(pid);
+      // 3.7.12 (auditoria da cadeia 3.7.11): o verify sem live não decide (unverifiable) — não fecha a pendência; ela volta
+      // em pendingUndecided e segue aberta
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data.pendingResolved).toBeUndefined();
+      expect(v.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(pid);
+      expect(v.text).not.toMatch(/govbr-3\.7\.0|emag-/);
     } finally {
       await kf.client.close();
     }
@@ -350,9 +355,11 @@ describe("3.6.1 revisão M1/M2/H1 — sessionPending limitado, resolução por r
     expect(JSON.stringify(sessionPendingBlock(s.open(), new Set(), (c) => s.textDelivered(c), true))).not.toContain("texto da cláusula");
     // M2: verify na mesma rota (outro localizador) resolve; noutra rota, só no mesmo elemento
     const f = (page: string, locator: string) => ({ id: "F", rule: { id: "3.9", source: "emag" }, element: { page, locator } }) as never;
-    expect(s.resolveByVerify(f("http://h/r0", "#outro"), "V-1", "unverifiable")).toHaveLength(1);
-    expect(s.resolveByVerify(f("http://h/zz", "#t3"), "V-2", "unverifiable")).toHaveLength(1);
-    expect(s.resolveByVerify(f("http://h/zz", "#nada"), "V-3", "unverifiable")).toHaveLength(0);
+    // 3.7.12: o verify que não decide (unverifiable) não resolve nada; a mecânica de rota/elemento vale para o que decide
+    expect(s.resolveByVerify(f("http://h/r0", "#outro"), "V-0", "unverifiable")).toHaveLength(0);
+    expect(s.resolveByVerify(f("http://h/r0", "#outro"), "V-1", "confirmed")).toHaveLength(1);
+    expect(s.resolveByVerify(f("http://h/zz", "#t3"), "V-2", "confirmed")).toHaveLength(1);
+    expect(s.resolveByVerify(f("http://h/zz", "#nada"), "V-3", "confirmed")).toHaveLength(0);
   });
 });
 

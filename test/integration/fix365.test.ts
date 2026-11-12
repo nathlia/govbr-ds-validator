@@ -420,7 +420,14 @@ describe("3.6.5 item 5 — a cláusula mensurável servida no checklist vira pen
           pathway: "heuristic",
         },
       });
-      expect(verify.data.pendingResolved).toContain(b.pendingId);
+      // 3.7.12 (auditoria da cadeia 3.7.11): o verify sem live não decide (unverifiable) — não fecha a cláusula; ela volta em
+      // pendingUndecided com a cite e segue aberta até um verify que decida ou o pendingResolved do agente
+      expect(verify.data.verdict).toBe("unverifiable");
+      expect(verify.data.pendingResolved).toBeUndefined();
+      expect(verify.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(b.pendingId);
+      expect(verify.data.actions.map((x: { action: string }) => x.action)).not.toContain("keep-uncertain");
+      const closed = await call("scan_page", { url: `${base}/oficina/aviso`, checks: ["axe"], pendingResolved: [{ id: b.pendingId, status: "violada" }] });
+      expect(closed.data.pendingResolution.recordAsFinding.map((r: { id: string }) => r.id)).toContain(b.pendingId);
     } finally {
       await client.close();
     }

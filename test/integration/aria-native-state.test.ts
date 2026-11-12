@@ -281,6 +281,13 @@ describe("MCP: pendência registrada e fechada pelo verify_finding com a mesma r
         // 3.7.4 (D2): a pendência cobre vários elementos (evaluation: os dois switches; knowledge-free: todos os não
         // verificados) — decidir um deixa os outros abertos, com o mesmo pendingId; o último fecha.
         expect(verified.pendingResolved ?? []).not.toContain(target!.pendingId);
+        // 3.7.12 (auditoria da cadeia 3.7.11): no knowledge-free o verify não decide (unverifiable) — não decide elemento nem
+        // fecha a pendência; ela volta em pendingUndecided e segue aberta (o perfil a encerra em limitations).
+        if (profile === "knowledge-free") {
+          expect(verified).not.toHaveProperty("pendingPartial");
+          expect((verified.pendingUndecided as Array<{ id: string }>).map((u) => u.id)).toContain(target!.pendingId);
+          return;
+        }
         expect(verified.pendingPartial).toEqual([expect.objectContaining({ id: target!.pendingId, decided: ["#sw-stale"] })]);
         const remaining = verified.pendingPartial[0].remaining as string[];
         expect(remaining).toContain("#sw-ok");

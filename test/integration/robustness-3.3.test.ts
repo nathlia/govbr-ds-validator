@@ -210,14 +210,18 @@ describe("S-04 / N-01 / N-06: verify não rejeita o que não mediu", () => {
     }
   });
 
-  it("dados faltando = evidence-incomplete com request-detail; nunca no-predicate/keep-uncertain", async () => {
+  it("dados faltando = evidence-incomplete com o passo que nomeia os campos; nunca no-predicate/keep-uncertain", async () => {
     const { client, call } = await connect();
     try {
       const claim = tokenClaim(`${base}/ok`, "#cor", { evidence: { observed: "#ff5733", expected: "token" } });
       const v = await call("verify_finding", { finding: claim });
       expect(v.data.verdict).toBe("unverifiable");
       expect(v.data.reasons[0].code).toBe("evidence-incomplete");
-      expect(v.data.actions[0]).toMatchObject({ action: "request-detail", tool: "get_finding_details" });
+      // 3.7.12 (conserto 3): o id é do agente (não é achado guardado na sessão) — o passo nomeia os campos que o predicado
+      // lê e repete o verify; nada de get_finding_details com um id que o oráculo não tem.
+      expect(v.data.actions[0]).toMatchObject({ action: "fix-evidence-data", tool: "verify_finding" });
+      expect(v.data.actions[0].what).toMatch(/observedHex e expectedCondition/);
+      expect(v.data.actions.some((a: { tool: string | null }) => a.tool === "get_finding_details")).toBe(false);
       expect(v.data.actions.map((a: { action: string }) => a.action)).not.toContain("keep-uncertain");
     } finally {
       await client.close();

@@ -434,7 +434,9 @@ describe("3.6.3 item 5 — a pendência de um elemento que reaparece em outra ro
     expect(onB.id).toBe(onA.id);
     // verify em /b, num elemento qualquer, citando a norma: fecha só /b
     const f = { id: "C", rule: { id: "1.4.3", source: "wcag" }, element: { page: "http://h/b", locator: "#qualquer" } } as never;
-    const resolved = s.resolveByVerify(f, "V-1", "unverifiable");
+    // 3.7.12: o verify que não decide (unverifiable) não fecha nenhuma rota; a mecânica por rota vale para o que decide
+    expect(s.resolveByVerify(f, "V-0", "unverifiable")).toEqual([]);
+    const resolved = s.resolveByVerify(f, "V-1", "confirmed");
     expect(resolved).toEqual([`${onA.id}@/b`]);
     expect(slotOf(onA, "http://h/b")?.status).toBe("resolved");
     expect(slotOf(onA, "http://h/a")?.status).toBe("open");

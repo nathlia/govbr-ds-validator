@@ -158,6 +158,12 @@ export interface PendingEntry {
    * ou proíbe — falta só a decisão. Um verify que não decide (unverifiable) não a fecha: ela volta em `undecided`.
    */
   measuredFact?: string;
+  /**
+   * 3.7.12 (auditoria da cadeia 3.7.11, U-12/A-10): o `observed` do último scan que listou a pendência (o que o scan leu:
+   * restrição, apoio, erro exibido…). Vai no pendingUndecided de um verify que não decidiu, para a resposta não dizer
+   * "nada foi medido" quando o scan leu algo.
+   */
+  observed?: string;
   /** Derivado das rotas: "open" enquanto alguma rota estiver aberta. */
   status: "open" | "resolved";
   /** A última resolução (de qualquer rota). */
@@ -428,6 +434,7 @@ export class ScanSession {
         this.byId.set(entry.id, entry);
       }
       if (!entry.routes.includes(route)) entry.routes.push(route);
+      if (item.observed) entry.observed = item.observed;
       let slot = slotOf(entry, route);
       if (!slot) {
         // Rota nova: abre aberta, mesmo que outra rota da mesma pendência já esteja resolvida.
@@ -719,7 +726,11 @@ export class ScanSession {
           : entry.slots.filter((x) => x.status === "open" && x.locators.length === 1 && x.locators[0] === finding.element.locator);
       // 3.7.11 (teste à mão, B-22/A-05): fato já medido + cláusula que obriga/proíbe — só um verify que DECIDE fecha; o que
       // não decide devolve a pendência em `undecided` (continua aberta; a decisão é do agente).
-      const factUndecided = entry.measuredFact !== undefined && decision !== "confirmed" && decision !== "rejected" && decision !== "measured";
+      // 3.7.12 (auditoria da cadeia 3.7.11, A-10/U-12): um verify que não decidiu nada (unverifiable sem medida: sem predicado,
+      // evidência incompleta, estado não reproduzido…) não fecha pendência NENHUMA, nem marca elemento como decidido — todas
+      // voltam em `undecided`. O rejected (citação/aplicabilidade/evidência desmentida) segue como antes.
+      const nonDeciding = decision !== "confirmed" && decision !== "rejected" && decision !== "measured";
+      const factUndecided = nonDeciding && (entry.measuredFact !== undefined || verdict === "unverifiable");
       for (const slot of targets) {
         if (factUndecided) {
           undecided.push(slotLabel(entry, slot.route));
@@ -875,8 +886,15 @@ export class ScanSession {
       const entry = this.byId.get(id);
       if (!entry || seen.has(id)) return [];
       seen.add(id);
-      return [{ id: l, code: entry.code, cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3), ...(entry.measuredFact ? { observed: entry.measuredFact } : {}) }];
+      // 3.7.12: sem fato medido por inteiro, o que o último scan leu na pendência (observed), com teto
+      const observed = entry.measuredFact || (entry.observed ? clip(entry.observed, 300) : undefined);
+      return [{ id: l, code: entry.code, cite: entry.rule?.id ?? entry.norms[0] ?? null, norms: entry.norms.slice(0, 3), ...(observed ? { observed } : {}) }];
     });
+  }
+
+  /** 3.7.12: as pendências citadas cujo fato o scan mediu por inteiro (measuredFact) — só falta a decisão. */
+  allMeasured(labels: string[]): boolean {
+    return labels.every((l) => this.byId.get(l.split("@")[0])?.measuredFact !== undefined);
   }
 
   /** 3.6.3: as rotas ainda abertas das pendências citadas (rótulos `P-NN@/rota`). */

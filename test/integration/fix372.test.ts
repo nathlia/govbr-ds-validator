@@ -170,12 +170,15 @@ describe("3.7.2 A1 — C01 aponta o botão embutido em Input/Select como candida
       expect(v.data.verdict).not.toBe("rejected");
       expect(v.data.verdict).not.toBe("confirmed");
       expect(v.text).toMatch(/exemplo oficial/);
-      // 3.7.4 (D2): o verify em #lupa decidiu só um dos dois elementos — a pendência segue aberta com #gatilho.
-      expect(v.data.pendingPartial).toEqual([expect.objectContaining({ id: cand.pendingId, decided: ["#lupa"], remaining: ["#gatilho"] })]);
+      // 3.7.12 (auditoria da cadeia 3.7.11): o verify que não decide (unverifiable) não decide elemento nenhum — a pendência
+      // segue aberta inteira e volta em pendingUndecided (antes: 3.7.4 D2, #lupa contava como decidido).
+      expect(v.data.verdict).toBe("unverifiable");
+      expect(v.data).not.toHaveProperty("pendingPartial");
+      expect(v.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(cand.pendingId);
       const ok = await call("scan_page", { url: `${base}/padaria/simples`, checks: ["structure"], maxChars: 60_000 });
       // a página sem botão embutido não abre a pendência; a de /padaria/busca segue na sessão, com o que falta
       expect(JSON.stringify(ok.data.checksRun.pageLevel)).not.toMatch(/icon-only-embedded/);
-      expect(ok.data.sessionPending.items.find((i: { code: string }) => i.code === "icon-only-embedded")).toMatchObject({ remaining: { [cand.pendingId]: ["#gatilho"] } });
+      expect(JSON.stringify(ok.data.sessionPending.items.find((i: { code: string }) => i.code === "icon-only-embedded"))).toContain(cand.pendingId);
     } finally {
       await client.close();
     }
@@ -497,16 +500,14 @@ describe("3.7.2 revisão — pendência de elementos, estado anterior com invent
         severity: "moderate", nature: "syntactic", mode: "display", pathway: "heuristic",
       };
       const v2 = await call("verify_finding", { live: true, finding: onLupa });
-      // 3.7.4 (D2): um dos elementos dele decidido → parcial; o último fecha.
-      const bound = (cand.examples as string[]);
-      if (bound.length > 1) {
-        expect(JSON.stringify(v2.data.pendingResolved ?? [])).not.toContain(cand.pendingId);
-        expect(v2.data.pendingPartial[0]).toMatchObject({ id: cand.pendingId, decided: ["#lupa"] });
-        for (const locator of bound.filter((l) => l !== "#lupa")) {
-          const last = await call("verify_finding", { live: true, finding: { ...onLupa, id: `agente-${locator}`, element: { ...onLupa.element, locator } } });
-          if (locator === bound[bound.length - 1]) expect(JSON.stringify(last.data.pendingResolved ?? [])).toContain(cand.pendingId);
-        }
-      } else expect(JSON.stringify(v2.data.pendingResolved ?? [])).toContain(cand.pendingId);
+      // 3.7.12 (auditoria da cadeia 3.7.11): o verify num dos elementos dele não decide (unverifiable) — não fecha nem decide
+      // o elemento; a pendência volta em pendingUndecided e fecha pela decisão do agente (pendingResolved).
+      expect(v2.data.verdict).toBe("unverifiable");
+      expect(JSON.stringify(v2.data.pendingResolved ?? [])).not.toContain(cand.pendingId);
+      expect(v2.data).not.toHaveProperty("pendingPartial");
+      expect(v2.data.pendingUndecided.map((u: { id: string }) => u.id)).toContain(cand.pendingId);
+      const closed = await call("scan_page", { url, checks: ["structure"], maxChars: 60_000, pendingResolved: [{ id: cand.pendingId, status: "violada" }] });
+      expect(closed.data.pendingResolution.recordAsFinding.map((r: { id: string }) => r.id)).toContain(cand.pendingId);
     } finally {
       await client.close();
     }

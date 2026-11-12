@@ -201,7 +201,16 @@ function conditionStep(hint: { id: string; condition: string }, scanId: string |
   );
 }
 
-function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefined, knowledgeFree: boolean, legacy?: { successors: string[] }): NextStep[] {
+/**
+ * 3.7.12 (auditoria da cadeia 3.7.11, conserto 3): o que falta em evidence.data, como o predicado o nomeia no detail
+ * ("só é verificável com evidence.data.expectedCondition = 'a' ou 'b'", "exige evidence.data.x", "precisa de …").
+ */
+function missingEvidenceOf(detail: string): string | null {
+  const m = /((?:só é verificável com|exige|precisa de)\s+evidence\.data.*?\.)(?=\s|$)/.exec(detail);
+  return m ? m[1].slice(0, 300) : null;
+}
+
+function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefined, knowledgeFree: boolean, legacy?: { successors: string[] }, knownFindingId = false, fullDetail = ""): NextStep[] {
   const t = texts(knowledgeFree);
   const hint = conditionHint(finding, knowledgeFree);
   const out: NextStep[] = [];
@@ -239,16 +248,29 @@ function actionsOf(reasons: Reason[], finding: Finding, scanId: string | undefin
       case "evidence-inconsistent":
         add(step("fix-evidence-data", "Corrija os dados estruturados (evidence.data: property, valor observado e expectedCondition exata do predicado) e repita; o fato não foi avaliado.", "verify_finding", undefined, { keep: ["element", ...(scanId ? ["scanId"] : [])] }));
         break;
-      case "evidence-incomplete":
+      case "evidence-incomplete": {
+        // 3.7.12 (conserto 3): get_finding_details só conhece os achados guardados na sessão (os do scan). Com o id de um
+        // achado do agente, o pedido voltava `missing`; o passo passa a nomear os campos/condições que o predicado aceita.
+        // o detail inteiro do veredito (o das razões é cortado em 400 caracteres e perde a lista de campos)
+        const needed = missingEvidenceOf(fullDetail) ?? missingEvidenceOf(r.detail);
         add(
-          step(
-            "request-detail",
-            "Faltam campos de evidence.data: peça o achado com get_finding_details (detail 'evidence' ou 'full' traz evidence.data) e reenvie o payload completo.",
-            "get_finding_details",
-            { ids: [finding.id], detail: "full" },
-          ),
+          knownFindingId
+            ? step(
+                "request-detail",
+                "Faltam campos de evidence.data: peça o achado com get_finding_details (detail 'evidence' ou 'full' traz evidence.data) e reenvie o payload completo.",
+                "get_finding_details",
+                { ids: [finding.id], detail: "full" },
+              )
+            : step(
+                "fix-evidence-data",
+                `Faltam campos de evidence.data: a norma citada ${needed ?? "só é verificável com os campos que o reasons nomeia."} Ponha-os em evidence.data e repita o verify no mesmo estado (o achado é seu; o get_finding_details não o tem).`,
+                "verify_finding",
+                { live: true, ...(scanId ? { scanId } : {}) },
+                { keep: ["element", ...(scanId ? ["scanId"] : [])] },
+              ),
         );
         break;
+      }
       case "locator-ambiguous":
       case "invalid-locator":
         add(step("fix-locator", r.code === "invalid-locator" ? "Use um seletor CSS válido (sem XPath nem text=) e repita." : "Restrinja element.locator ao elemento do defeito (o localizador resolveu elementos com valores diferentes) e repita.", "verify_finding", undefined, { keep: ["evidence", ...(scanId ? ["scanId"] : [])] }));
@@ -435,7 +457,7 @@ export function citationForceWarning(finding: Finding) {
 export function verificationEnvelope(
   finding: Finding,
   verification: GateVerification,
-  options: { verificationId: string; knowledgeFree: boolean; scanId?: string; absenceNote?: string; inheritedFromLedger?: { findingId: string; fields: string[]; note: string } },
+  options: { verificationId: string; knowledgeFree: boolean; scanId?: string; absenceNote?: string; inheritedFromLedger?: { findingId: string; fields: string[]; note: string }; knownFindingId?: boolean },
 ) {
   const { reasons, legacy } = reasonsOf(finding, verification, options.knowledgeFree);
   const confirmed = verification.verdict === "confirmed";
@@ -457,7 +479,7 @@ export function verificationEnvelope(
     ...(normResolution ? { normResolution } : {}),
     ...(citationForce ? { citationForce } : {}),
     reasons: confirmed ? [] : reasons.map(({ status: _s, ...r }) => r),
-    actions: confirmed ? [] : actionsOf(reasons, finding, options.scanId, options.knowledgeFree, legacy),
+    actions: confirmed ? [] : actionsOf(reasons, finding, options.scanId, options.knowledgeFree, legacy, options.knownFindingId ?? false, verification.detail ?? ""),
     verification,
     ...(options.inheritedFromLedger ? { inheritedFromLedger: options.inheritedFromLedger } : {}),
     ...(options.absenceNote ? { absenceNote: options.absenceNote } : {}),

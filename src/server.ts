@@ -2924,22 +2924,46 @@ export function createServer(options: ServerOptions = {}): McpServer {
       // decidiu — ela NÃO fecha (não entra em pendingResolved) e a resposta não manda "manter incerto com rule: null": diz o
       // fato medido pelo scan, a norma a citar, e que a decisão é do agente (registrar citando-a ou recusar com o motivo).
       const undecidedItems = undecided.length ? session.citeFor(undecided) : [];
+      // 3.7.12 (auditoria da cadeia 3.7.11, A-10/U-12): todas mediu o scan por inteiro (measuredFact) → o texto da 3.7.11; senão
+      // (p. ex. upload-paths), o que o scan leu (observed) com a mesma forma judge-fact, sem dizer que o fato foi medido inteiro.
+      const allMeasured = undecidedItems.length > 0 && session.allMeasured(undecided);
       const envelope = verificationEnvelope(candidate, verification, {
         verificationId: stored.verificationId,
         knowledgeFree,
         ...(scanId ? { scanId } : {}),
+        // 3.7.12 (conserto 3): o id do achado só serve ao get_finding_details quando é de um achado guardado na sessão
+        knownFindingId: typeof candidate.id === "string" && Boolean(findingStore.get([candidate.id]).found[0]),
         ...(inherited ? { inheritedFromLedger: { ...inherited, note: "Campos que faltavam no payload (evidence.data; 3.6.0: rule.checker) foram herdados do achado guardado nesta sessão (mesma norma e localizador)." } } : {}),
         ...(verification.verdict === "unverifiable" ? { absenceNote: knowledgeFree ? ABSENCE_NOTE_KNOWLEDGE_FREE : ABSENCE_NOTE } : {}),
-      }) as Record<string, unknown> & { observation?: Record<string, unknown>; actions?: unknown[] };
+      }) as Record<string, unknown> & { observation?: Record<string, unknown>; actions?: Array<{ action: string; what: string }> };
       if (undecidedItems.length) {
-        const facts = undecidedItems.map((u) => `${u.id} (${u.code}): ${u.observed ?? "medido pelo scan"}`).join("; ");
+        const withFact = undecidedItems.filter((u) => u.observed);
+        const facts = undecidedItems.slice(0, 3).map((u) => `${u.id} (${u.code}): ${u.observed ?? "medido pelo scan"}`).join("; ") + (undecidedItems.length > 3 ? `; +${undecidedItems.length - 3} em pendingUndecided` : "");
         const cites = [...new Set(undecidedItems.map((u) => u.cite).filter((c): c is string => Boolean(c)))];
-        envelope.observation = {
-          ...(envelope.observation ?? {}),
-          message: `Este verify não mediu o fato (não decidiu), mas o scan já o mediu na pendência: ${facts}. Nada foi desmentido.`,
-        };
-        envelope.actions = [step("judge-fact",
-          `O fato da pendência já foi medido pelo scan (${facts}); a norma a citar é ${cites.join(", ") || "a de cite"}. Decida: registre o achado citando-a, ou recuse-o com o motivo. Este verify não decidiu.`)];
+        const closeBy = knowledgeFree
+          ? "um verify_finding que decida; sem isso, feche em limitations (id + o fato)"
+          : "pendingResolved (violada, ou não se aplica + reason) ou um verify_finding que decida";
+        // os passos que não contradizem o conselho (sem keep-uncertain nem "rule: null" ao lado de uma cite): completar a
+        // evidência, reproduzir o estado, corrigir o localizador… seguem depois do judge-fact
+        const kept = (envelope.actions ?? []).filter((a) => a.action !== "keep-uncertain" && !/rule: null/.test(a.what));
+        if (allMeasured) {
+          envelope.observation = {
+            ...(envelope.observation ?? {}),
+            message: `Este verify não mediu o fato (não decidiu), mas o scan já o mediu na pendência: ${facts}. Nada foi desmentido.`,
+          };
+          envelope.actions = [step("judge-fact",
+            `O fato da pendência já foi medido pelo scan (${facts}); a norma a citar é ${cites.join(", ") || "a de cite"}. Decida: registre o achado citando-a, ou recuse-o com o motivo. Este verify não decidiu.`), ...kept].slice(0, 3) as typeof envelope.actions;
+        } else if (withFact.length) {
+          envelope.observation = {
+            ...(envelope.observation ?? {}),
+            message: `Este verify não decidiu o fato; o scan leu na pendência: ${facts}. Nada foi desmentido.`,
+          };
+          envelope.actions = [step("judge-fact",
+            `A pendência segue aberta. O scan leu nela: ${facts}; a norma a citar é ${cites.join(", ") || "a de cite"}. Decida com esse fato (meça o que faltar): registre o achado citando-a, ou recuse-o com o motivo. Fecha por ${closeBy}.`), ...kept].slice(0, 3) as typeof envelope.actions;
+        } else {
+          envelope.actions = [step("measure-condition",
+            `Nada foi decidido e a pendência segue aberta (${undecidedItems.map((u) => `${u.id} ${u.code}`).join("; ")}). Meça o que ela pede (measure) e decida; fecha por ${closeBy}.`), ...kept].slice(0, 3) as typeof envelope.actions;
+        }
       }
       // 2.15.0: veredito que não decide (sem predicado, regra sem norma, estado não reproduzido) não
       // desmente o fato medido — a nota fixa diz isso em todo `unverifiable`, nos dois perfis.
@@ -2949,21 +2973,18 @@ export function createServer(options: ServerOptions = {}): McpServer {
         ...(stateWarning ? { stateWarning } : {}),
         ...(interactionBlock ? { interaction: interactionBlock } : {}),
         ...(pendingResolved.length ? { pendingResolved } : {}),
-        // 3.7.11 (auditoria A/A2, A-05; conserto A): o verify que não decidiu (sem predicado, estado não reproduzido…) fecha
-        // a pendência por ter verificado o elemento — mas não decidiu nada. A resposta diz isso e devolve o que registrar,
-        // como o pendingResolved violada; quem decide é o agente.
+        // 3.7.11 (auditoria A/A2, A-05; conserto A) → 3.7.12: o verify que não decidiu não fecha pendência nenhuma; elas voltam
+        // em pendingUndecided (continuam abertas) com o que citar e o que o scan leu; quem decide é o agente.
         ...(undecidedItems.length
           ? { pendingUndecided: undecidedItems,
               // a nota não diz que fecharam (não fecham) nem, no knowledge-free, cita pendingResolved (o perfil não o tem)
-              pendingUndecidedNote: knowledgeFree
-                ? "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable), mas o scan já mediu o fato de cada uma (observed). A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, recuse-o com o motivo."
-                : "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable), mas o scan já mediu o fato de cada uma (observed). A decisão é sua: registre o achado citando cite (ou declare pendingResolved violada, que devolve o mesmo), ou recuse com status \"não se aplica\" e o motivo." }
-          // pendência sem fato medido que um verify sem decisão fechou (como na 3.7.11 antes do teste à mão)
-          : pendingResolved.length && verification.verdict === "unverifiable" && !decided && decision !== "measured"
-            ? { pendingUndecided: session.citeFor(pendingResolved),
-                pendingUndecidedNote: knowledgeFree
-                  ? "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências listadas fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, rejeite-o com o motivo."
-                  : "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências em pendingResolved fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a cláusula, registre o achado citando cite (o mesmo que pendingResolved violada); se não, rejeite-o com o motivo." }
+              pendingUndecidedNote: allMeasured
+                ? knowledgeFree
+                  ? "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable), mas o scan já mediu o fato de cada uma (observed). A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, recuse-o com o motivo."
+                  : "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable), mas o scan já mediu o fato de cada uma (observed). A decisão é sua: registre o achado citando cite (ou declare pendingResolved violada, que devolve o mesmo), ou recuse com status \"não se aplica\" e o motivo."
+                : knowledgeFree
+                  ? "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable). observed é o que o scan leu nelas. A decisão é sua: se o fato viola a norma, registre o achado citando cite; se não, recuse-o com o motivo. Sem um verify que decida, feche em limitations (id + o fato)."
+                  : "Nada foi decidido e estas pendências continuam abertas: este verify não decidiu (unverifiable). observed é o que o scan leu nelas. A decisão é sua: registre o achado citando cite (ou declare pendingResolved violada, que devolve o mesmo), ou recuse com status \"não se aplica\" e o motivo." }
             : {}),
         // 3.7.4 (D2): pendência de N elementos com só parte decidida — continua aberta (mesmo pendingId) com os que faltam.
         ...(pendingPartial.length

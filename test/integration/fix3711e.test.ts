@@ -198,7 +198,10 @@ describe("LOW — nota do verify que não decidiu no knowledge-free", () => {
           id: "F-x", rule: { id: "wcag-3.3.1", source: "wcag", description: "erro de entrada" }, element: { locator: "#u1", page: `${base}/apoio` },
           evidence: { observed: "campo de arquivo", expected: "erro identificado" }, severity: "serious", nature: "semantic", mode: "interaction", pathway: "heuristic",
         } });
-        expect(v.data.pendingResolved, profile).toContain(up.pendingId);
+        // 3.7.12 (auditoria da cadeia 3.7.11): o verify que não decide não fecha a pendência do upload — ela volta em
+        // pendingUndecided e continua aberta
+        expect(v.data.pendingResolved, profile).toBeUndefined();
+        expect(v.data.pendingUndecided.map((u: { id: string }) => u.id), profile).toContain(up.pendingId);
         expect(v.data.pendingUndecidedNote, profile).toMatch(/^Nada foi decidido/);
         if (profile === "knowledge-free") {
           expect(v.data.pendingUndecidedNote).not.toMatch(/pendingResolved violada/);
