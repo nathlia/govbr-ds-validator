@@ -1137,16 +1137,20 @@ export function sessionPendingChecklistCount<T extends { checklist?: unknown }>(
 }
 
 /** Encolhimento do teto: sem textos; depois só ids. */
-export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[]; remaining?: Record<string, readonly string[]> }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
+export function sessionPendingCodes(block: { items?: Array<{ code: string; ids: string[]; remaining?: Record<string, readonly string[]>; measuredIn?: Record<string, string> }>; count?: number; lowSignal?: number; checklist?: ChecklistBlock }) {
   const checklist = checklistIds(block.checklist);
   // 3.7.9 (D1): `P-07:state-unscanned@#gatilho` (o seletor depois do código)
   const ids = (block.items ?? []).flatMap((i) => i.ids.map((id) => (id.includes("@") ? `${id.slice(0, id.indexOf("@"))}:${i.code}${id.slice(id.indexOf("@"))}` : `${id}:${i.code}`)));
   // 3.7.4 (D2): verificada em parte — os elementos que faltam ficam também na forma de ids.
   const remaining = Object.assign({}, ...(block.items ?? []).map((i) => i.remaining ?? {})) as Record<string, readonly string[]>;
+  const measuredIn = Object.assign({}, ...(block.items ?? []).map((i) => i.measuredIn ?? {})) as Record<string, string>;
   return {
     count: block.count ?? 0,
     ...(ids.length || !checklist ? { ids } : {}),
     ...(Object.keys(remaining).length ? { remaining } : {}),
+    // 3.7.11 (revisão LOW): a O-NN que um scan do estado aberto já mediu aponta os achados também na forma de ids; o degrau
+    // seguinte da escada (sessionPending.measuredIn → fora) a tira antes de qualquer outra coisa se não couber.
+    ...(Object.keys(measuredIn).length ? { measuredIn } : {}),
     ...(block.lowSignal ? { lowSignal: block.lowSignal } : {}),
     ...(checklist ? { checklist } : {}),
   };

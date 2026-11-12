@@ -2939,7 +2939,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         // como o pendingResolved violada; quem decide é o agente.
         ...(pendingResolved.length && verification.verdict === "unverifiable" && !decided && decision !== "measured"
           ? { pendingUndecided: session.citeFor(pendingResolved),
-              pendingUndecidedNote: `Nada foi decidido: este verify não decidiu (unverifiable) e as pendências em pendingResolved fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a cláusula, registre o achado citando cite (o mesmo que pendingResolved violada); se não, rejeite-o com o motivo.` }
+              // revisão (LOW): o knowledge-free não tem pendingResolved no scan_page — a nota não o cita.
+              pendingUndecidedNote: knowledgeFree
+                ? "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências listadas fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a norma, registre o achado citando cite; se não, rejeite-o com o motivo."
+                : "Nada foi decidido: este verify não decidiu (unverifiable) e as pendências em pendingResolved fecharam só por ele ter verificado o elemento. A decisão é sua: se o fato medido viola a cláusula, registre o achado citando cite (o mesmo que pendingResolved violada); se não, rejeite-o com o motivo." }
           : {}),
         // 3.7.4 (D2): pendência de N elementos com só parte decidida — continua aberta (mesmo pendingId) com os que faltam.
         ...(pendingPartial.length

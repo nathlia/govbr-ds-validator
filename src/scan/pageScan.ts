@@ -231,8 +231,15 @@ export async function fileInputSupport(page: Page, locators: string[], ds = true
       try { input = document.querySelector(locator); } catch { continue; }
       if (!input) continue;
       const errorTarget = input.getAttribute("aria-errormessage");
-      const isError = (el: Element) => el.matches(ALERT) || Boolean(el.querySelector(ALERT)) || (errorTarget !== null && el.id === errorTarget) ||
-        (ds && (el.matches(".feedback") || Boolean(el.querySelector(".feedback"))));
+      // revisão MED 3: só conta como erro o que tem TEXTO — região viva vazia dentro do apoio continua apoio — e, com a pista
+      // do DS, só o feedback de erro (danger/error/invalid); `.feedback success`/`info` não é erro.
+      const filled = (el: Element) => (el.textContent ?? "").trim().length > 0;
+      const ERROR_FEEDBACK = ".feedback.danger, .feedback.error, .feedback.invalid";
+      const isError = (el: Element) => {
+        if (filled(el) && (el.matches(ALERT) || (errorTarget !== null && el.id === errorTarget) || (ds && el.matches(ERROR_FEEDBACK)))) return true;
+        const inner = Array.from(el.querySelectorAll(ds ? `${ALERT}, ${ERROR_FEEDBACK}` : ALERT));
+        return inner.some(filled);
+      };
       const support: string[] = [];
       const error: string[] = [];
       // knowledge-free: sem a pista da classe do componente do DS, o pai do campo.

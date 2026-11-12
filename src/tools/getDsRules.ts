@@ -348,10 +348,17 @@ export async function getDsRules(args: DsRulesArgs, projections: DsRulesProjecti
     }
     if (rule.legacy && args.clauseCursor === undefined) {
       // 3.3.0 (B-15): id histórico diz que não é a norma servida e aponta a regra corrente (ou o WCAG do registro).
-      return ok({ ...idResponse(rule, args.clauseCursor), citeAs: null, current: currentPointer(rule), absenceNote: ABSENCE_NOTE });
+      return ok(idResponse(rule, args.clauseCursor, undefined, { citeAs: null, current: currentPointer(rule), absenceNote: ABSENCE_NOTE }));
     }
     // 3.7.11 (conserto 3; U-01): a leitura por id de uma unidade de especificação diz a força do mesmo jeito que o verify.
-    return ok(isSpecification(rule) ? { ...idResponse(rule, args.clauseCursor), forceNote: SPECIFICATION_FORCE_NOTE } : idResponse(rule, args.clauseCursor));
+    // 3.7.11 (revisão HIGH 1, MED 2): a nota de força e o antecedente entram dentro do orçamento da leitura por id (antes, a
+    // nota ia por cima do dimensionamento e 408 unidades passavam de 8.000).
+    const antecedent = args.clauseCursor === undefined ? antecedentOf(rule, true) : undefined;
+    const extra = {
+      ...(isSpecification(rule) ? { forceNote: SPECIFICATION_FORCE_NOTE } : {}),
+      ...(antecedent ? { antecedent } : {}),
+    };
+    return ok(idResponse(rule, args.clauseCursor, undefined, extra));
   }
 
   // ── lote por ids ──

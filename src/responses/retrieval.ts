@@ -952,17 +952,17 @@ export function lookupResponse(input: LookupInput) {
  * regra saem (ficam as referências). Acima do teto, cláusulas adjacentes por `clauseCursor`, cada uma
  * inteira ou ausente.
  */
-export function idResponse(rule: KnowledgeRule, clauseCursor: number | undefined, budget = RESPONSE_BUDGET) {
+export function idResponse(rule: KnowledgeRule, clauseCursor: number | undefined, budget = RESPONSE_BUDGET, extra: Record<string, unknown> = {}) {
   const unit = normativeUnit(rule) as
     | (Record<string, unknown> & { unitSource: unknown; mainClause: Record<string, unknown>; adjacentClauses: unknown[] })
     | undefined;
   const base = { contract: CONTRACT, kind: ruleKind(rule) };
   if (!unit) {
-    return { ...base, rule, normativeContext: unit ?? null, legacyResolution: legacyResolution(rule) ?? null, next: [] as NextStep[] };
+    return { ...base, rule, normativeContext: unit ?? null, legacyResolution: legacyResolution(rule) ?? null, next: [] as NextStep[], ...extra };
   }
   const { unitSource, mainClause, adjacentClauses, ...restUnit } = unit;
   const sameSource = JSON.stringify(unitSource) === JSON.stringify(rule.source);
-  const dedupedUnit = {
+  const dedupedUnit: Record<string, unknown> = {
     ...restUnit,
     unitSource: sameSource ? { ref: "rule.source" } : unitSource,
     mainClause: { id: mainClause.id, ref: "rule", applicability: "unknown" },
@@ -992,8 +992,25 @@ export function idResponse(rule: KnowledgeRule, clauseCursor: number | undefined
       normativeContext: { ...dedupedUnit, adjacentClauses: clauses, totalAdjacent: adjacentClauses.length, nextClauseCursor: more ? end : null },
       legacyResolution: legacyResolution(rule) ?? null,
       next,
+      // 3.7.11 (revisão HIGH 1): o que a ferramenta acrescenta (forceNote, antecedent) entra ANTES do orçamento
+      ...extra,
     };
   };
+  // 3.7.11 (revisão HIGH 1): sem nenhuma cláusula adjacente a unidade ainda passava do teto (48 unidades, o parágrafo
+  // literal da seção longo — tabelas de especificação). O parágrafo literal é cortado no limite, com a marca e o tamanho
+  // inteiro; as cláusulas seguem pelo clauseCursor.
+  const ctx = dedupedUnit.sourceContext as { text?: string } | null | undefined;
+  if (clauseCursor === undefined && ctx && typeof ctx.text === "string" && textSize(compose([], 0)) > budget) {
+    const full = ctx.text;
+    const over = textSize(compose([], 0)) - budget;
+    let keep = Math.max(0, full.length - over - 200);
+    const cut = (n: number) => ({ ...ctx, text: `${full.slice(0, n).trimEnd()}…`, textComplete: false, textChars: full.length });
+    dedupedUnit.sourceContext = cut(keep);
+    while (keep > 0 && textSize(compose([], 0)) > budget) {
+      keep = Math.max(0, keep - 200);
+      dedupedUnit.sourceContext = cut(keep);
+    }
+  }
   const clauses: unknown[] = [];
   let index = start;
   while (index < adjacentClauses.length) {

@@ -601,6 +601,14 @@ function sessionPendingStep(r: Record<string, unknown>): Record<string, unknown>
   return { ...r, sessionPending: sessionPendingCodes(sp) };
 }
 
+/** 3.7.11 (revisão LOW): o measuredIn da forma de ids sai antes de qualquer outro degrau (só fica se couber sem tirar nada). */
+function sessionPendingMeasuredOut(r: Record<string, unknown>): Record<string, unknown> | null {
+  const sp = r.sessionPending as { ids?: unknown; measuredIn?: unknown } | undefined;
+  if (!sp?.ids || !sp.measuredIn) return null;
+  const { measuredIn: _m, ...rest } = sp;
+  return { ...r, sessionPending: rest };
+}
+
 /** 3.6.5 (revisão): as cláusulas lidas no checklist (sub-bloco de sessionPending) → contagem + componentes. */
 function sessionPendingChecklistStep(r: Record<string, unknown>): Record<string, unknown> | null {
   const sp = r.sessionPending as { checklist?: unknown } | undefined;
@@ -649,6 +657,17 @@ export function pageLevelIdsStep(r: Record<string, unknown>): Record<string, unk
   return { ...r, checksRun: { ...cr, pageLevel: { ids, ...(located ? { idsNote: STATE_IDS_NOTE } : { count: pl.count ?? pl.notMeasured.length }), ...(pl.conditions ? { conditions: pl.conditions } : {}), ...(pl.uploads ? { uploads: pl.uploads } : {}), ...(pl.endNote ? { endNote: pl.endNote } : {}), next: pl.next ?? pl.full } } };
 }
 
+/**
+ * 3.7.11 (revisão MED 4): o mapa `pageLevel.uploads` (o fato do campo de arquivo; inteiro na pendência do ledger) cede antes
+ * dos ids das pendências, das famílias e do estado das cláusulas — nunca toma o lugar deles.
+ */
+export function pageLevelUploadsOut(r: Record<string, unknown>): Record<string, unknown> | null {
+  const cr = r.checksRun as { pageLevel?: { uploads?: unknown } } | undefined;
+  if (!cr?.pageLevel?.uploads) return null;
+  const { uploads: _u, ...pageLevel } = cr.pageLevel as Record<string, unknown>;
+  return { ...r, checksRun: { ...cr, pageLevel } };
+}
+
 function pageLevelCompact(r: Record<string, unknown>, scanId: string): Record<string, unknown> | null {
   const cr = r.checksRun as { pageLevel?: { measured?: string[]; notMeasured?: Array<NotJudgedItem | string>; count?: number } } | undefined;
   if (!cr?.pageLevel?.notMeasured?.length || cr.pageLevel.count !== undefined) return null;
@@ -673,6 +692,7 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["investigate → next sem dica", investigateHintOut],
     // 3.6.1 (revisão H1): as pendências cedem para a forma curta (a cláusula fica em full).
     ["sessionPending → ids", sessionPendingStep],
+    ["sessionPending.measuredIn → fora", sessionPendingMeasuredOut],
     ["sessionPending.checklist → contagem", sessionPendingChecklistStep],
     [
       "state → essencial (inteiro no ledger)",
@@ -711,6 +731,8 @@ export function enforceCeiling(response: Record<string, unknown>, maxChars: numb
     ["checksRun.pageLevel → curto", pageLevelShortStep],
     ["checksRun.pageLevel → mínimo", pageLevelMinimalStep],
     ["checksRun.pageLevel → código⇒norma", pageLevelNormStep],
+    // 3.7.11 (revisão MED 4): o mapa uploads sai antes dos códigos/contagem das pendências.
+    ["checksRun.pageLevel → sem uploads (no ledger)", pageLevelUploadsOut],
     [
       "checksRun → códigos",
       (r) => {
@@ -996,7 +1018,26 @@ function withClausesSummary(facts: Record<string, unknown>, summary: Record<stri
   return out;
 }
 
+/**
+ * 3.7.11 (revisão MED 4): o mapa `pageLevel.uploads` tem prioridade MENOR que o estado das cláusulas (`clauses`) — no 1º scan
+ * da tela A ele tomava o espaço e o bloco sumia. Se a página com o mapa sai sem `clauses` (ou recusada) e a sem o mapa o
+ * leva, fica a sem o mapa (o fato inteiro segue na pendência do ledger).
+ */
 function assembleReservedScan(
+  head: Record<string, unknown>, observations: Observation[] | null, scanId: string,
+  maxChars: number, page: (budget: number) => Record<string, unknown>, allCandidates: ReserveCandidate[],
+  delivered?: ContextDelivered, clauseDelivered?: ClauseDelivered,
+): Record<string, unknown> {
+  const out = assembleReservedScanCore(head, observations, scanId, maxChars, page, allCandidates, delivered, clauseDelivered);
+  const withClauses = (r: Record<string, unknown>) => r.kind !== "error" && r.clauses !== undefined;
+  if (withClauses(out) || !allCandidates.length) return out;
+  const lighter = pageLevelUploadsOut(head);
+  if (!lighter) return out;
+  const alt = assembleReservedScanCore(lighter, observations, scanId, maxChars, page, allCandidates, delivered, clauseDelivered);
+  return withClauses(alt) ? alt : out;
+}
+
+function assembleReservedScanCore(
   head: Record<string, unknown>, observations: Observation[] | null, scanId: string,
   maxChars: number, page: (budget: number) => Record<string, unknown>, allCandidates: ReserveCandidate[],
   delivered?: ContextDelivered, clauseDelivered?: ClauseDelivered,
@@ -1291,6 +1332,7 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
       const next = sessionPendingStep(h);
       return next ? (sessionPendingChecklistStep(next) ?? next) : null;
     })],
+    ["sessionPending.measuredIn → fora", onHead(sessionPendingMeasuredOut)],
     ["revisited → contagem + seletores", onHead((h) => {
       const rv = h.revisited as { items?: Array<{ locator: string }>; count?: number } | undefined;
       if (!rv?.items) return null;
@@ -1361,6 +1403,9 @@ function firstPageStages(scanId: string, page: (budget: number) => Record<string
     ["pageLevel → curto", onHead(pageLevelShortStep)],
     ["pageLevel → mínimo", onHead(pageLevelMinimalStep)],
     ["pageLevel → código⇒norma", onHead(pageLevelNormStep)],
+    // 3.7.11 (revisão MED 4): o mapa uploads (inteiro na pendência do ledger) sai antes dos códigos/ids das pendências e
+    // antes de qualquer família — depois da forma código⇒norma, que guarda o seletor do campo.
+    ["pageLevel → sem uploads (no ledger)", onHead(pageLevelUploadsOut)],
     // 3.6.2 (revisão): os textos de checksRun.limits (D-154/3.4.2: a orientação de honestidade), a separação por
     // rota/estado e os ids das pendências de outras rotas NÃO entram aqui — ficam inteiros enquanto houver família
     // a cortar; só o teto rígido (hardFloor) os reduz, e a códigos/ids, nunca a nada.

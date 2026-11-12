@@ -472,6 +472,9 @@ type FileInputFact = {
 
 /** 3.7.11 (conserto 1): o apoio e a mensagem de erro, cada um até este tamanho, no fato da pendência de upload. */
 const UPLOAD_TEXT_MAX = 90;
+/** Revisão (MED 4): teto de uma entrada do mapa `uploads` e do mapa inteiro (as entradas que não cabem ficam no ledger). */
+const UPLOAD_FACT_MAX = 240;
+const UPLOADS_MAP_MAX = 480;
 
 /** Arquivo sintético para a receita de arrasto (o conteúdo não importa: a receita prova o caminho, não o formato). */
 const DROP_SAMPLE = { name: "exemplo.pdf", mimeType: "application/pdf", size: 1024 };
@@ -516,7 +519,10 @@ export function uploadPathsPending(inputs: FileInputFact[], knowledgeFree = fals
   // 3.7.11 (auditoria A/A2, conserto 1; U-12): a mensagem de erro exibida é fato próprio, não "apoio"; e a restrição medida do
   // campo (accept) vem ao lado do apoio exibido, primeiro na linha — é o que a forma curta guarda e o que vai em uploads.
   const error = inputs.map((i) => i.error).find((t): t is string => typeof t === "string") ?? null;
-  const uploadFacts = `${accepts.join("; ")} × ${support === SUPPORT_HIDDEN ? "apoio oculto neste estado (meça onde o campo aparece)" : support ? `apoio "${clip(support, UPLOAD_TEXT_MAX)}"` : "nenhum texto de apoio associado"}${error ? `; erro exibido "${clip(error, UPLOAD_TEXT_MAX)}"` : ""}`;
+  // revisão (MED 4): o fato tem teto — até 3 restrições distintas (+N), o apoio e o erro cortados; a entrada inteira até
+  // UPLOAD_FACT_MAX. Com 40 campos o mapa passava de 2 mil caracteres e tomava o lugar dos ids no teto.
+  const acceptsShown = accepts.length > 3 ? `${accepts.slice(0, 3).join("; ")}; +${accepts.length - 3}` : accepts.join("; ");
+  const uploadFacts = clip(`${acceptsShown} × ${support === SUPPORT_HIDDEN ? "apoio oculto neste estado (meça onde o campo aparece)" : support ? `apoio "${clip(support, UPLOAD_TEXT_MAX)}"` : "nenhum texto de apoio associado"}${error ? `; erro exibido "${clip(error, UPLOAD_TEXT_MAX)}"` : ""}`, UPLOAD_FACT_MAX);
   const inform = knowledgeFree ? [] : uploadInformClauses();
   return {
     code: "upload-paths",
@@ -896,7 +902,15 @@ export function pageLevelMeasured(checks: string[], componentsRestricted = false
  * página nos dois perfis. Como `conditions`, sobrevive a toda forma das pendências (o essencial não some no teto).
  */
 export function uploadsOf(items: PendingItem[]): Record<string, string> | undefined {
-  const out = Object.fromEntries(items.filter((i) => i.code === "upload-paths" && i.uploadFacts && i.pendingId).map((i) => [i.pendingId as string, i.uploadFacts as string]));
+  const out: Record<string, string> = {};
+  let used = 0;
+  for (const i of items) {
+    if (i.code !== "upload-paths" || !i.uploadFacts || !i.pendingId) continue;
+    const size = i.uploadFacts.length + String(i.pendingId).length + 6;
+    if (used + size > UPLOADS_MAP_MAX) break;
+    out[i.pendingId as string] = i.uploadFacts;
+    used += size;
+  }
   return Object.keys(out).length ? out : undefined;
 }
 

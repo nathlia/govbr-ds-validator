@@ -1,0 +1,199 @@
+{
+ "evaluation|A": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "summary",
+   "investigate",
+   "absenceNote",
+   "observations",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete",
+   "clauses"
+  ],
+  "pageLevel": [
+   "ids",
+   "idsNote",
+   "conditions",
+   "next"
+  ],
+  "families": 6,
+  "clauses": true
+ },
+ "evaluation|A2": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "sessionPending",
+   "summary",
+   "units",
+   "investigate",
+   "specification",
+   "absenceNote",
+   "observations",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete",
+   "clauses",
+   "clauseReserve"
+  ],
+  "pageLevel": [
+   "notMeasured",
+   "lowSignal",
+   "conditions",
+   "full"
+  ],
+  "families": 4,
+  "clauses": true
+ },
+ "evaluation|B": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "sessionPending",
+   "summary",
+   "units",
+   "investigate",
+   "specification",
+   "absenceNote",
+   "observations",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete",
+   "clauses",
+   "clauseReserve"
+  ],
+  "pageLevel": [
+   "ids",
+   "idsNote",
+   "conditions",
+   "next"
+  ],
+  "families": 3,
+  "clauses": true
+ },
+ "knowledge-free|A": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "summary",
+   "absenceNote",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete"
+  ],
+  "pageLevel": [
+   "notMeasured",
+   "endNote",
+   "note"
+  ],
+  "families": 2,
+  "clauses": false
+ },
+ "knowledge-free|A2": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "sessionPending",
+   "summary",
+   "units",
+   "absenceNote",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete"
+  ],
+  "pageLevel": [
+   "notMeasured",
+   "endNote",
+   "note"
+  ],
+  "families": 4,
+  "clauses": false
+ },
+ "knowledge-free|B": {
+  "top": [
+   "contract",
+   "kind",
+   "url",
+   "status",
+   "scanId",
+   "stateFingerprint",
+   "state",
+   "coverage",
+   "checksRun",
+   "sessionPending",
+   "summary",
+   "units",
+   "absenceNote",
+   "view",
+   "totalFindings",
+   "totalFamilies",
+   "cursor",
+   "count",
+   "families",
+   "complete"
+  ],
+  "pageLevel": [
+   "notMeasured"
+  ],
+  "families": 6,
+  "clauses": false
+ },
+ "_source": "1º scan (maxChars padrão) do pai d8fae86 contra o corpus de desenvolvimento, medido em 2026-11-12 (probe rev3711d/p2-firstscan.mjs); só as chaves de bloco, sem conteúdo"
+}
