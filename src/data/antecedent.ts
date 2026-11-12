@@ -53,7 +53,19 @@ type RuleLike = { id?: string; originalText?: string; source?: Record<string, un
  * A unidade anterior ADJACENTE da mesma seção (id + texto), quando a cláusula tem demonstrativo (`leading`: só no começo).
  * Sem charRange, sem seção, sem unidade anterior ou com texto entre as duas: undefined.
  */
+/**
+ * Revisão à mão dos 167 antecedentes adjacentes (12/11/2026): nestas quatro cláusulas a unidade anterior não é o referente
+ * (o referente está no título da seção, numa figura ou noutro parágrafo). Ficam sem antecedente; nada é posto no lugar.
+ */
+export const ANTECEDENT_REVIEWED_OUT: ReadonlySet<string> = new Set([
+  "component-modal-3b597e569d84",
+  "component-pagination-b7c2534d8aea",
+  "component-upload-96a0871dbcb0",
+  "component-loading-df127ece48df",
+]);
+
 export function antecedentOf(rule: RuleLike, leading = false): { id: string; text: string } | undefined {
+  if (rule.id && [...ANTECEDENT_REVIEWED_OUT].some((k) => rule.id!.endsWith(k))) return undefined;
   const text = plain(String(rule.originalText ?? ""));
   if (!(leading ? LEADING_ANAPHORIC : ANAPHORIC).test(text)) return undefined;
   const src = (rule.source ?? {}) as { section?: unknown; corpusFile?: unknown; charRange?: unknown };
