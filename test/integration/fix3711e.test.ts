@@ -116,7 +116,7 @@ describe("MED 2 — antecedente só com a unidade anterior adjacente no corpus",
     const drag = antecedentOf(getRuleById("govbr-3.7.0-component-upload-a54eed419af5")!, true);
     expect(drag).toEqual({ id: "govbr-3.7.0-component-upload-f0d98f9e5880", text: "O componente upload deve disponibilizar o recurso de arrastar arquivos." });
     const kept = getKnowledgeBase().rules.filter((r) => antecedentOf(r, true));
-    expect(kept.length).toBe(167);
+    expect(kept.length).toBe(163) // 167 adjacentes menos os 4 tirados na revisão à mão (ANTECEDENT_REVIEWED_OUT);
     const { client, call } = await connect();
     try {
       const one = await call("get_ds_rules", { id: "govbr-3.7.0-component-upload-a54eed419af5" });
