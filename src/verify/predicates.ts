@@ -29,6 +29,7 @@ import { PLACEHOLDER_LABEL_CONDITION, PLACEHOLDER_LABEL_GROUNDING, labelSourceOf
 import { DECORATIVE_ICON_CONDITION, DECORATIVE_ICON_GROUNDING, LINK_TITLE_CONDITION, LINK_TITLE_GROUNDING, exposedDecorativeIcons, isControl, linkTitleRepeatsText } from "../checkers/decorativeIcons.js";
 import { ICON_ONLY_BUTTON_CONDITION, ICON_ONLY_BUTTON_GROUNDING, embeddedHostOf, iconOnlyNonCircleButton, iconOnlyNonCircleFact, isButtonHost } from "../checkers/iconOnlyButton.js";
 import { checkPageStructure, pageConstraints } from "../checkers/pageStructure.js";
+import { EMAG_WEB_STANDARDS, NATIVE_BUTTON_CONDITION, defectText, hasButtonMarkupDefect, nativePageButton } from "../checkers/buttonMarkup.js";
 import { ARIA_STATES, ARIA_STATE_CONDITION, SWITCH_ARIA_CHECKED, ariaNativePairs, exposedForAria, hasNativeTwin, isSwitch, pairText, type AriaState } from "../checkers/ariaNativeState.js";
 import type { PageFacts } from "../evidence/pageFacts.js";
 import { normalizeColor } from "../checkers/color.js";
@@ -331,6 +332,35 @@ const iconOnlyButtonPredicate: Predicate = {
   },
 };
 const linkTitlePredicate = elementPredicate("link-title", LINK_TITLE_CONDITION, "title do link repete o texto", linkTitleRepeatsText);
+
+/**
+ * 3.7.11 (B-18): <button> nativo da página com marcação que o HTML não admite (checkers/buttonMarkup.ts) — recalculado no
+ * estado reproduzido. Fora do escopo (shadow DOM, web component, elemento customizado registrado, outra tag): sem decisão.
+ * Oculto conta (a marcação existe). Verified = o fato; a força é a da unidade citada (e-MAG 1.1, recommended).
+ */
+const nativeButtonPredicate: Predicate = {
+  id: "native-button-html",
+  properties: [],
+  verifyClaim: (elements) => ({ status: "consistent", detail: `Condição '${NATIVE_BUTTON_CONDITION}' aceita; ${elements.length} elemento(s) no estado reproduzido.` }),
+  evaluate: (elements) => {
+    const outside = elements.filter((el) => !nativePageButton(el));
+    if (outside.length) {
+      return {
+        status: "undetermined",
+        code: "rule-not-applicable",
+        detail: `${outside.length} de ${elements.length} elemento(s) não é <button> nativo da página (outra tag, shadow DOM, web component ou elemento customizado registrado): ${outside.slice(0, 3).map((el) => `${el.locator} <${el.tagName}>`).join("; ")}. Aponte element.locator para o <button>.`,
+      };
+    }
+    const clean = elements.filter((el) => !hasButtonMarkupDefect(el));
+    if (clean.length) {
+      return { status: "contradicted", detail: `${clean.length} de ${elements.length} <button> sem atributo href e sem conteúdo só de fluxo neste estado: ${clean.slice(0, 3).map((el) => el.locator).join("; ")}.` };
+    }
+    return {
+      status: "verified",
+      detail: `Fato recalculado em ${elements.length} de ${elements.length} <button>: ${elements.slice(0, 3).map((el) => `${el.locator} (${defectText(el)})`).join("; ")} — marcação que o HTML não admite no elemento (referência: HTML, elemento button).`,
+    };
+  },
+};
 
 function citesAny(finding: Finding, grounding: { implements: string[] }, emag?: string, wcag: string[] = []): boolean {
   const { source, id } = finding.rule;
@@ -674,6 +704,11 @@ export function selectPredicate(finding: Finding): PredicateSelection {
   if (data.expectedCondition === SPEC_PART_TOKEN_CONDITION) return specPartSelection(finding, data);
   if (source === "govbr-ds-kb" && id === SWITCH_ARIA_CHECKED && data.expectedCondition === undefined) {
     return none(`${SWITCH_ARIA_CHECKED} só é verificável com evidence.data.expectedCondition='${ARIA_STATE_CONDITION}' (e state 'checked'), no estado que a receita reproduz.`, "missing");
+  }
+  // 3.7.11 (B-18): marcação do <button> nativo — só com a condição exata e a norma relacionada que o scan entrega.
+  if (data.expectedCondition === NATIVE_BUTTON_CONDITION) {
+    if ((source === "govbr-ds-kb" && id === EMAG_WEB_STANDARDS) || (source === "emag" && id.trim().replace(/^emag[-:.]?/i, "") === "1.1")) return { predicate: nativeButtonPredicate };
+    return none(`A condição '${NATIVE_BUTTON_CONDITION}' só é medida citando ${EMAG_WEB_STANDARDS} (e-MAG 1.1 'Respeitar os Padrões Web', recommended) ou emag 1.1; a referência do fato é o HTML (elemento button).`);
   }
   if (data.expectedCondition === LINK_TITLE_CONDITION) {
     // 3.5.0 (revisão, MED): title redundante não reprova a WCAG 2.4.4 — só a cláusula do e-MAG 3.5 que o proíbe.

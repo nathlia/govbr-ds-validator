@@ -53,6 +53,12 @@ export const BUTTON_LABEL_ANATOMY = "govbr-3.7.0-component-button-9d77803305c0";
 export const BUTTON_CIRCLE_ICON = "govbr-3.7.0-component-button-627dd3089562";
 /** O legado que trazia a exceção (substituído por 7ef75d42ac65 na base literal). */
 export const BUTTON_LABEL_LEGACY = "govbr-3.7.0-component-button-4d7b5f978df1";
+/**
+ * 3.7.11 (leitura dev-3710-b § 3(d), § 7 item 3): a frase literal que SEGUE a cláusula do rótulo na mesma seção da base
+ * ("2. Rótulo (Obrigatório)", charRange contíguo): "A exceção ocorre na versão tipo circular uma vez que não existe
+ * rótulo." (força especificacao). A pendência icon-only-embedded a entrega junto da cláusula.
+ */
+export const BUTTON_LABEL_EXCEPTION = "govbr-3.7.0-component-button-4f33506c98ed";
 
 export const ICON_ONLY_BUTTON_GROUNDING: CheckGrounding = {
   implements: [BUTTON_LABEL_REQUIRED, BUTTON_LABEL_ANATOMY],

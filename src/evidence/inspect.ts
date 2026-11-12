@@ -27,6 +27,7 @@ import { isKnowledgeLocked } from "../data/lock.js";
 import type { DsStylesheetIndex } from "./cssProvenance.js";
 import { INTERACTIVE_TAGS, NAME_PROBE_KEY, approximateAccessibleName, chromiumAccessibleNames, removeProbe } from "./accessibleName.js";
 import type { Page } from "playwright";
+import { BUTTON_FLOW_ONLY, BUTTON_INVALID_ATTRIBUTES } from "../checkers/buttonMarkup.js";
 
 export const DEFAULT_SELECTOR =
   "button, a, input, select, textarea, [role='button'], [role='link'], [role='checkbox'], [role='radio'], [class*='br-']";
@@ -103,7 +104,7 @@ export async function inspectPageComputedStyles(
   try {
   // 3.4.4 (revisão, L5): só host com tag de componente do DS (br-<componente do catálogo>) conta como DS.
   const dsHosts = isKnowledgeLocked() ? [] : Object.keys(getComponentSpecs().components).map((name) => `br-${name}`);
-  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts, dsFacts, renderedText }) => {
+  elements = await page.evaluate(({ sels, shadowStep, computedProps, focusProps, cssNames, interactiveTags, probeKey, descendants, descendantLimit, dsHosts, dsFacts, renderedText, buttonInvalidAttributes, buttonFlowOnly }) => {
       /**
        * Every element matching `selector`, in this root and in every open shadow root below it.
        * A selector that already names a shadow path (`host >>> inner`) is walked hop by hop:
@@ -483,8 +484,34 @@ export async function inspectPageComputedStyles(
           }
         }
 
+        // 3.7.11 (B-18): <button> nativo do DOM claro, sem `is` — atributo que o elemento não tem (href) e descendente só de
+        // fluxo (fora de svg/math/template/select/datalist e de elemento com hífen). Sai só quando há algo.
+        let buttonMarkup: { attributes: string[]; nonPhrasing: string[]; insideCustomElement?: true } | undefined;
+        if (el.tagName.toLowerCase() === "button" && el.namespaceURI === "http://www.w3.org/1999/xhtml" && !(el.getRootNode() instanceof ShadowRoot) && !el.hasAttribute("is")) {
+          const attributes = buttonInvalidAttributes.filter((a) => el.hasAttribute(a));
+          const nonPhrasing: string[] = [];
+          const walk = (parent: Element) => {
+            for (const child of Array.from(parent.children)) {
+              const tag = child.tagName.toLowerCase();
+              if (child.namespaceURI !== "http://www.w3.org/1999/xhtml" || tag.includes("-") || ["template", "select", "datalist"].includes(tag)) continue;
+              if (buttonFlowOnly.includes(tag) && !nonPhrasing.includes(tag)) nonPhrasing.push(tag);
+              walk(child);
+            }
+          };
+          walk(el);
+          if (attributes.length || nonPhrasing.length) {
+            let inCustom = false;
+            for (let n: Element | null = el.parentElement; n; n = n.parentElement) {
+              const tag = n.tagName.toLowerCase();
+              if (tag.includes("-") && customElements.get(tag)) { inCustom = true; break; }
+            }
+            buttonMarkup = { attributes, nonPhrasing: nonPhrasing.slice(0, 6), ...(inCustom ? { insideCustomElement: true as const } : {}) };
+          }
+        }
+
         return {
           nameProbeIndex,
+          ...(buttonMarkup ? { buttonMarkup } : {}),
           locator: locatorFor(el),
           tagName: el.tagName.toLowerCase(),
           id: el.id || null,
@@ -585,6 +612,8 @@ export async function inspectPageComputedStyles(
       descendants: options.descendants === true,
       renderedText: options.renderedText === true,
       descendantLimit: DESCENDANT_SCOPE_LIMIT,
+      buttonInvalidAttributes: [...BUTTON_INVALID_ATTRIBUTES] as string[],
+      buttonFlowOnly: [...BUTTON_FLOW_ONLY] as string[],
     });
 
   const probed = elements.filter((element) => element.nameProbeIndex !== null).length;

@@ -39,6 +39,11 @@ export const EXPECTED_CONDITIONS = {
    * para ela. A alegação diz que difere.
    */
   partValueMatchesSpecToken: "part-value-matches-spec-token",
+  /**
+   * 3.7.11 (B-18): o `<button>` nativo da página só tem atributos que o HTML admite no elemento (medido: href) e só conteúdo
+   * de fraseado (medido: elementos só de fluxo). A alegação diz que não.
+   */
+  nativeButtonValidHtml: "native-button-valid-html",
   // 2.13.0 (NAT-85) — verificação contextual delimitada. Cada condição nomeia o estado ESPERADO;
   // a alegação de violação diz que ele não se cumpre. Só as regras listadas em
   // verify/contextual.ts (CONTEXT_CONDITIONS) selecionam estes predicados.

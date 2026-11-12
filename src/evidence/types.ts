@@ -155,6 +155,12 @@ export interface ElementEvidence {
   inShadowDom: boolean;
   /** 3.4.0 (B5): cor, largura e estilo de cada lado da borda — só quando borderColor foi pedido. */
   borderSides?: Array<{ side: "top" | "right" | "bottom" | "left"; color: string; width: string; style: string }>;
+  /**
+   * 3.7.11 (B-18): só em `<button>` nativo do DOM claro (sem `is`) com marcação que o HTML não admite — atributos fora do
+   * elemento (checkers/buttonMarkup.ts: só `href`) e descendentes só de fluxo (`p`, `div`, títulos, listas…). Ausente =
+   * nada medido fora do admitido. `insideCustomElement`: ancestral é elemento customizado registrado (fora do escopo).
+   */
+  buttonMarkup?: { attributes: string[]; nonPhrasing: string[]; insideCustomElement?: true };
   /** 3.4.0: o elemento tem caixa na página e não está com visibility hidden. Ausente antes da 3.4.0. */
   rendered?: boolean;
   /**

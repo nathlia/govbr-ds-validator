@@ -19,7 +19,7 @@ import { createHash } from "node:crypto";
 import { filterRules, getKnowledgeBase, getRuleById } from "../data/knowledge.js";
 import { USAGE_SUBCATEGORY } from "../tools/usageClauses.js";
 import type { DisclosureGroup } from "../evidence/disclosures.js";
-import { BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
+import { BUTTON_LABEL_EXCEPTION, BUTTON_LABEL_REQUIRED } from "../checkers/iconOnlyButton.js";
 
 /** 3.6.3: o hash de um conjunto de elementos (ordem não importa). */
 function setHash(parts: string[]): string {
@@ -27,7 +27,7 @@ function setHash(parts: string[]): string {
 }
 
 export interface NotJudgedItem {
-  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required" | "upload-paths" | "state-unscanned";
+  code: "document-title-adequacy" | "document-title-empty" | "field-name-source" | "table-name" | "lang-adequacy" | "landmark-adequacy" | "contrast-incomplete" | "icon-only-embedded" | "aria-native-mismatch" | "aria-state-unverified" | "usage-unread" | "observed-required" | "upload-paths" | "state-unscanned" | "button-html";
   subject: string;
   count?: number;
   observed?: string;
@@ -39,6 +39,11 @@ export interface NotJudgedItem {
    * "por falta de norma" exija contrariar um texto visível. Ausente no perfil knowledge-free.
    */
   rule?: { id: string; force: string; text: string };
+  /**
+   * 3.7.11 (leitura dev-3710-b § 7 item 3): a frase literal da base que segue a cláusula de `rule` na mesma seção e diz a
+   * exceção dela (id, força, texto). Como `rule`: o texto só na 1ª vez que o código aparece na sessão.
+   */
+  exception?: { id: string; force: string; text: string };
   /**
    * 3.7.2 (revisão HIGH 1): pendência de ELEMENTOS que só fecha pelo verify_finding num dos próprios elementos — a norma
    * citada é compartilhada com achados de outros elementos (o C01 de um botão fora de hospedeiro não decide o candidato
@@ -108,6 +113,8 @@ export interface NotJudgedInput {
   embeddedIconButtons?: Array<{ locator: string; host: string; examples: string[] }>;
   /** 3.7.3 A8: pendências ARIA × estado nativo (checkers/ariaNativeState.ts), depois das demais. */
   ariaStates?: NotJudgedItem[];
+  /** 3.7.11 (B-18): <button> nativo com marcação que o HTML não admite (checkers/buttonMarkup.ts), depois de todas. */
+  buttonHtml?: NotJudgedItem;
   /** 3.7.8 (item 5): campos de arquivo (input type=file) do escopo, com o `accept` da marcação. Depois de todas. */
   fileInputs?: FileInputFact[];
   /** 3.7.8 (N5): estados recolhidos deste estado (evidence/disclosures.ts), casca primeiro, e a url da receita. */
@@ -333,6 +340,10 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
   const width = Math.max(0, ...candidates.map((c) => c.examples.length));
   const examples = [...new Set(Array.from({ length: width }, (_, k) => candidates.map((c) => c.examples[k]).filter((e): e is string => Boolean(e))).flat())].slice(0, 4);
   const rule = kbRule(BUTTON_LABEL_REQUIRED);
+  // 3.7.11 (leitura dev-3710-b § 3(d), § 7 item 3; B-09/B-10): a cláusula chegava sem a frase que a segue na base, e dois
+  // agentes rejeitaram por "tem aria-label". Agora vão juntos: a frase literal da exceção (com o id), a distinção nome
+  // acessível × rótulo visível (procedimento) e a nota do exemplo oficial. O oráculo continua sem afirmar a violação.
+  const exception = kbRule(BUTTON_LABEL_EXCEPTION);
   return {
     code: "icon-only-embedded",
     subject: "botões do DS só com ícone, sem circle, dentro de outro componente do DS",
@@ -350,7 +361,8 @@ export function embeddedIconButtonPending(candidates: NonNullable<NotJudgedInput
     // só a cláusula do rótulo: a forma curta da pendência cita a 1ª norma que não está em `rule` (a anatomia tomaria o lugar)
     norms: [BUTTON_LABEL_REQUIRED],
     ...(rule ? { rule } : {}),
-    measure: "o check automático do botão só com ícone não cobre botão dentro de outro componente; a norma é a cláusula citada (required), não o exemplo: texto visível no botão × circle × nome acessível",
+    ...(exception ? { exception } : {}),
+    measure: `o check automático do botão só com ícone não cobre botão dentro de outro componente; a norma é a cláusula citada (required), não o exemplo${exception ? `, e a frase seguinte dela na base (exception, ${exception.id}) diz a exceção` : ""}. aria-label e title dão nome acessível; não são o rótulo visível de que a cláusula fala. Meça: texto visível no botão × circle × nome acessível`,
   };
 }
 
@@ -705,6 +717,8 @@ export function notJudgedFor(input: NotJudgedInput): NotJudgedItem[] {
   const upload = uploadPathsPending(input.fileInputs ?? [], false, input.stateBase ?? (input.url ? { url: input.url } : undefined));
   if (upload) items.push(upload);
   items.push(...statePendings(input.disclosures ?? [], input.stateBase ?? { url: input.url ?? "" }));
+  // 3.7.11 (B-18): por último — os ids das pendências de sempre não mudam por causa desta.
+  if (input.buttonHtml) items.push(input.buttonHtml);
   return items;
 }
 
@@ -798,10 +812,13 @@ function compactItem(item: PendingItem, withText: (code: string) => boolean = ()
   // 3.6.1 (revisão H1): o texto da cláusula só na 1ª vez que o código aparece na sessão; depois, só id e força.
   const low = signal === "low";
   const rule = rest.rule && (low || !withText(item.code)) ? { id: rest.rule.id, force: rest.rule.force } : rest.rule;
+  // 3.7.11: a frase da exceção segue a regra do texto da cláusula (inteira só na 1ª vez do código na sessão).
+  const exception = rest.exception && (low || !withText(item.code)) ? { id: rest.exception.id, force: rest.exception.force } : rest.exception;
   return {
     ...rest,
     ...(low ? { signal } : { measure }),
     ...(rule ? { rule } : {}),
+    ...(exception ? { exception } : {}),
     // 3.7.6: a pendência de observação cita só a norma de `rule` — sem `norms: []` vazio.
     ...(others && (others.length || item.code !== "observed-required") ? { norms: others } : {}),
     ...(examples && !measured ? { examples: examples.slice(0, 2) } : {}),
@@ -874,6 +891,8 @@ export function pageLevelBlockKnowledgeFree(items: PendingItem[]) {
       ? "notMeasured: pendências suas — o oráculo mediu e não decidiu, ou um estado/caminho da página que este scan não exerceu (recipe, measure); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo: verify_finding (critério em norms) ou o scan do estado."
       : aria
       ? "notMeasured: pendências suas — o oráculo mediu e não decidiu (axe; estado ARIA × nativo); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério candidato em norms)."
+      : items.some((i) => i.code === "button-html")
+      ? "notMeasured: pendências suas — o oráculo mediu e não decidiu (axe; marcação do button); não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo: verify_finding (critério em norms) ou, sem critério, em limitations."
       : "notMeasured: pendências suas — o axe mediu e não decidiu; não é conformidade. Cada pendingId volta em todo scan até você resolvê-lo com verify_finding (critério em norms).",
   };
 }

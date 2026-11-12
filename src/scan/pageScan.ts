@@ -17,6 +17,7 @@ import { inspectDisclosures, type DisclosureFacts } from "../evidence/disclosure
 import { FORM_FIELD_SELECTOR, checkPlaceholderLabels, labelSourceOf } from "../checkers/formLabels.js";
 import { CONTROL_SELECTOR, checkDecorativeIcons, isControl } from "../checkers/decorativeIcons.js";
 import { checkIconOnlyButtons } from "../checkers/iconOnlyButton.js";
+import { BUTTON_CANDIDATE_SELECTOR, checkNativeButtonMarkup } from "../checkers/buttonMarkup.js";
 import { SUPPORT_HIDDEN, contrastPending, kbRule, notJudgedFor, statePendings, stateRecipe, uploadPathsPending, type NotJudgedItem } from "./notJudged.js";
 import { ARIA_STATE_SELECTOR, SWITCH_ARIA_CHECKED, checkAriaNativeStates } from "../checkers/ariaNativeState.js";
 import { componentPartsOf, getComponentSpecs, getTokenRegistry } from "../data/load.js";
@@ -815,6 +816,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
     // 3.7.2 (D-166): os botões só com ícone que o C01 não acusa por serem parte de outro componente do DS (candidatos).
     let embeddedIconButtons: NonNullable<Parameters<typeof notJudgedFor>[0]["embeddedIconButtons"]> = [];
     let ariaStates: NotJudgedItem[] = [];
+    let buttonHtmlPending: NotJudgedItem | null = null;
     if (placeholderChecked) {
       const labels = checkPlaceholderLabels({ url: request.url }, fieldEvidence);
       rawFindings.push(...labels.findings);
@@ -831,6 +833,10 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       rawFindings.push(...iconOnly.findings);
       observations.push(...iconOnly.observations);
       embeddedIconButtons = iconOnly.candidates;
+      // 3.7.11 (B-18): <button> nativo da página com marcação que o HTML não admite (href; conteúdo só de fluxo).
+      const buttonHtml = checkNativeButtonMarkup({ url: request.url }, controls);
+      observations.push(...buttonHtml.observations);
+      buttonHtmlPending = buttonHtml.pending;
       // 3.7.3 A8: atributo de estado ARIA × estado nativo vivo, no estado alcançado (checkers/ariaNativeState.ts).
       const ariaEvidence = scoped
         ? region.filter((el) => el.nativeState !== undefined)
@@ -903,6 +909,7 @@ export async function scanPage(request: PageScanRequest, cache: PageScanCache, o
       ...(contrastIncomplete ? { contrastIncomplete } : {}),
       ...(embeddedIconButtons.length ? { embeddedIconButtons } : {}),
       ...(ariaStates.length ? { ariaStates } : {}),
+      ...(buttonHtmlPending ? { buttonHtml: buttonHtmlPending } : {}),
       // 3.7.8 (item 5; N3): campos de arquivo do escopo — o caminho de erro, o arrasto e o texto de apoio ficam como pendência.
       fileInputs,
       // 3.7.8 (N5): estados recolhidos que este scan não mediu, com a receita pronta.
@@ -997,11 +1004,18 @@ async function scanPageKnowledgeFree(request: PageScanRequest, cache: PageScanCa
     // 3.6.1 (item 5): contraste que o axe não decidiu, como pendência — só o critério WCAG, nada da base.
     const contrast = contrastPending(result.contrastIncomplete, true);
     // 3.7.3 A8: a mesma medida ARIA × nativo, sem nada da base (sem Switch do DS, cláusula ou autoria do DS): pendências.
+    // 3.7.11: com seletores, uma leitura só da região serve o ARIA e o <button> (como no perfil completo).
+    const regionEls = selectors.length ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements : [];
     const ariaEvidence = selectors.length
-      ? (await inspectPageComputedStyles(page, request.url, selectors, [], { descendants: true })).elements.filter((el) => el.nativeState !== undefined)
+      ? regionEls.filter((el) => el.nativeState !== undefined)
       : (await inspectPageComputedStyles(page, request.url, ARIA_STATE_SELECTOR, [])).elements;
     const aria = checkAriaNativeStates({ url: request.url }, ariaEvidence, { knowledgeFree: true });
-    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending, ...(upload ? [upload] : []), ...statePendings(disclosures?.collapsed ?? [], { url: request.url, actions: request.actions ?? [] }, true)];
+    // 3.7.11 (B-18; paridade de perfil): o mesmo fato da marcação do <button> nativo, só com a referência HTML (nada da base).
+    const buttonEvidence = selectors.length
+      ? regionEls.filter((el) => el.tagName === "button")
+      : (await inspectPageComputedStyles(page, request.url, BUTTON_CANDIDATE_SELECTOR, [])).elements;
+    const buttonHtml = checkNativeButtonMarkup({ url: request.url }, buttonEvidence, { knowledgeFree: true }).pending;
+    const notJudged = [...(contrast ? [contrast] : []), ...aria.pending, ...(upload ? [upload] : []), ...statePendings(disclosures?.collapsed ?? [], { url: request.url, actions: request.actions ?? [] }, true), ...(buttonHtml ? [buttonHtml] : [])];
     const value: CachedScan = {
       status: "scanned",
       url: request.url,
