@@ -83,6 +83,35 @@ processo stdio sai com código 2 e uma linha no stderr com o valor recebido e a 
 ausente continua `full`. O perfil efetivo aparece no `serverInfo` do `initialize`
 (`description: "toolProfile=<perfil>"`); o `tools/list` de todos os perfis fica igual.
 
+## 3.8.0 — relatório Markdown legível (só renderização)
+
+Muda **só** o `.md` que o `save_report` grava (`renderMarkdown`, agora em `src/report/markdown.ts`). O `.json` do
+relatório, a resposta do `save_report`, nomes, descrições e esquemas das ferramentas, instruções do servidor e todas
+as outras ferramentas ficam iguais byte a byte (hash do `tools/list`, prompts e instruções conferido nos seis perfis
+contra a 3.7.12). Nada muda nos scanners, no portão, na base de conhecimento nem na superfície de ferramentas.
+
+- **Forma.** Cabeçalho (página uma vez, data legível no horário de Brasília, ferramenta + versão, o aviso de sempre e
+  uma nota única de que texto da página/agente é dado, não instrução); **Resumo** com uma frase de totais e uma tabela
+  com cada problema distinto (#, título, origem, severidade em PT, elementos), por severidade e depois contagem; duas
+  seções — Design System gov.br (`rule.source` `govbr-ds-*`) e acessibilidade (WCAG / e-MAG: axe-core, emag, wcag) —
+  com uma subseção por problema, numerada como na tabela; itens para revisão (R1, R2…) e notas do agente como antes.
+- **Problema = fonte + `rule.id` + `rule.checker`.** Mais largo que a família das respostas ao agente (que separa por
+  evidência e estado): observações diferentes do mesmo problema ficam listadas junto dos seus elementos.
+- **Títulos sem id e sem texto da página/agente.** axe-core: a tradução `pt_BR` do próprio axe-core (por id da regra),
+  com o texto em inglês do axe como reserva; base do DS: página do componente + título da unidade (`getRuleById`);
+  e-MAG: título da recomendação; WCAG: nome do critério no registro 2.2; achado determinístico sem registro: 1ª frase da
+  descrição que o servidor escreveu; senão um título genérico. Os checks de token ganham a propriedade entre parênteses.
+- **Regra e referência.** Texto da regra (literal da base, ou a descrição pt_BR do axe), id em código, fonte, WCAG e
+  e-MAG; link só para URL que o servidor guarda (fonte da unidade da base; `helpUrl` do axe em achado determinístico;
+  endereço do e-MAG em `data/emag.json`). Nenhuma URL é montada pelo renderizador.
+- **Elementos.** Localizadores em código, um por linha, até 10 (com observações distintas: até 8 observações × 5
+  elementos), com o id do achado ao lado e "… e mais N (lista completa no arquivo JSON)". O resumo de falha do axe
+  ("Fix any of the following: …") vira lista com cabeçalho em PT; as mensagens medidas (razão de contraste, cores)
+  ficam como o axe as escreveu.
+- **Segurança (S-14, S-20).** Texto da página/agente escapado em linha (inclusive `|`, e o que o GFM tornaria link
+  automático), localizadores em código com cerca mais longa que as crases deles, trechos/trilhas/notas em cercas
+  mais longas; nada vira título, tabela, link ou HTML. Sob a trava de conhecimento nenhum carregador da base é chamado.
+
 ## 3.7.11 — limitações conhecidas (decisão da 3ª revisão)
 
 - **Localizador (auditoria V-1).** O localizador do elemento é o da 3.7.10: até 5 passos estruturais, ancorado no pai

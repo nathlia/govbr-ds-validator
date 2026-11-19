@@ -237,8 +237,10 @@ describe("3.6.0 — verify_finding com a citação nova", () => {
     expect(result.accepted[0].rule).toMatchObject({ id: "govbr-3.7.0-accessibility-skiplink-b0641993618f", source: "govbr-ds-kb", checker: "ds-page-focus-order" });
     expect(result.normalized).toContainEqual({ index: 0, field: "rule.id", from: { id: "ds-page-focus-order", source: "govbr-ds-page" }, to: { id: "govbr-3.7.0-accessibility-skiplink-b0641993618f", source: "govbr-ds-kb", checker: "ds-page-focus-order" } });
     const md = renderMarkdown(buildReport(page.url, result.accepted));
-    expect(md).toContain("govbr-3.7.0-accessibility-skiplink-b0641993618f (verificação ds-page-focus-order)");
-    expect(md).not.toMatch(/] ds-page-focus-order/);
+    // 3.8.0: a citação é a norma (rule.id); o check aparece só como "verificação", depois dela.
+    expect(md).toContain("**Referência:** `govbr-3.7.0-accessibility-skiplink-b0641993618f` · ");
+    expect(md).toContain("verificação `ds-page-focus-order`");
+    expect(md).not.toContain("**Referência:** `ds-page-focus-order`");
   });
 
   it("WCAG 2.4.3 com a condição do salto como 1º foco escolhe o predicado da ordem de foco", async () => {

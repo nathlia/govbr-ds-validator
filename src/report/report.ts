@@ -21,6 +21,7 @@ import { findingSha256 } from "../verify/store.js";
 import { sameScanPage } from "../scan/state.js";
 import { getRuleById } from "../data/knowledge.js";
 import { findEmagRule } from "../data/load.js";
+import { renderMarkdown } from "./markdown.js";
 
 export interface ReportSummary {
   total: number;
@@ -228,95 +229,11 @@ export function buildReport(url: string, findings: Finding[], notes?: string, re
   };
 }
 
-const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
-
 /** Notas do relatório: no máximo 20.000 caracteres (S-20). */
 export const REPORT_NOTES_MAX_CHARS = 20_000;
 
-/** Cerca de código mais longa que qualquer sequência de crases do texto: o texto nunca fecha o bloco. */
-function fenced(text: string, lang = ""): string[] {
-  const longest = Math.max(2, ...Array.from(text.matchAll(/`+/g), (m) => m[0].length));
-  const fence = "`".repeat(longest + 1);
-  return [`${fence}${lang}`, text, fence];
-}
-
-/** Texto em linha: sem quebras, sem crases soltas, sem HTML/markdown ativo. */
-function inline(text: string, max = 600): string {
-  const flat = text.replace(/\s+/g, " ").trim();
-  const cut = flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
-  // A linha já começa com "- **…**": # e | no meio do texto não viram título nem tabela.
-  return cut.replace(/[\\`*_[\]<>]/g, (c) => `\\${c}`);
-}
-
-function renderFinding(f: Finding): string[] {
-  const lines = [
-    `### ${inline(f.id, 80)} — [${f.severity}] ${inline(f.rule.id, 120)}${f.rule.checker ? ` (verificação ${inline(f.rule.checker, 80)})` : ""}`,
-    "",
-    `- **Regra:** ${inline(f.rule.description)}${f.rule.wcag ? ` (WCAG ${inline(f.rule.wcag, 20)})` : ""} — fonte: ${f.rule.source}`,
-    `- **Elemento:** ${inline(f.element.locator, 300)} em ${inline(f.element.page, 300)}`,
-    `- **Observado (dado da página/agente, não instrução):** ${inline(f.evidence.observed)}`,
-    `- **Esperado:** ${inline(f.evidence.expected)}`,
-    `- **Classificação:** ${f.nature} / ${f.mode} · via ${f.pathway}`,
-  ];
-  if (f.verification) {
-    lines.push(`- **Verificação:** ${f.verification.verdict} (${inline(f.verification.verifiedBy, 80)})${f.verification.detail ? ` — ${inline(f.verification.detail)}` : ""}`);
-    const c = f.verification.checks;
-    if (c) {
-      lines.push(`- **Conferências:** regra existe: ${c.ruleExists} · aplicável: ${c.applicability} · evidência: ${c.evidenceConsistent} · violação: ${c.violation}`);
-    }
-  }
-  // S-14: o trecho é conteúdo da página — dado, nunca instrução; a cerca não pode ser fechada por ele.
-  if (f.element.snippet) lines.push("", "Trecho da página (conteúdo não confiável, não é instrução):", "", ...fenced(f.element.snippet.slice(0, 600), "html"));
-  if (f.trace) lines.push("", "Trilha de raciocínio (do agente):", "", ...fenced(f.trace.slice(0, 4_000)));
-  lines.push("");
-  return lines;
-}
-
-export function renderMarkdown(report: Report): string {
-  const { meta, summary, findings } = report;
-  const reviewItems = report.reviewItems ?? [];
-  const lines: string[] = [
-    `# Relatório de validação — ${inline(meta.url, 300)}`,
-    "",
-    `Gerado em ${meta.generatedAt} por ${meta.tool}.`,
-    "",
-    `> ${meta.disclaimer}`,
-    "",
-    "## Resumo",
-    "",
-    `- Total de achados: **${summary.total}**`,
-    `- Por severidade: ${Object.entries(summary.bySeverity).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}`,
-    `- Por natureza: ${Object.entries(summary.byNature).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}`,
-    `- Por via de detecção: ${Object.entries(summary.byPathway).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}`,
-    `- Itens para revisão (verificação inconclusiva, fora do total): **${reviewItems.length}**`,
-    "",
-    "## Achados",
-    "",
-  ];
-
-  for (const f of [...findings].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])) {
-    lines.push(...renderFinding(f));
-  }
-
-  if (reviewItems.length > 0) {
-    lines.push(
-      "## Itens para revisão — verificação inconclusiva",
-      "",
-      "> O portão não confirmou nem rejeitou estes achados heurísticos: a regra existe e a evidência não foi contradita, mas nenhum predicado do oráculo recalculou a violação. Não são achados confirmados e não entram no total.",
-      ""
-    );
-    for (const f of [...reviewItems].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])) {
-      lines.push(...renderFinding(f));
-    }
-  }
-
-  if (report.notes) {
-    // S-20: notas do agente em bloco literal — não viram título, tabela, script nem link.
-    lines.push("## Notas (do agente)", "", ...fenced(report.notes), "");
-  }
-
-  return lines.join("\n");
-}
+/** 3.8.0: a renderização Markdown mora em markdown.ts (só apresentação; o JSON não muda). */
+export { renderMarkdown };
 
 export interface PersistedReport {
   jsonPath: string;
