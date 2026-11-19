@@ -111,6 +111,20 @@ contra a 3.7.12). Nada muda nos scanners, no portão, na base de conhecimento ne
 - **Segurança (S-14, S-20).** Texto da página/agente escapado em linha (inclusive `|`, e o que o GFM tornaria link
   automático), localizadores em código com cerca mais longa que as crases deles, trechos/trilhas/notas em cercas
   mais longas; nada vira título, tabela, link ou HTML. Sob a trava de conhecimento nenhum carregador da base é chamado.
+- **2ª passada (mesma versão).** (1) Ordem e numeração 1..N sem saltos: problemas do Design System primeiro, depois
+  os de acessibilidade, cada grupo por severidade e contagem — a tabela e o corpo na mesma ordem. (2) Título curto pelo
+  check do oráculo (`ds-token-*`, `ds-page-header|footer|skip-link|focus-order|title`, `ds-structure-<componente>-tag`,
+  este só em achado do servidor); sem check, o título da norma sem abertura vazia ("É importante ressaltar que…"), com
+  maiúscula, sem ponto final, até 80 caracteres em palavra inteira. (3) "Como o oráculo mede" só quando acrescenta algo à
+  regra, e só a 1ª frase (até 220), sem a cláusula repetida no início, sem "(required)" e sem ids da base; "O que se
+  espera" sem o parêntese sobre o que o check não acusa — o texto inteiro segue no JSON. (4) Mensagens das verificações
+  do axe em pt_BR pelo próprio axe-core: índice reverso dos modelos em inglês (`require("axe-core")._audit.data.checks`,
+  em Node, sem navegador) para `locales/pt_BR.json` `checks`; modelos com `${data.x}` viram padrão e os valores medidos
+  (razão de contraste, cores, fonte) passam intactos; mensagem sem correspondência única fica em inglês, sem mudança. Na
+  tela Vistorias: 13 de 13 mensagens distintas (179 ocorrências) traduzidas. (5) Localizadores iguais exceto por um
+  único índice numérico viram uma linha (`tr:nth-child(N) > …` · N = 1–10 · F-050 a F-059; não contíguo: N = 1, 5, 9);
+  com dois índices variando, nada se agrupa; o teto de 10 vale para as linhas depois de agrupar; o "Exemplo" mantém o
+  localizador literal.
 
 ## 3.7.11 — limitações conhecidas (decisão da 3ª revisão)
 

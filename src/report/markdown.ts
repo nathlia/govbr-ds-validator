@@ -6,9 +6,10 @@
  *   1. Cabeçalho: página, data legível, ferramenta + versão, o aviso de sempre e UMA nota de que o texto
  *      vindo da página/agente é dado, não instrução.
  *   2. Resumo: uma frase com os totais e UMA tabela com cada problema distinto (#, título, origem,
- *      severidade, elementos), por severidade e depois contagem.
+ *      severidade, elementos): Design System primeiro, depois acessibilidade; em cada grupo, por severidade e
+ *      depois contagem; numerados 1..N sem saltos.
  *   3. Duas seções — Design System gov.br e acessibilidade (WCAG / e-MAG) — com uma subseção por problema,
- *      numerada como na tabela.
+ *      na mesma ordem e numeração da tabela.
  *
  * Problema = mesma fonte + mesmo rule.id + mesmo rule.checker. É mais largo que a família de
  * responses/families.ts (que separa também por evidência, estado e severidade, para o agente): para quem
@@ -35,9 +36,9 @@ import { findEmagRule, getEmag } from "../data/load.js";
 import { getWcagRegistry } from "../verify/registries.js";
 import { isKnowledgeLocked } from "../data/lock.js";
 
-/** Quantos localizadores cada problema lista antes de "… e mais N". */
+/** Quantas linhas de localizador (depois de agrupar os que só diferem por um índice) antes de "… e mais N". */
 export const ELEMENT_LIST_CAP = 10;
-/** Com observações diferentes: quantas observações distintas e quantos elementos em cada. */
+/** Com observações diferentes: quantas observações distintas e quantas linhas de localizador em cada. */
 export const OBSERVATION_GROUP_CAP = 8;
 export const ELEMENTS_PER_OBSERVATION_CAP = 5;
 /** Achados do agente: quantas verificações/trilhas por problema. */
@@ -72,14 +73,53 @@ const VERDICT_PT: Record<Verification["verdict"], string> = {
   unverifiable: "não verificável",
 };
 
-/** Os checks de token citam a mesma unidade da base; o título diz qual propriedade. */
-const TOKEN_CHECK_PT: Record<string, string> = {
-  "ds-token-color": "cores",
-  "ds-token-spacing": "espaçamentos",
-  "ds-token-radius": "cantos arredondados",
-  "ds-token-font-family": "família tipográfica",
-  "ds-token-font-size": "tamanho de fonte",
+/**
+ * Título curto por check do oráculo (`rule.checker`): os checks que existem no código (checkers/tokenCompliance,
+ * checkers/pageStructure, checkers/structure). A cláusula literal que o check cita é texto da norma, nem sempre bom
+ * título ("É importante ressaltar que…"); o nome do que foi medido é. Check desconhecido cai no título da norma.
+ */
+const CHECKER_TITLE: Record<string, string> = {
+  "ds-token-color": "Tokens de cor",
+  "ds-token-spacing": "Tokens de espaçamento",
+  "ds-token-radius": "Tokens de arredondamento de cantos",
+  "ds-token-font-family": "Tokens de família tipográfica",
+  "ds-token-font-size": "Tokens de tamanho de fonte",
+  "ds-page-header": "Cabeçalho do Template Base",
+  "ds-page-footer": "Rodapé do Template Base",
+  "ds-page-skip-link": "Link de salto para o conteúdo",
+  "ds-page-focus-order": "Primeiro foco no link de salto para o conteúdo",
+  "ds-page-title": "Título do documento",
 };
+
+/** `ds-structure-<componente>-tag`: o nome vem do id do check, só em achado do próprio servidor. */
+function checkerTitle(f: Finding): string | undefined {
+  const checker = f.rule.checker;
+  if (!checker) return undefined;
+  if (Object.prototype.hasOwnProperty.call(CHECKER_TITLE, checker)) return CHECKER_TITLE[checker];
+  const structure = /^ds-structure-([a-z0-9]+(?:-[a-z0-9]+)*)-tag$/.exec(checker);
+  if (structure && f.pathway === "deterministic") return `Elemento raiz do componente ${structure[1]}`;
+  return undefined;
+}
+
+/** Abertura de cláusula que não diz nada ("É importante ressaltar que …"). */
+const FILLER_OPENING =
+  /^(?:(?:é|e) (?:importante|necessário|fundamental|essencial) (?:ressaltar|lembrar|destacar|observar|notar|frisar) que|vale (?:a pena )?(?:ressaltar|lembrar|destacar|observar|notar) que|lembre-se (?:de )?que|lembrando que|note que|observe que|repare que|importante:)\s+/i;
+
+/** Título a partir de texto de norma: sem numeração e abertura vazia, maiúscula inicial, sem ponto final, ≤ max. */
+export function cleanTitle(value: string, max = 80): string {
+  let t = value.replace(/\s+/g, " ").trim().replace(/^\d+(\.\d+)*\.?\s+/, "");
+  for (let previous = ""; previous !== t; ) {
+    previous = t;
+    t = t.replace(FILLER_OPENING, "");
+  }
+  t = t.replace(/[.;:]+$/, "").trim();
+  if (t.length > max) {
+    const cut = t.slice(0, max - 1);
+    const space = cut.lastIndexOf(" ");
+    t = `${(space > max / 2 ? cut.slice(0, space) : cut).replace(/[\s,;:.—-]+$/, "")}…`;
+  }
+  return t.charAt(0).toLocaleUpperCase("pt-BR") + t.slice(1);
+}
 
 // ── Escapes ────────────────────────────────────────────────────────────────
 
@@ -133,8 +173,11 @@ const AXE_HELP_URL = /^https:\/\/dequeuniversity\.com\/rules\/axe\/[0-9.]+\/[a-z
 
 // ── Registros (títulos, textos, referências) ───────────────────────────────
 
+type AxeCheckMessages = Partial<Record<"pass" | "fail" | "incomplete", string | Record<string, string>>>;
+
 interface AxeLocale {
   rules: Record<string, { description?: string; help?: string }>;
+  checks?: Record<string, AxeCheckMessages>;
   failureSummaries?: Record<string, { failureMessage?: string }>;
 }
 
@@ -161,6 +204,131 @@ function axeSummaryHeader(kind: "any" | "none"): string {
   const head = typeof template === "string" ? template.split("{{")[0].trim() : "";
   if (head) return head;
   return kind === "any" ? "Corrija qualquer um dos itens a seguir:" : "Corrija todos os itens a seguir:";
+}
+
+// ── Mensagens das verificações do axe em pt_BR ─────────────────────────────
+//
+// O achado guarda a mensagem do axe em inglês (failureSummary). O próprio pacote axe-core traz as duas pontas:
+// os modelos em inglês (`_audit.data.checks[id].messages`, carregados em Node sem navegador) e os pt_BR
+// (`locales/pt_BR.json`, `checks[id]`). O índice reverso inglês → pt_BR é montado só daí — nenhuma tradução
+// escrita aqui. Modelo com `${data.x}` vira padrão: os valores medidos são capturados do texto em inglês e
+// postos, intactos, no modelo pt_BR. Mensagem sem correspondência única fica em inglês, sem mudança.
+
+interface AxeTemplate {
+  re: RegExp;
+  vars: string[];
+  pt: string;
+  literal: number;
+}
+
+interface AxeMessageIndex {
+  /** Mensagem estática em inglês → pt_BR; null quando duas verificações a traduzem diferente (ambígua). */
+  exact: Map<string, string | null>;
+  /** Modelos, do mais específico (mais texto literal) para o menos. */
+  templates: AxeTemplate[];
+}
+
+const PLACEHOLDER = /\$\{\s*([^}]+?)\s*\}/g;
+/** Modelo com menos texto literal que isto casaria quase qualquer coisa: fica de fora. */
+const MIN_TEMPLATE_LITERAL = 12;
+
+let axeMessages: AxeMessageIndex | null | undefined;
+
+function placeholders(template: string): string[] {
+  return Array.from(template.matchAll(PLACEHOLDER), (m) => m[1]);
+}
+
+function buildAxeMessageIndex(): AxeMessageIndex | null {
+  const pt = getAxeLocale()?.checks;
+  if (!pt) return null;
+  let checks: Record<string, { messages?: AxeCheckMessages }> | undefined;
+  try {
+    const require = createRequire(import.meta.url);
+    checks = (require("axe-core") as { _audit?: { data?: { checks?: Record<string, { messages?: AxeCheckMessages }> } } })._audit?.data?.checks;
+  } catch {
+    return null;
+  }
+  if (!checks) return null;
+  const index: AxeMessageIndex = { exact: new Map(), templates: [] };
+  const add = (en: unknown, ptMessage: unknown) => {
+    if (typeof en !== "string" || typeof ptMessage !== "string" || !en.trim() || !ptMessage.trim()) return;
+    if (en.includes("{{") || ptMessage.includes("{{")) return; // lógica doT: não é um modelo plano
+    const vars = placeholders(en);
+    if (vars.length === 0) {
+      if (placeholders(ptMessage).length) return;
+      const known = index.exact.get(en);
+      index.exact.set(en, known === undefined || known === ptMessage ? ptMessage : null);
+      return;
+    }
+    if (!placeholders(ptMessage).every((v) => vars.includes(v))) return;
+    const literals = en.split(PLACEHOLDER).filter((_, i) => i % 2 === 0);
+    const literal = literals.join("").length;
+    if (literal < MIN_TEMPLATE_LITERAL) return;
+    const source = `^${literals.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("(.+?)")}$`;
+    index.templates.push({ re: new RegExp(source), vars, pt: ptMessage, literal });
+  };
+  for (const [id, check] of Object.entries(checks)) {
+    const messages = check.messages ?? {};
+    const ptCheck = pt[id];
+    if (!ptCheck) continue;
+    for (const kind of ["pass", "fail", "incomplete"] as const) {
+      const en = messages[kind];
+      const ptKind = ptCheck[kind];
+      if (typeof en === "string") add(en, typeof ptKind === "string" ? ptKind : ptKind?.default);
+      else if (en && typeof en === "object") {
+        for (const [key, enMessage] of Object.entries(en)) {
+          // pt_BR em texto único só corresponde à variante padrão do inglês.
+          add(enMessage, typeof ptKind === "string" ? (key === "default" ? ptKind : undefined) : ptKind?.[key]);
+        }
+      }
+    }
+  }
+  index.templates.sort((a, b) => b.literal - a.literal);
+  return index;
+}
+
+function getAxeMessageIndex(): AxeMessageIndex | null {
+  if (axeMessages === undefined) axeMessages = buildAxeMessageIndex();
+  return axeMessages;
+}
+
+/**
+ * A mensagem de verificação do axe em pt_BR, ou undefined quando não há correspondência única (fica em inglês).
+ * Os valores medidos (razão de contraste, cores, tamanho de fonte) entram como vieram.
+ */
+export function translateAxeMessage(message: string): string | undefined {
+  const index = getAxeMessageIndex();
+  if (!index) return undefined;
+  const exact = index.exact.get(message);
+  if (exact !== undefined) return exact ?? undefined;
+  let best: number | undefined;
+  let result: string | undefined;
+  for (const template of index.templates) {
+    if (best !== undefined && template.literal < best) break;
+    const match = template.re.exec(message);
+    if (!match) continue;
+    const values = new Map<string, string>();
+    let consistent = true;
+    template.vars.forEach((name, i) => {
+      const value = match[i + 1];
+      if (values.has(name) && values.get(name) !== value) consistent = false;
+      values.set(name, value);
+    });
+    if (!consistent) continue;
+    const filled = template.pt.replace(PLACEHOLDER, (_, name: string) => values.get(name.trim()) ?? "");
+    if (best === undefined) {
+      best = template.literal;
+      result = filled;
+    } else if (filled !== result) {
+      return undefined; // dois modelos igualmente específicos, traduções diferentes: ambíguo
+    }
+  }
+  return result;
+}
+
+/** Item do resumo de falha do axe: a tradução, ou o texto em inglês intacto. */
+function axeItem(message: string): string {
+  return translateAxeMessage(message) ?? message;
 }
 
 /** Sob a trava de conhecimento (perfil knowledge-free), nenhum carregador da base é chamado: o título cai na reserva. */
@@ -203,8 +371,10 @@ function isDsSource(source: Finding["rule"]["source"]): boolean {
 
 /** Título do problema: só de registros do servidor (ou da descrição que o servidor escreveu). */
 export function problemTitle(f: Finding): string {
-  const { source, id, checker } = f.rule;
+  const { source, id } = f.rule;
   const deterministic = f.pathway === "deterministic";
+  const byChecker = checkerTitle(f);
+  if (byChecker) return byChecker;
   let title: string | undefined;
   if (source === "axe-core") {
     title = axeRulePt(id)?.help;
@@ -213,19 +383,18 @@ export function problemTitle(f: Finding): string {
   } else if (source === "govbr-ds-kb") {
     const rule = kbRule(f);
     if (rule) {
-      const unit = firstSentence(rule.title.replace(/^\d+(\.\d+)*\.?\s+/, ""), 90);
+      const unit = cleanTitle(firstSentence(rule.title, 200));
       const page = typeof rule.source?.pageTitle === "string" ? rule.source.pageTitle.trim() : "";
-      title = page && page.toLowerCase() !== unit.toLowerCase() ? `${page} — ${unit}` : unit;
+      return page && page.toLowerCase() !== unit.toLowerCase() ? `${page} — ${unit}` : unit;
     }
   } else if (source === "emag") {
     title = emagRule(id)?.title;
   } else if (source === "wcag") {
     title = wcagHandle(id);
   }
-  if (!title && deterministic && f.rule.description) title = firstSentence(f.rule.description);
-  if (!title) title = isDsSource(source) ? "Regra do Design System gov.br sem título no registro" : "Regra de acessibilidade sem título no registro";
-  const qualifier = checker ? TOKEN_CHECK_PT[checker] : undefined;
-  return qualifier ? `${title} (${qualifier})` : title;
+  if (!title && deterministic && f.rule.description) title = stripInternal(firstSentence(f.rule.description, 200));
+  if (!title) return isDsSource(source) ? "Regra do Design System gov.br sem título no registro" : "Regra de acessibilidade sem título no registro";
+  return cleanTitle(title);
 }
 
 // ── Agrupamento ────────────────────────────────────────────────────────────
@@ -238,7 +407,11 @@ export interface Problem {
   worst: Severity;
 }
 
-/** Problema = fonte + rule.id + rule.checker; ordem: severidade mais alta, mais elementos, 1ª aparição. */
+/**
+ * Problema = fonte + rule.id + rule.checker. Ordem (a da tabela e a do corpo, numeradas 1..N sem saltos):
+ * Design System gov.br primeiro, depois acessibilidade; em cada grupo, severidade mais alta, mais elementos,
+ * 1ª aparição.
+ */
 export function groupProblems(findings: Finding[]): Problem[] {
   const byKey = new Map<string, Problem>();
   for (const f of findings) {
@@ -258,7 +431,13 @@ export function groupProblems(findings: Finding[]): Problem[] {
   }
   return problems
     .map((p, order) => ({ p, order }))
-    .sort((a, b) => SEVERITY_ORDER[a.p.worst] - SEVERITY_ORDER[b.p.worst] || b.p.members.length - a.p.members.length || a.order - b.order)
+    .sort(
+      (a, b) =>
+        Number(b.p.ds) - Number(a.p.ds) ||
+        SEVERITY_ORDER[a.p.worst] - SEVERITY_ORDER[b.p.worst] ||
+        b.p.members.length - a.p.members.length ||
+        a.order - b.order
+    )
     .map(({ p }) => p);
 }
 
@@ -274,7 +453,8 @@ function originLabel(ds: boolean): string {
 
 /**
  * O resumo de falha do axe ("Fix any of the following:\n  item\n  item"): cabeçalho em pt_BR e itens
- * separados. Os itens ficam como o axe os mediu (em inglês), com razão de contraste e cores intactas.
+ * separados. Cada item sai pela tradução pt_BR do próprio axe (translateAxeMessage) quando houver correspondência
+ * única, com os valores medidos intactos; senão, como o axe o escreveu (em inglês).
  */
 function axeFailureParts(observed: string): { header?: string; items: string[] }[] | undefined {
   if (!/^\s*Fix (any|all) of the following:/.test(observed)) return undefined;
@@ -296,8 +476,8 @@ function observedInline(f: Finding, atStart = false): string {
   const parts = f.rule.source === "axe-core" ? axeFailureParts(f.evidence.observed) : undefined;
   if (!parts) return t(f.evidence.observed);
   const items = parts.flatMap((b) => b.items);
-  if (items.length === 1) return t(items[0]);
-  return t(parts.map((b) => `${b.header ? `${b.header} ` : ""}${b.items.join("; ")}`).join(" "));
+  if (items.length === 1) return t(axeItem(items[0]));
+  return t(parts.map((b) => `${b.header ? `${b.header} ` : ""}${b.items.map(axeItem).join("; ")}`).join(" "));
 }
 
 /** Observação como item de lista: com várias mensagens do axe, uma sublista. */
@@ -309,9 +489,9 @@ function observedBlock(label: string, f: Finding): string[] {
   for (const block of parts) {
     if (block.header) {
       lines.push(`  - ${lead(block.header)}`);
-      for (const item of block.items) lines.push(`    - ${lead(item, 300)}`);
+      for (const item of block.items) lines.push(`    - ${lead(axeItem(item), 300)}`);
     } else {
-      for (const item of block.items) lines.push(`  - ${lead(item, 300)}`);
+      for (const item of block.items) lines.push(`  - ${lead(axeItem(item), 300)}`);
     }
   }
   return lines;
@@ -376,9 +556,13 @@ function ruleLines(p: Problem): string[] {
   const axe = source === "axe-core" ? axeRulePt(id) : undefined;
 
   if (kb) {
-    lines.push(`- **Regra:** “${text(kb.normalizedRule || kb.title)}”`);
-    if (f.rule.description && f.rule.description.trim() !== kb.normalizedRule.trim()) {
-      lines.push(`- **${f.pathway === "deterministic" ? "Como o oráculo mede" : "Descrição do agente"}:** ${text(f.rule.description)}`);
+    const ruleText = kb.normalizedRule || kb.title;
+    lines.push(`- **Regra:** “${text(ruleText)}”`);
+    if (f.pathway === "deterministic") {
+      const note = measureNote(f.rule.description, ruleText);
+      if (note) lines.push(`- **Como o oráculo mede:** ${text(note)}`);
+    } else if (f.rule.description && f.rule.description.trim() !== ruleText.trim()) {
+      lines.push(`- **Descrição do agente:** ${text(f.rule.description)}`);
     }
   } else if (axe?.description) {
     lines.push(`- **Regra:** ${text(axe.description)}`);
@@ -423,6 +607,63 @@ function ruleLines(p: Problem): string[] {
   return lines;
 }
 
+const FORCE_WORDS = "required|prohibited|recommended|discouraged|permitted|informative|unclear|especificacao|example";
+/** "Button: 'O rótulo é um elemento obrigatório.' (required)." — a cláusula repetida com a força, no início. */
+const RESTATED_CLAUSE = new RegExp(`^[^:'"“]{1,60}:\\s*['"“].*?['"”]\\s*(?:\\((?:${FORCE_WORDS})\\))?\\s*\\.?(?:\\s+|$)`, "i");
+/** Parênteses que só falam do próprio check (o que ele não acusa, o legado da base) — internos para quem corrige. */
+const CHECK_PARENTHETICAL = /\s*\([^()]*\b(?:o check|a verificação|não (?:é )?acusad[oa]s?|não acusa|legado)\b[^()]*\)/gi;
+const NOTE_MAX = 220;
+
+/** Tira do texto do servidor o que é interno: força entre parênteses, ids da base, parênteses sobre o check. */
+function stripInternal(value: string): string {
+  return value
+    .replace(new RegExp(`\\s*\\((?:${FORCE_WORDS})\\)`, "gi"), "")
+    .replace(/\s*\((?:legado\s+)?govbr-\d+\.\d+\.\d+-[a-z0-9-]+\)/gi, "")
+    .replace(/\s*\blegado\s+govbr-\d+\.\d+\.\d+-[a-z0-9-]+/gi, "")
+    .replace(/\s*\bgovbr-\d+\.\d+\.\d+-[a-z0-9-]+/gi, "")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function capAtWord(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max / 2 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/, "")}…`;
+}
+
+const normalizedWords = (value: string) =>
+  value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * "Como o oráculo mede" (descrição que o servidor escreveu para o check): só quando acrescenta algo à regra, e então
+ * só a 1ª frase, sem a cláusula repetida no início nem fragmentos internos, até NOTE_MAX. O texto inteiro fica no JSON.
+ */
+export function measureNote(description: string | undefined, ruleText: string): string | undefined {
+  if (!description) return undefined;
+  const body = stripInternal(description.replace(/\s+/g, " ").trim().replace(RESTATED_CLAUSE, "")).replace(
+    /^O check aplica a exceção[^:]*:\s*/i,
+    "Exceção aplicada: "
+  );
+  // 1ª frase: termina em . ! ? seguido de espaço e maiúscula (ou no fim), fora de aspas abertas.
+  let end = body.length;
+  let quote = false;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === '"' || c === "“" || c === "”") quote = c === "“" ? true : c === "”" ? false : !quote;
+    if (!quote && /[.!?]/.test(c) && (i === body.length - 1 || (/\s/.test(body[i + 1]) && /[A-ZÀ-Ý]/.test(body[i + 2] ?? "")))) {
+      end = i + 1;
+      break;
+    }
+  }
+  const sentence = capAtWord(body.slice(0, end).trim(), NOTE_MAX);
+  const words = normalizedWords(sentence);
+  const rule = normalizedWords(ruleText);
+  if (!words || rule.includes(words) || words === rule) return undefined;
+  return sentence;
+}
+
 function expectedText(f: Finding, atStart = false): string {
   const t = atStart ? lead : text;
   // O expected do axe é o help em inglês da própria regra: com tradução, vai a tradução.
@@ -430,15 +671,113 @@ function expectedText(f: Finding, atStart = false): string {
     const help = axeRulePt(f.rule.id)?.help;
     if (help) return t(help);
   }
+  // Texto do servidor: sem o parêntese sobre o que o check não acusa (o JSON guarda o inteiro).
+  if (f.pathway === "deterministic") return t(stripInternal(f.evidence.expected.replace(CHECK_PARENTHETICAL, "")) || f.evidence.expected);
   return t(f.evidence.expected);
 }
 
-function elementLine(f: Finding, indent = ""): string {
-  return `${indent}- ${code(f.element.locator)} · ${text(f.id, 40)}`;
+// ── Localizadores: os que só diferem por UM índice numérico viram uma linha ─────
+
+export interface LocatorLine {
+  /** O localizador; agrupado, com o índice que varia trocado por `marker`. */
+  locator: string;
+  marker?: string;
+  /** Valores do índice que varia (texto, como no localizador), em ordem numérica. */
+  values?: string[];
+  ids: string[];
+  /** Posição do 1º membro na lista original (a ordem das linhas). */
+  first: number;
 }
 
-function moreLine(rest: number, indent = ""): string {
-  return `${indent}- … e mais ${rest} (lista completa no arquivo JSON)`;
+interface LocatorEntry {
+  locator: string;
+  tokens: string[];
+  ids: string[];
+  first: number;
+}
+
+/**
+ * Agrupa localizadores iguais exceto por um único número (ex.: `tr:nth-child(1) > td` … `tr:nth-child(10) > td`).
+ * O localizador é partido em texto e números; dois entram no mesmo grupo quando têm as mesmas partes e só o número de
+ * uma posição muda. Com dois números variando, nada se agrupa. Escolha gulosa: o maior grupo primeiro.
+ */
+export function collapseLocators(members: Array<{ locator: string; id: string }>): LocatorLine[] {
+  const byLocator = new Map<string, LocatorEntry>();
+  members.forEach((m, i) => {
+    const entry = byLocator.get(m.locator);
+    if (entry) entry.ids.push(m.id);
+    else byLocator.set(m.locator, { locator: m.locator, tokens: m.locator.split(/(\d+)/), ids: [m.id], first: i });
+  });
+  let pending = [...byLocator.values()];
+  const lines: LocatorLine[] = [];
+  for (;;) {
+    const groups = new Map<string, { pos: number; entries: LocatorEntry[] }>();
+    for (const entry of pending) {
+      for (let pos = 1; pos < entry.tokens.length; pos += 2) {
+        const key = `${entry.tokens.length}\u0001${pos}\u0001${entry.tokens.map((t, i) => (i === pos ? "\u0000" : t)).join("\u0002")}`;
+        const group = groups.get(key) ?? { pos, entries: [] };
+        group.entries.push(entry);
+        groups.set(key, group);
+      }
+    }
+    let best: { pos: number; entries: LocatorEntry[] } | undefined;
+    for (const group of groups.values()) {
+      if (group.entries.length < 2) continue;
+      if (!best || group.entries.length > best.entries.length || (group.entries.length === best.entries.length && group.entries[0].first < best.entries[0].first)) best = group;
+    }
+    if (!best) break;
+    const chosen = new Set(best.entries);
+    const sample = best.entries[0].tokens;
+    const rest = sample.filter((_, i) => i !== best!.pos).join("");
+    const marker = rest.includes("N") ? "{N}" : "N";
+    const values = [...new Set(best.entries.map((e) => e.tokens[best!.pos]))].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    const ordered = [...best.entries].sort((a, b) => a.first - b.first);
+    lines.push({
+      locator: sample.map((t, i) => (i === best!.pos ? marker : t)).join(""),
+      marker,
+      values,
+      ids: ordered.flatMap((e) => e.ids),
+      first: ordered[0].first,
+    });
+    pending = pending.filter((e) => !chosen.has(e));
+  }
+  for (const entry of pending) lines.push({ locator: entry.locator, ids: entry.ids, first: entry.first });
+  return lines.sort((a, b) => a.first - b.first);
+}
+
+/** "1–10" quando contíguo (3 ou mais); senão a lista, até 15. */
+function valuesText(values: string[]): string {
+  const nums = values.map(Number);
+  const contiguous = nums.length >= 3 && nums.every((n, i) => i === 0 || n === nums[i - 1] + 1) && values.every((v) => String(Number(v)) === v);
+  if (contiguous) return `${values[0]}–${values[values.length - 1]}`;
+  return values.length > 15 ? `${values.slice(0, 15).join(", ")}, …` : values.join(", ");
+}
+
+/** Ids dos achados: faixa "F-050 a F-059" quando contíguos com o mesmo prefixo; senão a lista, até 10. */
+function idsText(ids: string[]): string {
+  const parsed = ids.map((id) => /^(.*?)(\d+)$/.exec(id));
+  if (ids.length >= 3 && parsed.every((m) => m && m[1] === parsed[0]![1] && m[2].length === parsed[0]![2].length)) {
+    const sorted = parsed.map((m) => ({ id: m![0], n: Number(m![2]) })).sort((a, b) => a.n - b.n);
+    if (sorted.every((s, i) => i === 0 || s.n === sorted[i - 1].n + 1)) return `${text(sorted[0].id, 40)} a ${text(sorted[sorted.length - 1].id, 40)}`;
+  }
+  const shown = ids.slice(0, 10).map((id) => text(id, 40)).join(", ");
+  return ids.length > 10 ? `${shown} e mais ${ids.length - 10}` : shown;
+}
+
+function locatorLine(line: LocatorLine, indent = ""): string {
+  if (line.values && line.marker) {
+    return `${indent}- ${code(line.locator)} · ${line.marker} = ${valuesText(line.values)} · ${idsText(line.ids)}`;
+  }
+  return `${indent}- ${code(line.locator)} · ${idsText(line.ids)}`;
+}
+
+/** Linhas de localizador (já agrupadas) até `cap`, e o resto contado em elementos. */
+function locatorList(members: Finding[], cap: number, indent = ""): string[] {
+  const lines = collapseLocators(members.map((m) => ({ locator: m.element.locator, id: m.id })));
+  const out = lines.slice(0, cap).map((l) => locatorLine(l, indent));
+  const rest = lines.slice(cap).reduce((n, l) => n + l.ids.length, 0);
+  if (rest > 0) out.push(`${indent}- … e mais ${plural(rest, "elemento", "elementos")} (lista completa no arquivo JSON)`);
+  return out;
 }
 
 function renderProblem(p: Problem, label: string): string[] {
@@ -467,14 +806,12 @@ function renderProblem(p: Problem, label: string): string[] {
 
   lines.push(`**Elementos afetados (${p.members.length}):**`, "");
   if (uniform) {
-    for (const f of p.members.slice(0, ELEMENT_LIST_CAP)) lines.push(elementLine(f));
-    if (p.members.length > ELEMENT_LIST_CAP) lines.push(moreLine(p.members.length - ELEMENT_LIST_CAP));
+    lines.push(...locatorList(p.members, ELEMENT_LIST_CAP));
   } else {
     const groups = [...byObserved.values()];
     for (const list of groups.slice(0, OBSERVATION_GROUP_CAP)) {
       lines.push(`- ${observedInline(list[0], true)} — ${plural(list.length, "elemento", "elementos")}:`);
-      for (const f of list.slice(0, ELEMENTS_PER_OBSERVATION_CAP)) lines.push(elementLine(f, "  "));
-      if (list.length > ELEMENTS_PER_OBSERVATION_CAP) lines.push(moreLine(list.length - ELEMENTS_PER_OBSERVATION_CAP, "  "));
+      lines.push(...locatorList(list, ELEMENTS_PER_OBSERVATION_CAP, "  "));
     }
     if (groups.length > OBSERVATION_GROUP_CAP) {
       const rest = groups.slice(OBSERVATION_GROUP_CAP).reduce((n, l) => n + l.length, 0);
